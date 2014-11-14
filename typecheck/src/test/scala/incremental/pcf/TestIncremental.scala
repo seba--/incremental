@@ -7,7 +7,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
 /**
  * Created by seba on 14/11/14.
  */
-class TestIncremental(checkerFactory: TypeCheckerFactory) extends FunSuite with BeforeAndAfterEach {
+class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory) extends FunSuite with BeforeAndAfterEach {
   var checker: TypeChecker = _
 
   override def beforeEach: Unit = {
@@ -23,15 +23,15 @@ class TestIncremental(checkerFactory: TypeCheckerFactory) extends FunSuite with 
 
   def incTypecheckTest(desc: String, e: =>Exp)(expected: Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
   def incTypecheckTest(desc: String, e: =>Exp, mod: =>Unit)(expected: Type)(consCount: Int): Unit =
-    test (s"Type check $desc") {
+    test (s"$classdesc: Type check $desc") {
       val Unit = mod
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
-      assertResult(consCount, "constraint count")(checker.constraintCount)
+      assertResult(consCount, "solved constraint(s)")(checker.constraintCount)
     }
 
   def typecheckTestError(e: =>Exp) =
-    test (s"Type check $e") {
+    test (s"$classdesc: Type check $e") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
     }
@@ -63,5 +63,5 @@ class TestIncremental(checkerFactory: TypeCheckerFactory) extends FunSuite with 
   incTypecheckTest("factorial base 1", fac, fac match {case Fix(Abs(Abs(e@If0(_,_,_)))) => e.kids(1) = Num(1)})(TFun(TNum, TNum))(4)
 }
 
-class TestBottomUpIncremental extends TestIncremental(BottomUpCheckerFactory)
+class TestBottomUpIncremental extends TestIncremental("BottomUp", BottomUpCheckerFactory)
 //class TestBottomUpEarlyTermIncremental extends TestIncremental(BottomUpEarlyTermCheckerFactory)
