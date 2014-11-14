@@ -16,19 +16,19 @@ class TestCorrectness(checkerFactory: TypeCheckerFactory) extends FunSuite with 
   override def afterEach: Unit = {
     Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
     Util.log(f"Type-check time\t\t${checker.typecheckTime}%.3fms")
-    Util.log(f"Constraint count\t${checker.constraintCount}%.3fms")
+    Util.log(f"Constraint count\t${checker.constraintCount}")
     Util.log(f"Cons. solve time\t${checker.constraintSolveTime}%.3fms")
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
   }
 
-  def typecheckTest(e: Exp)(expected: Type): Unit = typecheckTest(e.toString, e)(expected)
-  def typecheckTest(desc: String, e: Exp)(expected: Type): Unit =
+  def typecheckTest(e: =>Exp)(expected: Type): Unit = typecheckTest(e.toString, e)(expected)
+  def typecheckTest(desc: String, e: =>Exp)(expected: Type): Unit =
     test (s"Type check $desc") {
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
     }
 
-  def typecheckTestError(e: Exp) =
+  def typecheckTestError(e: =>Exp) =
     test (s"Type check $e") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
@@ -44,11 +44,11 @@ class TestCorrectness(checkerFactory: TypeCheckerFactory) extends FunSuite with 
   typecheckTest(Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
   typecheckTest(If0(Num(17), Num(0), Num(1)))(TNum)
 
-  def fac = Fix(Abs('f, Abs('n, If0(Var('n), Num(1), Mul(Var('n), App(Var('f), Add(Var('n), Num(-1))))))))
+  val fac = Fix(Abs('f, Abs('n, If0(Var('n), Num(1), Mul(Var('n), App(Var('f), Add(Var('n), Num(-1))))))))
   typecheckTest("factorial", fac)(TFun(TNum, TNum))
   typecheckTest("eta-expanded factorial", Abs('x, App(fac, Var('x))))((TFun(TNum, TNum)))
 
-  def fib = Fix(Abs('f, Abs('n,
+  val fib = Fix(Abs('f, Abs('n,
     If0(Var('n), Num(1),
       If0(Add(Var('n), Num(-1)), Num(1),
         Add(App(Var('f), Add(Var('n), Num(-1))),

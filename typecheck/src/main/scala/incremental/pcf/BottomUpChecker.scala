@@ -113,7 +113,7 @@ class BottomUpChecker extends TypeChecker {
             (TFun(treq, t), otherReqs, unres)
         }
       }
-      else if (e.lits(0).isInstanceOf[Seq[Symbol]]) {
+      else if (e.lits(0).isInstanceOf[Seq[_]]) {
         val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
         val (t, reqs, unres) = e.kids(0).typ
 

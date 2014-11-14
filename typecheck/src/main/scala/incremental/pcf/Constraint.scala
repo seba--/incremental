@@ -36,17 +36,20 @@ class Constraint {
 
 
   def solve(cs: Iterable[EqConstraint]): Solution = {
+    constraintCount += cs.size
     val (res, time) = Util.timed(cs.foldLeft(emptySol)(extendSolution))
     constraintSolveTime += time
     res
   }
   def solve(c: EqConstraint): Solution = {
-    val (res, time) = Util.timed(c.solve(Map()))
+    constraintCount += 1
+    val (res, time) = Util.timed(c.solve(Map()) match {
+        case None => emptySol
+        case Some(s) => (s, Set[EqConstraint]())
+      }
+    )
     constraintSolveTime += time
-    res match {
-      case None => (Map(), Set(c))
-      case Some(s) => (s, Set())
-    }
+    res
   }
 
   private def extendSolution(sol: Solution, c: EqConstraint): Solution = {
