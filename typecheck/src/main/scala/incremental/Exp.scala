@@ -26,7 +26,7 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   private val _kids: collection.mutable.ArrayBuffer[Exp_[T]] = collection.mutable.ArrayBuffer() ++= kidsArg
   private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
 
-  def kids = new Object {
+  object kids {
     def apply(i: Int) = _kids(i)
     def update[U](i: Int, e: Exp_[U]): Unit = {
       val ee = e.asInstanceOf[Exp_[T]]
