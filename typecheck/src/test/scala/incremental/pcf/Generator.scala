@@ -50,7 +50,10 @@ object Generator {
     ts(0)
   }
 
-  def makeFunType(length: Int, returnType: Type, argMaker: () => Type): Type = {
+  def usedVars(h: Int) = for (j <- (1 to Math.pow(2, h-1).toInt).toSeq) yield Symbol(s"x$j")
+
+  def makeFunType(height: Int, returnType: Type, argMaker: () => Type): Type = {
+    val length = Math.pow(2,height-1).toInt
     var argTypes = Seq[Type]()
     for (i <- 1 to length)
       argTypes = argMaker() +: argTypes
