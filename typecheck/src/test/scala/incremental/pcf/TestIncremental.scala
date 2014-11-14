@@ -56,27 +56,11 @@ class TestIncremental(checkerFactory: TypeCheckerFactory) extends FunSuite with 
   incTypecheckTest("\\x. x + x", fun1, fun1.kids(0) = Add(Var('x), Var('x)))(TFun(TNum, TNum))(3)
   lazy val app1 = Add(App(fun1, Num(3)), Add(Num(1), Num(2)))
   incTypecheckTest("(\\x. x+x) 3 + (1 + 2)", app1)(TNum)(5)
+  incTypecheckTest("(\\x. x+x+x) 3 + (1 + 2)", app1, fun1.kids(0) = Add(fun1.kids(0), Var('x)))(TNum)(6)
 
-
-//  typecheckTest(Abs('x, Add(Num(10), Num(5))))(TFun(TVar('x$0), TNum))
-//  typecheckTest(Abs('x, Add(Var('x), Var('x))))(TFun(TNum, TNum))
-//  typecheckTestError(Abs('x, Add(Var('err), Var('x))))
-//  typecheckTest(Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(TVar('x$1), TVar('x$2)), TFun(TVar('x$1), TVar('x$2))))
-//  typecheckTest(Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
-//  typecheckTest(If0(Num(17), Num(0), Num(1)))(TNum)
-//
-//  val fac = Fix(Abs('f, Abs('n, If0(Var('n), Num(1), Mul(Var('n), App(Var('f), Add(Var('n), Num(-1))))))))
-//  typecheckTest("factorial", fac)(TFun(TNum, TNum))
-//  typecheckTest("eta-expanded factorial", Abs('x, App(fac, Var('x))))((TFun(TNum, TNum)))
-//
-//  val fib = Fix(Abs('f, Abs('n,
-//    If0(Var('n), Num(1),
-//      If0(Add(Var('n), Num(-1)), Num(1),
-//        Add(App(Var('f), Add(Var('n), Num(-1))),
-//          App(Var('f), Add(Var('n), Num(-2)))))))))
-//  typecheckTest("fibonacci", fib)(TFun(TNum, TNum))
-//  typecheckTest("factorial + fibonacci", Abs('x, Add(App(fac, Var('x)), App(fib, Var('x)))))(TFun(TNum, TNum))
-//  typecheckTest(Abs('y, Var('y)))(TFun(TVar('x$0), TVar('x$0)))
+  val fac = Fix(Abs('f, Abs('n, If0(Var('n), Num(0), Mul(Var('n), App(Var('f), Add(Var('n), Num(-1))))))))
+  incTypecheckTest("factorial base 0", fac)(TFun(TNum, TNum))(10)
+  incTypecheckTest("factorial base 1", fac, fac match {case Fix(Abs(Abs(e@If0(_,_,_)))) => e.kids(1) = Num(1)})(TFun(TNum, TNum))(4)
 }
 
 class TestBottomUpIncremental extends TestIncremental(BottomUpCheckerFactory)
