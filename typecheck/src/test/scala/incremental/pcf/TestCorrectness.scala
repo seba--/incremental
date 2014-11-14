@@ -58,5 +58,6 @@ class TestCorrectness(checkerFactory: TypeCheckerFactory) extends FunSuite with 
   typecheckTest(Abs('y, Var('y)))(TFun(TVar('x$0), TVar('x$0)))
 }
 
+class TestDownUpCorrectness extends TestCorrectness(DownUpCheckerFactory)
 class TestBottomUpCorrectness extends TestCorrectness(BottomUpCheckerFactory)
 class TestBottomUpEarlyTermCorrectness extends TestCorrectness(BottomUpEarlyTermCheckerFactory)

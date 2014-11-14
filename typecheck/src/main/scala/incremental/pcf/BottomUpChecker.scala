@@ -21,13 +21,6 @@ class BottomUpChecker extends TypeChecker {
 
   type Result = (Type, TSubst, Unsolvable)
 
-  private var _nextId = 0
-  def freshTVar(): TVar = {
-    val v = TVar(Symbol("x$" + _nextId))
-    _nextId += 1
-    v
-  }
-
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
 

@@ -11,9 +11,17 @@ class Constraint {
   type Solution = (TSubst, Unsolvable)
   val emptySol: Solution = (Map(), Seq())
 
+  private var _nextId = 0
+  def freshTVar(): TVar = {
+    val v = TVar(Symbol("x$" + _nextId))
+    _nextId += 1
+    v
+  }
+
   var constraintCount = 0
   var mergeReqsTime = 0.0
   var constraintSolveTime = 0.0
+  var mergeSolutionTime = 0.0
 
   def mergeReqMaps(reqs1: Map[Symbol, Type], reqs2: Map[Symbol, Type]) = {
     val (res, time) = Util.timed(_mergeReqMaps(reqs1, reqs2))
@@ -35,22 +43,24 @@ class Constraint {
   }
 
 
-  def solve(cs: Iterable[EqConstraint]): Solution = {
+  def solve(cs: Iterable[EqConstraint], sol: Solution = emptySol): Solution = {
     constraintCount += cs.size
-    val (res, time) = Util.timed(cs.foldLeft(emptySol)(extendSolution))
+    val (res, time) = Util.timed(cs.foldLeft(sol)(extendSolution))
     constraintSolveTime += time
     res
   }
-  def _solve(cs: Iterable[EqConstraint]): Solution = {
-    cs.foldLeft(emptySol)(extendSolution)
+  def _solve(cs: Iterable[EqConstraint], sol: Solution): Solution = {
+    cs.foldLeft(sol)(extendSolution)
   }
   def solve(c: EqConstraint): Solution = {
     constraintCount += 1
-    val (res, time) = Util.timed(c.solve(Map()) match {
-        case None => emptySol
-        case Some(s) => (s, Seq[EqConstraint]())
-      }
-    )
+    val (res, time) = Util.timed(extendSolution(emptySol, c))
+    constraintSolveTime += time
+    res
+  }
+  def solve(c: EqConstraint, sol: Solution): Solution = {
+    constraintCount += 1
+    val (res, time) = Util.timed(extendSolution(sol, c))
     constraintSolveTime += time
     res
   }
@@ -72,6 +82,32 @@ class Constraint {
         }
         (s, unres)
     }
+  }
+
+  def mergeSolution(sol1: Solution, sol2: Solution): Solution = {
+    val (res, time) = Util.timed(_mergeSolution(sol1, sol2))
+    mergeSolutionTime += time
+    res
+  }
+
+  private def _mergeSolution(sol1: Solution, sol2: Solution): Solution = {
+    val s1 = sol1._1
+    val s2 = sol2._1
+    var unres: Unsolvable = sol1._2 ++ sol2._2
+
+    var s = s1 mapValues (_.subst(s2))
+
+    for ((x, t2) <- s2) {
+      s.get(x) match {
+        case None => s += x -> t2.subst(s)
+        case Some(t1) => t1.unify(t2, s) match {
+          case None => unres = EqConstraint(t1, t2) +: unres
+          case Some(u) => s = s.mapValues(_.subst(u)) ++ u
+        }
+      }
+    }
+
+    (s, unres)
   }
 }
 
