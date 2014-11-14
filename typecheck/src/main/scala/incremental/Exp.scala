@@ -1,8 +1,14 @@
 package incremental
 
-abstract class ExpKind(val arity: Int)
-
 import Exp._
+abstract class ExpKind(val arity: Int) {
+  def unapplySeq(e: Exp_[_]): Option[Seq[Exp_[_]]] =
+    if (e.kind == this)
+      Some(e.kids.seq)
+    else
+      None
+}
+
 class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   var parent: Exp_[T] = _
   var pos: Int = _
@@ -13,10 +19,11 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
 
   def kids = new Object {
     def apply(i: Int) = _kids(i)
-    def update(i: Int, e: Exp_[T]): Unit = {
-      _kids(i) = e
+    def update[U](i: Int, e: Exp_[U]): Unit = {
+      _kids(i) = e.asInstanceOf[Exp_[T]]
       typ = null.asInstanceOf[T]
     }
+    def seq: Seq[Exp_[T]] = _kids
   }
 
   for (i <- 0 until _kids.size) {
@@ -56,8 +63,8 @@ object Exp {
   type Exp = Exp_[Nothing]
 
   import scala.language.implicitConversions
-  implicit def constructable(k: ExpKind) = new Constructable(k)
-  class Constructable(k: ExpKind) {
+  implicit def kindExpression(k: ExpKind) = new KindExpression(k)
+  class KindExpression(k: ExpKind) {
     def apply(): Exp = new Exp_[Nothing](k, Seq(), Seq())
     def apply(l: Lit, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(l), Seq(sub:_*))
     def apply(e: Exp, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(), e +: Seq(sub:_*))
