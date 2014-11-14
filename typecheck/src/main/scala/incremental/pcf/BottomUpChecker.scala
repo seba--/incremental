@@ -29,7 +29,6 @@ class BottomUpChecker extends TypeChecker {
   }
 
   def typecheck(e: Exp): Either[Type, TError] = {
-    _nextId = 0
     val root = e.withType[Result]
 
     val (leaves, ptime) = Util.timed {root.leaves}
