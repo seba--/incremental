@@ -31,11 +31,11 @@ class BottomUpChecker extends TypeChecker {
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    val (leaves, ptime) = Util.timed {root.leaves}
+    val (uninitialized, ptime) = Util.timed {root.uninitialized}
     preparationTime += ptime
 
     val (res, ctime) = Util.timed {
-      leaves foreach (typecheckSpine(_))
+      uninitialized foreach (e => if (e.typ == null) typecheckSpine(e))
 
       val (t, reqs, unres) = root.typ
       if (!reqs.isEmpty)

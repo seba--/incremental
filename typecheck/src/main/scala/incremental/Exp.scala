@@ -21,17 +21,16 @@ case class Exp_[T](kind: ExpKind, lits: Seq[Lit], kids: Seq[Exp_[T]]) {
 
   def allKidTypesAvailable = availableKidTypes.foldLeft(true)(_&&_)
 
-  def leaves: Seq[Exp_[T]] = {
+  def uninitialized: Seq[Exp_[T]] = {
     val buf = collection.mutable.ArrayBuffer[Exp_[T]]()
-    leaves(buf)
+    uninitialized(buf)
     buf
   }
 
-  def leaves(buf: collection.mutable.ArrayBuffer[Exp_[T]]): Unit = {
-    if (kids.isEmpty)
+  def uninitialized(buf: collection.mutable.ArrayBuffer[Exp_[T]]): Unit = {
+    kids foreach (_.uninitialized(buf))
+    if (typ == null)
       buf += this
-    else
-      kids foreach (_.leaves(buf))
   }
 
   override def toString = {
