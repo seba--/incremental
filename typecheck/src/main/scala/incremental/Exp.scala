@@ -3,15 +3,25 @@ package incremental
 abstract class ExpKind(val arity: Int)
 
 import Exp._
-case class Exp_[T](kind: ExpKind, lits: Seq[Lit], kids: Seq[Exp_[T]]) {
-  var availableKidTypes: Seq[Boolean] = kids map (_.typ != null)
+class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   var parent: Exp_[T] = _
   var pos: Int = _
   var typ: T = _
 
-  for (i <- 0 until kids.size) {
-    kids(i).parent = this
-    kids(i).pos = i
+  private val _kids: collection.mutable.ArrayBuffer[Exp_[T]] = collection.mutable.ArrayBuffer() ++= kidsArg
+  private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
+
+  def kids = new Object {
+    def apply(i: Int) = _kids(i)
+    def update(i: Int, e: Exp_[T]): Unit = {
+      _kids(i) = e
+      typ = null.asInstanceOf[T]
+    }
+  }
+
+  for (i <- 0 until _kids.size) {
+    _kids(i).parent = this
+    _kids(i).pos = i
   }
 
   def withType[T] = this.asInstanceOf[Exp_[T]]
@@ -28,13 +38,13 @@ case class Exp_[T](kind: ExpKind, lits: Seq[Lit], kids: Seq[Exp_[T]]) {
   }
 
   def uninitialized(buf: collection.mutable.ArrayBuffer[Exp_[T]]): Unit = {
-    kids foreach (_.uninitialized(buf))
+    _kids foreach (_.uninitialized(buf))
     if (typ == null)
       buf += this
   }
 
   override def toString = {
-    val subs = lits.map(_.toString) ++ kids.map(_.toString)
+    val subs = lits.map(_.toString) ++ _kids.map(_.toString)
     val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail
     val substring = subssep.foldLeft("")(_+_)
     s"$kind($substring)"
@@ -48,9 +58,9 @@ object Exp {
   import scala.language.implicitConversions
   implicit def constructable(k: ExpKind) = new Constructable(k)
   class Constructable(k: ExpKind) {
-    def apply(): Exp = Exp_[Nothing](k, Seq(), Seq())
-    def apply(l: Lit, sub: Exp*): Exp = Exp_[Nothing](k, scala.Seq(l), Seq(sub:_*))
-    def apply(e: Exp, sub: Exp*): Exp = Exp_[Nothing](k, scala.Seq(), e +: Seq(sub:_*))
-    def apply(lits: Seq[Lit], sub: Seq[Exp]): Exp = Exp_[Nothing](k, lits, sub)
+    def apply(): Exp = new Exp_[Nothing](k, Seq(), Seq())
+    def apply(l: Lit, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(l), Seq(sub:_*))
+    def apply(e: Exp, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(), e +: Seq(sub:_*))
+    def apply(lits: Seq[Lit], sub: Seq[Exp]): Exp = new Exp_[Nothing](k, lits, sub)
   }
 }

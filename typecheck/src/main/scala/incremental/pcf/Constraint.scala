@@ -22,13 +22,13 @@ class Constraint {
   }
 
   def _mergeReqMaps(reqs1: Map[Symbol, Type], reqs2: Map[Symbol, Type]) = {
-    var mcons = Set[EqConstraint]()
+    var mcons = Seq[EqConstraint]()
     var mreqs = reqs1
     for ((x, r2) <- reqs2)
       reqs1.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-          mcons = mcons + EqConstraint(r1, r2)
+          mcons = EqConstraint(r1, r2) +: mcons
       }
 
     (mcons, mreqs)

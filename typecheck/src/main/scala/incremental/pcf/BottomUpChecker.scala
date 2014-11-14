@@ -82,7 +82,7 @@ class BottomUpChecker extends TypeChecker {
 
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
-      val (s, newunres) = solve(mcons + lcons + rcons)
+      val (s, newunres) = solve(lcons +: rcons +: mcons)
       (TNum, mreqs.mapValues(_.subst(s)), unres1 ++ unres2 ++ newunres)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -96,7 +96,7 @@ class BottomUpChecker extends TypeChecker {
       val fcons = EqConstraint(TFun(t2, X), t1)
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
-      val (s, newunres) = solve(mcons + fcons)
+      val (s, newunres) = solve(fcons +: mcons)
 
       (X.subst(s), mreqs.mapValues(_.subst(s)), unres1 ++ unres2 ++ newunres)
     case Abs =>
@@ -148,7 +148,7 @@ class BottomUpChecker extends TypeChecker {
       val cond = EqConstraint(TNum, t1)
       val body = EqConstraint(t2, t3)
 
-      val (s, newunres) = solve(mcons12 ++ mcons23 + cond + body)
+      val (s, newunres) = solve(cond +: body +: (mcons12 ++ mcons23))
 
       (t2.subst(s), mreqs123.mapValues(_.subst(s)), unres1 ++ unres2 ++ unres3 ++ newunres)
 
