@@ -7,9 +7,9 @@ import incremental.{Util, Type}
  * Created by seba on 13/11/14.
  */
 class Constraint {
-  type Unsolvable = Set[EqConstraint]
+  type Unsolvable = Seq[EqConstraint]
   type Solution = (TSubst, Unsolvable)
-  val emptySol: Solution = (Map(), Set())
+  val emptySol: Solution = (Map(), Seq())
 
   var constraintCount = 0
   var mergeReqsTime = 0.0
@@ -41,11 +41,14 @@ class Constraint {
     constraintSolveTime += time
     res
   }
+  def _solve(cs: Iterable[EqConstraint]): Solution = {
+    cs.foldLeft(emptySol)(extendSolution)
+  }
   def solve(c: EqConstraint): Solution = {
     constraintCount += 1
     val (res, time) = Util.timed(c.solve(Map()) match {
         case None => emptySol
-        case Some(s) => (s, Set[EqConstraint]())
+        case Some(s) => (s, Seq[EqConstraint]())
       }
     )
     constraintSolveTime += time
@@ -54,7 +57,7 @@ class Constraint {
 
   private def extendSolution(sol: Solution, c: EqConstraint): Solution = {
     c.solve(sol._1) match {
-      case None => (sol._1, sol._2 + c)
+      case None => (sol._1, c +: sol._2)
       case Some(u) =>
         var s = sol._1.mapValues(_.subst(u))
         var unres = sol._2
@@ -62,7 +65,7 @@ class Constraint {
           s.get(x) match {
             case None => s += x -> t2.subst(s)
             case Some(t1) => t1.unify(t2, s) match {
-              case None => unres += EqConstraint(t1, t2)
+              case None => unres = EqConstraint(t1, t2) +: unres
               case Some(u) => s = s.mapValues(_.subst(u)) ++ u
             }
           }

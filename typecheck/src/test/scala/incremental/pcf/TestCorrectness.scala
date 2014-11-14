@@ -59,3 +59,4 @@ class TestCorrectness(checkerFactory: TypeCheckerFactory) extends FunSuite with 
 }
 
 class TestBottomUpCorrectness extends TestCorrectness(BottomUpCheckerFactory)
+class TestBottomUpEarlyTermCorrectness extends TestCorrectness(BottomUpEarlyTermCheckerFactory)

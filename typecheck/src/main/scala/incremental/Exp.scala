@@ -12,7 +12,16 @@ abstract class ExpKind(val arity: Int) {
 class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   var parent: Exp_[T] = _
   var pos: Int = _
-  var typ: T = _
+
+  private var _typ: T = _
+  private var _valid = false
+
+  def valid = _valid
+  def typ = _typ
+  def typ_=(t: T): Unit = {
+    _typ = t
+    _valid = true
+  }
 
   private val _kids: collection.mutable.ArrayBuffer[Exp_[T]] = collection.mutable.ArrayBuffer() ++= kidsArg
   private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
@@ -20,8 +29,11 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   def kids = new Object {
     def apply(i: Int) = _kids(i)
     def update[U](i: Int, e: Exp_[U]): Unit = {
-      _kids(i) = e.asInstanceOf[Exp_[T]]
-      typ = null.asInstanceOf[T]
+      val ee = e.asInstanceOf[Exp_[T]]
+      _kids(i) = ee
+      _valid = false
+      ee.parent = Exp_.this
+      ee.pos = i
     }
     def seq: Seq[Exp_[T]] = _kids
   }
@@ -46,7 +58,7 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
 
   def uninitialized(buf: collection.mutable.ArrayBuffer[Exp_[T]]): Unit = {
     _kids foreach (_.uninitialized(buf))
-    if (typ == null)
+    if (!valid)
       buf += this
   }
 

@@ -64,3 +64,4 @@ class TestIncremental(checkerFactory: TypeCheckerFactory) extends FunSuite with 
 }
 
 class TestBottomUpIncremental extends TestIncremental(BottomUpCheckerFactory)
+//class TestBottomUpEarlyTermIncremental extends TestIncremental(BottomUpEarlyTermCheckerFactory)

@@ -35,7 +35,7 @@ class BottomUpChecker extends TypeChecker {
     preparationTime += ptime
 
     val (res, ctime) = Util.timed {
-      uninitialized foreach (e => if (e.typ == null) typecheckSpine(e))
+      uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
 
       val (t, reqs, unres) = root.typ
       if (!reqs.isEmpty)
@@ -52,15 +52,12 @@ class BottomUpChecker extends TypeChecker {
   def typecheckSpine(e: Exp_[Result]): Unit ={
     var current = e
     while (current != null && current.allKidTypesAvailable) {
-      val isFirstTime = current.typ == null
+      val isFirstTime = !current.valid
       val isRoot = current.parent == null
 
       val t = typecheckStep(current)
 //      println(s"$current -> t")
 //      println(s"  old: ${current.typ}")
-
-//      if (!isFirstTime && current.typ == t)
-//        return
 
       current.typ = t
       if (!isRoot && isFirstTime)
@@ -70,7 +67,7 @@ class BottomUpChecker extends TypeChecker {
   }
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
-    case Num => (TNum, Map(), Set())
+    case Num => (TNum, Map(), Seq())
     case op if op == Add || op == Mul =>
       val (t1, reqs1, unres1) = e.kids(0).typ
       val (t2, reqs2, unres2) = e.kids(1).typ
@@ -85,7 +82,7 @@ class BottomUpChecker extends TypeChecker {
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshTVar()
-      (X, Map(x -> X), Set())
+      (X, Map(x -> X), Seq())
     case App =>
       val (t1, reqs1, unres1) = e.kids(0).typ
       val (t2, reqs2, unres2) = e.kids(1).typ
