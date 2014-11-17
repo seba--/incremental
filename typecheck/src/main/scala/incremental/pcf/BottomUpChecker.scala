@@ -93,11 +93,13 @@ class BottomUpChecker extends TypeChecker {
 
       reqs.get(x) match {
         case None =>
-          val X = freshTVar()
+          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshTVar()
           (TFun(X, t), reqs, unres)
         case Some(treq) =>
           val otherReqs = reqs - x
-          (TFun(treq, t), otherReqs, unres)
+          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else treq
+          val (s, newunres)  = solve(EqConstraint(X, treq))
+          (TFun(treq, t).subst(s), otherReqs.mapValues(_.subst(s)), unres ++ newunres)
       }
     case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]

@@ -67,7 +67,11 @@ class DownUpChecker extends TypeChecker {
       (X.subst(s), s, unres)
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val X = freshTVar()
+      val X =
+        if (e.lits.size == 2)
+          e.lits(1).asInstanceOf[Type]
+        else
+          freshTVar()
 
       val (t, s, unres) = typecheck(e.kids(0), ctx + (x -> X))
       (TFun(X.subst(s), t), s, unres)
