@@ -87,44 +87,39 @@ class BottomUpChecker extends TypeChecker {
       val (s, newunres) = solve(fcons +: mcons)
 
       (X.subst(s), mreqs.mapValues(_.subst(s)), unres1 ++ unres2 ++ newunres)
-    case Abs =>
-      if (e.lits(0).isInstanceOf[Symbol]) {
-        val x = e.lits(0).asInstanceOf[Symbol]
-        val (t, reqs, unres) = e.kids(0).typ
+    case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
+      val x = e.lits(0).asInstanceOf[Symbol]
+      val (t, reqs, unres) = e.kids(0).typ
 
-        reqs.get(x) match {
+      reqs.get(x) match {
+        case None =>
+          val X = freshTVar()
+          (TFun(X, t), reqs, unres)
+        case Some(treq) =>
+          val otherReqs = reqs - x
+          (TFun(treq, t), otherReqs, unres)
+      }
+    case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
+      val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
+      val (t, reqs, unres) = e.kids(0).typ
+
+      val Xs = xs map (_ => freshTVar())
+
+      var restReqs = reqs
+      var tfun = t
+      for (i <- xs.size-1 to 0 by -1) {
+        val x = xs(i)
+        restReqs.get(x) match {
           case None =>
             val X = freshTVar()
-            (TFun(X, t), reqs, unres)
+            tfun = TFun(X, tfun)
           case Some(treq) =>
-            val otherReqs = reqs - x
-            (TFun(treq, t), otherReqs, unres)
+            restReqs = restReqs - x
+            tfun = TFun(treq, tfun)
         }
       }
-      else if (e.lits(0).isInstanceOf[Seq[_]]) {
-        val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
-        val (t, reqs, unres) = e.kids(0).typ
 
-        val Xs = xs map (_ => freshTVar())
-
-        var restReqs = reqs
-        var tfun = t
-        for (i <- xs.size-1 to 0 by -1) {
-          val x = xs(i)
-          restReqs.get(x) match {
-            case None =>
-              val X = freshTVar()
-              tfun = TFun(X, tfun)
-            case Some(treq) =>
-              restReqs = restReqs - x
-              tfun = TFun(treq, tfun)
-          }
-        }
-
-        (tfun, restReqs, unres)
-      }
-      else
-        throw new RuntimeException(s"Cannot handle Abs variables ${e.lits(0)}")
+      (tfun, restReqs, unres)
     case If0 =>
       val (t1, reqs1, unres1) = e.kids(0).typ
       val (t2, reqs2, unres2) = e.kids(1).typ

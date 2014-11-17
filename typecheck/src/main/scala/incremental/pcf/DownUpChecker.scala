@@ -65,30 +65,25 @@ class DownUpChecker extends TypeChecker {
       val (s, unres) = solve(fcons, subsol)
 
       (X.subst(s), s, unres)
-    case Abs =>
-      if (e.lits(0).isInstanceOf[Symbol]) {
-        val x = e.lits(0).asInstanceOf[Symbol]
-        val X = freshTVar()
+    case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
+      val x = e.lits(0).asInstanceOf[Symbol]
+      val X = freshTVar()
 
-        val (t, s, unres) = typecheck(e.kids(0), ctx + (x -> X))
-        (TFun(X.subst(s), t), s, unres)
+      val (t, s, unres) = typecheck(e.kids(0), ctx + (x -> X))
+      (TFun(X.subst(s), t), s, unres)
+    case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
+      val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
+      val Xs = xs map (_ => freshTVar())
+
+      val (t, s, unres) = typecheck(e.kids(0), ctx ++ (xs zip Xs))
+
+      var tfun = t
+      for (i <- xs.size-1 to 0 by -1) {
+        val X = Xs(i)
+        tfun = TFun(X.subst(s), tfun)
       }
-      else if (e.lits(0).isInstanceOf[Seq[_]]) {
-        val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
-        val Xs = xs map (_ => freshTVar())
 
-        val (t, s, unres) = typecheck(e.kids(0), ctx ++ (xs zip Xs))
-
-        var tfun = t
-        for (i <- xs.size-1 to 0 by -1) {
-          val X = Xs(i)
-          tfun = TFun(X.subst(s), tfun)
-        }
-
-        (tfun, s, unres)
-      }
-      else
-        throw new RuntimeException(s"Cannot handle Abs variables ${e.lits(0)}")
+      (tfun, s, unres)
     case If0 =>
       val (t1, s1, unres1) = typecheck(e.kids(0), ctx)
       val (t2, s2, unres2) = typecheck(e.kids(1), ctx)
