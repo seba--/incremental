@@ -22,10 +22,14 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
   }
 
-  def typecheckTest(desc: String, e: =>Exp)(expected: Type): Unit =
+  import scala.language.implicitConversions
+  implicit def eqType(t: Type): PartialFunction[Type,Boolean] = {case t2 => t == t2}
+
+  def typecheckTest(desc: String, e: =>Exp)(expected: PartialFunction[Type,Boolean]): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
-      assertResult(Left(expected))(actual)
+      assert(actual.isLeft, s"Expected resulting type but found type error ${actual.right}")
+      assert(expected.isDefinedAt(actual.left.get) && expected(actual.left.get), s"Unexpected type ${actual.left.get}")
     }
 
   def typecheckTestError(desc: String, e: =>Exp) =
@@ -34,28 +38,12 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 
-  typecheckTest("17", Num(17))(TNum)
-  typecheckTest("17+(10+2)", Add(Num(17), Add(Num(10), Num(2))))(TNum)
-  typecheckTest("17+(10+5)", Add(Num(17), Add(Num(10), Num(5))))(TNum)
-  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(TVar('x$0), TNum))
-  typecheckTest("\\x. x+x", Abs('x, Add(Var('x), Var('x))))(TFun(TNum, TNum))
-  typecheckTestError("\\x. err+x", Abs('x, Add(Var('err), Var('x))))
-  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(TVar('x$1), TVar('x$2)), TFun(TVar('x$1), TVar('x$2))))
-  typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
-  typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
-
-  lazy val fac = Fix(Abs('f, Abs('n, If0(Var('n), Num(1), Mul(Var('n), App(Var('f), Add(Var('n), Num(-1))))))))
-  typecheckTest("factorial", fac)(TFun(TNum, TNum))
-  typecheckTest("eta-expanded factorial", Abs('x, App(fac, Var('x))))((TFun(TNum, TNum)))
-
-  lazy val fib = Fix(Abs('f, Abs('n,
-    If0(Var('n), Num(1),
-      If0(Add(Var('n), Num(-1)), Num(1),
-        Add(App(Var('f), Add(Var('n), Num(-1))),
-          App(Var('f), Add(Var('n), Num(-2)))))))))
-  typecheckTest("fibonacci", fib)(TFun(TNum, TNum))
-  typecheckTest("factorial + fibonacci", Abs('x, Add(App(fac, Var('x)), App(fib, Var('x)))))(TFun(TNum, TNum))
-  typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(TVar('x$0), TVar('x$0)))
+  typecheckTest("Ref(17)", Ref(Num(17)))(TRef(TNum))
+  typecheckTest("17+Deref(Ref(10+2))", Add(Num(17), Deref(Ref(Add(Num(10), Num(2))))))(TNum)
+  typecheckTest("\\x. Deref(x)+Deref(x)", Abs('x, Add(Deref(Var('x)), Deref(Var('x)))))(TFun(TRef(TNum), TNum))
+  typecheckTestError("\\x. x+Deref(x)", Abs('x, Add(Var('x), Deref(Var('x)))))
+  typecheckTest("\\x. \\y. x=y", Abs('x, Abs('y, Assign(Var('x), Var('y))))){case TFun(TRef(TVar(x)), TFun(TVar(y), TUnit)) => x==y}
+  typecheckTest("\\x. \\y. x=y; y", Abs('x, Abs('y, Seq(Assign(Var('x), Var('y)), Var('y))))){case TFun(TRef(TVar(x)), TFun(TVar(y), TVar(z))) => x==y && y==z}
 }
 
 class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
