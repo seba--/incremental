@@ -38,7 +38,7 @@ class BottomUpChecker extends TypeChecker {
       if (!reqs.isEmpty)
         Right(s"Unresolved context requirements $reqs, type $t, unres $unres, unsat $unsat")
       else if (!unres.isEmpty)
-        Right(s"Unresolved constraints $unres, type $t")
+        Right(s"Unresolved constraints $unres, type $t, unsat $unsat")
       else if (!unsat.isEmpty)
         Right(s"Unsatisfiable subtype constraints $unsat, type $t")
       else

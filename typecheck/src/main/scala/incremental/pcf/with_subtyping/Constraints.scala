@@ -55,7 +55,7 @@ object Constraints {
       var res = cs
       for ((tv, c) <- that) {
         cs.get(tv) match {
-          case Some(c1) if c1 != unconstr =>
+          case Some(c1) =>
             res += tv -> (c && c1)
           case None =>
             res += tv -> c
