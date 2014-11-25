@@ -43,15 +43,13 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
 
 
-  //typecheckTest("\\x: TNum . x", Abs('x, Var('x)))(TFun(TVar('x$0), TVar('x$0)))
   typecheckTest("\\x: TNum . x", Abs(Seq('x, TVar('a)),Seq(Var('x))))(TFun(TVar('x$0), TVar('x$0)))
 
-
   typecheckTest("\\a. \\x : a. x", TAbs('a, Abs(Seq('x,TUsVar('a)),Seq((Var('x))))))(TUniv('a, TFun(TUsVar('a), TUsVar('a))))
-
   //typecheckTest("\\a. \\x : a. x", TAbs('a, Abs(Seq('x,'a$0),(Var('x)))))(TUniv('a, TFun(TVar('x$0),TFun(TVar('x$3), TVar('x$0)))))
- typecheckTest("\\a. \\x : a. x + x", TAbs('a, Abs(Seq('x, TUsVar('a)), Seq(Add(Var('x), Var('x))))))(TUniv('a, TFun(TNum, TNum)))
-  //typecheckTest("\\a. \\b. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(TVar('x$1), TVar('x$2)), TFun(TVar('x$1), TVar('x$2))))
+
+  typecheckTest("\\a. \\x : a. x + x", TAbs('a, Abs(Seq('x, TUsVar('a)), Seq(Add(Var('x), Var('x))))))(TUniv('a, TFun(TNum, TNum)))
+
   typecheckTest("\\a. \\f . \\x:a. f x", TAbs('a, Abs(Seq('f,TFun(TUsVar('a),TUsVar('a))),Seq(Abs(Seq('x, TUsVar('a)), Seq(App(Var('f),Var('x))))))))(TUniv('a,TFun(TFun(TUsVar('a), TUsVar('a)),TFun(TUsVar('a), TUsVar('a)))))
 
   typecheckTest("\\a. \\b. \\f:a->a . \\x:b. f x", TAbs('a,TAbs('b, Abs(Seq('f,TFun(TUsVar('a),TUsVar('a))),Seq(Abs(Seq('x, TUsVar('b)), Seq(App(Var('f),Var('x)))))))))(TUniv('a,TUniv('b,TFun(TFun(TUsVar('a), TUsVar('a)),TFun(TUsVar('b), TUsVar('a))))))
