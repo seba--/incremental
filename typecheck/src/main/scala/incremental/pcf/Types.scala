@@ -43,4 +43,5 @@ case class TFun(t1: Type, t2: Type) extends Type {
     case TVar(x) => other.unify(this, s)
     case _ => None
   }
+  override def toString= s"($t1 --> $t2)"
 }
