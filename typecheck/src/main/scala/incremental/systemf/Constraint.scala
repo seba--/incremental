@@ -12,8 +12,8 @@ class Constraint {
   val emptySol: Solution = (Map(), Seq())
 
   private var _nextId = 0
-  def freshTVar(): TVar = {
-    val v = TVar(Symbol("x$" + _nextId))
+  def freshTVar(): TVarInternal = {
+    val v = TVarInternal(Symbol("x$" + _nextId))
     _nextId += 1
     v
   }

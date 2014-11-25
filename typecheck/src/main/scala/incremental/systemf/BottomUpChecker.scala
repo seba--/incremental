@@ -91,7 +91,7 @@ class BottomUpChecker extends TypeChecker {
       (Xalpha, Map(Xalpha -> t), Seq())
 
      // val vcons = EqConstraint(Xbody.subst(Xalpha -> t), Xres)
-      val ucons = EqConstraint(TUniv(Xalpha, Xbody), t1)
+      val ucons = EqConstraint(TUnivInternal(Xalpha, Xbody), t1)
       val (s, newunres) = solve(Seq( ucons))// , vcons
 
       (Xres.subst(s), reqs1.mapValues(_.subst(s)), unres1 ++  newunres)
