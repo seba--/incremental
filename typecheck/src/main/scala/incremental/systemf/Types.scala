@@ -24,7 +24,7 @@ case class TUsVar(alpha : Symbol) extends Type{
 
   // def subst(s: Map[Symbol, Type]) =  //s.apply(alpha) //(Map(alpha -> TUsVar(alpha))
   def unify(other: Type, s :TSubst) = other match {
-    case TUsVar(_) => Some(Map())
+    case TUsVar(`alpha`) => Some(Map())
     case TVar(x) => other.unify(this, s)
     case _ => None
   }
@@ -44,16 +44,21 @@ case class TUsUniv(alpha : Symbol, t : Type) extends Type {
   def subst(s: Map[Symbol, Type]) = TUsUniv(alpha, t.subst(s))
 
   def unify(other: Type, s: TSubst) = other match {
-    case TUniv(alpha2, t2) =>
-      t.unify(t2, s + (alpha -> TUsVar(alpha2)))
+    case TUniv(alpha2, t2) => t.unify(t2, s + (alpha2 -> TUsVar(alpha)))
+    case TUsUniv(`alpha`, t2) => t.unify(t2, s)
+    case TVar(_) => other.unify(this, s)
+    case _ => None
   }
 }
+
 case class TUniv(alpha: Symbol, t : Type) extends Type{
   def subst(s : Map[Symbol, Type]) = TUniv(alpha,  t.subst(s))
   def unify(other: Type, s: TSubst) = other match {
-    case TUniv(alpha2, t2) =>
-     t.unify(t2, s + (alpha -> TUsVar(alpha2)))
-      }
+    case TUniv(alpha2, t2) => t.unify(t2, s + (alpha -> TVar(alpha2)))
+    case TUsUniv(alpha2, t2) => t.unify(t2, s + (alpha -> TUsVar(alpha2)))
+    case TVar(_) => other.unify(this, s)
+    case _ => None
+  }
 }
 
 case class TFun(t1: Type, t2: Type) extends Type {

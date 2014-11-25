@@ -49,7 +49,7 @@ class BottomUpChecker extends TypeChecker {
       val isRoot = current.parent == null
 
       val t = typecheckStep(current)
-//      println(s"$current -> t")
+//      println(s"$current -> $t")
 //      println(s"  old: ${current.typ}")
 
       current.typ = t
@@ -149,8 +149,7 @@ class BottomUpChecker extends TypeChecker {
     case TAbs if (e.lits(0).isInstanceOf[Symbol]) =>
       val alpha = e.lits(0).asInstanceOf[Symbol]
       val (t, reqs, unres) = e.kids(0).typ
-
-      ( TUniv(alpha, t), reqs - alpha, unres)
+      (TUniv(alpha, t), reqs - alpha, unres)
 
     case If0 =>
       val (t1, reqs1, unres1) = e.kids(0).typ
