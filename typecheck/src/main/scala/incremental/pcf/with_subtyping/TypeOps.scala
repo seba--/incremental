@@ -35,7 +35,7 @@ object TypeOps {
       case (Bot, t) => t
       case (t, Bot) => t
       case (TNum, TNum) => TNum
-      case (s1 --> t1, s2 --> t2) => (s1 & s2) --> (t1 | t2)
+      case (s1 -->: t1, s2 -->: t2) => (s1 & s2) -->: (t1 | t2)
       case _ => Top
     }
 
@@ -49,14 +49,14 @@ object TypeOps {
       case (t, Top) => t
       case (Bot, _) | (_, Bot) => Bot
       case (TNum, TNum) => TNum
-      case (s1 --> t1, s2 --> t2) => (s1 | s2) --> (t1 & t2)
+      case (s1 -->: t1, s2 -->: t2) => (s1 | s2) -->: (t1 & t2)
       case _ => Bot
     }
 
-    def -->(that: Type): Type = TFun(tpe, that)
+    def -->:(that: Type): Type = TFun(tpe, that)
   }
 
-  object --> {
+  object -->: {
     def unapply(t: Type): Option[(Type, Type)] = t match {
       case TFun(t1, t2) => Some((t1,t2))
       case _ => None

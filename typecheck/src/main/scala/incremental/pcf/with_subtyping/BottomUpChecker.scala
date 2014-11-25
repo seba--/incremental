@@ -86,7 +86,7 @@ class BottomUpChecker extends TypeChecker {
       val (t1, reqs1, unres1, unsat1) = e.kids(0).typ
       val (t2, reqs2, unres2, unsat2) = e.kids(1).typ
       val (u, v): (Type, Type) = (freshTVar(), freshTVar())
-      val (fcons, funsat) = Constraint.normalize(u --> v, t1, u --> v)
+      val (fcons, funsat) = Constraint.normalize(u -->: v, t1, u -->: v)
       val (argcons, argunsat) = Constraint.normalize(Bot, t2, u)
       val (mreqs, mcons, munsat) = mergeReqMaps(reqs1, reqs2)
       val (s, newunres, newunsat) = solve(fcons && argcons && mcons && unres1 && unres2)
@@ -98,12 +98,12 @@ class BottomUpChecker extends TypeChecker {
 
       reqs.get(x) match {
         case None =>
-          (annotatedT --> t, reqs - x, unres, unsat)
+          (annotatedT -->: t, reqs - x, unres, unsat)
         case Some(treq) =>
           val otherReqs = reqs - x
           val (xcons, xunsat) = Constraint.normalize(Bot, treq, annotatedT)
           val (s, newunres, newunsat)  = solve(xcons && unres)
-          ((annotatedT --> t).subst(s), otherReqs.mapValues(_.subst(s)), newunres, unsat ++ newunsat)
+          ((annotatedT -->: t).subst(s), otherReqs.mapValues(_.subst(s)), newunres, unsat ++ newunsat)
       }
     /*case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
@@ -140,7 +140,7 @@ class BottomUpChecker extends TypeChecker {
     case Fix =>
       val (t, reqs, unres, unsat) = e.kids(0).typ
       val X = freshTVar()
-      val (fixCons, fixUnsat) = Constraint.normalize(X --> X, t, X --> X)
+      val (fixCons, fixUnsat) = Constraint.normalize(X -->: X, t, X -->: X)
       val (s, newunres, newunsat) = solve(fixCons && unres)
       (X.subst(s), reqs.mapValues(_.subst(s)), newunres, unsat ++ fixUnsat ++ newunsat)
   }

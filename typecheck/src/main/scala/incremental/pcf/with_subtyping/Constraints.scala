@@ -36,7 +36,7 @@ object Constraints {
       case (TVar(a), t2) => (CSet(a -> Between(Bot, t2)), Set())
       case (t1, TVar(a)) => (CSet(a -> Between(t1, Top)), Set())
       case (TNum, TNum) => (CSet(), Set())
-      case (s1 --> t1, s2 --> t2) =>
+      case (s1 -->: t1, s2 -->: t2) =>
         val (c1, u1) = subtypeConstraints(s2, s1)
         val (c2, u2) = subtypeConstraints(t1, t2)
         (c1 && c2, u1 ++ u2)

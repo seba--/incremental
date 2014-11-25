@@ -40,12 +40,12 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
     }
 
   typecheckTest("lambda f: TNum -> Top -> TNum. lambda g: Top -> TNum. f g",
-    Abs(Seq('f, TNum --> Top --> TNum), Seq(Abs(Seq('g, Top --> TNum),  Seq(App(Var('f), Var('g))))))) {
-      case (TNum --> Top --> TNum) --> (Top --> TNum) --> TNum => true
+    Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(Abs(Seq('g, Top -->: TNum),  Seq(App(Var('f), Var('g))))))) {
+      case ((TNum -->: Top) -->: TNum) -->: (Top -->: TNum) -->: TNum => true
   }
   typecheckTest("lambda f: TNum -> TNum. lambda g: (TNum -> TNum) -> (TNum -> TNum). if0 0 f g",
-    Abs(Seq('f, TNum --> TNum), Seq(Abs(Seq('g, (TNum --> TNum) --> (TNum --> TNum)), Seq(App(Var('f), Var('g))))))) {
-      case (TNum --> TNum) --> ((TNum --> TNum) --> (TNum --> TNum)) --> (Bot --> Top) => true
+    Abs(Seq('f, TNum -->: TNum), Seq(Abs(Seq('g, (TNum -->: TNum) -->: (TNum -->: TNum)), Seq(App(Var('f), Var('g))))))) {
+      case (TNum -->: TNum) -->: ((TNum -->: TNum) -->: (TNum -->: TNum)) -->: (Bot -->: Top) => true
   }
 }
 
