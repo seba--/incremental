@@ -45,10 +45,19 @@ object Constraints {
 
   }
 
-  type CSet = Map[Symbol, Constraint]
-  val empty: CSet = Map().withDefaultValue(unconstr)
+  type CSet = Map[Symbol, Set[Constraint]]
+  val empty: CSet = Map().withDefaultValue(Set(unconstr))
   object CSet {
-    def apply(cs: (Symbol, Constraint)*): CSet = Map((cs filter (_._2 != unconstr)): _*).withDefaultValue(unconstr)
+    def apply(cs: (Symbol, Constraint)*): CSet = {
+      var res: CSet = Map()
+      for ((tv, c) <- cs) {
+        res.get(tv) match {
+          case None => res += tv -> Set(c)
+          case Some(cset) => res += tv -> (cset + c)
+        }
+      }
+      res
+    }
   }
   implicit class CSetOps(val cs: CSet) extends AnyVal {
     def &&(that: CSet): CSet = {
@@ -56,7 +65,7 @@ object Constraints {
       for ((tv, c) <- that) {
         cs.get(tv) match {
           case Some(c1) =>
-            res += tv -> (c && c1)
+            res += tv -> (c ++ c1)
           case None =>
             res += tv -> c
         }
