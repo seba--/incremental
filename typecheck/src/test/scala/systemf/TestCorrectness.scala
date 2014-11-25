@@ -57,8 +57,8 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(TVarInternal('x$0), TVarInternal('x$0)))
 
   // test polymorphism
-  typecheckTest("\\x: a . x", Abs(Seq('x, TVar('a)),Seq(Var('x))))(TFun(TVar('a), TVar('a)))
-  typecheckTest("\\a. \\x : a. x", TAbs('a, Abs(Seq('x,TVar('a)),Seq(Var('x)))))(TUniv('a, TFun(TVar('a), TVar('a))))
+  typecheckTest("\\x: a . x", Abs('x, TVar('a), Var('x)))(TFun(TVar('a), TVar('a)))
+  typecheckTest("\\a. \\x : a. x", TAbs('a, Abs('x, TVar('a), Var('x))))(TUniv('a, TFun(TVar('a), TVar('a))))
   typecheckTestError("\\a. \\x : a. x + x", TAbs('a, Abs(Seq('x, TVar('a)), Seq(Add(Var('x), Var('x))))))
   typecheckTest("\\a. \\f : a -> a. \\x:a. f x", TAbs('a, Abs(Seq('f,TFun(TVar('a),TVar('a))),Seq(Abs(Seq('x, TVar('a)), Seq(App(Var('f),Var('x))))))))(TUniv('a,TFun(TFun(TVar('a), TVar('a)),TFun(TVar('a), TVar('a)))))
   typecheckTestError("\\a. \\b. \\f:a->a . \\x:b. f x", TAbs('a,TAbs('b, Abs(Seq('f,TFun(TVar('a),TVar('a))),Seq(Abs(Seq('x, TVar('b)), Seq(App(Var('f),Var('x)))))))))
