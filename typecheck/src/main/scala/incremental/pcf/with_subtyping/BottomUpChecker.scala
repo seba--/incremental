@@ -23,7 +23,7 @@ class BottomUpChecker extends TypeChecker {
   def mergeReqsTime = solver.mergeReqsTime
   def constraintSolveTime = solver.constraintSolveTime
 
-  type Result = (Type, Require, CSet, Unsat)
+  type Result = (Type, Require, CSet)
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
@@ -34,13 +34,11 @@ class BottomUpChecker extends TypeChecker {
     val (res, ctime) = Util.timed {
       uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
 
-      val (t, reqs, unres, unsat) = root.typ
+      val (t, reqs, unres) = root.typ
       if (!reqs.isEmpty)
-        Right(s"Unresolved context requirements $reqs, type $t, unres $unres, unsat $unsat")
+        Right(s"Unresolved context requirements $reqs, type $t, unres $unres")
       else if (!unres.isEmpty)
-        Right(s"Unresolved constraints $unres, type $t, unsat $unsat")
-      else if (!unsat.isEmpty)
-        Right(s"Unsatisfiable subtype constraints $unsat, type $t")
+        Right(s"Unresolved constraints $unres, type $t")
       else
         Left(t)
     }
@@ -66,44 +64,41 @@ class BottomUpChecker extends TypeChecker {
   }
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
-    case Num => (TNum, Map(), CSet(), Set())
+    case Num => (TNum, Map(), empty)
     case op if op == Add || op == Mul =>
-      val (t1, reqs1, unres1, unsat1) = e.kids(0).typ
-      val (t2, reqs2, unres2, unsat2) = e.kids(1).typ
-
-      val (lcons, lunsat) = Constraint.normalize(Bot, t1, TNum)
-      val (rcons, runsat) = Constraint.normalize(Bot, t2, TNum)
-
-      val (mreqs, mcons, munsat) = mergeReqMaps(reqs1, reqs2)
-
-      val (s, newunres, newunsat) = solve(mcons && lcons && rcons && unres1 && unres2)
-      (TNum, mreqs.mapValues(_.subst(s)), newunres, unsat1 ++ unsat2 ++ lunsat ++ runsat ++ munsat ++ newunsat)
+      val (t1, reqs1, unres1) = e.kids(0).typ
+      val (t2, reqs2, unres2) = e.kids(1).typ
+      val lcons = Constraint.normalizeEq(t1, TNum)
+      val rcons = Constraint.normalizeEq(t2, TNum)
+      val (mreqs, mcons) = mergeReqMaps(reqs1, reqs2)
+      val (s, newunres) = solve(mcons && lcons && rcons && unres1 && unres2)
+      (TNum, mreqs.mapValues(_.subst(s)), newunres)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshTVar()
-      (X, Map(x -> X), CSet(), Set())
+      (X, Map(x -> X), empty)
     case App =>
-      val (t1, reqs1, unres1, unsat1) = e.kids(0).typ
-      val (t2, reqs2, unres2, unsat2) = e.kids(1).typ
-      val (u, v): (Type, Type) = (freshTVar(), freshTVar())
-      val (fcons, funsat) = Constraint.normalize(u -->: v, t1, u -->: v)
-      val (argcons, argunsat) = Constraint.normalize(Bot, t2, u)
-      val (mreqs, mcons, munsat) = mergeReqMaps(reqs1, reqs2)
-      val (s, newunres, newunsat) = solve(fcons && argcons && mcons && unres1 && unres2)
-      (v.subst(s), mreqs.mapValues(_.subst(s)), newunres, unsat1 ++ unsat2 ++ funsat ++ argunsat ++ munsat ++ newunsat)
-    case Abs if (e.lits(0).isInstanceOf[Symbol] && e.lits(1).isInstanceOf[Type]) => //TODO fugly
+      val (t1, reqs1, unres1) = e.kids(0).typ
+      val (t2, reqs2, unres2) = e.kids(1).typ
+      val (u, v) = (freshTVar(), freshTVar())
+      val fcons = Constraint.normalizeEq(t1, u -->: v)
+      val argcons = Constraint.normalizeSub(Bot, t2, u)
+      val (mreqs, mcons) = mergeReqMaps(reqs1, reqs2)
+      val (s, newunres) = solve(fcons && argcons && mcons && unres1 && unres2)
+      (v.subst(s), mreqs.mapValues(_.subst(s)), newunres)
+    case Abs if (e.lits(0).isInstanceOf[Symbol] && e.lits(1).isInstanceOf[Type]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val annotatedT = e.lits(1).asInstanceOf[Type]
-      val (t, reqs, unres, unsat) = e.kids(0).typ
+      val (t, reqs, unres) = e.kids(0).typ
 
       reqs.get(x) match {
         case None =>
-          (annotatedT -->: t, reqs - x, unres, unsat)
+          (annotatedT -->: t, reqs - x, unres)
         case Some(treq) =>
           val otherReqs = reqs - x
-          val (xcons, xunsat) = Constraint.normalize(Bot, treq, annotatedT)
-          val (s, newunres, newunsat)  = solve(xcons && unres)
-          ((annotatedT -->: t).subst(s), otherReqs.mapValues(_.subst(s)), newunres, unsat ++ newunsat)
+          val xcons = Constraint.normalizeEq(treq, annotatedT)
+          val (s, newunres)  = solve(xcons && unres)
+          ((annotatedT -->: t).subst(s), otherReqs.mapValues(_.subst(s)), newunres)
       }
     /*case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
@@ -127,22 +122,30 @@ class BottomUpChecker extends TypeChecker {
 
       (tfun, restReqs, unres)*/
     case If0 =>
-      val (t1, reqs1, unres1, unsat1) = e.kids(0).typ
-      val (t2, reqs2, unres2, unsat2) = e.kids(1).typ
-      val (t3, reqs3, unres3, unsat3) = e.kids(2).typ
-      val (reqsCombined, cset, unsat) = mergeReqMaps(reqs1, reqs2, reqs3)
+      println("If0")
+      val (t1, reqs1, unres1) = e.kids(0).typ
+      val (t2, reqs2, unres2) = e.kids(1).typ
+      val (t3, reqs3, unres3) = e.kids(2).typ
+      val (reqsCombined, cset) = mergeReqMaps(reqs1, reqs2, reqs3)
       val t4 = freshTVar()
-      val (ccons, cunsat) = Constraint.normalize(TNum, t1, TNum)
-      val (tcons, tunsat) = Constraint.normalize(Bot, t2, t4)
-      val (econs, eunsat) = Constraint.normalize(Bot, t3, t4)
-      val (s, newunres, newunsat) = solve(cset && unres1 && unres2 && unres3 && ccons && tcons && econs)
-      (t4.subst(s), reqsCombined.mapValues(_.subst(s)), newunres, unsat1 ++ unsat2 ++ unsat3 ++ cunsat ++ tunsat ++ eunsat ++ newunsat)
+      val ccons = Constraint.normalizeEq(t1, TNum)
+      val tcons = Constraint.normalizeSub(Bot, t2, t4)
+      val econs = Constraint.normalizeSub(Bot, t3, t4)
+      println(cset)
+      println(unres1)
+      println(unres2)
+      println(unres3)
+      println(ccons)
+      println(tcons)
+      println(econs)
+      val (s, newunres) = solve(cset && unres1 && unres2 && unres3 && ccons && tcons && econs)
+      (t4.subst(s), reqsCombined.mapValues(_.subst(s)), newunres)
     case Fix =>
-      val (t, reqs, unres, unsat) = e.kids(0).typ
+      val (t, reqs, unres) = e.kids(0).typ
       val X = freshTVar()
-      val (fixCons, fixUnsat) = Constraint.normalize(X -->: X, t, X -->: X)
-      val (s, newunres, newunsat) = solve(fixCons && unres)
-      (X.subst(s), reqs.mapValues(_.subst(s)), newunres, unsat ++ fixUnsat ++ newunsat)
+      val fixCons = Constraint.normalizeEq(t, X -->: X)
+      val (s, newunres) = solve(fixCons && unres)
+      (X.subst(s), reqs.mapValues(_.subst(s)), newunres)
   }
 }
 

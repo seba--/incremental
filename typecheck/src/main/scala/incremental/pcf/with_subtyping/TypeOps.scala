@@ -53,7 +53,7 @@ object TypeOps {
       case _ => Bot
     }
 
-    def -->:(that: Type): Type = TFun(tpe, that)
+    def -->:(that: Type): Type = TFun(that, tpe)
   }
 
   object -->: {

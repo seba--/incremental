@@ -1,14 +1,12 @@
 package incremental.pcf.with_subtyping
 
-
-
 import incremental.Type._
 import incremental.{Util, Type}
 import incremental.pcf.{Constraint => _, TNum, TVar}
 import TypeOps._
 
 object Constraints {
-  type Unsat = Set[(Type, Type)]
+  type Unsat = Set[Constraint]
   type Require = Map[Symbol, Type]
 
   sealed trait Constraint {
@@ -20,29 +18,32 @@ object Constraints {
         Between(lower | l1, upper & u1)
     }
   }
+  case class Equal(tpe: Type) extends Constraint {
+    def &&(that: Constraint) = ??? //TODO
+  }
   val unconstr: Constraint = Between(Bot, Top)
 
   object Constraint {
-    def normalize(lower: Type, arg: Type, upper: Type): (CSet, Unsat) = {
-      val (c1, u1) = subtypeConstraints(lower, arg)
-      val (c2, u2) = subtypeConstraints(arg, upper)
-      (c1 && c2, u1 ++ u2)
+    def normalizeSub(lower: Type, arg: Type, upper: Type): CSet =
+      subtypeConstraints(lower, arg) && subtypeConstraints(arg, upper)
+    
+    def normalizeEq(a: Type, b: Type): CSet = (a, b) match {
+      case (t1, t2) if t1 == t2 => empty
+      case (TVar(x), TVar(y)) => CSet(x -> Equal(TVar(y)), y -> Equal(TVar(x)))
+      case (TVar(x), t2) => CSet(x -> Equal(t2))
+      case (t1, TVar(x)) => CSet(x -> Equal(t1))
+      case (s1 -->: t1, s2 -->: t2) => normalizeEq(s1, s2) && normalizeEq(s2, t2)
     }
 
-    def subtypeConstraints(s: Type, t: Type): (CSet, Unsat) = (s,t) match {
-      case (_, Top) => (CSet(), Set())
-      case (Bot, _) => (CSet(), Set())
-      case (TVar(a), TVar(b)) if a == b => (CSet(), Set())
-      case (TVar(a), t2) => (CSet(a -> Between(Bot, t2)), Set())
-      case (t1, TVar(a)) => (CSet(a -> Between(t1, Top)), Set())
-      case (TNum, TNum) => (CSet(), Set())
+    def subtypeConstraints(s: Type, t: Type): CSet = (s,t) match {
+      case (t1, t2) if t1 == t2 => empty
+      case (_, Top) => empty
+      case (Bot, _) => empty
+      case (TVar(a), t2) => CSet(a -> Between(Bot, t2))
+      case (t1, TVar(a)) => CSet(a -> Between(t1, Top))
       case (s1 -->: t1, s2 -->: t2) =>
-        val (c1, u1) = subtypeConstraints(s2, s1)
-        val (c2, u2) = subtypeConstraints(t1, t2)
-        (c1 && c2, u1 ++ u2)
-      case _ => (CSet(), Set((s,t)))
+        subtypeConstraints(s2, s1) && subtypeConstraints(t1, t2)
     }
-
   }
 
   type CSet = Map[Symbol, Set[Constraint]]
@@ -87,44 +88,42 @@ object Constraints {
     var constraintSolveTime = 0.0
     var mergeSolutionTime = 0.0
 
-    def mergeReqMaps(r1: Require, r2: Require): (Require, CSet, Unsat) = {
+    def mergeReqMaps(r1: Require, r2: Require): (Require, CSet) = {
       val (res, time) = Util.timed { _mergeReqMaps(r1, r2)  }
       mergeReqsTime += time
       res
     }
 
-    def _mergeReqMaps(r1: Require, r2: Require): (Require, CSet, Unsat) = {
-      var cset: CSet = CSet()
-      var unsat: Unsat = Set()
+    def _mergeReqMaps(r1: Require, r2: Require): (Require, CSet) = {
+      var cset: CSet = empty
       var req: Require = r1
       for ((v,tpe2) <- r2) {
         r1.get(v) match {
           case Some(tpe) =>
-              val (c, u) = Constraint.normalize(tpe, tpe2, tpe)
+              val c = Constraint.normalizeSub(tpe, tpe2, tpe)
               cset = cset && c
-              unsat ++= u
           case None =>
             req += v -> tpe2
         }
       }
-      (req, cset, unsat)
+      (req, cset)
     }
 
-    def mergeReqMaps(r1: Require, r2: Require, r3: Require, rs: Require*): (Require, CSet, Unsat) = {
+    def mergeReqMaps(r1: Require, r2: Require, r3: Require, rs: Require*): (Require, CSet) = {
       val (res, time) = Util.timed { _mergeReqMaps(r1, r2, r3, rs:_*)  }
       mergeReqsTime += time
       res
     }
 
-    def _mergeReqMaps(r1: Require, r2: Require, r3: Require, rs: Require*): (Require, CSet, Unsat) = {
-      (r2 +: r3 +: rs).foldLeft((r1, CSet(), Set[(Type,Type)]())) {
-        case ((req, cset, unsat), req2) =>
-          val (res, cset2, unsat2) = _mergeReqMaps(req, req2)
-          (res, cset && cset2, unsat ++ unsat2)
+    def _mergeReqMaps(r1: Require, r2: Require, r3: Require, rs: Require*): (Require, CSet) = {
+      (r2 +: r3 +: rs).foldLeft((r1, empty)) {
+        case ((req, cset), req2) =>
+          val (res, cset2) = _mergeReqMaps(req, req2)
+          (res, cset && cset2)
       }
     }
 
-    def solve(cset: CSet): (TSubst, CSet, Unsat) = {
+    def solve(cset: CSet): (TSubst, CSet) = {
       constraintCount += cset.size
       val (res, time) = Util.timed { _solve(cset) }
       constraintSolveTime += time
@@ -132,8 +131,8 @@ object Constraints {
     }
 
 
-    def _solve(cset: CSet): (TSubst, CSet, Unsat) = {
-      (Map(), cset, Set()) //TODO implement the solver
+    def _solve(cset: CSet): (TSubst, CSet) = {
+      (Map(), cset) //TODO implement the solver
     }
   }
 }
