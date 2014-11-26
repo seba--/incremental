@@ -33,13 +33,6 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
       assert(expected.isDefinedAt(actual.left.get) && expected(actual.left.get), s"Unexpected type ${actual.left.get}")
     }
 
-  def testTypecheckFails(desc: String)(e: => Exp): Unit = {
-    test (s"$classdesc: Check failure $desc") {
-      val actual = checker.typecheck(e)
-      assert(actual.isRight, s"Expected type error but found resulting type ${actual.left}")
-    }
-  }
-
   def typecheckTestError(desc: String, e: =>Exp) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
@@ -54,11 +47,9 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
     Abs(Seq('f, TNum -->: TNum), Seq(Abs(Seq('g, (TNum -->: TNum) -->: (TNum -->: TNum)), Seq(If0(Num(0), Var('f), Var('g))))))) {
       case (TNum -->: TNum) -->: ((TNum -->: TNum) -->: (TNum -->: TNum)) -->: (Bot -->: Top) => true
   }
-  typecheckTest("lambda f: (TNum -> Top) -> TNum. lambda g: TNum. f g",
+  typecheckTestError("lambda f: (TNum -> Top) -> TNum. lambda g: TNum. f g",
     Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(Abs(Seq('g, TNum),  Seq(App(Var('f), Var('g))))))
-  ) {
-    case (TNum -->: TNum) -->: ((TNum -->: TNum) -->: (TNum -->: TNum)) -->: (Bot -->: Top) => true
-  }
+  )
 }
 
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpCheckerFactory)

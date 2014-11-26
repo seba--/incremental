@@ -19,7 +19,6 @@ object TypeOps {
      */
     def <(that: Type): Boolean = (tpe, that) match {
       case (_, Top) | (Bot, _) => true
-      case (TVar(x), TVar(y)) if x == y => true
       case (TNum, TNum) => true
       case (TFun(s1, t1), TFun(s2, t2)) => s2 < s1 && t1 < t2
       case _ => false

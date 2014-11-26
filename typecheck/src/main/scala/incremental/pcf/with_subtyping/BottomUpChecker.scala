@@ -33,17 +33,18 @@ class BottomUpChecker extends TypeChecker {
     preparationTime += ptime
 
     val (res, ctime) = Util.timed {
-      uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
+      try {
+        uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
+        val (t, reqs, cons) = root.typ
+        val sigma = cons.finalized
+        if (!reqs.isEmpty)
+          Right(s"Unresolved context requirements $reqs, type $t, cons $cons")
+        else
+          Left(t.subst(sigma))
+      } catch {
+        case ConstraintException(msg) => Right(msg)
+      }
 
-      val (t, reqs, unres) = root.typ
-      val sigma = unres.finalized
-
-      if (!reqs.isEmpty)
-        Right(s"Unresolved context requirements $reqs, type $t, unres $unres")
-      else if (!unres.isEmpty)
-        Right(s"Unresolved constraints $unres, type $t")
-      else
-        Left(t)
     }
     typecheckTime += ctime
     res
@@ -69,39 +70,39 @@ class BottomUpChecker extends TypeChecker {
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
     case Num => (TNum, Map(), empty)
     case op if op == Add || op == Mul =>
-      val (t1, reqs1, unres1) = e.kids(0).typ
-      val (t2, reqs2, unres2) = e.kids(1).typ
+      val (t1, reqs1, cons1) = e.kids(0).typ
+      val (t2, reqs2, cons2) = e.kids(1).typ
       val lcons = Constraint.normalizeEq(t1, TNum) //TODO add some more interesting use of subtyping here?
       val rcons = Constraint.normalizeEq(t2, TNum)
       val (mreqs, mcons) = mergeReqMaps(reqs1, reqs2)
-      val (s, newunres) = solve(unres1 && unres2 && lcons && rcons && mcons)
-      (TNum, mreqs.mapValues(_.subst(s)), newunres)
+      val newcons = cons1 && cons2 && lcons && rcons && mcons
+      (TNum, mreqs, newcons)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshTVar()
       (X, Map(x -> X), empty)
     case App =>
-      val (t1, reqs1, unres1) = e.kids(0).typ
-      val (t2, reqs2, unres2) = e.kids(1).typ
+      val (t1, reqs1, cons1) = e.kids(0).typ
+      val (t2, reqs2, cons2) = e.kids(1).typ
       val (u, v) = (freshTVar(), freshTVar())
       val fcons = Constraint.normalizeEq(t1, u -->: v)
       val argcons = Constraint.normalizeSub(Bot, t2, u)
       val (mreqs, mcons) = mergeReqMaps(reqs1, reqs2)
-      val (s, newunres) = solve(unres1 && unres2 && fcons && argcons && mcons)
-      (v.subst(s), mreqs.mapValues(_.subst(s)), newunres)
+      val newcons = cons1 && cons2 && fcons && argcons && mcons
+      (v, mreqs, newcons)
     case Abs if (e.lits(0).isInstanceOf[Symbol] && e.lits(1).isInstanceOf[Type]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val annotatedT = e.lits(1).asInstanceOf[Type]
-      val (t, reqs, unres) = e.kids(0).typ
+      val (t, reqs, cons) = e.kids(0).typ
 
       reqs.get(x) match {
         case None =>
-          (annotatedT -->: t, reqs - x, unres)
+          (annotatedT -->: t, reqs - x, cons)
         case Some(treq) =>
           val otherReqs = reqs - x
           val xcons = Constraint.normalizeEq(treq, annotatedT)
-          val (s, newunres)  = solve(unres && xcons)
-          ((annotatedT -->: t).subst(s), otherReqs.mapValues(_.subst(s)), newunres)
+          val newcons = cons && xcons
+          (annotatedT -->: t, otherReqs, newcons)
       }
     /*case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
@@ -125,22 +126,22 @@ class BottomUpChecker extends TypeChecker {
 
       (tfun, restReqs, unres)*/
     case If0 =>
-      val (t1, reqs1, unres1) = e.kids(0).typ
-      val (t2, reqs2, unres2) = e.kids(1).typ
-      val (t3, reqs3, unres3) = e.kids(2).typ
+      val (t1, reqs1, cons1) = e.kids(0).typ
+      val (t2, reqs2, cons2) = e.kids(1).typ
+      val (t3, reqs3, cons3) = e.kids(2).typ
       val (reqsCombined, cset) = mergeReqMaps(reqs1, reqs2, reqs3)
       val t4 = freshTVar()
       val ccons = Constraint.normalizeEq(t1, TNum)
       val tcons = Constraint.normalizeSub(Bot, t2, t4)
       val econs = Constraint.normalizeSub(Bot, t3, t4)
-      val (s, newunres) = solve(unres1 && unres2 && unres3 && cset && ccons && tcons && econs)
-      (t4.subst(s), reqsCombined.mapValues(_.subst(s)), newunres)
+      val newcons = cons1 && cons2 && cons3 && cset && ccons && tcons && econs
+      (t4, reqsCombined, newcons)
     case Fix =>
-      val (t, reqs, unres) = e.kids(0).typ
+      val (t, reqs, cons) = e.kids(0).typ
       val X = freshTVar()
       val fixCons = Constraint.normalizeEq(t, X -->: X)
-      val (s, newunres) = solve(unres && fixCons)
-      (X.subst(s), reqs.mapValues(_.subst(s)), newunres)
+      val newcons = cons && fixCons
+      (X, reqs, newcons)
   }
 }
 

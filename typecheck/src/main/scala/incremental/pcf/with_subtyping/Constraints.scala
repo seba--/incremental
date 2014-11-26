@@ -75,7 +75,7 @@ object Constraints {
       case Between(l1, u1) =>
         val (l, lc) = lower | l1
         val (u, uc) = upper & u1
-        (Between(l, u), lc && uc)
+        (if (l == u) Equal(l) else Between(l, u), lc && uc)
       case Equal(t) =>
         (that, Constraint.normalizeSub(lower, t, upper))
     }
@@ -132,11 +132,6 @@ object Constraints {
     }
   }
   implicit class CSetOps(val cs: CSet) extends AnyVal {
-    /**
-     * Meet of constraint sets
-     * @param that
-     * @return
-     */
     def &&(that: CSet): CSet = extend(that)
 
     def update(x: Symbol, c: Constraint): CSet = {
@@ -155,6 +150,8 @@ object Constraints {
         c match {
           case e@Equal(t) =>
             res = res.subst(x, e)
+          case Between(l, u) if l == u=>
+            res = res.subst(x, Equal(u))
           case _ =>
             res = res.update(x, c)
         }
@@ -182,7 +179,10 @@ object Constraints {
 
     def finalized: TSubst = cs.mapValues {
       case Equal(t) => t
-      case Between(lower, upper) => throw ConstraintException(s"There were unresolved subtype constraints in solution $cs")
+      case Between(lower, upper) if lower < upper =>  //TODO check if this is always sound
+        lower
+      case _ =>
+        throw ConstraintException(s"There were unresolved subtype constraints in solution $cs")
     }
   }
 
@@ -204,7 +204,7 @@ object Constraints {
       for ((v,tpe2) <- r2) {
         r1.get(v) match {
           case Some(tpe) =>
-              val c = Constraint.normalizeSub(tpe, tpe2, tpe)
+              val c = Constraint.normalizeEq(tpe, tpe2)
               cset = cset && c
           case None =>
             req += v -> tpe2
@@ -225,17 +225,6 @@ object Constraints {
           val (res, cset2) = _mergeReqMaps(req, req2)
           (res, cset && cset2)
       }
-    }
-
-    def solve(cset: CSet): (TSubst, CSet) = {
-      constraintCount += cset.size
-      val (res, time) = Util.timed { _solve(cset) }
-      constraintSolveTime += time
-      res
-    }
-
-    def _solve(cset: CSet): (TSubst, CSet) = {
-      (Map(), cset) //TODO remove this method
     }
   }
 }
