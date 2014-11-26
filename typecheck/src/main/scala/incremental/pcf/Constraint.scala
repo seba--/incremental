@@ -112,5 +112,6 @@ class Constraint {
 }
 
 case class EqConstraint(expected: Type, actual: Type) {
+
   def solve(s: TSubst) = expected.unify(actual, s)
 }

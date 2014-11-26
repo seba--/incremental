@@ -1,7 +1,7 @@
 package incremental.systemf
 
 import incremental.Type.TSubst
-import incremental.{Util, Type}
+import incremental.{Exp_, Util, Type}
 
 /**
  * Created by seba on 13/11/14.
@@ -12,8 +12,8 @@ class Constraint {
   val emptySol: Solution = (Map(), Seq())
 
   private var _nextId = 0
-  def freshTVar(): TVar = {
-    val v = TVar(Symbol("x$" + _nextId))
+  def freshTVar(): TVarInternal = {
+    val v = TVarInternal(Symbol("x$" + _nextId))
     _nextId += 1
     v
   }
@@ -108,6 +108,16 @@ class Constraint {
     }
 
     (s, unres)
+  }
+
+ def substConstraint(a : Type, t : Type): Solution = {
+
+   def solve(s : TSubst) = a.subst(s)
+
+ }
+
+  def substitute(a:Symbol, actual : Type, body : Type): Type = {
+    body.subst(Map(a -> actual))
   }
 }
 
