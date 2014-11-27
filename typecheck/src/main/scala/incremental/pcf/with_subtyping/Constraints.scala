@@ -63,12 +63,6 @@ object Constraints {
         (sr -->: tr, cs && ct)
       case _ => (Top, empty)
     }
-
-    def occurs(tv: Symbol): Boolean = tpe match {
-      case TVar(x) if x == tv => true
-      case s -->: t => s.occurs(tv) || t.occurs(tv)
-      case _ => false
-    }
   }
 
   case class ConstraintException(msg: String) extends RuntimeException(msg)
