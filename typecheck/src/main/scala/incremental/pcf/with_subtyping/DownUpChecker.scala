@@ -5,7 +5,6 @@ import incremental.Exp._
 import incremental.Type._
 import incremental._
 import incremental.pcf._
-import incremental.pcf.with_subtyping.Constraints._
 import TypeOps._
 
 /**
@@ -13,7 +12,7 @@ import TypeOps._
  */
 class DownUpChecker extends TypeChecker {
 
-  val solver = new Solver
+  val solver = new Constraints
   import solver._
   def constraintCount = solver.constraintCount
   def mergeReqsTime = solver.mergeReqsTime
@@ -44,8 +43,8 @@ class DownUpChecker extends TypeChecker {
     case k if k == Add || k == Mul =>
       val (t1, unres1) = typecheck(e.kids(0), ctx)
       val (t2, unres2) = typecheck(e.kids(1), ctx)
-      val lcons = Constraint.normalizeEq(t1, TNum)
-      val rcons = Constraint.normalizeEq(t2, TNum)
+      val lcons = normalizeEq(t1, TNum)
+      val rcons = normalizeEq(t2, TNum)
       (TNum, unres1 && unres2 && lcons && rcons)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -57,8 +56,8 @@ class DownUpChecker extends TypeChecker {
       val (t1, unres1) = typecheck(e.kids(0), ctx)
       val (t2, unres2) = typecheck(e.kids(1), ctx)
       val (x,y) = (freshTVar(), freshTVar())
-      val fcons = Constraint.normalizeEq(t1, x -->: y)
-      val argcons = Constraint.normalizeSub(Bot, t2, x)
+      val fcons = normalizeEq(t1, x -->: y)
+      val argcons = normalizeSub(Bot, t2, x)
       (y, unres1 && unres2 && fcons && argcons)
     case Abs if (e.lits(0).isInstanceOf[Symbol] && e.lits(1).isInstanceOf[Type]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -83,15 +82,15 @@ class DownUpChecker extends TypeChecker {
       val (t2, cons2) = typecheck(e.kids(1), ctx)
       val (t3, cons3) = typecheck(e.kids(2), ctx)
       val t4 = freshTVar()
-      val ccons = Constraint.normalizeEq(t1, TNum)
-      val tcons = Constraint.normalizeSub(Bot, t2, t4)
-      val econs = Constraint.normalizeSub(Bot, t3, t4)
+      val ccons = normalizeEq(t1, TNum)
+      val tcons = normalizeSub(Bot, t2, t4)
+      val econs = normalizeSub(Bot, t3, t4)
       val newcons = cons1 && cons2 && cons3 && ccons && tcons && econs
       (t4, newcons)
     case Fix =>
       val (t, cons) = typecheck(e.kids(0), ctx)
       val X = freshTVar()
-      val fixCons = Constraint.normalizeEq(t, X -->: X)
+      val fixCons = normalizeEq(t, X -->: X)
       val newcons = cons && fixCons
       (X, newcons)
   }

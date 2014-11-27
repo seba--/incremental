@@ -6,7 +6,6 @@ import incremental.Exp._
 import incremental.Type._
 import incremental._
 import incremental.pcf.{Constraint => _, _}
-import incremental.pcf.with_subtyping.Constraints._
 import incremental.pcf.with_subtyping.TypeOps._
 
 
@@ -17,16 +16,15 @@ class BottomUpChecker extends TypeChecker {
   var preparationTime = 0.0
   var typecheckTime = 0.0
 
-  val solver = new Solver
-  import solver._
-  def constraintCount = solver.constraintCount
-  def mergeReqsTime = solver.mergeReqsTime
-  def constraintSolveTime = solver.constraintSolveTime
+  val constraint = new Constraints
+  import constraint._
+  def constraintCount = constraint.constraintCount
+  def mergeReqsTime = constraint.mergeReqsTime
+  def constraintSolveTime = constraint.constraintSolveTime
 
   type Result = (Type, Require, CSet)
 
   def typecheck(e: Exp): Either[Type, TError] = {
-    Constraints.reset()
     val root = e.withType[Result]
 
     val (uninitialized, ptime) = Util.timed {root.uninitialized}
@@ -72,8 +70,8 @@ class BottomUpChecker extends TypeChecker {
     case op if op == Add || op == Mul =>
       val (t1, reqs1, cons1) = e.kids(0).typ
       val (t2, reqs2, cons2) = e.kids(1).typ
-      val lcons = Constraint.normalizeEq(t1, TNum) //TODO add some more interesting use of subtyping here?
-      val rcons = Constraint.normalizeEq(t2, TNum)
+      val lcons = normalizeEq(t1, TNum) //TODO add some more interesting use of subtyping here?
+      val rcons = normalizeEq(t2, TNum)
       val (mreqs, mcons) = mergeReqMaps(reqs1, reqs2)
       val newcons = cons1 && cons2 && lcons && rcons && mcons
       (TNum, mreqs, newcons)
@@ -85,8 +83,8 @@ class BottomUpChecker extends TypeChecker {
       val (t1, reqs1, cons1) = e.kids(0).typ
       val (t2, reqs2, cons2) = e.kids(1).typ
       val (u, v) = (freshTVar(), freshTVar())
-      val fcons = Constraint.normalizeEq(t1, u -->: v)
-      val argcons = Constraint.normalizeSub(Bot, t2, u)
+      val fcons = normalizeEq(t1, u -->: v)
+      val argcons = normalizeSub(Bot, t2, u)
       val (mreqs, mcons) = mergeReqMaps(reqs1, reqs2)
       val newcons = cons1 && cons2 && fcons && argcons && mcons
       (v, mreqs, newcons)
@@ -100,7 +98,7 @@ class BottomUpChecker extends TypeChecker {
           (annotatedT -->: t, reqs - x, cons)
         case Some(treq) =>
           val otherReqs = reqs - x
-          val xcons = Constraint.normalizeEq(treq, annotatedT)
+          val xcons = normalizeEq(treq, annotatedT)
           val newcons = cons && xcons
           (annotatedT -->: t, otherReqs, newcons)
       }
@@ -131,15 +129,15 @@ class BottomUpChecker extends TypeChecker {
       val (t3, reqs3, cons3) = e.kids(2).typ
       val (reqsCombined, cset) = mergeReqMaps(reqs1, reqs2, reqs3)
       val t4 = freshTVar()
-      val ccons = Constraint.normalizeEq(t1, TNum)
-      val tcons = Constraint.normalizeSub(Bot, t2, t4)
-      val econs = Constraint.normalizeSub(Bot, t3, t4)
+      val ccons = normalizeEq(t1, TNum)
+      val tcons = normalizeSub(Bot, t2, t4)
+      val econs = normalizeSub(Bot, t3, t4)
       val newcons = cons1 && cons2 && cons3 && cset && ccons && tcons && econs
       (t4, reqsCombined, newcons)
     case Fix =>
       val (t, reqs, cons) = e.kids(0).typ
       val X = freshTVar()
-      val fixCons = Constraint.normalizeEq(t, X -->: X)
+      val fixCons = normalizeEq(t, X -->: X)
       val newcons = cons && fixCons
       (X, reqs, newcons)
   }

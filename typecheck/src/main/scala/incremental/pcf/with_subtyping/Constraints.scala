@@ -5,22 +5,34 @@ import incremental.{Util, Type}
 import incremental.pcf.{Constraint => _, TNum, TVar}
 import TypeOps._
 
-object Constraints {
+class Constraints {
+  var constraintCount = 0
+  var mergeReqsTime = 0.0
+  var constraintSolveTime = 0.0
+  var mergeSolutionTime = 0.0
   private var _nextId = 0
   def freshTVar(): TVar = {
     val v = TVar(Symbol("x$" + _nextId))
     _nextId += 1
     v
   }
-  def reset(): Unit = {
-    _nextId = 0
-  }
 
-  type Unsat = Set[Constraint]
   type Require = Map[Symbol, Type]
 
-  implicit class TypeOpsConstraints(val tpe: Type) extends AnyVal {
-    def &(that: Type): (Type, CSet) = (tpe, that) match {
+  implicit class TypeOpsConstraints(val tpe: Type) { //extends AnyVal {
+    def &(that: Type): (Type, CSet) = {
+      val (res, time) = Util.timed { &&&(that) }
+      constraintSolveTime += time
+      res
+    }
+
+    def |(that: Type): (Type, CSet) = {
+      val (res, time) = Util.timed { |||(that) }
+      constraintSolveTime += time
+      res
+    }
+
+    private[Constraints] def &&&(that: Type): (Type, CSet) = (tpe, that) match {
       case (t, Top) => (t, empty)
       case (Top, t) => (t, empty)
       case (Bot, _) | (_, Bot) => (Bot, empty)
@@ -31,18 +43,18 @@ object Constraints {
         (tz, CSet(x -> Between(tz, Top), y -> Between(tz, Top)))
       case (TVar(x), t) =>
         val tz = freshTVar()
-        (tz, CSet(x -> Between(tz, Top)) && Constraint.normalizeSub(tz, t, Top))
+        (tz, CSet(x -> Between(tz, Top)) extend normalizeSub(tz, t, Top))
       case (t, TVar(x)) =>
         val tz = freshTVar()
-        (tz, CSet(x -> Between(tz, Top)) && Constraint.normalizeSub(tz, t, Top))
+        (tz, CSet(x -> Between(tz, Top)) extend normalizeSub(tz, t, Top))
       case (s1 -->: t1, s2 -->: t2) =>
-        val (sr, cs) = s1 | s2
-        val (tr, ct) = t1 & t2
-        (sr -->: tr, cs && ct)
+        val (sr, cs) = s1 ||| s2
+        val (tr, ct) = t1 &&& t2
+        (sr -->: tr, cs extend ct)
       case _ => (Bot, empty)
     }
 
-    def |(that: Type): (Type, CSet) = (tpe, that) match {
+    private[Constraints] def |||(that: Type): (Type, CSet) = (tpe, that) match {
       case (_, Top) | (Top, _) => (Top, empty)
       case (Bot, t) => (t, empty)
       case (t, Bot) => (t, empty)
@@ -53,14 +65,14 @@ object Constraints {
         (tz, CSet(x -> Between(Bot, tz), y -> Between(Bot, tz)))
       case (TVar(x), t) =>
         val tz = freshTVar()
-        (tz, CSet(x -> Between(Bot, tz)) && Constraint.normalizeSub(Bot, t, tz))
+        (tz, CSet(x -> Between(Bot, tz)) extend normalizeSub(Bot, t, tz))
       case (t, TVar(x)) =>
         val tz = freshTVar()
-        (tz, CSet(x -> Between(Bot, tz)) && Constraint.normalizeSub(Bot, t, tz))
+        (tz, CSet(x -> Between(Bot, tz)) extend normalizeSub(Bot, t, tz))
       case (s1 -->: t1, s2 -->: t2) =>
-        val (sr, cs) = s1 & s2
-        val (tr, ct) = t1 | t2
-        (sr -->: tr, cs && ct)
+        val (sr, cs) = s1 &&& s2
+        val (tr, ct) = t1 ||| t2
+        (sr -->: tr, cs extend ct)
       case _ => (Top, empty)
     }
   }
@@ -77,7 +89,7 @@ object Constraints {
         val (u, uc) = upper & u1
         (if (l == u) Equal(l) else Between(l, u), lc && uc)
       case Equal(t) =>
-        (that, Constraint.normalizeSub(lower, t, upper))
+        (that, normalizeSub(lower, t, upper))
     }
 
     def subst(x: Symbol, t: Type) = Between(lower.subst(Map(x -> t)), upper.subst(Map(x -> t)))
@@ -85,40 +97,51 @@ object Constraints {
   case class Equal(tpe: Type) extends Constraint {
     def &&(that: Constraint) = that match {
       case Between(lower, upper) =>
-        (this, Constraint.normalizeSub(lower, tpe, upper))
+        (this, normalizeSub(lower, tpe, upper))
       case Equal(tpe2) =>
-        (this, Constraint.normalizeEq(tpe, tpe2))
+        (this, normalizeEq(tpe, tpe2))
     }
 
     def subst(x: Symbol, t: Type) = Equal(tpe.subst(Map(x -> t)))
   }
   val unconstr: Constraint = Between(Bot, Top)
 
-  object Constraint {
-    def normalizeSub(lower: Type, arg: Type, upper: Type): CSet =
-      subtypeConstraints(lower, arg) && subtypeConstraints(arg, upper)
+  def normalizeSub(lower: Type, arg: Type, upper: Type): CSet = {
+      val (res, time) = Util.timed {
+        subtypeConstraints(lower, arg) extend subtypeConstraints(arg, upper)
+      }
+    constraintSolveTime += time
+    res
+  }
 
-    def normalizeEq(a: Type, b: Type): CSet = a.unify(b) match {
-      case None => throw ConstraintException(s"Unsatisfiable equality between types $a and $b")
-      case Some(s) => s.mapValues(Equal(_))
+  def normalizeEq(a: Type, b: Type): CSet = {
+    val (res, time) = Util.timed {
+      a.unify(b) match {
+        case None => throw ConstraintException(s"Unsatisfiable equality between types $a and $b")
+        case Some(s) =>
+          constraintCount += s.size
+          s.mapValues(Equal(_))
+      }
     }
+    constraintSolveTime += time
+    res
+  }
 
-    def subtypeConstraints(s: Type, t: Type): CSet = (s,t) match {
-      case (t1, t2) if t1 == t2 => empty
-      case (_, Top) => empty
-      case (Bot, _) => empty
-      case (TVar(a), t2) =>
-        if (t2.occurs(a))
-          throw ConstraintException(s"Unsatisfiable constraint $s <: $t. Variable $a occurs in $t")
-        CSet(a -> Between(Bot, t2))
-      case (t1, TVar(a)) =>
-        if (t1.occurs(a))
-          throw ConstraintException(s"Unsatisfiable constraint $s <: $t. Variable $a occurs in $s")
-        CSet(a -> Between(t1, Top))
-      case (s1 -->: t1, s2 -->: t2) =>
-        subtypeConstraints(s2, s1) && subtypeConstraints(t1, t2)
-      case _ => throw ConstraintException(s"Type $s is not a subtype of $t")
-    }
+  private[Constraints] def subtypeConstraints(s: Type, t: Type): CSet = (s,t) match {
+    case (t1, t2) if t1 == t2 => empty
+    case (_, Top) => empty
+    case (Bot, _) => empty
+    case (TVar(a), t2) =>
+      if (t2.occurs(a))
+        throw ConstraintException(s"Unsatisfiable constraint $s <: $t. Variable $a occurs in $t")
+      CSet(a -> Between(Bot, t2))
+    case (t1, TVar(a)) =>
+      if (t1.occurs(a))
+        throw ConstraintException(s"Unsatisfiable constraint $s <: $t. Variable $a occurs in $s")
+      CSet(a -> Between(t1, Top))
+    case (s1 -->: t1, s2 -->: t2) =>
+      subtypeConstraints(s2, s1) extend subtypeConstraints(t1, t2)
+    case _ => throw ConstraintException(s"Type $s is not a subtype of $t")
   }
 
   type CSet = Map[Symbol, Constraint]
@@ -129,11 +152,16 @@ object Constraints {
       for ((tv, c) <- cs if c != unconstr) {
         res = res.insert(tv, c)
       }
+      constraintCount += res.size
       res
     }
   }
-  implicit class CSetOps(val cs: CSet) extends AnyVal {
-    def &&(that: CSet): CSet = extend(that)
+  implicit class CSetOps(val cs: CSet) { //extends AnyVal {
+    def &&(that: CSet): CSet = {
+      val (res, time) = Util.timed { extend(that) }
+      constraintSolveTime += time
+      res
+    }
 
     private[Constraints] def insert(x: Symbol, c: Constraint): CSet = {
       cs.get(x) match {
@@ -190,45 +218,38 @@ object Constraints {
     }
   }
 
-  class Solver {
-    var constraintCount = 0
-    var mergeReqsTime = 0.0
-    var constraintSolveTime = 0.0
-    var mergeSolutionTime = 0.0
+  def mergeReqMaps(r1: Require, r2: Require): (Require, CSet) = {
+    val (res, time) = Util.timed { _mergeReqMaps(r1, r2) }
+    mergeReqsTime += time
+    res
+  }
 
-    def mergeReqMaps(r1: Require, r2: Require): (Require, CSet) = {
-      val (res, time) = Util.timed { _mergeReqMaps(r1, r2) }
-      mergeReqsTime += time
-      res
-    }
-
-    def _mergeReqMaps(r1: Require, r2: Require): (Require, CSet) = {
-      var cset: CSet = empty
-      var req: Require = r1
-      for ((v,tpe2) <- r2) {
-        r1.get(v) match {
-          case Some(tpe) =>
-              val c = Constraint.normalizeEq(tpe, tpe2)
-              cset = cset && c
-          case None =>
-            req += v -> tpe2
-        }
+  def _mergeReqMaps(r1: Require, r2: Require): (Require, CSet) = {
+    var cset: CSet = empty
+    var req: Require = r1
+    for ((v,tpe2) <- r2) {
+      r1.get(v) match {
+        case Some(tpe) =>
+          val c = normalizeEq(tpe, tpe2)
+          cset = cset && c
+        case None =>
+          req += v -> tpe2
       }
-      (req, cset)
     }
+    (req, cset)
+  }
 
-    def mergeReqMaps(r1: Require, r2: Require, r3: Require, rs: Require*): (Require, CSet) = {
-      val (res, time) = Util.timed { _mergeReqMaps(r1, r2, r3, rs:_*)  }
-      mergeReqsTime += time
-      res
-    }
+  def mergeReqMaps(r1: Require, r2: Require, r3: Require, rs: Require*): (Require, CSet) = {
+    val (res, time) = Util.timed { _mergeReqMaps(r1, r2, r3, rs:_*)  }
+    mergeReqsTime += time
+    res
+  }
 
-    def _mergeReqMaps(r1: Require, r2: Require, r3: Require, rs: Require*): (Require, CSet) = {
-      (r2 +: r3 +: rs).foldLeft((r1, empty)) {
-        case ((req, cset), req2) =>
-          val (res, cset2) = _mergeReqMaps(req, req2)
-          (res, cset && cset2)
-      }
+  def _mergeReqMaps(r1: Require, r2: Require, r3: Require, rs: Require*): (Require, CSet) = {
+    (r2 +: r3 +: rs).foldLeft((r1, empty)) {
+      case ((req, cset), req2) =>
+        val (res, cset2) = _mergeReqMaps(req, req2)
+        (res, cset && cset2)
     }
   }
 }
