@@ -58,5 +58,5 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   ) { case TFun(TFun(TFun(TVar(x), TVar(y)), TNum), TNum) if x==y => true }
 }
 
-class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpCheckerFactory)
-class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
+class TestBottomUpCorrectness extends TestCorrectness("BottomUp (Subtyping)", BottomUpCheckerFactory)
+class TestDownUpCorrectness extends TestCorrectness("DownUp (Subtyping)", DownUpCheckerFactory)
