@@ -55,6 +55,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   typecheckTest("fibonacci", fib)(TFun(TNum, TNum))
   typecheckTest("factorial + fibonacci", Abs('x, Add(App(fac, Var('x)), App(fib, Var('x)))))(TFun(TNum, TNum))
   typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(TVar('x$0), TVar('x$0)))
+  typecheckTestError("\\x. x x", Abs(Seq('x, TVar('T)), Seq(App(Var('x), Var('x)))))
 }
 
 class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
