@@ -19,7 +19,7 @@ object Constraints {
   type Unsat = Set[Constraint]
   type Require = Map[Symbol, Type]
 
-  implicit class TypeMeetsJoins(val tpe: Type) extends AnyVal {
+  implicit class TypeOpsConstraints(val tpe: Type) extends AnyVal {
     def &(that: Type): (Type, CSet) = (tpe, that) match {
       case (t, Top) => (t, empty)
       case (Top, t) => (t, empty)
@@ -63,6 +63,12 @@ object Constraints {
         (sr -->: tr, cs && ct)
       case _ => (Top, empty)
     }
+
+    def occurs(tv: Symbol): Boolean = tpe match {
+      case TVar(x) if x == tv => true
+      case s -->: t => s.occurs(tv) || t.occurs(tv)
+      case _ => false
+    }
   }
 
   case class ConstraintException(msg: String) extends RuntimeException(msg)
@@ -101,8 +107,14 @@ object Constraints {
     def normalizeEq(a: Type, b: Type): CSet = (a, b) match {
       case (t1, t2) if t1 == t2 => empty
       case (TVar(x), TVar(y)) => CSet(x -> Equal(TVar(y)), y -> Equal(TVar(x)))
-      case (TVar(x), t2) => CSet(x -> Equal(t2))
-      case (t1, TVar(x)) => CSet(x -> Equal(t1))
+      case (TVar(x), t2) =>
+        if (t2.occurs(x))
+          throw ConstraintException(s"Unsatisfiable equality $a = $b. Variable $x occurs in $b")
+        CSet(x -> Equal(t2))
+      case (t1, TVar(x)) =>
+        if (t1.occurs(x))
+          throw ConstraintException(s"Unsatisfiable equality $a = $b. Variable $x occurs in $a")
+        CSet(x -> Equal(t1))
       case (s1 -->: t1, s2 -->: t2) =>
         normalizeEq(s1, s2) && normalizeEq(t1, t2)
       case _ => throw ConstraintException(s"Unsatisfiable equality between types $a and $b")
@@ -112,11 +124,17 @@ object Constraints {
       case (t1, t2) if t1 == t2 => empty
       case (_, Top) => empty
       case (Bot, _) => empty
-      case (TVar(a), t2) => CSet(a -> Between(Bot, t2))
-      case (t1, TVar(a)) => CSet(a -> Between(t1, Top))
+      case (TVar(a), t2) =>
+        if (t2.occurs(a))
+          throw ConstraintException(s"Unsatisfiable constraint $s <: $t. Variable $a occurs in $t")
+        CSet(a -> Between(Bot, t2))
+      case (t1, TVar(a)) =>
+        if (t1.occurs(a))
+          throw ConstraintException(s"Unsatisfiable constraint $s <: $t. Variable $a occurs in $s")
+        CSet(a -> Between(t1, Top))
       case (s1 -->: t1, s2 -->: t2) =>
         subtypeConstraints(s2, s1) && subtypeConstraints(t1, t2)
-      case _ => throw ConstraintException(s"Types $s and $t cannot be in the subtypes relation")
+      case _ => throw ConstraintException(s"Type $s is not a subtype of $t")
     }
   }
 
@@ -126,7 +144,7 @@ object Constraints {
     def apply(cs: (Symbol, Constraint)*): CSet = {
       var res: CSet = empty
       for ((tv, c) <- cs if c != unconstr) {
-        res = res.update(tv, c)
+        res = res.insert(tv, c)
       }
       res
     }
@@ -134,7 +152,7 @@ object Constraints {
   implicit class CSetOps(val cs: CSet) extends AnyVal {
     def &&(that: CSet): CSet = extend(that)
 
-    def update(x: Symbol, c: Constraint): CSet = {
+    def insert(x: Symbol, c: Constraint): CSet = {
       cs.get(x) match {
         case Some(c1) =>
           val (c2, unres) = c && c1
@@ -153,7 +171,7 @@ object Constraints {
           case Between(l, u) if l == u=>
             res = res.subst(x, Equal(u))
           case _ =>
-            res = res.update(x, c)
+            res = res.insert(x, c)
         }
       }
       res
@@ -161,9 +179,12 @@ object Constraints {
 
     def subst(x: Symbol, c: Equal): CSet = {
       val (eq@Equal(t), nuCons) = cs(x) && c
-      var res: CSet = cs.update(x, eq)
-      for ((v,_) <- cs if v != x)
-        res = res._subst(v, x, t)
+      var res: CSet = cs
+      if (cs(x) != eq) {
+        res = cs.updated(x, eq)
+        for ((v,_) <- cs if v != x)
+          res = res._subst(v, x, t)
+      }
       res.extend(nuCons)
     }
 

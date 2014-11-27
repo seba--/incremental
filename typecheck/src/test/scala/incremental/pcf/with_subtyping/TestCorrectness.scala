@@ -34,7 +34,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
     }
 
   def typecheckTestError(desc: String, e: =>Exp) =
-    test (s"$classdesc: Type check $desc") {
+    test (s"$classdesc: Type check error $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
     }
@@ -49,6 +49,9 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   }
   typecheckTestError("lambda f: (TNum -> Top) -> TNum. lambda g: TNum. f g",
     Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(Abs(Seq('g, TNum),  Seq(App(Var('f), Var('g))))))
+  )
+  typecheckTestError("lambda x: T. x x",
+    Abs(Seq('x, TVar('T)), Seq(App(Var('x), Var('x))))
   )
 }
 
