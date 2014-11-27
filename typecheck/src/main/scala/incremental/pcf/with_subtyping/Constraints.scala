@@ -98,20 +98,9 @@ object Constraints {
     def normalizeSub(lower: Type, arg: Type, upper: Type): CSet =
       subtypeConstraints(lower, arg) && subtypeConstraints(arg, upper)
 
-    def normalizeEq(a: Type, b: Type): CSet = (a, b) match {
-      case (t1, t2) if t1 == t2 => empty
-      case (TVar(x), TVar(y)) => CSet(x -> Equal(TVar(y)), y -> Equal(TVar(x)))
-      case (TVar(x), t2) =>
-        if (t2.occurs(x))
-          throw ConstraintException(s"Unsatisfiable equality $a = $b. Variable $x occurs in $b")
-        CSet(x -> Equal(t2))
-      case (t1, TVar(x)) =>
-        if (t1.occurs(x))
-          throw ConstraintException(s"Unsatisfiable equality $a = $b. Variable $x occurs in $a")
-        CSet(x -> Equal(t1))
-      case (s1 -->: t1, s2 -->: t2) =>
-        normalizeEq(s1, s2) && normalizeEq(t1, t2)
-      case _ => throw ConstraintException(s"Unsatisfiable equality between types $a and $b")
+    def normalizeEq(a: Type, b: Type): CSet = a.unify(b) match {
+      case None => throw ConstraintException(s"Unsatisfiable equality between types $a and $b")
+      case Some(s) => s.mapValues(Equal(_))
     }
 
     def subtypeConstraints(s: Type, t: Type): CSet = (s,t) match {
