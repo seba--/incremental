@@ -152,7 +152,7 @@ object Constraints {
   implicit class CSetOps(val cs: CSet) extends AnyVal {
     def &&(that: CSet): CSet = extend(that)
 
-    def insert(x: Symbol, c: Constraint): CSet = {
+    private[Constraints] def insert(x: Symbol, c: Constraint): CSet = {
       cs.get(x) match {
         case Some(c1) =>
           val (c2, unres) = c && c1
@@ -162,7 +162,7 @@ object Constraints {
       }
     }
 
-    def extend(newcs: CSet): CSet = {
+    private[Constraints] def extend(newcs: CSet): CSet = {
       var res = cs
       for ((x, c) <- newcs if c != unconstr) {
         c match {
@@ -177,7 +177,7 @@ object Constraints {
       res
     }
 
-    def subst(x: Symbol, c: Equal): CSet = {
+    private[Constraints] def subst(x: Symbol, c: Equal): CSet = {
       val (eq@Equal(t), nuCons) = cs(x) && c
       var res: CSet = cs
       if (cs(x) != eq) {
@@ -188,7 +188,7 @@ object Constraints {
       res.extend(nuCons)
     }
 
-    def _subst(y: Symbol, x: Symbol, t: Type): CSet = {
+    private[Constraints] def _subst(y: Symbol, x: Symbol, t: Type): CSet = {
       //assumes x != y
       cs.get(y) match {
         case Some(c) =>
