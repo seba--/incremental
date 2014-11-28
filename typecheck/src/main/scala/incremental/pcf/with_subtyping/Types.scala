@@ -24,5 +24,9 @@ case object Bot extends Type {
 
   def subst(s: TSubst) = this
 
-  def unify(other: Type, s: TSubst) = ???
+  def unify(other: Type, s: TSubst) = other match {
+    case Top => Some(Map())
+    case TVar(x) => other.unify(this, s)
+    case _ => None
+  }
 }

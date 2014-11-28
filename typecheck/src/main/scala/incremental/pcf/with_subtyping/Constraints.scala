@@ -75,6 +75,12 @@ class Constraints {
         (sr -->: tr, cs extend ct)
       case _ => (Top, empty)
     }
+
+    def containsBot: Boolean = tpe match {
+      case Bot => true
+      case s -->: t => s.containsBot || t.containsBot
+      case _ => false
+    }
   }
 
   case class ConstraintException(msg: String) extends RuntimeException(msg)
@@ -209,12 +215,18 @@ class Constraints {
       }
     }
 
-    def finalized: TSubst = cs.mapValues {
-      case Equal(t) => t
-      case Between(lower, upper) if lower < upper =>
-        lower
-      case _ =>
-        throw ConstraintException(s"There were unresolved subtype constraints in solution $cs")
+    def finalized: TSubst = {
+      val (res, time) = Util.timed {
+        cs.mapValues {
+          case Equal(t) if !t.containsBot => t
+          case Between(lower, upper) if lower < upper && !lower.containsBot && !upper.containsBot =>
+            lower
+          case _ =>
+            throw ConstraintException(s"There were unresolved subtype constraints in solution $cs")
+        }
+      }
+      constraintSolveTime += time
+      res
     }
   }
 
