@@ -211,7 +211,7 @@ class Constraints {
 
     def finalized: TSubst = cs.mapValues {
       case Equal(t) => t
-      case Between(lower, upper) if lower < upper =>  //TODO check if this is always sound
+      case Between(lower, upper) if lower < upper =>
         lower
       case _ =>
         throw ConstraintException(s"There were unresolved subtype constraints in solution $cs")
