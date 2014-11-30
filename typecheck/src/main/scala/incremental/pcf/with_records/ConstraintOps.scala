@@ -1,8 +1,9 @@
 package incremental.pcf.with_records
 
+import incremental.ConstraintOps._
 import incremental.Type.TSubst
-import incremental.pcf.{Constraint, EqConstraint}
-import incremental.{Type, Util}
+import incremental._
+import incremental.pcf.TVar
 
 /**
  * Created by seba on 13/11/14.
@@ -97,8 +98,22 @@ class ConstraintOps extends incremental.pcf.ConstraintOps {
 }
 
 case class RecordProjectConstraint(record: Type, label: Symbol, field: Type) extends Constraint {
-  def solve(s: TSubst) = record match {
-    case TRecord(fields) => fields.get(label).flatMap(EqConstraint(_, field).solve(s))
-    case _ => None
+  def solve(s: Solution) = {
+    val trec = record.subst(s.solution)
+    trec match {
+      case TRecord(fields) =>
+        fields.get(label) match {
+          case None => never(RecordProjectConstraint(trec, label, field))
+          case Some(t) => EqConstraint(t, field).solve(s)
+        }
+      case TVar(_) => notyet(RecordProjectConstraint(trec, label, field))
+      case _ => never(RecordProjectConstraint(trec, label, field))
+    }
+  }
+
+  def equiv(other: Constraint, s: TSubst) = other match {
+    case RecordProjectConstraint(record2, `label`, field2) =>
+      record.unify(record2, s) == Some(Map()) && field.unify(field2, s) == Some(Map())
+    case _ => false
   }
 }

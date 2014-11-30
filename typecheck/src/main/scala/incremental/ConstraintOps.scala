@@ -46,13 +46,12 @@ object ConstraintOps {
       res
     }
 
-    // if solution.keys != other.solution.keys
+    // if solutions are not needed
     def +++(other: Solution): Solution = {
       val (res, time) = Util.timed {
-        var msolution = solution ++ other.solution
         var mnotyet = never ++ other.never
         var mnever = never ++ other.never
-        Solution(msolution, mnotyet, mnever)
+        Solution(Map(), mnotyet, mnever)
       }
       mergeSolutionTime += time
       res

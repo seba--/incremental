@@ -1,8 +1,8 @@
 package incremental.pcf.with_records
 
 import incremental.Type._
-import incremental.pcf.EqConstraint
 import incremental.{TypeCheckerFactory, Exp_, pcf}
+import incremental.ConstraintOps._
 
 /**
 * Created by seba on 15/11/14.
@@ -18,20 +18,20 @@ trait DownUpChecker extends pcf.DownUpChecker {
 
       var sol = emptySol
       val subs = for (sub <- e.kids.seq) yield {
-        val (t, s, unres) = typecheck(sub, ctx)
-        sol = mergeSolution(sol, (s, unres))
+        val (t, kidsol) = typecheck(sub, ctx)
+        sol = sol ++ kidsol
         t
       }
 
       val fields = keys.zip(subs).toMap
-      (TRecord(fields), sol._1, sol._2)
+      (TRecord(fields), sol)
 
     case Project =>
       val label = e.lits(0).asInstanceOf[Symbol]
-      val (t1, s1, unres1) = typecheck(e.kids(0), ctx)
+      val (t1, subsol) = typecheck(e.kids(0), ctx)
       val X = freshTVar()
-      val (s, unres) = solve(RecordProjectConstraint(t1, label, X), (s1, unres1))
-      (X, s, unres)
+      val sol = solve(RecordProjectConstraint(t1, label, X), subsol)
+      (X.subst(sol.solution), sol)
 
     case _ => super.typecheck(e, ctx)
   }
