@@ -5,7 +5,7 @@ import incremental.Exp.Exp
 import incremental.Exp._
 import incremental.Type._
 import incremental._
-import incremental.pcf.{Constraint => _, _}
+import incremental.pcf.{ConstraintOps => _, _}
 import incremental.pcf.with_subtyping.Constraints._
 import incremental.pcf.with_subtyping.TypeOps._
 

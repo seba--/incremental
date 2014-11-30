@@ -2,7 +2,7 @@ package incremental.pcf.with_subtyping
 
 import incremental.Type._
 import incremental.{Util, Type}
-import incremental.pcf.{Constraint => _, TNum, TVar}
+import incremental.pcf.{ConstraintOps => _, TNum, TVar}
 import TypeOps._
 
 object Constraints {

@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import incremental.{TypeCheckerFactory, Exp_}
+import incremental.{ConstraintOps, EqConstraint, TypeCheckerFactory, Exp_}
 
 /**
  * Created by seba on 14/11/14.
@@ -28,25 +28,24 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
   }
 
   def sameResult(r1: Result, r2: Result): Boolean = {
-    val (t1, reqs1, unres1) = r1
-    val (t2, reqs2, unres2) = r2
+    val (t1, reqs1, sol1_) = r1
+    val (t2, reqs2, sol2_) = r2
+    val sol1 = sol1_.trySolveNow
+    val sol2 = sol2_.trySolveNow
 
-    if (unres1.size != unres2.size)
+    if (sol1.never.size != sol2.never.size || sol1.notyet.size != sol2.notyet.size)
       return false
 
     val (mcons, _) = constraint.mergeReqMaps(reqs1, reqs2)
-    val (s, unres) = constraint.solve(EqConstraint(t1, t2) +: mcons)
+    val sol = ConstraintOps.solve(EqConstraint(t1, t2) +: mcons).trySolveNow
 
-    if (!unres.isEmpty)
+    if (!sol.isSolved)
       return false
 
-    for (i <- 0 until unres1.size) {
-      val EqConstraint(t11, t12) = unres1(i)
-      val EqConstraint(t21, t22) = unres2(i)
-      if (t11.subst(s) != t21.subst(s) || t12.subst(s) != t22.subst(s))
-        return false
-    }
-    true
+    val s = sol.solution
+    val notyetEquiv = sol1.never.zip(sol2.never).foldLeft(true)((b,p) => b && p._1.equiv(p._2, s))
+    val neverEquiv = sol1.never.zip(sol2.never).foldLeft(true)((b,p) => b && p._1.equiv(p._2, s))
+    notyetEquiv && neverEquiv
   }
 }
 
