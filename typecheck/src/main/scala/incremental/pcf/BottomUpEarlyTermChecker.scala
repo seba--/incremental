@@ -43,8 +43,8 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
       return false
 
     val s = sol.solution
-    val notyetEquiv = sol1.never.zip(sol2.never).foldLeft(true)((b,p) => b && p._1.equiv(p._2, s))
-    val neverEquiv = sol1.never.zip(sol2.never).foldLeft(true)((b,p) => b && p._1.equiv(p._2, s))
+    val notyetEquiv = sol1.never.zip(sol2.never).foldLeft(true)((b,p) => b && p._1.subst(s) == p._2.subst(s))
+    val neverEquiv = sol1.never.zip(sol2.never).foldLeft(true)((b,p) => b && p._1.subst(s) == p._2.subst(s))
     notyetEquiv && neverEquiv
   }
 }

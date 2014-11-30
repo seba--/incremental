@@ -14,19 +14,21 @@ object ConstraintOps {
   type NotYetSolvable = Seq[Constraint]
   type Unsolvable = Seq[Constraint]
 
-  val emptySol: Solution = Solution(Map(), Seq(), Seq())
+  def emptySol = Solution(Map(), Seq(), Seq())
   def solution(s: TSubst) = Solution(s, Seq(), Seq())
   def notyet(c: Constraint) = Solution(Map(), Seq(c), Seq())
   def never(c: Constraint) = Solution(Map(), Seq(), Seq(c))
   case class Solution(solution: TSubst, notyet: NotYetSolvable, never: Unsolvable) {
     def unsolved = notyet ++ never
+
     def isSolved = notyet.isEmpty && never.isEmpty
+
     def solvable = !never.isEmpty
 
     def ++(other: Solution): Solution = {
       val (res, time) = Util.timed {
         var msolution = solution mapValues (_.subst(other.solution))
-        var mnotyet = never ++ other.never
+        val mnotyet = notyet ++ other.notyet
         var mnever = never ++ other.never
 
         for ((x, t2) <- other.solution) {
@@ -35,7 +37,6 @@ object ConstraintOps {
             case Some(t1) =>
               val usol = t1.unify(t2, msolution)
               msolution = msolution.mapValues(_.subst(usol.solution)) ++ usol.solution
-              mnotyet = mnotyet ++ usol.notyet
               mnever = mnever ++ usol.never
           }
         }
@@ -49,7 +50,7 @@ object ConstraintOps {
     // if solutions are not needed
     def +++(other: Solution): Solution = {
       val (res, time) = Util.timed {
-        var mnotyet = never ++ other.never
+        var mnotyet = notyet ++ other.notyet
         var mnever = never ++ other.never
         Solution(Map(), mnotyet, mnever)
       }
@@ -57,7 +58,17 @@ object ConstraintOps {
       res
     }
 
-    def trySolveNow: Solution = {
+    def <++(other: Solution): Solution = {
+      val (res, time) = Util.timed {
+        var mnotyet = notyet.map(_.subst(other.solution)) ++ other.notyet
+        var mnever = never.map(_.subst(other.solution)) ++ other.never
+        Solution(Map(), mnotyet, mnever)
+      }
+      mergeSolutionTime += time
+      res
+    }
+
+    def trySolveNow = {
       var rest = notyet
       var newSolution = solution
       var newNotyet = Seq[Constraint]()
@@ -95,18 +106,13 @@ object ConstraintOps {
     constraintSolveTime += time
     res
   }
-
 }
-
 
 trait Constraint {
   def solve(s: Solution): Solution
-  def equiv(other: Constraint, s: TSubst): Boolean
+  def subst(s: TSubst): Constraint
 }
 case class EqConstraint(expected: Type, actual: Type) extends Constraint {
   def solve(s: Solution) = expected.unify(actual, s.solution)
-  def equiv(other: Constraint, s: TSubst) = other match {
-    case EqConstraint(e, a) => expected.unify(e, s) == Some(Map()) && actual.unify(a, s) == Some(Map())
-    case _ => false
-  }
+  def subst(s: TSubst) = EqConstraint(expected.subst(s), actual.subst(s))
 }

@@ -1,11 +1,11 @@
 package incremental.pcf.with_subtyping
 
+import incremental.ConstraintOps._
 import incremental.Exp.Exp
 import incremental.Exp._
 import incremental.Type._
 import incremental._
 import incremental.pcf._
-import incremental.pcf.with_subtyping.Constraints._
 import TypeOps._
 
 /**
@@ -13,58 +13,70 @@ import TypeOps._
  */
 class DownUpChecker extends TypeChecker {
 
-  val solver = new Solver
-  import solver._
-  def constraintCount = solver.constraintCount
-  def mergeReqsTime = solver.mergeReqsTime
-  def constraintSolveTime = solver.constraintSolveTime
-
+  val constraint = new ConstraintOps
+  import constraint._
+  def constraintCount = constraint.constraintCount
+  def mergeReqsTime = constraint.mergeReqsTime
+  def constraintSolveTime = constraint.constraintSolveTime
 
   val preparationTime = 0.0
   var typecheckTime = 0.0
 
-  type Result = (Type, CSet)
+  type Result = (Type, Solution)
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
     val (res, ctime) = Util.timed(
       try {
-        val (t, unres) = typecheck(root, Map())
-        Left(t.subst(unres.finalized))
+        val (t, sol_) = typecheck(root, Map())
+        val sol = sol_.trySolveNow
+        if (sol.isSolved)
+          Left(t.subst(sol.solution))
+        else
+          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.solution)}")
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
-        case ConstraintException(msg) => Right(s"There were unresolved constraints: $msg")
-      })
+      }
+    )
     typecheckTime += ctime
     res
   }
 
   def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
-    case Num => (TNum, empty)
+    case Num => (TNum, emptySol)
     case k if k == Add || k == Mul =>
-      val (t1, unres1) = typecheck(e.kids(0), ctx)
-      val (t2, unres2) = typecheck(e.kids(1), ctx)
-      val lcons = Constraint.normalizeEq(t1, TNum)
-      val rcons = Constraint.normalizeEq(t2, TNum)
-      (TNum, unres1 && unres2 && lcons && rcons)
+      val (t1, sol1) = typecheck(e.kids(0), ctx)
+      val (t2, sol2) = typecheck(e.kids(1), ctx)
+      val subsol = sol1 ++ sol2
+
+      val lcons = EqConstraint(TNum, t1)
+      val rcons = EqConstraint(TNum, t2)
+      val sol = solve(Seq(lcons, rcons), subsol)
+
+      (TNum, sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       ctx.get(x) match {
         case None => throw UnboundVariable(x, ctx)
-        case Some(t) => (t, empty)
+        case Some(t) => (t, emptySol)
       }
     case App =>
-      val (t1, unres1) = typecheck(e.kids(0), ctx)
-      val (t2, unres2) = typecheck(e.kids(1), ctx)
-      val (x,y) = (freshTVar(), freshTVar())
-      val fcons = Constraint.normalizeEq(t1, x -->: y)
-      val argcons = Constraint.normalizeSub(Bot, t2, x)
-      (y, unres1 && unres2 && fcons && argcons)
+      val (t1, sol1) = typecheck(e.kids(0), ctx)
+      val (t2, sol2) = typecheck(e.kids(1), ctx)
+      val subsol = sol1 ++ sol2
+
+      val X = freshTVar()
+      val Y = freshTVar()
+      val fcons = EqConstraint(TFun(X, Y), t1)
+      val acons = SubConstraint(t2, X)
+
+      val sol = solve(Seq(fcons, acons), subsol)
+      (Y.subst(sol.solution), sol)
     case Abs if (e.lits(0).isInstanceOf[Symbol] && e.lits(1).isInstanceOf[Type]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val annotatedT = e.lits(1).asInstanceOf[Type]
-      val (t, unres) = typecheck(e.kids(0), ctx + (x -> annotatedT))
-      (annotatedT -->: t, unres)
+      val (t, subsol) = typecheck(e.kids(0), ctx + (x -> annotatedT))
+      (TFun(annotatedT, t), subsol)
     /*case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
       val Xs = xs map (_ => freshTVar())
@@ -79,21 +91,24 @@ class DownUpChecker extends TypeChecker {
 
       (tfun, s, unres)*/
     case If0 =>
-      val (t1, cons1) = typecheck(e.kids(0), ctx)
-      val (t2, cons2) = typecheck(e.kids(1), ctx)
-      val (t3, cons3) = typecheck(e.kids(2), ctx)
-      val t4 = freshTVar()
-      val ccons = Constraint.normalizeEq(t1, TNum)
-      val tcons = Constraint.normalizeSub(Bot, t2, t4)
-      val econs = Constraint.normalizeSub(Bot, t3, t4)
-      val newcons = cons1 && cons2 && cons3 && ccons && tcons && econs
-      (t4, newcons)
+      val (t1, sol1) = typecheck(e.kids(0), ctx)
+      val (t2, sol2) = typecheck(e.kids(1), ctx)
+      val (t3, sol3) = typecheck(e.kids(2), ctx)
+      val subsol = sol1 ++ sol2 ++ sol3
+
+      val Xmeet = freshTVar()
+      val ccons = EqConstraint(t1, TNum)
+      val tcons = SubConstraint(t2, Xmeet)
+      val econs = SubConstraint(t3, Xmeet)
+
+      val sol = solve(Seq(ccons, tcons, econs), subsol)
+      (Xmeet, sol)
     case Fix =>
-      val (t, cons) = typecheck(e.kids(0), ctx)
+      val (t, subsol) = typecheck(e.kids(0), ctx)
       val X = freshTVar()
-      val fixCons = Constraint.normalizeEq(t, X -->: X)
-      val newcons = cons && fixCons
-      (X, newcons)
+      val fixCons = EqConstraint(t, TFun(X, X))
+      val sol = solve(fixCons, subsol)
+      (X.subst(sol.solution), sol)
   }
 }
 

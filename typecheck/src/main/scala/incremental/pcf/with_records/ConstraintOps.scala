@@ -111,9 +111,5 @@ case class RecordProjectConstraint(record: Type, label: Symbol, field: Type) ext
     }
   }
 
-  def equiv(other: Constraint, s: TSubst) = other match {
-    case RecordProjectConstraint(record2, `label`, field2) =>
-      record.unify(record2, s) == Some(Map()) && field.unify(field2, s) == Some(Map())
-    case _ => false
-  }
+  def subst(s: TSubst) = RecordProjectConstraint(record.subst(s), label, field.subst(s))
 }

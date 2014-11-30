@@ -1,6 +1,7 @@
 package incremental.pcf.with_subtyping
 
-import incremental.Type
+import incremental.ConstraintOps._
+import incremental.{EqConstraint, Type}
 import incremental.Type.TSubst
 import incremental.pcf.TVar
 
@@ -13,9 +14,9 @@ case object Top extends Type {
   def subst(s: TSubst) = this
 
   def unify(other: Type, s: TSubst) = other match {
-    case Top => Some(Map())
+    case Top => emptySol
     case TVar(x) => other.unify(this, s)
-    case _ => None
+    case _ => never(EqConstraint(this, other))
   }
 }
 

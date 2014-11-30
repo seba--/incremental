@@ -34,7 +34,8 @@ class DownUpChecker extends TypeChecker {
           Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.solution)}")
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
-      })
+      }
+    )
     typecheckTime += ctime
     res
   }
