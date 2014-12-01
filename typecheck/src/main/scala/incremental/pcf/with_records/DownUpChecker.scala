@@ -14,7 +14,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
 
   override def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
     case Record =>
-      val keys = e.lits(0).asInstanceOf[Seq[Symbol]]
+      val keys = e.lits.asInstanceOf[Seq[Symbol]]
 
       var sol = emptySol
       val subs = for (sub <- e.kids.seq) yield {

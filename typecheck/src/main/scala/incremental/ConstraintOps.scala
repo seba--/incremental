@@ -68,7 +68,7 @@ object ConstraintOps {
       res
     }
 
-    def trySolveNow = {
+    private def trySolve(finalize: Boolean) = {
       var rest = notyet
       var newSolution = solution
       var newNotyet = Seq[Constraint]()
@@ -78,14 +78,17 @@ object ConstraintOps {
         rest = rest.tail
         val wasNotyet = newNotyet ++ rest
         val current = Solution(newSolution, wasNotyet, newNever)
-        val sol = next.solve(current)
+        val sol = if (finalize) next.finalize(current) else next.solve(current)
 
-        newSolution = sol.solution
+        newSolution = newSolution.mapValues(_.subst(sol.solution)) ++ sol.solution
         newNever = sol.never
         newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
       }
       Solution(newSolution, newNotyet, newNever)
     }
+
+    def trySolveNow = trySolve(false)
+    def tryFinalize = trySolve(true)
   }
 
   def solve(cs: Iterable[Constraint], sol: Solution = emptySol): Solution = {
@@ -111,8 +114,10 @@ object ConstraintOps {
 trait Constraint {
   def solve(s: Solution): Solution
   def subst(s: TSubst): Constraint
+  def finalize(s: Solution): Solution
 }
 case class EqConstraint(expected: Type, actual: Type) extends Constraint {
   def solve(s: Solution) = expected.unify(actual, s.solution)
+  def finalize(s: Solution) = solve(s)
   def subst(s: TSubst) = EqConstraint(expected.subst(s), actual.subst(s))
 }

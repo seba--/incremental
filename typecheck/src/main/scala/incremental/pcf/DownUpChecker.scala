@@ -27,11 +27,11 @@ class DownUpChecker extends TypeChecker {
     val (res, ctime) = Util.timed(
       try {
         val (t, sol_) = typecheck(root, Map())
-        val sol = sol_.trySolveNow
+        val sol = sol_.tryFinalize
         if (sol.isSolved)
           Left(t.subst(sol.solution))
         else
-          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.solution)}")
+          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.solution)}, subst ${sol.solution}")
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
       }

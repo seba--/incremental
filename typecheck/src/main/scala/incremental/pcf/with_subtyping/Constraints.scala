@@ -6,38 +6,6 @@ import incremental._
 import incremental.pcf.{ConstraintOps => _, TFun, TNum, TVar}
 import TypeOps._
 
-case class SubConstraint(lower: Type, upper: Type) extends Constraint {
-  def solve(s: Solution) = (lower,upper) match {
-      case _ if s.notyet.contains(this) => emptySol
-      case (t1, t2) if t1 == t2 => emptySol
-      case (_, Top) => emptySol
-      case (Bot, _) => emptySol
-      case (TVar(a), t2) =>
-        s.solution.get(a) match {
-          case Some(t1) => SubConstraint(t1, t2).solve(s)
-          case None =>
-            if (t2.occurs(a))
-              never(this)
-            else
-              notyet(this)
-        }
-      case (t1, TVar(a)) =>
-        s.solution.get(a) match {
-          case Some(t2) => SubConstraint(t1, t2).solve(s)
-          case None =>
-            if (t1.occurs(a))
-              never(this)
-            else
-              notyet(this)
-        }
-      case (TFun(s1, t1), TFun(s2, t2)) =>
-        SubConstraint(s2, s1).solve(s) ++ SubConstraint(t1, t2).solve(s)
-      case _ => never(this)
-    }
-
-  def subst(s: TSubst) = SubConstraint(lower.subst(s), upper.subst(s))
-}
-
 class ConstraintOps {
   incremental.ConstraintOps.constraintCount = 0
   incremental.ConstraintOps.constraintSolveTime = 0
@@ -95,6 +63,8 @@ class ConstraintOps {
       case _ => withMeet(Bot, s)
     }
 
+    def finalize(s: Solution) = solve(s)
+
     def subst(s: TSubst) = EqMeetConstraint(t1.subst(s), t2.subst(s), tmeet.subst(s))
   }
 
@@ -115,9 +85,44 @@ class ConstraintOps {
       case _ => withJoin(Top, s)
     }
 
+    def finalize(s: Solution) = solve(s)
+
     def subst(s: TSubst) = EqJoinConstraint(t1.subst(s), t2.subst(s), tjoin.subst(s))
   }
 
+  case class SubConstraint(lower: Type, upper: Type) extends Constraint {
+    def solve(s: Solution) = (lower,upper) match {
+      case _ if s.notyet.contains(this) => emptySol
+      case (t1, t2) if t1 == t2 => emptySol
+      case (_, Top) => emptySol
+      case (Bot, _) => emptySol
+      case (TVar(a), t2) =>
+        s.solution.get(a) match {
+          case Some(t1) => SubConstraint(t1, t2).solve(s)
+          case None =>
+            if (t2.occurs(a))
+              never(this)
+            else
+              notyet(this)
+        }
+      case (t1, TVar(a)) =>
+        s.solution.get(a) match {
+          case Some(t2) => SubConstraint(t1, t2).solve(s)
+          case None =>
+            if (t1.occurs(a))
+              never(this)
+            else
+              notyet(this)
+        }
+      case (TFun(s1, t1), TFun(s2, t2)) =>
+        SubConstraint(s2, s1).solve(s) ++ SubConstraint(t1, t2).solve(s)
+      case _ => never(this)
+    }
+
+    def finalize(s: Solution) = solve(s)
+
+    def subst(s: TSubst) = SubConstraint(lower.subst(s), upper.subst(s))
+  }
 }
 
 //object Constraints {

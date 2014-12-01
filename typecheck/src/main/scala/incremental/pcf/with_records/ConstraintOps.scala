@@ -111,5 +111,26 @@ case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) e
     }
   }
 
+  def finalize(s: Solution) = {
+    val trec = record.subst(s.solution)
+    trec match {
+      case TRecord(fields) =>
+        fields.get(label) match {
+          case None => never(EqRecordProjectConstraint(trec, label, field))
+          case Some(t) => EqConstraint(t, field).solve(s)
+        }
+      case TVar(x) =>
+        var cons = Seq[Constraint]()
+        var fields = Map(label -> field.subst(s.solution))
+        for (EqRecordProjectConstraint(TVar(`x`), l, field) <- s.notyet)
+          if (!fields.isDefinedAt(l))
+            fields += l -> field.subst(s.solution)
+          else
+            cons = EqConstraint(fields(l), field) +: cons
+        solution(Map(x -> TRecord(fields))) ++ ConstraintOps.solve(cons, s)
+      case _ => never(EqRecordProjectConstraint(trec, label, field))
+    }
+  }
+
   def subst(s: TSubst) = EqRecordProjectConstraint(record.subst(s), label, field.subst(s))
 }
