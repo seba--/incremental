@@ -2,7 +2,7 @@ package incremental.pcf.with_subtyping
 
 import incremental.ConstraintOps._
 import incremental.Type._
-import incremental.{EqConstraint, Constraint, Util, Type}
+import incremental._
 import incremental.pcf.{ConstraintOps => _, TFun, TNum, TVar}
 import TypeOps._
 
@@ -76,6 +76,48 @@ class ConstraintOps {
 
     (mcons, mreqs)
   }
+
+
+  case class EqMeetConstraint(t1: Type, t2: Type, tmeet: Type) extends Constraint {
+    private def withMeet(t: Type, s: Solution) = t.unify(tmeet, s.solution)
+
+    def solve(s: Solution) = (t1, t2) match {
+      case _ if t1 == t2 => withMeet(t1, s)
+      case (_, Top) => withMeet(t1, s)
+      case (Top, _) => withMeet(t2, s)
+      case (Bot, _) | (_, Bot) => withMeet(Bot, s)
+      case (TVar(x), TVar(y)) if x == y => withMeet(t1, s)
+      case (TVar(_), _) | (_, TVar(_)) => notyet(this)
+      case (TFun(s1, t1), TFun(s2, t2)) =>
+        val X = freshTVar()
+        val Y = freshTVar()
+        EqJoinConstraint(s1, s2, X).solve(s) ++ EqMeetConstraint(t1, t2, Y).solve(s) ++ withMeet(TFun(X, Y), s)
+      case _ => withMeet(Bot, s)
+    }
+
+    def subst(s: TSubst) = EqMeetConstraint(t1.subst(s), t2.subst(s), tmeet.subst(s))
+  }
+
+  case class EqJoinConstraint(t1: Type, t2: Type, tjoin: Type) extends Constraint {
+    private def withJoin(t: Type, s: Solution) = t.unify(tjoin, s.solution)
+
+    def solve(s: Solution) = (t1, t2) match {
+      case _ if t1 == t2 => withJoin(t1, s)
+      case (_, Top) | (Top, _) => withJoin(Top, s)
+      case (Bot, _) => withJoin(t2, s)
+      case (_, Bot) => withJoin(t1, s)
+      case (TVar(x), TVar(y)) if x == y => withJoin(t1, s)
+      case (TVar(x), TVar(y)) => notyet(this)
+      case (TFun(s1, t1), TFun(s2, t2)) =>
+        val X = freshTVar()
+        val Y = freshTVar()
+        EqMeetConstraint(s1, s2, X).solve(s) ++ EqJoinConstraint(t1, t2, Y).solve(s) ++ withJoin(TFun(X, Y), s)
+      case _ => withJoin(Top, s)
+    }
+
+    def subst(s: TSubst) = EqJoinConstraint(t1.subst(s), t2.subst(s), tjoin.subst(s))
+  }
+
 }
 
 //object Constraints {

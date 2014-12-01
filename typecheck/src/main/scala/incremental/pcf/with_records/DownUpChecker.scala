@@ -30,7 +30,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
       val label = e.lits(0).asInstanceOf[Symbol]
       val (t1, subsol) = typecheck(e.kids(0), ctx)
       val X = freshTVar()
-      val sol = solve(RecordProjectConstraint(t1, label, X), subsol)
+      val sol = solve(EqRecordProjectConstraint(t1, label, X), subsol)
       (X.subst(sol.solution), sol)
 
     case _ => super.typecheck(e, ctx)

@@ -15,7 +15,7 @@ case object Top extends Type {
 
   def unify(other: Type, s: TSubst) = other match {
     case Top => emptySol
-    case TVar(x) => other.unify(this, s)
+    case TVar(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
 }
@@ -25,5 +25,9 @@ case object Bot extends Type {
 
   def subst(s: TSubst) = this
 
-  def unify(other: Type, s: TSubst) = ???
+  def unify(other: Type, s: TSubst) = other match {
+    case Bot => emptySol
+    case TVar(_) => other.unify(this, s)
+    case _ => never(EqConstraint(this, other))
+  }
 }

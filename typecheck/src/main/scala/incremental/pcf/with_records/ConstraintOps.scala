@@ -97,19 +97,19 @@ class ConstraintOps extends incremental.pcf.ConstraintOps {
 //  }
 }
 
-case class RecordProjectConstraint(record: Type, label: Symbol, field: Type) extends Constraint {
+case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) extends Constraint {
   def solve(s: Solution) = {
     val trec = record.subst(s.solution)
     trec match {
       case TRecord(fields) =>
         fields.get(label) match {
-          case None => never(RecordProjectConstraint(trec, label, field))
+          case None => never(EqRecordProjectConstraint(trec, label, field))
           case Some(t) => EqConstraint(t, field).solve(s)
         }
-      case TVar(_) => notyet(RecordProjectConstraint(trec, label, field))
-      case _ => never(RecordProjectConstraint(trec, label, field))
+      case TVar(_) => notyet(EqRecordProjectConstraint(trec, label, field))
+      case _ => never(EqRecordProjectConstraint(trec, label, field))
     }
   }
 
-  def subst(s: TSubst) = RecordProjectConstraint(record.subst(s), label, field.subst(s))
+  def subst(s: TSubst) = EqRecordProjectConstraint(record.subst(s), label, field.subst(s))
 }

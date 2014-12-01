@@ -34,8 +34,9 @@ class BottomUpChecker extends TypeChecker {
     val (res, ctime) = Util.timed {
       uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
 
-      val (t, reqs, sol_) = root.typ
+      val (t_, reqs, sol_) = root.typ
       val sol = sol_.trySolveNow
+      val t = t_.subst(sol.solution)
 
       if (!reqs.isEmpty)
         Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
@@ -138,14 +139,13 @@ class BottomUpChecker extends TypeChecker {
       val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
       val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
 
-      val Xmeet = freshTVar()
+      val Xjoin = freshTVar()
       val ccons = EqConstraint(TNum, t1)
-      val tcons = SubConstraint(t2, Xmeet)
-      val econs = SubConstraint(t3, Xmeet)
+      val bodycons = EqJoinConstraint(t2, t3, Xjoin)
 
-      val sol = solve(ccons +: tcons +: econs +: (mcons12 ++ mcons23))
+      val sol = solve(ccons +: bodycons +: (mcons12 ++ mcons23))
 
-      (Xmeet.subst(sol.solution), mreqs123.mapValues(_.subst(sol.solution)), sol1 +++ sol2 +++ sol3 <++ sol)
+      (Xjoin.subst(sol.solution), mreqs123.mapValues(_.subst(sol.solution)), sol1 +++ sol2 +++ sol3 <++ sol)
 
     case Fix =>
       val (t, reqs, subsol) = e.kids(0).typ
