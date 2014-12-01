@@ -28,12 +28,13 @@ class DownUpChecker extends TypeChecker {
     val root = e.withType[Result]
     val (res, ctime) = Util.timed(
       try {
-        val (t, sol_) = typecheck(root, Map())
-        val sol = sol_.trySolveNow
+        val (t_, sol_) = typecheck(root, Map())
+        val sol = sol_.tryFinalize
+        val t = t_.subst(sol.solution)
         if (sol.isSolved)
-          Left(t.subst(sol.solution))
+          Left(t)
         else
-          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.solution)}")
+          Right(s"Unresolved constraints ${sol.unsolved.map(_.subst(sol.solution))}, type ${t}")
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
       }
@@ -72,9 +73,9 @@ class DownUpChecker extends TypeChecker {
 
       val sol = solve(Seq(fcons, acons), subsol)
       (Y.subst(sol.solution), sol)
-    case Abs if (e.lits(0).isInstanceOf[Symbol] && e.lits(1).isInstanceOf[Type]) =>
+    case Abs if e.lits(0).isInstanceOf[Symbol] =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val annotatedT = e.lits(1).asInstanceOf[Type]
+      val annotatedT = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshTVar()
       val (t, subsol) = typecheck(e.kids(0), ctx + (x -> annotatedT))
       (TFun(annotatedT, t), subsol)
     /*case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>

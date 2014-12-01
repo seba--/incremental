@@ -81,7 +81,7 @@ object ConstraintOps {
         val sol = if (finalize) next.finalize(current) else next.solve(current)
 
         newSolution = newSolution.mapValues(_.subst(sol.solution)) ++ sol.solution
-        newNever = sol.never
+        newNever = newNever ++ sol.never
         newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
       }
       Solution(newSolution, newNotyet, newNever)
