@@ -1,47 +1,50 @@
-//package incremental.pcf.with_references
-//
-//import incremental.pcf.EqConstraint
-//import incremental.{TypeCheckerFactory, Exp_, pcf}
-//
-///**
-// * Created by seba on 15/11/14.
-// */
-//trait BottomUpChecker extends pcf.BottomUpChecker {
-//
-//  import constraint._
-//
-//  override def typecheckStep(e: Exp_[Result]): Result = e.kind match {
-//    case Ref =>
-//      val (t, reqs, unres) = e.kids(0).typ
-//      (TRef(t), reqs, unres)
-//    case Deref =>
-//      val (t, reqs, unres) = e.kids(0).typ
-//      val X = freshTVar()
-//      val (s, newunres) = solve(EqConstraint(TRef(X), t))
-//      (X.subst(s), reqs.mapValues(_.subst(s)), unres ++ newunres)
-//    case Assign =>
-//      val (t1, reqs1, unres1) = e.kids(0).typ
-//      val (t2, reqs2, unres2) = e.kids(1).typ
-//
-//      val refcons = EqConstraint(t1, TRef(t2))
-//      val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-//
-//      val (s, newunres) = solve(refcons +: mcons)
-//      (TUnit, mreqs.mapValues(_.subst(s)), unres1 ++ unres2 ++ newunres)
-//    case Seq =>
-//      val (t1, reqs1, unres1) = e.kids(0).typ
-//      val (t2, reqs2, unres2) = e.kids(1).typ
-//
-//      val t1cons = EqConstraint(TUnit, t1)
-//      val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-//
-//      val (s, newunres) = solve(t1cons +: mcons)
-//      (t2, mreqs.mapValues(_.subst(s)), unres1 ++ unres2 ++ newunres)
-//    case _ => super.typecheckStep(e)
-//  }
-//}
-//
-//object BottomUpCheckerFactory extends TypeCheckerFactory {
-//  object PCFRefBottomUpChecker extends BottomUpChecker
-//  def makeChecker = PCFRefBottomUpChecker
-//}
+package incremental.pcf.with_records
+
+import incremental.ConstraintOps._
+import incremental.{Constraint, TypeCheckerFactory, Exp_, pcf}
+
+/**
+* Created by seba on 15/11/14.
+*/
+trait BottomUpChecker extends pcf.BottomUpChecker {
+
+  import constraint._
+
+  override def typecheckStep(e: Exp_[Result]): Result = e.kind match {
+    case Record =>
+      val keys = e.lits.asInstanceOf[Seq[Symbol]]
+
+      var mcons = Seq[Constraint]()
+      var mreqs: Reqs = Map()
+      var msol = emptySol
+      val subs = for (sub <- e.kids.seq) yield {
+        val (t, subreqs, subsol) = sub.typ
+        msol = msol +++ subsol
+        val (cons, reqs) = mergeReqMaps(subreqs, subreqs)
+        mcons = mcons ++ cons
+        mreqs = reqs
+        t
+      }
+
+      val sol = solve(mcons)
+
+      val fields = keys.zip(subs).toMap
+      (TRecord(fields), mreqs.mapValues(_.subst(sol.solution)), msol <++ sol)
+
+    case Project =>
+      val label = e.lits(0).asInstanceOf[Symbol]
+      val (t1, reqs, subsol) = e.kids(0).typ
+      val X = freshTVar()
+
+      val sol = solve(EqRecordProjectConstraint(t1, label, X))
+
+      (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), subsol <++ sol)
+
+    case _ => super.typecheckStep(e)
+  }
+}
+
+object BottomUpCheckerFactory extends TypeCheckerFactory {
+  object PCFRefBottomUpChecker extends BottomUpChecker
+  def makeChecker = PCFRefBottomUpChecker
+}

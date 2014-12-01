@@ -48,5 +48,4 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
 }
 
 class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
-
-//class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpCheckerFactory)
+class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpCheckerFactory)
