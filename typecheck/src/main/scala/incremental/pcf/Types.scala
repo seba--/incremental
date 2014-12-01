@@ -30,7 +30,9 @@ case class TVar(x: Symbol) extends Type {
       case Some(t) => t.unify(other, s)
       case None =>
         val t = other.subst(s)
-        if (t.occurs(x))
+        if (this == t)
+          emptySol
+        else if (t.occurs(x))
           never(EqConstraint(this, t))
         else
           solution(Map(x -> t))

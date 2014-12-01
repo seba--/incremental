@@ -69,15 +69,15 @@ class ConstraintOps {
         val X = freshTVar()
         val Y = freshTVar()
         EqJoinConstraint(s1, s2, X).solve(s) ++ EqMeetConstraint(t1, t2, Y).solve(s) ++ withMeet(TFun(X, Y), s)
-      case _ => withMeet(Bot, s)
+      case _ => never(this) //withMeet(Bot, s)
     }
 
     def finalize(s: Solution) = {
       val sol = solve(s)
       if (sol.notyet.size == 1 && sol.notyet(0) == this)
         (t1, t2) match {
-          case (TVar(a), _) => solution(Map(a -> t2)) ++ withMeet(t2, s)
-          case (_, TVar(a)) => solution(Map(a -> t1)) ++ withMeet(t1, s)
+          case (TVar(a), _) => SubConstraint(t2, t1).solve(s).tryFinalize ++ withMeet(t2, s)
+          case (_, TVar(a)) => SubConstraint(t1, t2).solve(s).tryFinalize ++ withMeet(t1, s)
         }
       else
         sol.tryFinalize
@@ -94,7 +94,6 @@ class ConstraintOps {
       case (_, Top) | (Top, _) => withJoin(Top, s)
       case (Bot, _) => withJoin(t2, s)
       case (_, Bot) => withJoin(t1, s)
-      case (TVar(x), TVar(y)) if x == y => withJoin(t1, s)
       case (TVar(a), _) =>
         s.solution.get(a) match {
           case Some(t1) => EqJoinConstraint(t1, t2, tjoin).solve(s)
@@ -116,8 +115,8 @@ class ConstraintOps {
       val sol = solve(s)
       if (sol.notyet.size == 1 && sol.notyet(0) == this)
         (t1, t2) match {
-          case (TVar(a), _) => solution(Map(a -> t2)) ++ withJoin(t2, s)
-          case (_, TVar(a)) => solution(Map(a -> t1)) ++ withJoin(t1, s)
+          case (TVar(a), _) => SubConstraint(t1, t2).solve(s).tryFinalize ++ withJoin(t2, s)
+          case (_, TVar(a)) => SubConstraint(t2, t1).solve(s).tryFinalize ++ withJoin(t1, s)
         }
       else
         sol.tryFinalize
@@ -137,18 +136,18 @@ class ConstraintOps {
           case Some(t1) => SubConstraint(t1, t2).solve(s)
           case None =>
             if (t2.occurs(a))
-              never(this)
+              never(SubConstraint(lower, upper.subst(s.solution)))
             else
-              notyet(this)
+              notyet(SubConstraint(lower, upper.subst(s.solution)))
         }
       case (t1, TVar(a)) =>
         s.solution.get(a) match {
           case Some(t2) => SubConstraint(t1, t2).solve(s)
           case None =>
             if (t1.occurs(a))
-              never(this)
+              never(SubConstraint(lower.subst(s.solution), upper))
             else
-              notyet(this)
+              notyet(SubConstraint(lower.subst(s.solution), upper))
         }
       case (TFun(s1, t1), TFun(s2, t2)) =>
         SubConstraint(s2, s1).solve(s) ++ SubConstraint(t1, t2).solve(s)
@@ -156,24 +155,39 @@ class ConstraintOps {
     }
 
     def finalize(s: Solution) = {
-      val sol = ConstraintOps.solve(this +: s.notyet.filter(_.isInstanceOf[SubConstraint]), solution(s.solution))
+      val sol = ConstraintOps.solve(this +: s.notyet, solution(s.solution))
 
       var doneLower = Set[Symbol]()
       var doneUpper = Set[Symbol]()
       var cons = Seq[Constraint]()
+      var notyet = Seq[Constraint]()
       for (c <- sol.notyet) c match {
-        case SubConstraint(t1, TVar(a)) if !doneLower.contains(a) =>
-          doneLower += a
-          val bounds = sol.notyet.flatMap{case SubConstraint(t, TVar(`a`)) => Some(t); case _ => None}
-          cons = cons ++ lowerBound(bounds, TVar(a))
-        case SubConstraint(TVar(a), t1) if !doneUpper.contains(a) =>
-          doneUpper += a
-          val bounds = sol.notyet.flatMap{case SubConstraint(TVar(`a`), t) => Some(t); case _ => None}
-          cons = cons ++ upperBound(bounds, TVar(a))
-        case _ => {}
+        case SubConstraint(t1, TVar(a)) =>
+          if (!doneLower.contains(a)) {
+            doneLower += a
+            val bounds = sol.notyet.flatMap {
+              case SubConstraint(t, TVar(`a`)) => Some(t)
+              case EqMeetConstraint(TVar(`a`), _, tmeet) => Some(tmeet)
+              case EqMeetConstraint(_, TVar(`a`), tmeet) => Some(tmeet)
+              case _ => None
+            }
+            cons = cons ++ lowerBound(bounds, TVar(a))
+          }
+        case SubConstraint(TVar(a), t1) =>
+          if (!doneUpper.contains(a)) {
+            doneUpper += a
+            val bounds = sol.notyet.flatMap {
+              case SubConstraint(TVar(`a`), t) => Some(t)
+              case EqJoinConstraint(TVar(`a`), _, tjoin) => Some(tjoin)
+              case EqJoinConstraint(_, TVar(`a`), tjoin) => Some(tjoin)
+              case _ => None
+            }
+            cons = cons ++ upperBound(bounds, TVar(a))
+          }
+        case _ => notyet = c +: notyet
       }
 
-      ConstraintOps.solve(cons, solution(s.solution)).tryFinalize
+      ConstraintOps.solve(cons, Solution(sol.solution, notyet, sol.never)).tryFinalize
     }
 
     def upperBound(bounds: Seq[Type], t: Type): Seq[Constraint] = bound(bounds, t, EqJoinConstraint)
