@@ -10,7 +10,11 @@ import Generator._
  * Created by seba on 14/11/14.
  */
 class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFactory) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker = checkerFactory.makeChecker
+  var checker: TypeChecker = _
+
+  override def beforeEach: Unit = {
+    checker = checkerFactory.makeChecker
+  }
 
   override def afterEach: Unit = {
     Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
@@ -23,8 +27,7 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
   def typecheckTest(desc: String, e: => Exp)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
-      val sol = expected.unify(actual.left.get)
-      assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
+      assertResult(Left(expected))(actual)
     }
 
   def scaleTests(heights: Set[Int], kind: ExpKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Exp) => Exp = (_,e) => e)(expected: Int => Type) =
