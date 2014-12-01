@@ -10,11 +10,7 @@ import Generator._
  * Created by seba on 14/11/14.
  */
 class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFactory) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker = _
-
-  override def beforeEach: Unit = {
-    checker = checkerFactory.makeChecker
-  }
+  var checker: TypeChecker = checkerFactory.makeChecker
 
   override def afterEach: Unit = {
     Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
@@ -27,7 +23,8 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
   def typecheckTest(desc: String, e: => Exp)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
-      assertResult(Left(expected))(actual)
+      val sol = expected.unify(actual.left.get)
+      assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
   def scaleTests(heights: Set[Int], kind: ExpKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Exp) => Exp = (_,e) => e)(expected: Int => Type) =
@@ -45,5 +42,7 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
   scaleTests(Set(5, 10, 15, 18), Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i"))), leaveDesc="x1 .. xn", wrap = (h, e) => Abs(usedVars(h), e))(h => makeFunType(h, TNum, ()=>TNum))
 }
 class TestDownUpScaleNonincremental extends TestScaleNonincremental("DownUp", DownUpCheckerFactory)
+class TestDownUpSolveEndScaleNonincremental extends TestScaleNonincremental("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
 class TestBottomUpScaleNonincremental extends TestScaleNonincremental("BottomUp", BottomUpCheckerFactory)
+class TestBottomUpSolveEndScaleNonincremental extends TestScaleNonincremental("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
 class TestBottomUpEarlyTermScaleNonincremental extends TestScaleNonincremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
