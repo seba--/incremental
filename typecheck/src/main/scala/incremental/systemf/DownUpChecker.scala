@@ -116,4 +116,4 @@ case class UnboundVariable(x: Symbol, ctx: TSubst) extends RuntimeException
 
 object DownUpCheckerFactory extends TypeCheckerFactory {
   def makeChecker = new DownUpChecker
-}}
+}
