@@ -50,3 +50,4 @@ class TestDownUpSolveEndScaleNonincremental extends TestScaleNonincremental("Dow
 class TestBottomUpScaleNonincremental extends TestScaleNonincremental("BottomUp", BottomUpCheckerFactory)
 class TestBottomUpSolveEndScaleNonincremental extends TestScaleNonincremental("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
 class TestBottomUpEarlyTermScaleNonincremental extends TestScaleNonincremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
+class TestBottomKeepSubstUpScaleNonincremental extends TestScaleNonincremental("BottomUpKeepSubst", BottomUpKeepSubstCheckerFactory)

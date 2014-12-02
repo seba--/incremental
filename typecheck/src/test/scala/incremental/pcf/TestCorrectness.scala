@@ -64,3 +64,4 @@ class TestDownUpSolveEndCorrectness extends TestCorrectness("DownUpSolveEnd", Do
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpCheckerFactory)
 class TestBottomUpSolveEndCorrectness extends TestCorrectness("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
 class TestBottomUpEarlyTermCorrectness extends TestCorrectness("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
+class TestBottomKeepSubstUpCorrectness extends TestCorrectness("BottomUpKeepSubst", BottomUpKeepSubstCheckerFactory)
