@@ -105,7 +105,6 @@ object ConstraintOps {
   def solve(cs: Iterable[Constraint], sol: Solution = emptySol): Solution = {
     constraintCount += cs.size
     val (res, time) = Util.timed {
-
       cs.foldLeft(sol)((sol,c) => sol ++ c.solve(sol))
     }
     constraintSolveTime += time

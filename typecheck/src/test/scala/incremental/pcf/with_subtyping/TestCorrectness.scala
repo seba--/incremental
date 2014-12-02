@@ -49,12 +49,9 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   typecheckTestError("lambda f: Top. f (If0 0 (lambda x: TNum. x) (lambda x: TNum. f))",
     Abs(Seq('f, Top), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, TNum), Seq(Var('x))), Abs(Seq('x, TNum), Seq(Var('f)))))))
   )
-
   typecheckTestError("lambda f: Top. f 0",
     Abs(Seq('f, Top), Seq(App(Var('f), Num(0))))
   )
-
-
   typecheckTestError("lambda f: TNum -> TNum. lambda g: (TNum -> TNum) -> (TNum -> TNum). if0 0 f g",
     Abs(Seq('f, TNum -->: TNum), Seq(Abs(Seq('g, (TNum -->: TNum) -->: (TNum -->: TNum)), Seq(If0(Num(0), Var('f), Var('g)))))))
   
@@ -64,11 +61,9 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   typecheckTestError("lambda x: T. x x",
     Abs(Seq('x, TVar('T)), Seq(App(Var('x), Var('x))))
   )
-
   typecheckTest("(lamba f. f (lambda x. x) + f (lambda y. y))",
     Abs('f, Add(App(Var('f), Abs('x, Var('x))), App(Var('f), Abs('y, Var('y)))))
   ) { case TFun(TFun(TFun(TVar(x), TVar(y)), TNum), TNum) if x==y => true }
-
   typecheckTestError("lambda f: TNum -> TNum. f x",
     Abs(Seq('f, TNum -->: TNum), Seq(App(Var('f), Var('x))))
   )

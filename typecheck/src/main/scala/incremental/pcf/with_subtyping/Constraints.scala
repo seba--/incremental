@@ -37,9 +37,6 @@ class ConstraintOps {
       reqs1.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-//          val Xmeet = freshTVar()
-//          mcons = SubConstraint(r1, Xmeet) +: SubConstraint(r2, Xmeet) +: mcons
-//          mreqs += x -> Xmeet
           mcons = EqConstraint(r1, r2) +: mcons
           mreqs += x -> r1
       }
