@@ -44,9 +44,9 @@ case class TFun(t1: Type, t2: Type) extends Type {
   def subst(s: Map[Symbol, Type]) = TFun(t1.subst(s), t2.subst(s))
   def unify(other: Type, s: TSubst) = other match {
     case TFun(t1_, t2_) =>
-      val sol1 = t1.unify(t1_, s)
-      val sol2 = t2.unify(t2_, s)
-      sol1 ++ sol2
+      val Solution(s1, _, never1) = t1.unify(t1_, s)
+      val Solution(s2, _, never2) = t2.unify(t2_, s1 ++ s)
+      Solution(s1 ++ s2, Seq(), never1 ++ never2)
     case TVar(x) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
