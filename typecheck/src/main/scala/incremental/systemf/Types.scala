@@ -36,7 +36,7 @@ case class TFun(t1: Type, t2: Type) extends Type {
 }
 
 
-case class TVar(alpha : Symbol) extends Type{
+case class TVar(alpha : Symbol) extends Type {
 
   def occurs(x2: Symbol) = alpha == x2
 
@@ -70,10 +70,10 @@ case class TVarInternal(x: Symbol) extends Type {
 case class TUniv(alpha : Symbol, t : Type) extends Type {
   def occurs(x2: Symbol) = alpha == x2
 
-  def subst(s: Map[Symbol, Type]) = TUniv(alpha, t.subst(s))
+  def subst(s: Map[Symbol, Type]) = TUniv(alpha, t.subst(s - alpha))
 
   def unify(other: Type, s: TSubst) = other match {
-    case TUnivInternal(alpha2, t2) => t.unify(t2, s + (alpha2 -> TVar(alpha)))
+    case TUnivInternal(alpha2, t2) => solution(Map(alpha2 -> TVar(alpha))) ++ t.unify(t2, s + (alpha2 -> TVar(alpha)))
     case TUniv(`alpha`, t2) => t.unify(t2, s)
     case TVarInternal(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
@@ -83,10 +83,16 @@ case class TUniv(alpha : Symbol, t : Type) extends Type {
 case class TUnivInternal(alpha: Symbol, t : Type) extends Type{
   def occurs(x2: Symbol) = alpha == x2
 
-  def subst(s : Map[Symbol, Type]) = TUnivInternal(alpha,  t.subst(s))
+  def subst(s : Map[Symbol, Type]) = s.get(alpha) match {
+    case Some(TVar(beta)) => TUniv(beta, t.subst(s))
+    case Some(TVarInternal(beta)) => TUnivInternal(beta, t.subst(s))
+    case None => TUnivInternal(alpha, t.subst(s))
+    case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
+  }
+
   def unify(other: Type, s: TSubst) = other match {
-    case TUnivInternal(alpha2, t2) => t.unify(t2, s + (alpha -> TVarInternal(alpha2)))
-    case TUniv(alpha2, t2) => t.unify(t2, s + (alpha -> TVar(alpha2)))
+    case TUnivInternal(alpha2, t2) => solution(Map(alpha -> TVarInternal(alpha2))) ++ t.unify(t2, s + (alpha -> TVarInternal(alpha2)))
+    case TUniv(alpha2, t2) => solution(Map(alpha -> TVar(alpha2))) ++ t.unify(t2, s + (alpha -> TVar(alpha2)))
     case TVarInternal(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }

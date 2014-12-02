@@ -55,7 +55,7 @@ class BottomUpChecker extends TypeChecker {
       val isRoot = current.parent == null
 
       val t = typecheckStep(current)
-//      println(s"$current -> t")
+      println(s"$current -> $t")
 //      println(s"  old: ${current.typ}")
 
       current.typ = t
@@ -130,10 +130,6 @@ class BottomUpChecker extends TypeChecker {
       }
 
       (tfun, restReqs, subsol)
-    case TAbs if (e.lits(0).isInstanceOf[Symbol]) =>
-      val alpha = e.lits(0).asInstanceOf[Symbol]
-      val (t, reqs, subsol) = e.kids(0).typ
-      (TUniv(alpha, t), reqs - alpha, subsol)
     case If0 =>
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
@@ -155,6 +151,27 @@ class BottomUpChecker extends TypeChecker {
       val fixCons = EqConstraint(t, TFun(X, X))
       val sol = solve(fixCons)
       (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), subsol <++ sol)
+
+
+    case TAbs if (e.lits(0).isInstanceOf[Symbol]) =>
+      val alpha = e.lits(0).asInstanceOf[Symbol]
+      val (t, reqs, subsol) = e.kids(0).typ
+      (TUniv(alpha, t), reqs - alpha, subsol)
+
+    case TApp =>
+      val (t1, reqs1, subsol) = e.kids(0).typ
+      val t = e.lits(0).asInstanceOf[Type]
+
+      val Xalpha = freshTVar().x
+      val Xbody = freshTVar()
+      val Xres = freshTVar()
+
+      val ucons = EqConstraint(TUnivInternal(Xalpha, Xbody), t1)
+      val vcons = EqSubstConstraint(Xbody, Xalpha, true, t, Xres) // Xbody[Xalpha:=t] == Xres
+
+      val sol = solve(Seq(ucons, vcons))
+
+      (Xres.subst(sol.solution), reqs1.mapValues(_.subst(sol.solution)), subsol <++ sol)
   }
 }
 
