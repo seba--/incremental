@@ -19,6 +19,7 @@ class BottomUpChecker extends TypeChecker {
   def constraintCount = constraint.constraintCount
   def mergeReqsTime = constraint.mergeReqsTime
   def constraintSolveTime = constraint.constraintSolveTime
+  def mergeSolutionTime = constraint.mergeSolutionTime
 
   type Reqs = Map[Symbol, Type]
 

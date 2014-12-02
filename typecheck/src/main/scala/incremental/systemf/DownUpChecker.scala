@@ -18,6 +18,7 @@ class DownUpChecker extends TypeChecker {
   def constraintCount = constraint.constraintCount
   def mergeReqsTime = constraint.mergeReqsTime
   def constraintSolveTime = constraint.constraintSolveTime
+  def mergeSolutionTime = constraint.mergeSolutionTime
 
   type Result = (Type, Solution)
 
