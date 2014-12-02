@@ -46,8 +46,8 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
   scaleTests(Set(5, 10, 15, 18), Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i"))), leaveDesc="x1 .. xn", wrap = (h, e) => Abs(usedVars(h), e))(h => makeFunType(h, TNum, ()=>TNum))
 }
 class TestDownUpScaleNonincremental extends TestScaleNonincremental("DownUp", DownUpCheckerFactory)
-class TestDownUpSolveEndScaleNonincremental extends TestScaleNonincremental("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
+//class TestDownUpSolveEndScaleNonincremental extends TestScaleNonincremental("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
 class TestBottomUpScaleNonincremental extends TestScaleNonincremental("BottomUp", BottomUpCheckerFactory)
 //class TestBottomUpSolveEndScaleNonincremental extends TestScaleNonincremental("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
-class TestBottomUpEarlyTermScaleNonincremental extends TestScaleNonincremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
+//class TestBottomUpEarlyTermScaleNonincremental extends TestScaleNonincremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
 //class TestBottomKeepSubstUpScaleNonincremental extends TestScaleNonincremental("BottomUpKeepSubst", BottomUpKeepSubstCheckerFactory)
