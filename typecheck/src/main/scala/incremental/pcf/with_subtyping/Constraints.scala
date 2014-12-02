@@ -37,8 +37,9 @@ class ConstraintOps {
       reqs1.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-          mcons = EqConstraint(r1, r2) +: mcons
-          mreqs += x -> r1
+          val Xmeet = freshTVar()
+          mcons = EqMeetConstraint(r1, r2, Xmeet) +: mcons
+          mreqs += x -> Xmeet
       }
 
     (mcons, mreqs)
@@ -52,7 +53,6 @@ class ConstraintOps {
       case _ if t1 == t2 => withMeet(t1, s)
       case (_, Top) => withMeet(t1, s)
       case (Top, _) => withMeet(t2, s)
-      case (Bot, _) | (_, Bot) => withMeet(Bot, s)
       case (TVar(x), TVar(y)) if x == y => withMeet(t1, s)
       case (TVar(a), _) =>
         s.solution.get(a) match {
@@ -91,8 +91,6 @@ class ConstraintOps {
     def solve(s: Solution) = (t1, t2) match {
       case _ if t1 == t2 => withJoin(t1, s)
       case (_, Top) | (Top, _) => withJoin(Top, s)
-      case (Bot, _) => withJoin(t2, s)
-      case (_, Bot) => withJoin(t1, s)
       case (TVar(a), _) =>
         s.solution.get(a) match {
           case Some(t1) => EqJoinConstraint(t1, t2, tjoin).solve(s)
@@ -129,7 +127,6 @@ class ConstraintOps {
       case _ if s.notyet.contains(this) => emptySol
       case (t1, t2) if t1 == t2 => emptySol
       case (_, Top) => emptySol
-      case (Bot, _) => emptySol
       case (TVar(a), t2) =>
         s.solution.get(a) match {
           case Some(t1) => SubConstraint(t1, t2).solve(s)

@@ -71,8 +71,8 @@ object ConstraintOps {
 
     def <++(other: Solution): Solution = {
       val (res, time) = Util.timed {
-        var mnotyet = (notyet ++ other.notyet).map(_.subst(other.solution))
-        var mnever = (never ++ other.never).map(_.subst(other.solution))
+        var mnotyet = notyet.map(_.subst(other.solution)) ++ other.notyet
+        var mnever = never.map(_.subst(other.solution)) ++ other.never
         Solution(Map(), mnotyet, mnever)
       }
       mergeSolutionTime += time

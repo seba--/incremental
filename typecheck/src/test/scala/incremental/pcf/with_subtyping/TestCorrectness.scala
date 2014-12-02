@@ -67,6 +67,11 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   typecheckTestError("lambda f: TNum -> TNum. f x",
     Abs(Seq('f, TNum -->: TNum), Seq(App(Var('f), Var('x))))
   )
+  typecheckTest("lambda f: (TNum -> Top) -> TNum. f (if0 0 (lambda x: Top. 1) (lambda x: Top. x))",
+    Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, Top), Seq(Num(1))), Abs(Seq('x, Top), Seq(Var('x)))))))
+  ) {
+    case ((TNum -->: Top) -->: TNum) -->: TNum => true
+  }
 }
 
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp (Subtyping)", BottomUpCheckerFactory)
