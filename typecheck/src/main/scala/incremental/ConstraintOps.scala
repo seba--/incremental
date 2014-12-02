@@ -50,9 +50,20 @@ object ConstraintOps {
     // if solutions are not needed
     def +++(other: Solution): Solution = {
       val (res, time) = Util.timed {
-        var mnotyet = notyet ++ other.notyet
-        var mnever = never ++ other.never
+        val mnotyet = notyet ++ other.notyet
+        val mnever = never ++ other.never
         Solution(Map(), mnotyet, mnever)
+      }
+      mergeSolutionTime += time
+      res
+    }
+
+    def ++++(other: Solution): Solution = {
+      val (res, time) = Util.timed {
+        val msolution = solution ++ other.solution
+        val mnotyet = notyet ++ other.notyet
+        val mnever = never ++ other.never
+        Solution(msolution, mnotyet, mnever)
       }
       mergeSolutionTime += time
       res

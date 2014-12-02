@@ -14,6 +14,7 @@ trait TypeChecker {
   def constraintCount: Int
   def mergeReqsTime: Double
   def constraintSolveTime: Double
+  def mergeSolutionTime: Double
 }
 
 trait TypeCheckerFactory {

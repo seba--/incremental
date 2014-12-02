@@ -8,11 +8,8 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
  * Created by seba on 14/11/14.
  */
 class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker = _
+  var checker: TypeChecker = checkerFactory.makeChecker
 
-  override def beforeEach: Unit = {
-    checker = checkerFactory.makeChecker
-  }
   override def afterEach: Unit = {
     Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
     Util.log(f"Type-check time\t\t${checker.typecheckTime}%.3fms")
@@ -24,7 +21,9 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   def typecheckTest(desc: String, e: =>Exp)(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
-      assertResult(Left(expected))(actual)
+      assert(actual.isLeft, s"Expected $expected but got $actual")
+      val sol = expected.unify(actual.left.get)
+      assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
   def typecheckTestError(desc: String, e: =>Exp) =
@@ -61,5 +60,8 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
 }
 
 class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
+class TestDownUpSolveEndCorrectness extends TestCorrectness("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpCheckerFactory)
+class TestBottomUpSolveEndCorrectness extends TestCorrectness("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
 class TestBottomUpEarlyTermCorrectness extends TestCorrectness("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
+class TestBottomKeepSubstUpCorrectness extends TestCorrectness("BottomUpKeepSubst", BottomUpKeepSubstCheckerFactory)
