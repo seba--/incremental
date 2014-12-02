@@ -48,6 +48,6 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
 class TestDownUpScaleNonincremental extends TestScaleNonincremental("DownUp", DownUpCheckerFactory)
 class TestDownUpSolveEndScaleNonincremental extends TestScaleNonincremental("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
 class TestBottomUpScaleNonincremental extends TestScaleNonincremental("BottomUp", BottomUpCheckerFactory)
-class TestBottomUpSolveEndScaleNonincremental extends TestScaleNonincremental("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
+//class TestBottomUpSolveEndScaleNonincremental extends TestScaleNonincremental("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
 class TestBottomUpEarlyTermScaleNonincremental extends TestScaleNonincremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
-class TestBottomKeepSubstUpScaleNonincremental extends TestScaleNonincremental("BottomUpKeepSubst", BottomUpKeepSubstCheckerFactory)
+//class TestBottomKeepSubstUpScaleNonincremental extends TestScaleNonincremental("BottomUpKeepSubst", BottomUpKeepSubstCheckerFactory)
