@@ -22,6 +22,7 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
     Util.log(f"Constraint count\t${checker.constraintCount}")
     Util.log(f"Cons. solve time\t${checker.constraintSolveTime}%.3fms")
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
+    Util.log(f"Merge sol time\t\t${checker.mergeSolutionTime}%.3fms")
   }
 
   def typecheckTest(desc: String, e: => Exp)(expected: Type): Unit =

@@ -18,6 +18,7 @@ class DownUpChecker extends TypeChecker {
   def constraintCount = constraint.constraintCount
   def mergeReqsTime = constraint.mergeReqsTime
   def constraintSolveTime = constraint.constraintSolveTime
+  def mergeSolutionTime = constraint.mergeSolutionTime
 
   val preparationTime = 0.0
   var typecheckTime = 0.0

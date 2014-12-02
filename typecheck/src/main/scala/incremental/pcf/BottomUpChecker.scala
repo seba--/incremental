@@ -19,6 +19,7 @@ class BottomUpChecker extends TypeChecker {
   def constraintCount = constraint.constraintCount
   def mergeReqsTime = constraint.mergeReqsTime
   def constraintSolveTime = constraint.constraintSolveTime
+  def mergeSolutionTime = constraint.mergeSolutionTime
 
   type Reqs = Map[Symbol, Type]
 
@@ -76,7 +77,7 @@ class BottomUpChecker extends TypeChecker {
 
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
-      val sol = solve(lcons +: rcons +: mcons)
+      val sol = solve(mcons, solve(lcons) ++++ solve(rcons))
       (TNum, mreqs.mapValues(_.subst(sol.solution)), sol1 +++ sol2 <++ sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
