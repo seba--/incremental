@@ -56,7 +56,7 @@ class BottomUpChecker extends TypeChecker {
       val isRoot = current.parent == null
 
       val t = typecheckStep(current)
-      println(s"$current -> $t")
+//      println(s"$current -> $t")
 //      println(s"  old: ${current.typ}")
 
       current.typ = t
