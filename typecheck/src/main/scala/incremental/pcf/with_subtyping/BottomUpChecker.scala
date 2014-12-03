@@ -36,7 +36,8 @@ class BottomUpChecker extends TypeChecker {
       uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
 
       val (t_, reqs, sol_) = root.typ
-      val sol = sol_.tryFinalize
+      //val sol = sol_.tryFinalize
+      val sol = reduceSol(sol_)
       val t = t_.subst(sol.solution)
 
       if (!reqs.isEmpty)
@@ -108,8 +109,8 @@ class BottomUpChecker extends TypeChecker {
           (TFun(annotatedT, t), reqs - x, subsol)
         case Some(treq) =>
           val otherReqs = reqs - x
-          val sol = solve(EqConstraint(annotatedT, treq))
-          (TFun(treq, t).subst(sol.solution), otherReqs.mapValues(_.subst(sol.solution)), subsol <++ sol)
+          val sol = solve(SubConstraint(annotatedT, treq))
+          (TFun(annotatedT, t).subst(sol.solution), otherReqs.mapValues(_.subst(sol.solution)), subsol <++ sol)
       }
     /*case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]

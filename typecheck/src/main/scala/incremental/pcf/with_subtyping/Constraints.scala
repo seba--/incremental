@@ -204,4 +204,36 @@ class ConstraintOps {
 
     def subst(s: TSubst) = SubConstraint(lower.subst(s), upper.subst(s))
   }
+
+  def reduceSol(s: Solution): Solution = {
+    val (inner, leafs) = s.notyet.partition {
+      case SubConstraint(TVar(_), TVar(_)) => true
+      case _ => false
+    }
+    val (lowerBounded, rest1) = leafs.partition {
+      case SubConstraint(t, TVar(_)) => true
+      case EqMeetConstraint(_, _, TVar(_)) => true
+      case _ => false
+    }
+    val (upperBounded, rest) = rest1.partition {
+      case SubConstraint(TVar(_), _) => true
+      case EqJoinConstraint(_, _, TVar(_)) => true
+      case _ => false
+    }
+    val s1 = lowerBounded.foldLeft(Solution(s.solution, List(), s.never)) {
+      case (sol, SubConstraint(t, tv)) => sol ++ tv.unify(t, sol.solution)
+      case (sol, c) => sol ++ c.solve(sol)
+    }
+    val s2 = rest.foldLeft(s1) {
+      case (sol, c) => sol ++ c.solve(sol)
+    }
+    val s3 = upperBounded.foldLeft(s2) {
+      case (sol, SubConstraint(tv@TVar(_), t)) => sol ++ tv.unify(t, sol.solution)
+      case (sol, c) => sol ++ c.solve(sol)
+    }
+    val s4 = inner.foldLeft(s2) { case (sol, c) => sol ++ c.solve(sol) }
+    if (s4.notyet.nonEmpty)
+      reduceSol(s4)
+    else s4
+  }
 }
