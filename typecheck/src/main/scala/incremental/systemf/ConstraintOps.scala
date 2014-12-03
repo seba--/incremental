@@ -42,6 +42,26 @@ class ConstraintOps {
     (mcons, mreqs)
   }
 
+  var tmergeReqsTime = 0.0
+
+  def tmergeReqMaps(reqs1: Map[Symbol, Type], reqs2: Map[Symbol, Type]) = {
+    val (res, time) = Util.timed(_mergeReqMaps(reqs1, reqs2))
+    tmergeReqsTime += time
+    res
+  }
+
+  def _tmergeReqMaps(reqs1: Map[Symbol, Type], reqs2: Map[Symbol, Type]) = {
+    var mcons = Seq[EqConstraint]()
+    var mreqs = reqs1
+    for ((x, r2) <- reqs2)
+      reqs1.get(x) match {
+        case None => mreqs += x -> r2
+        case Some(r1) =>
+          mcons = EqConstraint(r1, r2) +: mcons
+      }
+
+    (mcons, mreqs)
+  }
 
   case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean, substitute: Type, result: Type) extends Constraint {
     private def withResult(t: Type, s: Solution) = t.unify(result, s.solution)
