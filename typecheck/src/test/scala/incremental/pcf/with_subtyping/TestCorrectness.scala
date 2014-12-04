@@ -38,14 +38,14 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
     }
-  /*typecheckTest("lambda f: (TNum -> Top) -> TNum. lambda g: Top -> TNum. f g",
+  typecheckTest("lambda f: (TNum -> Top) -> TNum. lambda g: Top -> TNum. f g",
     Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(Abs(Seq('g, Top -->: TNum),  Seq(App(Var('f), Var('g))))))) {
       case ((TNum -->: Top) -->: TNum) -->: (Top -->: TNum) -->: TNum => true
   }
-  typecheckTest("lambda f: TNum -> TNum. lambda g: TNum -> (TNum -> TNum). if0 0 f g",
+  /*typecheckTest("lambda f: TNum -> TNum. lambda g: TNum -> (TNum -> TNum). if0 0 f g",
     Abs(Seq('f, TNum -->: TNum), Seq(Abs(Seq('g, TNum -->: (TNum -->: TNum)), Seq(If0(Num(0), Var('f), Var('g))))))) {
     case (TNum -->: TNum) -->: (TNum -->: (TNum -->: TNum)) -->: (TNum -->: Top) => true
-  }*/
+  }
   typecheckTestError("lambda f: Top. f (If0 0 (lambda x: TNum. x) (lambda x: TNum. f))",
     Abs(Seq('f, Top), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, TNum), Seq(Var('x))), Abs(Seq('x, TNum), Seq(Var('f)))))))
   )
@@ -71,7 +71,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
     Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, Top), Seq(Num(1))), Abs(Seq('x, Top), Seq(Var('x)))))))
   ) {
     case ((TNum -->: Top) -->: TNum) -->: TNum => true
-  }
+  }*/
 }
 
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp (Subtyping)", BottomUpCheckerFactory)

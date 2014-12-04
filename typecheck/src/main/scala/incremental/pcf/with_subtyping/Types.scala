@@ -9,24 +9,13 @@ import incremental.pcf.TVar
  * Created by oliver on 19.11.14.
  */
 case object Top extends Type {
+  val isGround = true
   def occurs(x: Symbol) = false
 
   def subst(s: TSubst) = this
 
   def unify(other: Type, s: TSubst) = other match {
     case Top => emptySol
-    case TVar(_) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
-  }
-}
-
-case object Bot extends Type {
-  def occurs(x: Symbol) = false
-
-  def subst(s: TSubst) = this
-
-  def unify(other: Type, s: TSubst) = other match {
-    case Bot => emptySol
     case TVar(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }

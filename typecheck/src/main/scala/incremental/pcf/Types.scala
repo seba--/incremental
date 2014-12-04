@@ -12,6 +12,7 @@ import incremental.Type.TSubst
 //}
 
 case object TNum extends Type {
+  val isGround = true
   def occurs(x: Symbol) = false
   def subst(s: TSubst) = this
   def unify(other: Type, s: TSubst) = other match {
@@ -22,6 +23,7 @@ case object TNum extends Type {
 }
 
 case class TVar(x: Symbol) extends Type {
+  val isGround = false
   def occurs(x2: Symbol) = x == x2
   def subst(s: Map[Symbol, Type]) = s.getOrElse(x, this)
   def unify(other: Type, s: TSubst) =
@@ -40,6 +42,7 @@ case class TVar(x: Symbol) extends Type {
 }
 
 case class TFun(t1: Type, t2: Type) extends Type {
+  val isGround = t1.isGround && t2.isGround
   def occurs(x: Symbol) = t1.occurs(x) || t2.occurs(x)
   def subst(s: Map[Symbol, Type]) = TFun(t1.subst(s), t2.subst(s))
   def unify(other: Type, s: TSubst) = other match {

@@ -7,6 +7,8 @@ import Type._
 import incremental.ConstraintOps.Solution
 
 trait Type {
+  val isGround: Boolean
+
   def occurs(x: Symbol): Boolean
 
   def subst(s: TSubst): Type

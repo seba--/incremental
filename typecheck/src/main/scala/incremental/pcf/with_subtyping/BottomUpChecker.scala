@@ -89,7 +89,7 @@ class BottomUpChecker extends TypeChecker {
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
 
-      val X = freshTVar()
+      val X = freshTVar(false)
       val Y = freshTVar()
 
       val fcons = EqConstraint(TFun(X, Y), t1)
@@ -141,7 +141,7 @@ class BottomUpChecker extends TypeChecker {
       val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
       val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
 
-      val Xjoin = freshTVar()
+      val Xjoin = freshTVar()  //TODO positive or negative?
       val ccons = EqConstraint(TNum, t1)
       val bodycons = EqJoinConstraint(t2, t3, Xjoin)
 
@@ -151,9 +151,11 @@ class BottomUpChecker extends TypeChecker {
 
     case Fix =>
       val (t, reqs, subsol) = e.kids(0).typ
-      val X = freshTVar()
-      val fixCons = EqConstraint(t, TFun(X, X))
-      val sol = solve(fixCons)
+      val X = freshTVar(false)
+      val Y = freshTVar()
+      val fixCons = EqConstraint(t, TFun(X, Y))
+      val subCons = SubConstraint(Y, X)
+      val sol = solve(Seq(fixCons, subCons))
       (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), subsol <++ sol)
   }
 }

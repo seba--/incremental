@@ -11,17 +11,23 @@ import scala.language.implicitConversions
 object TypeOps {
   implicit def toTypeOp(tpe: Type): TypeOps = new TypeOps(tpe)
   class TypeOps(val tpe: Type) extends AnyVal {
-    /**
-     * Check if tpe is a subtype of that.
-     *
-     * @param that
-     * @return
-     */
+    def ||(that: Type): Type = (tpe, that) match {
+      case (Top, _) | (_, Top) => Top
+      case (TNum, TNum) => TNum
+      case (s1 -->: t1, s2 -->: t2) => (s1 && s2) -->: (t1 || t2)
+    }
+
+    def &&(that: Type): Type = (tpe, that) match {
+      case (Top, t) => t
+      case (t, Top) => t
+      case (TNum, TNum) => TNum
+      case (s1 -->: t1, s2 -->: t2) => (s1 || s2) -->: (t1 && t2)
+    }
+
     def <(that: Type): Boolean = (tpe, that) match {
-      case (_, Top) | (Bot, _) => true
+      case (_, Top) => true
       case (TNum, TNum) => true
-      case (TFun(s1, t1), TFun(s2, t2)) => s2 < s1 && t1 < t2
-      case _ => false
+      case (s1 -->: t1, s2 -->: t2) => s2 < s1 && t1 < t2
     }
 
     def -->:(that: Type): Type = TFun(that, tpe)

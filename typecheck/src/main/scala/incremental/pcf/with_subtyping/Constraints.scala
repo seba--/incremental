@@ -15,11 +15,25 @@ class ConstraintOps {
   def constraintSolveTime = incremental.ConstraintOps.constraintSolveTime
   def mergeSolutionTime = incremental.ConstraintOps.mergeSolutionTime
 
+  private var _pos: Set[Symbol] = Set()
+  private var _neg: Set[Symbol] = Set()
+
+  def isPositive(a: Symbol): Boolean = _pos(a)
+  def isNegative(a: Symbol): Boolean = _neg(a)
+  def isBipolar(a: Symbol): Boolean = isPositive(a) && isNegative(a)
+
   private var _nextId = 0
-  def freshTVar(): TVar = {
+  def freshTVar(positive: Boolean = true): TVar = {
     val v = TVar(Symbol("x$" + _nextId))
     _nextId += 1
+    if (positive) _pos += v.x
+    else _neg += v.x
     v
+  }
+  def freshBiVar(): TVar = {
+    val res = freshTVar()
+    _neg += res.x
+    res
   }
 
   var mergeReqsTime = 0.0
@@ -37,7 +51,7 @@ class ConstraintOps {
       reqs1.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-          val Xmeet = freshTVar()
+          val Xmeet = freshTVar() //TODO positive or negative?
           mcons = EqMeetConstraint(r1, r2, Xmeet) +: mcons
           mreqs += x -> Xmeet
       }
@@ -65,7 +79,7 @@ class ConstraintOps {
           case None => notyet(this)
         }
       case (TFun(s1, t1), TFun(s2, t2)) =>
-        val X = freshTVar()
+        val X = freshTVar(false)
         val Y = freshTVar()
         EqJoinConstraint(s1, s2, X).solve(s) ++ EqMeetConstraint(t1, t2, Y).solve(s) ++ withMeet(TFun(X, Y), s)
       case _ => never(this) //withMeet(Bot, s)
@@ -102,7 +116,7 @@ class ConstraintOps {
           case None => notyet(this)
         }
       case (TFun(s1, t1), TFun(s2, t2)) =>
-        val X = freshTVar()
+        val X = freshTVar(false)
         val Y = freshTVar()
         EqMeetConstraint(s1, s2, X).solve(s) ++ EqJoinConstraint(t1, t2, Y).solve(s) ++ withJoin(TFun(X, Y), s)
       case _ => withJoin(Top, s)
@@ -195,7 +209,7 @@ class ConstraintOps {
       else if (bounds.size == 2)
        Seq(mkBound(bounds(0), bounds(1), t))
       else {
-        val X = freshTVar()
+        val X = freshTVar() //TODO positive or negative?
         val hd = bounds.head
         val tl = bounds.tail
         val cons = lowerBound(tl, X)
@@ -203,6 +217,66 @@ class ConstraintOps {
       }
 
     def subst(s: TSubst) = SubConstraint(lower.subst(s), upper.subst(s))
+  }
+
+  def transClosure(s: Set[Constraint]): Set[Constraint] = {
+    var res = s
+    var lowerBounded: Map[Symbol, Set[Type]] = Map().withDefaultValue(Set())
+    var upperBounded: Map[Symbol, Set[Type]] = Map().withDefaultValue(Set())
+    for(SubConstraint(x,y) <- s) {
+      (x, y) match {
+        case (TVar(a), TVar(b)) =>
+          upperBounded += a -> (upperBounded(a) + y)
+          lowerBounded += b -> (lowerBounded(b) + x)
+        case (TVar(a), t) => upperBounded += a -> (upperBounded(a) + t)
+        case (t, TVar(a)) => lowerBounded += a -> (lowerBounded(a) + t)
+        case _ => ()
+      }
+    }
+    var terminated = false
+    while(!terminated) {
+      var nuLowerBounded: Map[Symbol, Set[Type]] = Map().withDefaultValue(Set())
+      var nuUpperBounded: Map[Symbol, Set[Type]] = Map().withDefaultValue(Set())
+      for ((v, ts1) <- lowerBounded;
+           ts2 = upperBounded(v);
+           t1 <- ts1;
+           t2 <- ts2;
+           c <- decomposeSub(t1, t2)) {
+        c match {
+          case SubConstraint(x@TVar(a), y@TVar(b)) =>
+            nuUpperBounded += a -> (nuUpperBounded(a) + y)
+            nuLowerBounded += b -> (nuLowerBounded(b) + x)
+          case SubConstraint(TVar(a), t) => nuUpperBounded += a -> (nuUpperBounded(a) + t)
+          case SubConstraint(t, TVar(a)) => nuLowerBounded += a -> (nuLowerBounded(a) + t)
+          case _ => ()
+        }
+        res += c
+      }
+
+      terminated = true
+      for((v, ts) <- nuLowerBounded) {
+        val old = lowerBounded(v)
+        val nu = old ++ ts
+        if (old.size != nu.size)
+          terminated = false
+        lowerBounded += v -> nu
+      }
+      for((v, ts) <- nuUpperBounded) {
+        val old = upperBounded(v)
+        val nu = old ++ ts
+        if (old.size != nu.size)
+          terminated = false
+        upperBounded += v -> nu
+      }
+    }
+    res
+  }
+
+  def decomposeSub(lower: Type, upper: Type): Set[Constraint] = (lower, upper) match {
+    case (t, t2) if t == t2 => Set()
+    case (_, Top) => Set()
+    case (s1 -->: t1, s2 -->: t2) => decomposeSub(s2, s1) ++ decomposeSub(t1, t2)
+    case _ => Set(SubConstraint(lower, upper))
   }
 
   def reduceSol(s: Solution): Solution = {

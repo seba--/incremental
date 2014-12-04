@@ -9,6 +9,7 @@ import incremental.pcf.TVar
  * Created by seba on 15/11/14.
  */
 case class TRef(t: Type) extends Type {
+  val isGround = t.isGround
   def occurs(x: Symbol) = t.occurs(x)
   def subst(s: TSubst) = TRef(t.subst(s))
   def unify(other: Type, s: TSubst) = other match {
@@ -19,6 +20,7 @@ case class TRef(t: Type) extends Type {
 }
 
 case object TUnit extends Type {
+  val isGround = true
   def occurs(x: Symbol) = false
   def subst(s: TSubst) = TUnit
   def unify(other: Type, s: TSubst) = other match {
