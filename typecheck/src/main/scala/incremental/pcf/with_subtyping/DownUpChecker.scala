@@ -30,7 +30,7 @@ class DownUpChecker extends TypeChecker {
     val (res, ctime) = Util.timed(
       try {
         val (t_, sol_) = typecheck(root, Map())
-        val (sigma, notyet, unsat) = sol_.tryFinalize
+        val (sigma, notyet, unsat) = sol_.tryFinalize.state
         val t = t_.subst(sigma)
         if (!(notyet.isEmpty && unsat.isEmpty))
           Right(s"Unresolved constraints notyet: $notyet\nunsat: ${unsat}, type $t")

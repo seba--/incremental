@@ -37,7 +37,7 @@ class BottomUpChecker extends TypeChecker {
       uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
 
       val (t_, reqs, sol_) = root.typ
-      val (sigma, notyet, unsat) = sol_.tryFinalize
+      val (sigma, notyet, unsat) = sol_.tryFinalize.state
       val t = t_.subst(sigma)
 
       if (!reqs.isEmpty)
@@ -87,7 +87,7 @@ class BottomUpChecker extends TypeChecker {
       val X = freshTVar(false)
       val Y = freshTVar()
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-      val sol = sol1 <-- sol2 <-- Equal(t1, X -->: Y) <-- Subtype(t2, X) <-- mcons
+      val sol = sol1 <-- sol2 + Equal(t1, X -->: Y) <-- Subtype(t2, X) <-- mcons
       (Y.subst(sol.solution), mreqs.mapValues(_.subst(sol.solution)), sol)
     case Abs if e.lits(0).isInstanceOf[Symbol] =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -109,14 +109,14 @@ class BottomUpChecker extends TypeChecker {
       val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
       val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
       val Xjoin = freshTVar()
-      val sol = sol1 <-- sol2 <-- sol3 <-- Equal(TNum, t1) <-- Subtype(t2, Xjoin) <-- Subtype(t3, Xjoin) <-- mcons12 <-- mcons23
+      val sol = sol1 <-- sol2 <-- sol3 + Equal(TNum, t1) + Subtype(t2, Xjoin) <-- Subtype(t3, Xjoin) <-- mcons12 <-- mcons23
       (Xjoin.subst(sol.solution), mreqs123.mapValues(_.subst(sol.solution)), sol)
 
     case Fix =>
       val (t, reqs, subsol) = e.kids(0).typ
       val X = freshTVar(false)
       val Y = freshTVar()
-      val sol = subsol <-- Equal(t, X -->: Y) <-- Subtype(Y, X)
+      val sol = subsol + Equal(t, X -->: Y) <-- Subtype(Y, X)
       (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), sol)
   }
 }

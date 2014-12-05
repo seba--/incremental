@@ -47,7 +47,7 @@ class Constr {
         case None => mreqs += x -> r2
         case Some(r1) =>
           val Xmeet = freshTVar(false)
-          mcons <-- Subtype(Xmeet, r1) <-- Subtype(Xmeet, r2)
+          mcons + Subtype(Xmeet, r1) <-- Subtype(Xmeet, r2)
           mreqs += x -> Xmeet
       }
     (mcons, mreqs)
@@ -82,7 +82,6 @@ class Constr {
   }
 
   class CSet  {
-    //TODO make this immutable
     //invariant: values are ground types
     private[CSet] var _solution: TSubst = Map()
     //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
@@ -92,60 +91,74 @@ class Constr {
     def solution: TSubst = _solution
 
     def <--(that: CSet): CSet = {
-      unsat ++= that.unsat
+      val res = copy
+      res.unsat ++= that.unsat
       for((tv, (l1, u1)) <- that.bounds) {
-        val (l2, u2) = bounds(tv)
+        val (l2, u2) = res.bounds(tv)
         val (newL, errorl) = l2 merge l1
         val (newU, erroru) = u2 merge u1
         if(errorl.nonEmpty)
-          never(Join(errorl))
+          res.never(Join(errorl))
         if(erroru.nonEmpty)
-          never(Meet(erroru))
+          res.never(Meet(erroru))
         val merged = (newL, newU)
-        bounds += tv -> merged
+        res.bounds += tv -> merged
       }
-      _solution = mergeSubsts(_solution, that._solution)   //TODO verify if it is safe to just join the maps
-      this
+      res._solution = mergeSubsts(res._solution, that._solution)   //TODO verify if it is safe to just join the maps
+      res
     }
 
     //add and solve immediately
     def <--(c: Constraint): CSet = {
+      val res = copy
       c match {
         case Equal(t1, t2) =>
-          normalizeSub(t1, t2)
-          normalizeSub(t2, t1)
-          saturateSolution()
+          res.normalizeSub(t1, t2)
+          res.normalizeSub(t2, t1)
+          res.saturateSolution()
         case Subtype(lower, upper) =>
-          normalizeSub(lower, upper)
-          saturateSolution()
-        case _ => ???
+          res.normalizeSub(lower, upper)
+          res.saturateSolution()
+        case _ =>
       }
-      this
+      res
     }
 
     //add but do not solve immediately
     def +(c: Constraint): CSet = {
+      val res = copy
       c match {
         case Equal(t1, t2) =>
-          normalizeSub(t1, t2)
-          normalizeSub(t2, t1)
+          res.normalizeSub(t1, t2)
+          res.normalizeSub(t2, t1)
         case Subtype(lower, upper) =>
-          normalizeSub(lower, upper)
-        case _ => ???
+          res.normalizeSub(lower, upper)
+        case _ =>
       }
-      this
+      res
     }
 
-    def tryFinalize: Sol = {
+    def tryFinalize: CSet = {
+      val res = copy
       //set upper bounds of negative vars to Top if still undetermined and solve
-      bounds = bounds.map {
+      res.bounds = bounds.map {
         case (tv, (lower, upper)) if isNegative(tv) && !upper.isGround =>
           val (newUpper, _) = upper.add(Top)
           (tv, (lower, newUpper))
         case x => x
       }
-      saturateSolution()
-      (_solution, bounds, unsat)
+      res.saturateSolution()
+      res
+    }
+
+    def state: Sol = (_solution, bounds, unsat)
+
+    def copy: CSet = {
+      val res = CSet()
+      res._solution = this._solution
+      res.bounds = this.bounds
+      res.unsat = this.unsat
+      res
     }
 
     private[CSet] def normalizeSub(s: Type, t: Type): Unit = (s,t) match {
