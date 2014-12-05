@@ -11,17 +11,19 @@ import scala.language.implicitConversions
 object TypeOps {
   implicit def toTypeOp(tpe: Type): TypeOps = new TypeOps(tpe)
   class TypeOps(val tpe: Type) extends AnyVal {
-    def ||(that: Type): Type = (tpe, that) match {
-      case (Top, _) | (_, Top) => Top
-      case (TNum, TNum) => TNum
-      case (s1 -->: t1, s2 -->: t2) => (s1 && s2) -->: (t1 || t2)
+    def ||(that: Type): Option[Type] = (tpe, that) match {
+      case (Top, _) | (_, Top) => Some(Top)
+      case (TNum, TNum) => Some(TNum)
+      case (s1 -->: t1, s2 -->: t2) if (s1 && s2).isDefined && (t1 || t2).isDefined => Some((s1 && s2).get -->: (t1 || t2).get)
+      case _ => Some(Top)
     }
 
-    def &&(that: Type): Type = (tpe, that) match {
-      case (Top, t) => t
-      case (t, Top) => t
-      case (TNum, TNum) => TNum
-      case (s1 -->: t1, s2 -->: t2) => (s1 || s2) -->: (t1 && t2)
+    def &&(that: Type): Option[Type] = (tpe, that) match {
+      case (Top, t) => Some(t)
+      case (t, Top) => Some(t)
+      case (TNum, TNum) => Some(TNum)
+      case (s1 -->: t1, s2 -->: t2) if (s1 || s2).isDefined && (t1 && t2).isDefined => Some((s1 || s2).get -->: (t1 && t2).get)
+      case _ => None
     }
 
     def <(that: Type): Boolean = (tpe, that) match {

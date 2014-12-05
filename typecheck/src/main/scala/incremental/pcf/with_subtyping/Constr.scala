@@ -1,7 +1,6 @@
 package incremental.pcf.with_subtyping
 
-import incremental.ConstraintOps.Solution
-import incremental.Type
+import incremental.{Util, Type}
 import incremental.Type.TSubst
 import incremental.pcf.{TNum, TVar}
 import TypeOps._
@@ -9,11 +8,50 @@ import TypeOps._
 /**
  * Created by oliver on 03.12.14.
  */
+
+
+
 class Constr {
+  sealed trait Constraint {}
+  case class Subtype(lower: Type, upper: Type) extends Constraint
+  //the following are not actually used, they just serve for error reporting
+  case class Equal(expected: Type, actual: Type) extends Constraint
+  case class Join(ts: Set[Type]) extends Constraint
+  case class Meet(ts: Set[Type]) extends Constraint
+
+  incremental.ConstraintOps.constraintCount = 0
+  incremental.ConstraintOps.constraintSolveTime = 0
+  incremental.ConstraintOps.mergeSolutionTime = 0
+  def constraintCount = incremental.ConstraintOps.constraintCount
+  def constraintSolveTime = incremental.ConstraintOps.constraintSolveTime
+  def mergeSolutionTime = incremental.ConstraintOps.mergeSolutionTime
+  var mergeReqsTime = 0.0
+
   type Require = Map[Symbol, Type]
   type NotYet = Map[Symbol, (LBound, UBound)]
   type Never = Set[Constraint]
   type Sol = (TSubst, NotYet, Never)
+
+
+  def mergeReqMaps(reqs1: Require, reqs2: Require) = {
+    val (res, time) = Util.timed(_mergeReqMaps(reqs1, reqs2))
+    mergeReqsTime += time
+    res
+  }
+
+  def _mergeReqMaps(reqs1: Require, reqs2: Require): (CSet, Require) = {
+    var mcons = CSet()
+    var mreqs = reqs1
+    for ((x, r2) <- reqs2)
+      reqs1.get(x) match {
+        case None => mreqs += x -> r2
+        case Some(r1) =>
+          val Xmeet = freshTVar(false)
+          mcons <-- Subtype(Xmeet, r1) <-- Subtype(Xmeet, r2)
+          mreqs += x -> Xmeet
+      }
+    (mcons, mreqs)
+  }
 
   private var _pos: Set[Symbol] = Set()
   private var _neg: Set[Symbol] = Set()
@@ -38,123 +76,146 @@ class Constr {
     res
   }
 
-  sealed trait Constraint {}
-  case class Equal(expected: Type, actual: Type) extends Constraint
-  case class Subtype(lower: Type, upper: Type) extends Constraint
+
+  object CSet {
+    def apply(): CSet = new CSet
+  }
 
   class CSet  {
+    //TODO make this immutable
     //invariant: values are ground types
-    private[CSet] var solution: TSubst = Map()
+    private[CSet] var _solution: TSubst = Map()
     //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
     private[CSet] var bounds: Map[Symbol, (LBound, UBound)] = Map().withDefaultValue((LBound(Set(), None), UBound(Set(), None)))
     private[CSet] var unsat: Set[Constraint] = Set()
+
+    def solution: TSubst = _solution
 
     def <--(that: CSet): CSet = {
       unsat ++= that.unsat
       for((tv, (l1, u1)) <- that.bounds) {
         val (l2, u2) = bounds(tv)
-        val merged = (l2 merge l1, u2 merge u1)
+        val (newL, errorl) = l2 merge l1
+        val (newU, erroru) = u2 merge u1
+        if(errorl.nonEmpty)
+          never(Join(errorl))
+        if(erroru.nonEmpty)
+          never(Meet(erroru))
+        val merged = (newL, newU)
         bounds += tv -> merged
       }
-      solution = mergeSubsts(solution, that.solution)
+      _solution = mergeSubsts(_solution, that._solution)   //TODO verify if it is safe to just join the maps
       this
     }
 
     def <--(c: Constraint): CSet = {
       c match {
         case Equal(t1, t2) =>
-          val sigma = normalizeSub(t1, t2)
-          val tau = normalizeSub(t2, t1)
-          val sigmares = mergeSubsts(sigma, tau)
-          extendSolution(sigmares)
+          normalizeSub(t1, t2)
+          normalizeSub(t2, t1)
+          saturateSolution()
         case Subtype(lower, upper) =>
-          val sigma = normalizeSub(lower, upper)
-          extendSolution(sigma)
+          normalizeSub(lower, upper)
+          saturateSolution()
+        case _ => ???
       }
       this
     }
 
-    def finalized: Sol = (solution, bounds, unsat)
+    def tryFinalize: Sol = {
+      //set upper bounds of negative vars to Top if still undetermined and solve
+      bounds = bounds.map {
+        case (tv, (lower, upper)) if isNegative(tv) && !upper.isGround =>
+          val (newUpper, _) = upper.add(Top)
+          (tv, (lower, newUpper))
+        case x => x
+      }
+      saturateSolution()
+      (_solution, bounds, unsat)
+    }
 
-    private[CSet] def normalizeSub(s: Type, t: Type): TSubst = (s,t) match {
-      case (t1, t2) if t1 == t2 => Map()
-      case (_, Top) => Map()
+    private[CSet] def normalizeSub(s: Type, t: Type): Unit = (s,t) match {
+      case (t1, t2) if t1 == t2 =>
+      case (_, Top) =>
       case (TVar(a), TVar(b)) =>
         addLowerBound(b, s)
         addUpperBound(a, t)
-        Map()
       case (TVar(a), t2) =>
-        if (t2.occurs(a)) {
+        if (t2.occurs(a))
           never(Subtype(s, t))
-          Map()
-        }
         else
           addUpperBound(a, t2)
       case (t1, TVar(a)) =>
-        if (t1.occurs(a)) {
+        if (t1.occurs(a))
           never(Subtype(s, t))
-          Map()
-        }
         else
           addLowerBound(a, t1)
       case (s1 -->: t1, s2 -->: t2) =>
-        val sigma = normalizeSub(s2, s1)
-        val tau = normalizeSub(t1, t2)
-        mergeSubsts(sigma, tau)
+        normalizeSub(s2, s1)
+        normalizeSub(t1, t2)
       case _ =>
         never(Subtype(s, t))
-        Map()
     }
 
-    private[CSet] def extendSolution(subst: TSubst) = {
-      var sol = subst
+    private[CSet] def saturateSolution() = {
+      var sol = solveOnce()
       while (sol.nonEmpty) {
         var temp = new CSet
-        var nextsol: TSubst = Map()
         for ((tv, (lb, ub)) <- bounds) {
-          val (newLb, newUb) = (lb.subst(sol), ub.subst(sol))
+          val ((newLb, errorl), (newUb, erroru)) = (lb.subst(sol), ub.subst(sol))
+          if(errorl.nonEmpty)
+            never(Join(errorl))
+          if(erroru.nonEmpty)
+            never(Meet(erroru))
           val t = TVar(tv).subst(sol)
-          val subs1 = mergeSubsts(for(tpe <- newLb.nonground)
-                        yield temp.normalizeSub(tpe, t))
-          val subs2 = mergeSubsts(for(tpe: Type <- newLb.ground.toSet)
-                        yield temp.normalizeSub(tpe, t))
-          val subs3 = mergeSubsts(for(tpe <- newUb.nonground)
-                        yield temp.normalizeSub(t, tpe))
-          val subs4 = mergeSubsts(for(tpe: Type <- newUb.ground.toSet)
-                        yield temp.normalizeSub(t, tpe))
-          nextsol = mergeSubsts(Set(nextsol, subs1, subs2, subs3, subs4))
+          for(tpe <- newLb.ground.toSet ++ newLb.nonground)
+            temp.normalizeSub(tpe, t)
+          for(tpe <- newUb.ground.toSet ++ newUb.nonground)
+            temp.normalizeSub(t, tpe)
         }
         bounds = temp.bounds
         unsat ++= temp.unsat
-        solution ++= sol
-        sol = nextsol
+        _solution ++= sol
+        sol = solveOnce()
       }
     }
 
-    private[CSet] def never(c: Constraint) = {
-      unsat += c
+    private[CSet] def solveOnce(): TSubst = {
+      var sol: TSubst = Map()
+      for ((tv, (lower, upper)) <- bounds) {
+        if (isBipolar(tv) && lower.isGround && upper.isGround)
+          sol += tv -> lower.ground.get
+        else if (isProperPositive(tv) && lower.isGround)
+          sol += tv -> lower.ground.get
+        else if (isProperNegative(tv) && upper.isGround)
+          sol += tv -> upper.ground.get
+      }
+      sol
     }
-    private[CSet] def addLowerBound(v: Symbol, t: Type): TSubst = {
+
+    private[CSet] def never(c: Constraint) = unsat += c
+
+    private[CSet] def addLowerBound(v: Symbol, t: Type) = {
       val (lower, upper) = bounds(v)
-      val newLower = lower.add(t)
+      val (newLower, error) = lower.add(t)
+      if (error.nonEmpty)
+        never(Join(error))
       bounds += v -> (newLower, upper)
-      if (isBipolar(v) && newLower.isGround && upper.isGround) {
-        Map(v -> newLower.ground.get) //Note: we check later if the bounds are actually equal
-      }
-      else if (isProperPositive(v) && newLower.isGround)
-        Map(v -> newLower.ground.get)
-      else Map()
+      val changed = if (t.isGround) newLower.ground.get else t
+      for(t2 <- upper.ground.toSet ++ upper.nonground)
+        normalizeSub(changed, t2)
     }
-    private[CSet] def addUpperBound(v: Symbol, t: Type): TSubst = {
+
+    private[CSet] def addUpperBound(v: Symbol, t: Type) = {
       val (lower, upper) = bounds(v)
-      val newUpper = upper.add(t)
+      val (newUpper, error) = upper.add(t)
+      if (error.nonEmpty)
+        never(Meet(error))
       bounds += v -> (lower, newUpper)
-      if (isBipolar(v) && lower.isGround && newUpper.isGround) {
-        Map(v -> newUpper.ground.get) //Note: we check later if the bounds are actually equal
-      }
-      else if (isProperNegative(v) && newUpper.isGround)
-        Map(v -> newUpper.ground.get)
-      else Map()
+      val changed = if (t.isGround) newUpper.ground.get else t
+      var subst: TSubst = Map()
+      for(t2 <- lower.ground.toSet ++ lower.nonground)
+        normalizeSub(t2, changed)
     }
 
     private[CSet] def mergeSubsts(sigma: TSubst, tau: TSubst): TSubst = {
@@ -166,48 +227,102 @@ class Constr {
     private[CSet] def mergeSubsts(ss: Set[TSubst]): TSubst =
       ss.fold(Map[Symbol, Type]()) { case (s, s1) => mergeSubsts(s, s1) }
   }
+
   case class LBound(nonground: Set[Type], ground: Option[Type]) {
     val isEmpty = nonground.isEmpty && !ground.isDefined
     val isGround = nonground.isEmpty && ground.isDefined
-    def merge(that: LBound): LBound = LBound(nonground ++ that.nonground, (ground, that.ground) match {
-      case (Some(t1), Some(t2)) => Some(t1 || t2)
-      case (Some(t1), _) => ground
-      case (_, Some(t2)) => that.ground
-      case _ => None
-    })
-    def add(t: Type) = if (t.isGround) LBound(nonground, Some(ground.fold(t)(_ || t))) else LBound(nonground + t, ground)
 
-    def subst(sigma: TSubst): LBound = {
+    def merge(that: LBound): (LBound, Set[Type]) = {
+      (ground, that.ground) match {
+        case (Some(t1), Some(t2)) =>
+          t1 || t2 match {
+            case None => (LBound(nonground ++ that.nonground, ground), Set(t1,t2))
+            case lub => (LBound(nonground ++ that.nonground, lub), Set())
+          }
+        case _ => (LBound(nonground ++ that.nonground, ground.orElse(that.ground)), Set())
+      }
+    }
+
+    //2nd component: set of types which have undefined least upper bound
+    def add(t: Type): (LBound, Set[Type]) =
+      if (t.isGround) {
+        val lub = if (ground.isDefined) t || ground.get else Some(t)
+        val error = if (lub.isDefined) Set[Type]() else Set(t, ground.get)
+        (LBound(nonground, lub), error)
+      }
+      else (LBound(nonground + t, ground), Set())
+
+    def subst(sigma: TSubst): (LBound, Set[Type]) = {
       val (g, ng) = nonground.map(_.subst(sigma)).partition(_.isGround)
-      val join = g.reduceOption(_ || _)
-      LBound(ng, (ground, join) match {
-        case (Some(t1), Some(t2)) => Some(t1 || t2)
-        case (Some(t1), None) => Some(t1)
-        case (None, Some(t2)) => Some(t2)
-        case _ => None
-      })
+      if (g.isEmpty)
+        (LBound(ng, ground), Set())
+      else {
+        val lub: Option[Type] = g.map(Some(_)).reduce( (a: Option[Type], b: Option[Type]) => (a,b) match {
+          case (Some(t1), Some(t2)) => (t1 || t2)
+          case _ => None
+        })
+
+        if(lub.isDefined) {
+          (lub, ground) match {
+            case (Some(t1), Some(t2)) =>
+              t1 || t2 match {
+                case None => (LBound(ng, ground), g + ground.get)
+                case lub => (LBound(ng, lub), Set())
+              }
+            case _ => (LBound(ng, ground.orElse(lub)), Set())
+          }
+        }
+        else (LBound(ng, ground), g)
+      }
     }
   }
 
   case class UBound(nonground: Set[Type], ground: Option[Type]) {
     val isEmpty = nonground.isEmpty && !ground.isDefined
     val isGround = nonground.isEmpty && ground.isDefined
-    def merge(that: UBound): UBound = UBound(nonground ++ that.nonground, (ground, that.ground) match {
-      case (Some(t1), Some(t2)) => Some(t1 && t2)
-      case (Some(t1), _) => ground
-      case (_, Some(t2)) => that.ground
-      case _ => None
-    })
-    def add(t: Type) = if (t.isGround) UBound(nonground, Some(ground.fold(t)(_ && t))) else UBound(nonground + t, ground)
-    def subst(sigma: TSubst): LBound = {
+
+    def merge(that: UBound): (UBound, Set[Type]) = {
+      (ground, that.ground) match {
+        case (Some(t1), Some(t2)) =>
+          t1 && t2 match {
+            case None => (UBound(nonground ++ that.nonground, ground), Set(t1, t2))
+            case meet => (UBound(nonground ++ that.nonground, meet), Set())
+          }
+        case _ => (UBound(nonground ++ that.nonground, ground.orElse(that.ground)), Set())
+      }
+    }
+
+    //2nd component: set of types which have undefined greatest lower bound
+    def add(t: Type): (UBound, Set[Type]) =
+      if (t.isGround) {
+        val lub = if (ground.isDefined) t && ground.get else Some(t)
+        val error = if (lub.isDefined) Set[Type]() else Set(t, ground.get)
+        (UBound(nonground, lub), error)
+      }
+      else (UBound(nonground + t, ground), Set())
+
+    def subst(sigma: TSubst): (UBound, Set[Type]) = {
       val (g, ng) = nonground.map(_.subst(sigma)).partition(_.isGround)
-      val meet = g.reduceOption(_ && _)
-      LBound(ng, (ground, meet) match {
-        case (Some(t1), Some(t2)) => Some(t1 && t2)
-        case (Some(t1), None) => Some(t1)
-        case (None, Some(t2)) => Some(t2)
-        case _ => None
-      })
+      if (g.isEmpty)
+        (UBound(ng, ground), Set())
+      else {
+        val meet: Option[Type] = g.map(Some(_)).reduce( (a: Option[Type], b: Option[Type]) => (a,b) match {
+          case (Some(t1), Some(t2)) => (t1 && t2)
+          case _ => None
+        })
+
+        if(meet.isDefined) {
+          (meet, ground) match {
+            case (Some(t1), Some(t2)) =>
+              t1 && t2 match {
+                case None => (UBound(ng, ground), g + ground.get)
+                case meet => (UBound(ng, meet), Set())
+              }
+            case _ => (UBound(ng, ground.orElse(meet)), Set())
+          }
+        }
+        else (UBound(ng, ground), g)
+      }
     }
   }
 }
