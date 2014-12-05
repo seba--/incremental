@@ -108,6 +108,7 @@ class Constr {
       this
     }
 
+    //add and solve immediately
     def <--(c: Constraint): CSet = {
       c match {
         case Equal(t1, t2) =>
@@ -117,6 +118,19 @@ class Constr {
         case Subtype(lower, upper) =>
           normalizeSub(lower, upper)
           saturateSolution()
+        case _ => ???
+      }
+      this
+    }
+
+    //add but do not solve immediately
+    def +(c: Constraint): CSet = {
+      c match {
+        case Equal(t1, t2) =>
+          normalizeSub(t1, t2)
+          normalizeSub(t2, t1)
+        case Subtype(lower, upper) =>
+          normalizeSub(lower, upper)
         case _ => ???
       }
       this

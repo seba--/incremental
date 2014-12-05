@@ -13,7 +13,7 @@ import TypeOps._
  */
 class DownUpChecker extends TypeChecker {
 
-  val constraint = new ConstraintOps
+  val constraint = new Constr
   import constraint._
   def constraintCount = constraint.constraintCount
   def mergeReqsTime = constraint.mergeReqsTime
@@ -23,19 +23,19 @@ class DownUpChecker extends TypeChecker {
   val preparationTime = 0.0
   var typecheckTime = 0.0
 
-  type Result = (Type, Solution)
+  type Result = (Type, CSet)
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
     val (res, ctime) = Util.timed(
       try {
         val (t_, sol_) = typecheck(root, Map())
-        val sol = sol_.tryFinalize
-        val t = t_.subst(sol.solution)
-        if (sol.isSolved)
-          Left(t)
+        val (sigma, notyet, unsat) = sol_.tryFinalize
+        val t = t_.subst(sigma)
+        if (!(notyet.isEmpty && unsat.isEmpty))
+          Right(s"Unresolved constraints notyet: $notyet\nunsat: ${unsat}, type $t")
         else
-          Right(s"Unresolved constraints ${sol.unsolved.map(_.subst(sol.solution))}, type ${t}")
+          Left(t)
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
       }
@@ -45,72 +45,43 @@ class DownUpChecker extends TypeChecker {
   }
 
   def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
-    case Num => (TNum, emptySol)
+    case Num =>
+      (TNum, CSet())
     case k if k == Add || k == Mul =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)
       val (t2, sol2) = typecheck(e.kids(1), ctx)
-      val subsol = sol1 ++ sol2
-
-      val lcons = EqConstraint(TNum, t1)
-      val rcons = EqConstraint(TNum, t2)
-      val sol = solve(Seq(lcons, rcons), subsol)
-
+      val sol = sol1 <-- sol2 <-- Equal(TNum, t1) <-- Equal(TNum, t2)
       (TNum, sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       ctx.get(x) match {
         case None => throw UnboundVariable(x, ctx)
-        case Some(t) => (t, emptySol)
+        case Some(t) => (t, CSet())
       }
     case App =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)
       val (t2, sol2) = typecheck(e.kids(1), ctx)
-      val subsol = sol1 ++ sol2
-
-      val X = freshTVar()
+      val X = freshTVar(false)
       val Y = freshTVar()
-      val fcons = EqConstraint(TFun(X, Y), t1)
-      val acons = SubConstraint(t2, X)
-
-      val sol = solve(Seq(fcons, acons), subsol)
+      val sol = sol1 <-- sol2 + Equal(X -->: Y, t1) <-- Subtype(t2, X)
       (Y.subst(sol.solution), sol)
     case Abs if e.lits(0).isInstanceOf[Symbol] =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val annotatedT = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshTVar()
       val (t, subsol) = typecheck(e.kids(0), ctx + (x -> annotatedT))
       (TFun(annotatedT, t), subsol)
-    /*case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
-      val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
-      val Xs = xs map (_ => freshTVar())
-
-      val (t, s, unres) = typecheck(e.kids(0), ctx ++ (xs zip Xs))
-
-      var tfun = t
-      for (i <- xs.size-1 to 0 by -1) {
-        val X = Xs(i)
-        tfun = TFun(X.subst(s), tfun)
-      }
-
-      (tfun, s, unres)*/
     case If0 =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)
       val (t2, sol2) = typecheck(e.kids(1), ctx)
       val (t3, sol3) = typecheck(e.kids(2), ctx)
-      val subsol = sol1 ++ sol2 ++ sol3
-
       val Xjoin = freshTVar()
-      val ccons = EqConstraint(t1, TNum)
-      val bodycons = EqJoinConstraint(t2, t3, Xjoin)
-
-      val sol = solve(Seq(ccons, bodycons), subsol)
+      val sol = sol1 <-- sol2 <-- sol3 + Equal(t1, TNum) + Subtype(t2, Xjoin) <-- Subtype(t3, Xjoin)
       (Xjoin.subst(sol.solution), sol)
     case Fix =>
       val (t, subsol) = typecheck(e.kids(0), ctx)
       val X = freshTVar(false)
       val Y = freshTVar()
-      val fixCons = EqConstraint(t, TFun(X, Y))
-      val subCons = SubConstraint(Y, X)
-      val sol = solve(Seq(fixCons, subCons))
+      val sol = subsol + Equal(t, X -->: Y) <-- Subtype(Y, X)
       (X.subst(sol.solution), sol)
   }
 }

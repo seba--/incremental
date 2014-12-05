@@ -38,7 +38,6 @@ class BottomUpChecker extends TypeChecker {
 
       val (t_, reqs, sol_) = root.typ
       val (sigma, notyet, unsat) = sol_.tryFinalize
-      //val sol = sol_.tryFinalize
       val t = t_.subst(sigma)
 
       if (!reqs.isEmpty)
