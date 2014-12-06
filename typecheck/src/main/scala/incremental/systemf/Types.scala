@@ -2,7 +2,7 @@ package incremental.systemf
 
 import incremental.{EqConstraint, Type}
 import incremental.ConstraintOps._
-import incremental.Type.TSubst
+import incremental.Type.Companion._
 
 /**
  * Created by seba on 13/11/14.
@@ -37,7 +37,6 @@ case class TFun(t1: Type, t2: Type) extends Type {
 
 
 case class TVar(alpha : Symbol) extends Type {
-
   def occurs(x2: Symbol) = alpha == x2
 
   def subst(s: TSubst) = this//subst(s + (alpha -> TUsVar(alpha)))

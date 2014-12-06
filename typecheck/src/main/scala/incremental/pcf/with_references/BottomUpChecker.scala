@@ -1,7 +1,7 @@
 package incremental.pcf.with_references
 
 import incremental.ConstraintOps._
-import incremental.{EqConstraint, TypeCheckerFactory, Exp_, pcf}
+import incremental._
 
 /**
  * Created by seba on 15/11/14.
@@ -41,7 +41,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
   }
 }
 
-object BottomUpCheckerFactory extends TypeCheckerFactory {
+object BottomUpCheckerFactory extends TypeCheckerFactory[Type] {
   object PCFRefBottomUpChecker extends BottomUpChecker
   def makeChecker = PCFRefBottomUpChecker
 }

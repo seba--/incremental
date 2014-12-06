@@ -2,13 +2,13 @@ package incremental.systemf
 import incremental.ConstraintOps._
 import incremental.Exp.Exp
 import incremental.Exp._
-import incremental.Type._
+import incremental.Type.Companion._
 import incremental._
 
 /**
  * Created by seba on 14/11/14.
  */
-class DownUpChecker extends TypeChecker {
+class DownUpChecker extends TypeChecker[Type] {
 
   val constraint = new ConstraintOps
   import constraint._
@@ -115,6 +115,6 @@ class DownUpChecker extends TypeChecker {
 
 case class UnboundVariable(x: Symbol, ctx: TSubst) extends RuntimeException
 
-object DownUpCheckerFactory extends TypeCheckerFactory {
+object DownUpCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new DownUpChecker
 }

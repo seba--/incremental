@@ -1,7 +1,7 @@
 package incremental.pcf.with_records
 
 import incremental.ConstraintOps._
-import incremental.Type.TSubst
+import incremental.Type.Companion.TSubst
 import incremental._
 import incremental.pcf.TVar
 

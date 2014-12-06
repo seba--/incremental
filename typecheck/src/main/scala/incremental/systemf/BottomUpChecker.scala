@@ -2,14 +2,14 @@ package incremental.systemf
 
 import incremental.ConstraintOps._
 import incremental.Exp.Exp
-import incremental.Type._
+import incremental.Type.Companion._
 import incremental.Exp._
 import incremental._
 
 /**
  * Created by seba on 13/11/14.
  */
-class BottomUpChecker extends TypeChecker {
+class BottomUpChecker extends TypeChecker[Type] {
 
   val constraint = new ConstraintOps
   import constraint._
@@ -187,6 +187,6 @@ class BottomUpChecker extends TypeChecker {
   }
 }
 
-object BottomUpCheckerFactory extends TypeCheckerFactory {
+object BottomUpCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new BottomUpChecker
 }

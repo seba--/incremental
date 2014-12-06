@@ -1,7 +1,5 @@
 package incremental.pcf.with_subtyping
 
-import incremental.Type
-import incremental.pcf.{TFun, TNum, TVar}
 
 import scala.language.implicitConversions
 
@@ -11,17 +9,25 @@ import scala.language.implicitConversions
 object TypeOps {
   implicit def toTypeOp(tpe: Type): TypeOps = new TypeOps(tpe)
   class TypeOps(val tpe: Type) extends AnyVal {
-    /**
-     * Check if tpe is a subtype of that.
-     *
-     * @param that
-     * @return
-     */
+    def ||(that: Type): Option[Type] = (tpe, that) match {
+      case (Top, _) | (_, Top) => Some(Top)
+      case (TNum, TNum) => Some(TNum)
+      case (s1 -->: t1, s2 -->: t2) if (s1 && s2).isDefined && (t1 || t2).isDefined => Some((s1 && s2).get -->: (t1 || t2).get)
+      case _ => Some(Top)
+    }
+
+    def &&(that: Type): Option[Type] = (tpe, that) match {
+      case (Top, t) => Some(t)
+      case (t, Top) => Some(t)
+      case (TNum, TNum) => Some(TNum)
+      case (s1 -->: t1, s2 -->: t2) if (s1 || s2).isDefined && (t1 && t2).isDefined => Some((s1 || s2).get -->: (t1 && t2).get)
+      case _ => None
+    }
+
     def <(that: Type): Boolean = (tpe, that) match {
-      case (_, Top) | (Bot, _) => true
+      case (_, Top) => true
       case (TNum, TNum) => true
-      case (TFun(s1, t1), TFun(s2, t2)) => s2 < s1 && t1 < t2
-      case _ => false
+      case (s1 -->: t1, s2 -->: t2) => s2 < s1 && t1 < t2
     }
 
     def -->:(that: Type): Type = TFun(that, tpe)

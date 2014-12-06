@@ -1,33 +1,40 @@
 package incremental.pcf.with_subtyping
 
-import incremental.ConstraintOps._
-import incremental.{EqConstraint, Type}
-import incremental.Type.TSubst
-import incremental.pcf.TVar
+import incremental.{TypCompanion, SType}
+
 
 /**
  * Created by oliver on 19.11.14.
  */
-case object Top extends Type {
-  def occurs(x: Symbol) = false
-
-  def subst(s: TSubst) = this
-
-  def unify(other: Type, s: TSubst) = other match {
-    case Top => emptySol
-    case TVar(_) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
-  }
+trait Type extends SType[Type]
+object Type {
+  implicit object Companion extends TypCompanion[Type]
 }
 
-case object Bot extends Type {
+import Type.Companion._
+
+case object Top extends Type {
+  val isGround = true
   def occurs(x: Symbol) = false
 
   def subst(s: TSubst) = this
+}
 
-  def unify(other: Type, s: TSubst) = other match {
-    case Bot => emptySol
-    case TVar(_) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
-  }
+case object TNum extends Type {
+  val isGround = true
+  def occurs(x: Symbol) = false
+  def subst(s: TSubst) = this
+}
+
+case class TVar(x: Symbol) extends Type {
+  val isGround = false
+  def occurs(x2: Symbol) = x == x2
+  def subst(s: TSubst) = s.getOrElse(x, this)
+}
+
+case class TFun(t1: Type, t2: Type) extends Type {
+  val isGround = t1.isGround && t2.isGround
+  def occurs(x: Symbol) = t1.occurs(x) || t2.occurs(x)
+  def subst(s: TSubst) = TFun(t1.subst(s), t2.subst(s))
+  override def toString= s"($t1 --> $t2)"
 }

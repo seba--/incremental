@@ -2,13 +2,12 @@ package incremental.pcf.with_references
 
 import incremental.ConstraintOps._
 import incremental.Type._
-import incremental.{EqConstraint, TypeCheckerFactory, Exp_, pcf}
+import incremental._
 
 /**
  * Created by seba on 15/11/14.
  */
 trait DownUpChecker extends pcf.DownUpChecker {
-
   import constraint._
 
   override def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
@@ -40,7 +39,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
   }
 }
 
-object DownUpCheckerFactory extends TypeCheckerFactory {
+object DownUpCheckerFactory extends TypeCheckerFactory[Type] {
   object PCFRefDownUpChecker extends DownUpChecker
   def makeChecker = PCFRefDownUpChecker
 }

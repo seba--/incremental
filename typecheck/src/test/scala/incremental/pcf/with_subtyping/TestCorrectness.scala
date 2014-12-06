@@ -9,8 +9,8 @@ import TypeOps._
 /**
  * Created by oliver on 20.11.14.
  */
-class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker = _
+class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
+  var checker: TypeChecker[Type] = _
 
   override def beforeEach: Unit = {
     checker = checkerFactory.makeChecker
@@ -52,18 +52,19 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
   typecheckTestError("lambda f: Top. f 0",
     Abs(Seq('f, Top), Seq(App(Var('f), Num(0))))
   )
-  typecheckTestError("lambda f: TNum -> TNum. lambda g: (TNum -> TNum) -> (TNum -> TNum). if0 0 f g",
-    Abs(Seq('f, TNum -->: TNum), Seq(Abs(Seq('g, (TNum -->: TNum) -->: (TNum -->: TNum)), Seq(If0(Num(0), Var('f), Var('g)))))))
-  
+  typecheckTest("lambda f: TNum -> TNum. lambda g: (TNum -> TNum) -> (TNum -> TNum). if0 0 f g",
+    Abs(Seq('f, TNum -->: TNum), Seq(Abs(Seq('g, (TNum -->: TNum) -->: (TNum -->: TNum)), Seq(If0(Num(0), Var('f), Var('g))))))) {
+    case (TNum -->: TNum) -->: ((TNum -->: TNum) -->: (TNum -->: TNum)) -->: Top => true
+  }
   typecheckTestError("lambda f: (TNum -> Top) -> TNum. lambda g: TNum. f g",
     Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(Abs(Seq('g, TNum),  Seq(App(Var('f), Var('g))))))
   )
   typecheckTestError("lambda x: T. x x",
     Abs(Seq('x, TVar('T)), Seq(App(Var('x), Var('x))))
   )
-  typecheckTest("(lamba f. f (lambda x. x) + f (lambda y. y))",
+  /*typecheckTest("(lamba f. (f (lambda x. x)) + (f (lambda y. y)))",
     Abs('f, Add(App(Var('f), Abs('x, Var('x))), App(Var('f), Abs('y, Var('y)))))
-  ) { case TFun(TFun(TFun(TVar(x), TVar(y)), TNum), TNum) if x==y => true }
+  ) { case TFun(TFun(TFun(TVar(x), TVar(y)), TNum), TNum) if x==y => true }*/
   typecheckTestError("lambda f: TNum -> TNum. f x",
     Abs(Seq('f, TNum -->: TNum), Seq(App(Var('f), Var('x))))
   )
@@ -71,6 +72,10 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) ext
     Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, Top), Seq(Num(1))), Abs(Seq('x, Top), Seq(Var('x)))))))
   ) {
     case ((TNum -->: Top) -->: TNum) -->: TNum => true
+  }
+  typecheckTest("fix (lambda x: Top. 1)",
+    Fix(Abs(Seq('x, Top), Seq(Num(1))))) {
+    case Top => true
   }
 }
 

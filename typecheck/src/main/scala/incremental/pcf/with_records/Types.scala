@@ -2,7 +2,7 @@ package incremental.pcf.with_records
 
 import incremental.{EqConstraint, Type}
 import incremental.ConstraintOps._
-import incremental.Type.TSubst
+import incremental.Type.Companion.TSubst
 import incremental.pcf.TVar
 
 /**

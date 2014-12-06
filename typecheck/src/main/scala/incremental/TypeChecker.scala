@@ -1,12 +1,14 @@
 package incremental
 
-import incremental.Type.TError
 import incremental.Exp.Exp
 
 /**
  * Created by seba on 13/11/14.
  */
-trait TypeChecker {
+abstract class TypeChecker[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
+  final type TError = definitions.TError
+  final type TSubst = definitions.TSubst
+
   def typecheck(e: Exp): Either[Type, TError]
 
   def preparationTime: Double
@@ -17,6 +19,6 @@ trait TypeChecker {
   def mergeSolutionTime: Double
 }
 
-trait TypeCheckerFactory {
-  def makeChecker: TypeChecker
+trait TypeCheckerFactory[T <: Typ[T]] {
+  def makeChecker: TypeChecker[T]
 }
