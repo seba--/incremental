@@ -1,7 +1,7 @@
 package incremental
 
 import incremental.ConstraintOps.Solution
-import incremental.Type._
+import incremental.Type.Companion._
 
 /**
  * Created by seba on 13/11/14.

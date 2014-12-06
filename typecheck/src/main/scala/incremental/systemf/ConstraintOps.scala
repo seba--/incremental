@@ -1,7 +1,7 @@
 package incremental.systemf
 
 import incremental.ConstraintOps._
-import incremental.Type.TSubst
+import incremental.Type.Companion._
 import incremental._
 
 

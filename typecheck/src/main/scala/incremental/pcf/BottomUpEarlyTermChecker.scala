@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import incremental.{ConstraintOps, EqConstraint, TypeCheckerFactory, Exp_}
+import incremental._
 
 /**
  * Created by seba on 14/11/14.
@@ -49,6 +49,6 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
   }
 }
 
-object BottomUpEarlyTermCheckerFactory extends TypeCheckerFactory {
+object BottomUpEarlyTermCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new BottomUpEarlyTermChecker
 }

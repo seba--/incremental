@@ -9,8 +9,8 @@ import TypeOps._
 /**
  * Created by oliver on 20.11.14.
  */
-class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker = _
+class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
+  var checker: TypeChecker[Type] = _
 
   override def beforeEach: Unit = {
     checker = checkerFactory.makeChecker

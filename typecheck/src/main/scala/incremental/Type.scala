@@ -6,19 +6,38 @@ package incremental
 import Type._
 import incremental.ConstraintOps.Solution
 
-trait Type {
-  val isGround: Boolean
+import scala.language.implicitConversions
 
-  def occurs(x: Symbol): Boolean
-
-  def subst(s: TSubst): Type
-
-  def unify(other: Type, s: TSubst): Solution
-  def unify(other: Type): Solution = unify(other, Map())
+//implicits trick for per-type class instance common definitions
+trait TypCompanion[T <: Typ[T]] {
+  type TError = String
+  type TSubst = Map[Symbol, T]
 }
 
+object TypCompanion {
+  implicit def companion[T <: Typ[T]](implicit comp: TypCompanion[T]): TypCompanion[T] = comp
+}
 
+//Type class for types
+trait Typ[T] {
+  def occurs(x: Symbol): Boolean
+
+  def subst(s: Map[Symbol, T]): T
+}
+
+//Type class for types which support unification
+trait UType[T] extends Typ[T] {
+  def unify(other: T, s: Map[Symbol, T]): Solution
+  def unify(other: T): Solution = unify(other, Map())
+}
+
+//Type class for types with groundness test
+trait SType[T] extends Typ[T] {
+  val isGround: Boolean
+}
+
+//always define a type class instance together with its companion
+trait Type extends UType[Type]
 object Type {
-  type TError = String
-  type TSubst = Map[Symbol, Type]
+  implicit object Companion extends TypCompanion[Type]
 }

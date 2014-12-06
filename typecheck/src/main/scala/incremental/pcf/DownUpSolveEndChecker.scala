@@ -3,13 +3,13 @@ package incremental.pcf
 import incremental.ConstraintOps._
 import incremental.Exp.Exp
 import incremental.Exp._
-import incremental.Type._
+import incremental.Type.Companion._
 import incremental._
 
 /**
  * Created by seba on 14/11/14.
  */
-class DownUpSolveEndChecker extends TypeChecker {
+class DownUpSolveEndChecker extends TypeChecker[Type] {
 
   val constraint = new ConstraintOps
   import constraint._
@@ -108,6 +108,6 @@ class DownUpSolveEndChecker extends TypeChecker {
   }
 }
 
-object DownUpSolveEndCheckerFactory extends TypeCheckerFactory {
+object DownUpSolveEndCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new DownUpSolveEndChecker
 }

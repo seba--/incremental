@@ -2,14 +2,13 @@ package incremental.pcf.with_records
 
 import incremental.{EqConstraint, Type}
 import incremental.ConstraintOps._
-import incremental.Type.TSubst
+import incremental.Type.Companion.TSubst
 import incremental.pcf.TVar
 
 /**
  * Created by seba on 15/11/14.
  */
 case class TRecord(fields: Map[Symbol, Type]) extends Type {
-  val isGround = fields.values.forall(_.isGround)
   def occurs(x: Symbol) = fields.exists(_._2.occurs(x))
   def subst(s: TSubst) = TRecord(fields.mapValues(_.subst(s)))
   def unify(other: Type, s: TSubst) = other match {

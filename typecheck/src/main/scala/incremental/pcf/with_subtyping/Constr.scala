@@ -1,16 +1,12 @@
 package incremental.pcf.with_subtyping
 
-import incremental.{Util, Type}
-import incremental.Type.TSubst
-import incremental.pcf.{TNum, TVar}
+import incremental.Util
 import TypeOps._
+import Type.Companion._
 
 /**
  * Created by oliver on 03.12.14.
  */
-
-
-
 class Constr {
   sealed trait Constraint {}
   case class Subtype(lower: Type, upper: Type) extends Constraint

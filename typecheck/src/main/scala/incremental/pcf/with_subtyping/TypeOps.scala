@@ -1,7 +1,5 @@
 package incremental.pcf.with_subtyping
 
-import incremental.Type
-import incremental.pcf.{TFun, TNum, TVar}
 
 import scala.language.implicitConversions
 

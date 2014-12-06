@@ -3,16 +3,15 @@ package incremental.pcf.with_subtyping
 import incremental.ConstraintOps._
 import incremental.Exp.Exp
 import incremental.Exp._
-import incremental.Type._
-import incremental._
-import incremental.pcf.{ConstraintOps => _, _}
+import incremental.pcf._
+import incremental.{TypeCheckerFactory, Exp_, TypeChecker, Util}
+import incremental.pcf.with_subtyping.Type.Companion
 import TypeOps._
-
 
 /**
  * Created by oliver on 20.11.14.
  */
-class BottomUpChecker extends TypeChecker {
+class BottomUpChecker extends TypeChecker[Type] {
   var preparationTime = 0.0
   var typecheckTime = 0.0
 
@@ -121,6 +120,6 @@ class BottomUpChecker extends TypeChecker {
   }
 }
 
-object BottomUpCheckerFactory extends TypeCheckerFactory {
+object BottomUpCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new BottomUpChecker
 }

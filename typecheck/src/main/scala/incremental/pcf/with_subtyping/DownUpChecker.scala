@@ -3,15 +3,15 @@ package incremental.pcf.with_subtyping
 import incremental.ConstraintOps._
 import incremental.Exp.Exp
 import incremental.Exp._
-import incremental.Type._
-import incremental._
-import incremental.pcf._
 import TypeOps._
+import Type.Companion._
+import incremental.pcf._
+import incremental.{TypeCheckerFactory, Exp_, TypeChecker, Util}
 
 /**
  * Created by oliver on 27.11.14.
  */
-class DownUpChecker extends TypeChecker {
+class DownUpChecker extends TypeChecker[Type] {
 
   val constraint = new Constr
   import constraint._
@@ -88,6 +88,6 @@ class DownUpChecker extends TypeChecker {
 
 case class UnboundVariable(x: Symbol, ctx: TSubst) extends RuntimeException
 
-object DownUpCheckerFactory extends TypeCheckerFactory {
+object DownUpCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new DownUpChecker
 }
