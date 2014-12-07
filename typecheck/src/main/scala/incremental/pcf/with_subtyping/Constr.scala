@@ -43,7 +43,7 @@ class Constr {
         case None => mreqs += x -> r2
         case Some(r1) =>
           val Xmeet = freshTVar(false)
-          mcons + Subtype(Xmeet, r1) <-- Subtype(Xmeet, r2)
+          mcons = mcons + Subtype(Xmeet, r1) <-- Subtype(Xmeet, r2)
           mreqs += x -> Xmeet
       }
     (mcons, mreqs)
@@ -100,7 +100,7 @@ class Constr {
         val merged = (newL, newU)
         res.bounds += tv -> merged
       }
-      res._solution = mergeSubsts(res._solution, that._solution)   //TODO verify if it is safe to just join the maps
+      res._solution = res._solution ++ that._solution
       res
     }
 
@@ -143,7 +143,7 @@ class Constr {
           (tv, (lower, newUpper))
         case x => x
       }
-      res.saturateSolution()
+      res.saturateSolution(true)
       res
     }
 
@@ -173,6 +173,8 @@ class Constr {
           never(Subtype(s, t))
         else
           addLowerBound(a, t1)
+      case (TNum, TNumeric) =>
+      case (TFloat, TNumeric) =>
       case (s1 -->: t1, s2 -->: t2) =>
         normalizeSub(s2, s1)
         normalizeSub(t1, t2)
@@ -180,8 +182,8 @@ class Constr {
         never(Subtype(s, t))
     }
 
-    private[CSet] def saturateSolution() = {
-      var sol = solveOnce()
+    private[CSet] def saturateSolution(finalize: Boolean = false) = {
+      var sol = solveOnce(finalize)
       while (sol.nonEmpty) {
         var temp = new CSet
         for ((tv, (lb, ub)) <- bounds) {
@@ -203,15 +205,21 @@ class Constr {
       }
     }
 
-    private[CSet] def solveOnce(): TSubst = {
+    private[CSet] def solveOnce(finalize: Boolean = false): TSubst = {
       var sol: TSubst = Map()
       for ((tv, (lower, upper)) <- bounds) {
-        if (isBipolar(tv) && lower.isGround && upper.isGround)
-          sol += tv -> lower.ground.get
-        else if (isProperPositive(tv) && lower.isGround)
-          sol += tv -> lower.ground.get
-        else if (isProperNegative(tv) && upper.isGround)
+        if (isBipolar(tv)) {
+          if (lower.isGround && upper.isGround || (finalize && lower.ground.isDefined && lower.ground.isDefined))
+            sol += tv -> lower.ground.get
+        }
+        else if (isProperPositive(tv)) {
+          if (lower.isGround || (finalize && lower.ground.isDefined))
+            sol += tv -> lower.ground.get
+        }
+        else if (isProperNegative(tv)) {
+         if(upper.isGround || (finalize && upper.ground.isDefined))
           sol += tv -> upper.ground.get
+        }
       }
       sol
     }

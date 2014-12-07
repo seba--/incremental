@@ -38,3 +38,15 @@ case class TFun(t1: Type, t2: Type) extends Type {
   def subst(s: TSubst) = TFun(t1.subst(s), t2.subst(s))
   override def toString= s"($t1 --> $t2)"
 }
+
+case object TNumeric extends Type {
+  val isGround = true
+  def occurs(x: Symbol) = false
+  def subst(s: Map[Symbol, Type]) = this
+}
+
+case object TFloat extends Type {
+  val isGround = true
+  def occurs(x: Symbol) = false
+  def subst(s: Map[Symbol, Type]) = this
+}
