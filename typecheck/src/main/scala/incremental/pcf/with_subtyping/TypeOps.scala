@@ -11,6 +11,10 @@ object TypeOps {
   class TypeOps(val tpe: Type) extends AnyVal {
     def ||(that: Type): Option[Type] = (tpe, that) match {
       case (Top, _) | (_, Top) => Some(Top)
+      case (TNumeric, TNumeric) => Some(TNumeric)
+      case (TFloat, TNumeric) | (TNumeric, TFloat) => Some(TNumeric)
+      case (TNum, TNumeric) | (TNumeric, TNum) => Some(TNumeric)
+      case (TFloat, TFloat) => Some(TFloat)
       case (TNum, TNum) => Some(TNum)
       case (s1 -->: t1, s2 -->: t2) if (s1 && s2).isDefined && (t1 || t2).isDefined => Some((s1 && s2).get -->: (t1 || t2).get)
       case _ => Some(Top)
@@ -19,6 +23,10 @@ object TypeOps {
     def &&(that: Type): Option[Type] = (tpe, that) match {
       case (Top, t) => Some(t)
       case (t, Top) => Some(t)
+      case (TNumeric, TNumeric) => Some(TNumeric)
+      case (TFloat, TNumeric) | (TNumeric, TFloat) => Some(TFloat)
+      case (TNum, TNumeric) | (TNumeric, TNum) => Some(TNum)
+      case (TFloat, TFloat) => Some(TFloat)
       case (TNum, TNum) => Some(TNum)
       case (s1 -->: t1, s2 -->: t2) if (s1 || s2).isDefined && (t1 && t2).isDefined => Some((s1 || s2).get -->: (t1 && t2).get)
       case _ => None

@@ -2,7 +2,7 @@ package incremental.pcf.with_subtyping
 
 import incremental.pcf._
 import incremental.Exp._
-import incremental.{Type, Util, TypeChecker, TypeCheckerFactory}
+import incremental.{Util, TypeChecker, TypeCheckerFactory}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import TypeOps._
 
@@ -76,6 +76,11 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTest("fix (lambda x: Top. 1)",
     Fix(Abs(Seq('x, Top), Seq(Num(1))))) {
     case Top => true
+  }
+  typecheckTest("lambda x: TFloat. lambda sqrt: TFloat -> TFloat. lambda add: TNumeric -> TNumeric -> TNumeric. add x (sqrt x)",
+    Abs(Seq('x, TFloat), Seq(Abs(Seq('sqrt, TFloat -->: TFloat), Seq(Abs(Seq('add, TNumeric -->: TNumeric -->: TNumeric), Seq(App(App(Var('add), Var('x)), App(Var('sqrt), Var('x))))))
+  )))) {
+    case TFloat -->: (TFloat -->: TFloat) -->: (TNumeric -->: TNumeric -->: TNumeric) -->: TNumeric => true
   }
 }
 
