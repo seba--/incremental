@@ -143,7 +143,7 @@ class Constr {
           (tv, (lower, newUpper))
         case x => x
       }
-      res.saturateSolution(true)
+      res.saturateSolution()
       res
     }
 
@@ -161,8 +161,13 @@ class Constr {
       case (t1, t2) if t1 == t2 =>
       case (_, Top) =>
       case (TVar(a), TVar(b)) =>
-        addLowerBound(b, s)
-        addUpperBound(a, t)
+        if (isNegative(a))
+          addUpperBound(a, t)
+        else {
+          addUpperBound(a, t)
+          addLowerBound(b, s)
+        }
+
       case (TVar(a), t2) =>
         if (t2.occurs(a))
           never(Subtype(s, t))
@@ -182,8 +187,8 @@ class Constr {
         never(Subtype(s, t))
     }
 
-    private[CSet] def saturateSolution(finalize: Boolean = false) = {
-      var sol = solveOnce(finalize)
+    private[CSet] def saturateSolution() = {
+      var sol = solveOnce
       while (sol.nonEmpty) {
         var temp = new CSet
         for ((tv, (lb, ub)) <- bounds) {
@@ -201,23 +206,23 @@ class Constr {
         bounds = temp.bounds
         unsat ++= temp.unsat
         _solution ++= sol
-        sol = solveOnce()
+        sol = solveOnce
       }
     }
 
-    private[CSet] def solveOnce(finalize: Boolean = false): TSubst = {
+    private[CSet] def solveOnce: TSubst = {
       var sol: TSubst = Map()
       for ((tv, (lower, upper)) <- bounds) {
         if (isBipolar(tv)) {
-          if (lower.isGround && upper.isGround || (finalize && lower.ground.isDefined && lower.ground.isDefined))
+          if (lower.isGround && upper.isGround)// || (finalize && lower.ground.isDefined && lower.ground.isDefined))
             sol += tv -> lower.ground.get
         }
         else if (isProperPositive(tv)) {
-          if (lower.isGround || (finalize && lower.ground.isDefined))
+          if (lower.isGround) // || (finalize && lower.ground.isDefined))
             sol += tv -> lower.ground.get
         }
         else if (isProperNegative(tv)) {
-         if(upper.isGround || (finalize && upper.ground.isDefined))
+         if(upper.isGround)// || (finalize && upper.ground.isDefined))
           sol += tv -> upper.ground.get
         }
       }
