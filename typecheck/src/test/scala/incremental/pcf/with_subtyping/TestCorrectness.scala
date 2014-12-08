@@ -62,9 +62,9 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTestError("lambda x: T. x x",
     Abs(Seq('x, TVar('T)), Seq(App(Var('x), Var('x))))
   )
-  /*typecheckTest("(lamba f. (f (lambda x. x)) + (f (lambda y. y)))",
-    Abs('f, Add(App(Var('f), Abs('x, Var('x))), App(Var('f), Abs('y, Var('y)))))
-  ) { case TFun(TFun(TFun(TVar(x), TVar(y)), TNum), TNum) if x==y => true }*/
+//  typecheckTest("(lamba f. (f (lambda x. x)) + (f (lambda y. y)))",
+//    Abs('f, Add(App(Var('f), Abs('x, Var('x))), App(Var('f), Abs('y, Var('y)))))
+//  ) { case TFun(TFun(TFun(TVar(x), TVar(y)), TNum), TNum) if x==y => true }
   typecheckTestError("lambda f: TNum -> TNum. f x",
     Abs(Seq('f, TNum -->: TNum), Seq(App(Var('f), Var('x))))
   )
