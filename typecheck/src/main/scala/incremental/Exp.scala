@@ -57,8 +57,9 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   }
 
   def uninitialized(buf: collection.mutable.ArrayBuffer[Exp_[T]]): Unit = {
+    val oldsize = buf.size
     _kids foreach (_.uninitialized(buf))
-    if (!valid)
+    if (!valid && oldsize == buf.size)
       buf += this
   }
 
