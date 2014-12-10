@@ -64,4 +64,4 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
 }
 
 class TestBottomUpIncremental extends TestIncremental("BottomUp", BottomUpCheckerFactory)
-//class TestBottomUpEarlyTermIncremental extends TestIncremental(BottomUpEarlyTermCheckerFactory)
+//class TestBottomUpEarlyTermIncremental extends TestIncremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)

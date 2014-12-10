@@ -8,6 +8,38 @@ import incremental._
  */
 class BottomUpEarlyTermChecker extends BottomUpChecker {
 
+  override def typecheck(e: Exp): Either[Type, TError] = {
+    val root = e.withType[Result]
+
+    //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
+    //    preparationTime += ptime
+
+    val (res, ctime) = Util.timed {
+      root.visitUninitialized {e =>
+        val t = typecheckStep(e)
+        if (e.typ != null && sameResult(e.typ, t))
+          false
+        else {
+          e.typ = t
+          true
+        }
+      }
+
+      val (t_, reqs, sol_) = root.typ
+      val sol = sol_.tryFinalize
+      val t = t_.subst(sol.solution)
+
+      if (!reqs.isEmpty)
+        Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
+      else if (!sol.isSolved)
+        Right(s"Unresolved constraints ${sol.unsolved}, type $t")
+      else
+        Left(t)
+    }
+    typecheckTime += ctime
+    res
+  }
+
   def sameResult(r1: Result, r2: Result): Boolean = {
     val (t1, reqs1, sol1_) = r1
     val (t2, reqs2, sol2_) = r2

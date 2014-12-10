@@ -64,6 +64,14 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
       buf += this
   }
 
+  def visitUninitialized(f: Exp_[T] => Boolean): Boolean = {
+    val hasSubchange = _kids.foldLeft(false)((changed, k) =>  k.visitUninitialized(f) || changed)
+    if (!valid || hasSubchange)
+      f(this)
+    else
+      false
+  }
+
   override def toString = {
     val subs = lits.map(_.toString) ++ _kids.map(_.toString)
     val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail

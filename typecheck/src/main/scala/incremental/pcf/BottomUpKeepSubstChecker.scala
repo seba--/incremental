@@ -28,11 +28,14 @@ class BottomUpKeepSubstChecker extends TypeChecker[Type] {
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    val (uninitialized, ptime) = Util.timed {root.uninitialized}
-    preparationTime += ptime
+//    val (uninitialized, ptime) = Util.timed {root.uninitialized}
+//    preparationTime += ptime
 
     val (res, ctime) = Util.timed {
-      uninitialized foreach (e => e.typ = typecheckStep(e))
+      root.visitUninitialized { e =>
+        e.typ = typecheckStep(e)
+        true
+      }
 
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
