@@ -21,7 +21,6 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   def typecheckTest(desc: String, e: =>Exp)(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
-      println(e.toString)
       assert(actual.isLeft, s"Expected $expected but got $actual")
       val sol = expected.unify(actual.left.get)
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
@@ -48,14 +47,16 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
                      If0(Var('m), Num(0), App(App(Var('f), Add(Var('m), Num(-1))), Var('n)))))))
   typecheckTest("multiplication", mul)(TFun(TNum, TFun(TNum, TNum)))
 
-  lazy val fac = Fix(Abs('f, Abs('n, If0(Var('n), Num(1), App(App(mul, Var('n)), App(Var('f), Add(Var('n), Num(-1))))))))
+  lazy val fac = Fix(Abs('f, Abs('n, If0(Add(Var('n), Num(-1)), Num(1), App(App(mul, Var('n)), App(Var('f), Add(Var('n), Num(-2))))))))
   typecheckTest("factorial", fac)(TFun(TNum, TNum))
-  lazy val fac2 = {fac.kids(0).kids(0).kids(0).kids(1) = Num(2); fac}
+  lazy val fac2 = {fac.kids(0).kids(0).kids(0).kids(0) = Var('n); fac}
   typecheckTest("factorial2", fac2)(TFun(TNum, TNum))
-  lazy val fac3 = {fac.kids(0).kids(0).kids(0).kids(2).kids(1).kids(1) = Add(Var('n), Num(1)); fac}
+  lazy val fac3 = {fac.kids(0).kids(0).kids(0).kids(2).kids(1).kids(1).kids(1) = Num(-1); fac}
   typecheckTest("factorial3", fac3)(TFun(TNum, TNum))
-  lazy val fac4 = {fac.kids(0).kids(0).kids(0).kids(1) = Num(1); fac.kids(0).kids(0).kids(0).kids(2).kids(1).kids(1) = Add(Var('n), Num(-1)); fac}
+  lazy val fac4 = Fix(Abs('f, Abs('n, If0(Add(Var('n), Num(-1)), Num(1), App(App(mul, Var('n)), App(Var('f), Add(Var('n), Num(-2))))))))
   typecheckTest("factorial4", fac4)(TFun(TNum, TNum))
+  lazy val fac5 = {fac4.kids(0).kids(0).kids(0).kids(0) = Var('n); fac4.kids(0).kids(0).kids(0).kids(2).kids(1).kids(1).kids(1) = Num(-1); fac4}
+  typecheckTest("factorial5", fac5)(TFun(TNum, TNum))
 
   typecheckTest("eta-expanded factorial", Abs('x, App(fac, Var('x))))((TFun(TNum, TNum)))
 
