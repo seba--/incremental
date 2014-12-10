@@ -1,31 +1,12 @@
 package incremental.pcf
 
+import incremental.Exp._
 import incremental._
 
 /**
  * Created by seba on 14/11/14.
  */
 class BottomUpEarlyTermChecker extends BottomUpChecker {
-
-  override def typecheckSpine(e: Exp_[Result]): Unit ={
-    var current = e
-    while (current != null && current.allKidTypesAvailable) {
-      val isFirstTime = !current.valid
-      val isRoot = current.parent == null
-
-      val t = typecheckStep(current)
-      //      println(s"$current -> t")
-      //      println(s"  old: ${current.typ}")
-
-      if (!isFirstTime && sameResult(current.typ, t))
-        return
-
-      current.typ = t
-      if (!isRoot && isFirstTime)
-        current.parent.markKidTypeAvailable(current.pos)
-      current = current.parent
-    }
-  }
 
   def sameResult(r1: Result, r2: Result): Boolean = {
     val (t1, reqs1, sol1_) = r1

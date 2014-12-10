@@ -59,7 +59,8 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   def uninitialized(buf: collection.mutable.ArrayBuffer[Exp_[T]]): Unit = {
     val oldsize = buf.size
     _kids foreach (_.uninitialized(buf))
-    if (!valid && oldsize == buf.size)
+    val hasSubchange = oldsize == buf.size
+    if (!valid || hasSubchange)
       buf += this
   }
 
@@ -67,7 +68,8 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
     val subs = lits.map(_.toString) ++ _kids.map(_.toString)
     val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail
     val substring = subssep.foldLeft("")(_+_)
-    s"$kind($substring)"
+    val typString = "" //if(typ == null) "" else "@{" + typ.asInstanceOf[Tuple3[_,_,_]]._1 "}"
+    s"$kind$typString($substring)"
   }
 }
 

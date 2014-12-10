@@ -21,6 +21,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   def typecheckTest(desc: String, e: =>Exp)(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
+      println(e.toString)
       assert(actual.isLeft, s"Expected $expected but got $actual")
       val sol = expected.unify(actual.left.get)
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
@@ -42,8 +43,20 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
   typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
 
-  lazy val fac = Fix(Abs('f, Abs('n, If0(Var('n), Num(1), Mul(Var('n), App(Var('f), Add(Var('n), Num(-1))))))))
+  lazy val mul = Fix(Abs('f, TFun(TNum, TFun(TNum, TNum)),
+                   Abs('m, TNum, Abs('n, TNum,
+                     If0(Var('m), Num(0), App(App(Var('f), Add(Var('m), Num(-1))), Var('n)))))))
+  typecheckTest("multiplication", mul)(TFun(TNum, TFun(TNum, TNum)))
+
+  lazy val fac = Fix(Abs('f, Abs('n, If0(Var('n), Num(1), App(App(mul, Var('n)), App(Var('f), Add(Var('n), Num(-1))))))))
   typecheckTest("factorial", fac)(TFun(TNum, TNum))
+  lazy val fac2 = {fac.kids(0).kids(0).kids(0).kids(1) = Num(2); fac}
+  typecheckTest("factorial2", fac2)(TFun(TNum, TNum))
+  lazy val fac3 = {fac.kids(0).kids(0).kids(0).kids(2).kids(1).kids(1) = Add(Var('n), Num(1)); fac}
+  typecheckTest("factorial3", fac3)(TFun(TNum, TNum))
+  lazy val fac4 = {fac.kids(0).kids(0).kids(0).kids(1) = Num(1); fac.kids(0).kids(0).kids(0).kids(2).kids(1).kids(1) = Add(Var('n), Num(-1)); fac}
+  typecheckTest("factorial4", fac4)(TFun(TNum, TNum))
+
   typecheckTest("eta-expanded factorial", Abs('x, App(fac, Var('x))))((TFun(TNum, TNum)))
 
   lazy val fib = Fix(Abs('f, Abs('n,

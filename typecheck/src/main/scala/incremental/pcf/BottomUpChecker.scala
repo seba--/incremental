@@ -32,7 +32,7 @@ class BottomUpChecker extends TypeChecker[Type] {
     preparationTime += ptime
 
     val (res, ctime) = Util.timed {
-      uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
+      uninitialized foreach (e => e.typ = typecheckStep(e))
 
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
@@ -47,23 +47,6 @@ class BottomUpChecker extends TypeChecker[Type] {
     }
     typecheckTime += ctime
     res
-  }
-
-  def typecheckSpine(e: Exp_[Result]): Unit ={
-    var current = e
-    while (current != null && current.allKidTypesAvailable) {
-      val isFirstTime = !current.valid
-      val isRoot = current.parent == null
-
-      val t = typecheckStep(current)
-//      println(s"$current -> t")
-//      println(s"  old: ${current.typ}")
-
-      current.typ = t
-      if (!isRoot && isFirstTime)
-        current.parent.markKidTypeAvailable(current.pos)
-      current = current.parent
-    }
   }
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {

@@ -32,7 +32,7 @@ class BottomUpSolveEndChecker extends TypeChecker[Type] {
     preparationTime += ptime
 
     val (res, ctime) = Util.timed {
-      uninitialized foreach (e => if (!e.valid) typecheckSpine(e))
+      uninitialized foreach (e => e.typ = typecheckStep(e))
 
       val (t_, reqs, cons) = root.typ
       val sol = solve(cons)
@@ -56,8 +56,8 @@ class BottomUpSolveEndChecker extends TypeChecker[Type] {
       val isRoot = current.parent == null
 
       val t = typecheckStep(current)
-      //      println(s"$current -> t")
-      //      println(s"  old: ${current.typ}")
+//      println(s"$current -> $t")
+//      println(s"  old: ${current.typ}")
 
       current.typ = t
       if (!isRoot && isFirstTime)
