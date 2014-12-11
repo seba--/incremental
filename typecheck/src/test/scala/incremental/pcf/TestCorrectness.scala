@@ -28,7 +28,6 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
 
   def typecheckTestError(desc: String, e: =>Exp) =
     test (s"$classdesc: Type check $desc") {
-      val s = desc
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
     }
@@ -52,6 +51,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTest("factorial", fac)(TFun(TNum, TNum))
 
   lazy val fac1 = Fix(Abs('f, Abs('n, If0(Add(Var('n), Num(-1)), Num(1), App(App(mul, Var('n)), App(Var('f), Add(Var('n), Num(-2))))))))
+  typecheckTest("factorial1", fac1)(TFun(TNum, TNum))
   lazy val fac2 = {fac1.kids(0).kids(0).kids(0).kids(0) = Var('n); fac1}
   typecheckTest("factorial2", fac2)(TFun(TNum, TNum))
   lazy val fac3 = {fac1.kids(0).kids(0).kids(0).kids(2).kids(1).kids(1).kids(1) = Num(-1); fac1}
@@ -59,7 +59,6 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   lazy val fac3_2 = {
     val absn = fac1.kids(0).kids(0)
     fac1.kids(0).kids(0) = Abs('x, absn.kids(0))
-    println(fac1)
     fac1
   }
   typecheckTestError("factorial3_2", fac3_2)
