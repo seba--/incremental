@@ -15,8 +15,8 @@ class ConstraintOps {
   def mergeSolutionTime = incremental.ConstraintOps.mergeSolutionTime
 
   private var _nextId = 0
-  def freshTVar(): TVarInternal = {
-    val v = TVarInternal(Symbol("x$" + _nextId))
+  def freshTVar(): UVar = {
+    val v = UVar(Symbol("x$" + _nextId))
     _nextId += 1
     v
   }
@@ -68,7 +68,7 @@ class ConstraintOps {
 
     private def substAlpha(s: TSubst) = if (!alphaIsInternal) (alpha, false) else s.get(alpha) match {
       case Some(TVar(beta)) => (beta, false)
-      case Some(TVarInternal(beta)) => (beta, true)
+      case Some(UVar(beta)) => (beta, true)
       case None => (alpha, alphaIsInternal)
       case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
     }
@@ -78,7 +78,7 @@ class ConstraintOps {
       val (beta, betaIsInternal) = substAlpha(s.solution)
 
       tbody match {
-        case TVar(`beta`) | TVarInternal(`beta`) => withResult(substitute, s)
+        case TVar(`beta`) | UVar(`beta`) => withResult(substitute, s)
         case TVar(_) if !betaIsInternal => withResult(tbody, s) // because alpha is user-defined and different
 
         case TNum => withResult(TNum, s)

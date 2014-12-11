@@ -163,7 +163,7 @@ class BottomUpChecker extends TypeChecker[Type] {
       val Xbody = freshTVar()
       val Xres = freshTVar()
 
-      val ucons = EqConstraint(TUnivInternal(Xalpha, Xbody), t1)
+      val ucons = EqConstraint(UUniv(Xalpha, Xbody), t1)
       val vcons = EqSubstConstraint(Xbody, Xalpha, true, t, Xres) // Xbody[Xalpha:=t] == Xres
 
       val sol = solve(Seq(ucons, vcons))

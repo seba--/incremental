@@ -14,8 +14,8 @@ class ConstraintOps {
   def mergeSolutionTime = incremental.ConstraintOps.mergeSolutionTime
 
   private var _nextId = 0
-  def freshTVar(): TVarInternal = {
-    val v = TVarInternal(Symbol("x$" + _nextId))
+  def freshTVar(): UVar = {
+    val v = UVar(Symbol("x$" + _nextId))
     _nextId += 1
     v
   }

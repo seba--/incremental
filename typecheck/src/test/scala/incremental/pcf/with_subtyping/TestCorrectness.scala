@@ -60,7 +60,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
     Abs(Seq('f, (TNum -->: Top) -->: TNum), Seq(Abs(Seq('g, TNum),  Seq(App(Var('f), Var('g))))))
   )
   typecheckTestError("lambda x: T. x x",
-    Abs(Seq('x, TVarInternal('T)), Seq(App(Var('x), Var('x))))
+    Abs(Seq('x, UVar('T)), Seq(App(Var('x), Var('x))))
   )
 //  typecheckTest("(lamba f. (f (lambda x. x)) + (f (lambda y. y)))",
 //    Abs('f, Add(App(Var('f), Abs('x, Var('x))), App(Var('f), Abs('y, Var('y)))))

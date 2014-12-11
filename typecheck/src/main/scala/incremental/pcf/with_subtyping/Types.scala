@@ -28,7 +28,7 @@ case object TNum extends Type {
   def subst(s: TSubst) = this
 }
 
-case class TVarInternal(x: Symbol) extends Type {
+case class UVar(x: Symbol) extends Type {
   val isGround = false
   def freeTVars = Set()
   def occurs(x2: Symbol) = x == x2

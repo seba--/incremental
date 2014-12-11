@@ -3,7 +3,7 @@ package incremental.pcf.with_references
 import incremental.ConstraintOps._
 import incremental.{EqConstraint, Type}
 import incremental.Type.Companion.TSubst
-import incremental.pcf.TVarInternal
+import incremental.pcf.UVar
 
 /**
  * Created by seba on 15/11/14.
@@ -14,7 +14,7 @@ case class TRef(t: Type) extends Type {
   def subst(s: TSubst) = TRef(t.subst(s))
   def unify(other: Type, s: TSubst) = other match {
     case TRef(t2) => t.unify(t2, s)
-    case TVarInternal(_) => other.unify(this, s)
+    case UVar(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
 }
@@ -25,7 +25,7 @@ case object TUnit extends Type {
   def subst(s: TSubst) = TUnit
   def unify(other: Type, s: TSubst) = other match {
     case TUnit => emptySol
-    case TVarInternal(_) => other.unify(this, s)
+    case UVar(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
 }

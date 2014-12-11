@@ -3,7 +3,7 @@ package incremental.pcf.with_records
 import incremental.{EqConstraint, Type}
 import incremental.ConstraintOps._
 import incremental.Type.Companion.TSubst
-import incremental.pcf.TVarInternal
+import incremental.pcf.UVar
 
 /**
  * Created by seba on 15/11/14.
@@ -19,7 +19,7 @@ case class TRecord(fields: Map[Symbol, Type]) extends Type {
         sol = sol ++ fields(k).unify(fields2(k), s)
       sol
     }
-    case TVarInternal(_) => other.unify(this, s)
+    case UVar(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
 }

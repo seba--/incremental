@@ -17,12 +17,12 @@ case object TNum extends Type {
   def subst(s: TSubst) = this
   def unify(other: Type, s: TSubst) = other match {
     case TNum => emptySol
-    case TVarInternal(x) => other.unify(this, s)
+    case UVar(x) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
 }
 
-case class TVarInternal(x: Symbol) extends Type {
+case class UVar(x: Symbol) extends Type {
   def freeTVars = Set()
   def occurs(x2: Symbol) = x == x2
   def subst(s: TSubst) = s.getOrElse(x, this)
@@ -50,7 +50,7 @@ case class TFun(t1: Type, t2: Type) extends Type {
       val Solution(s1, _, never1) = t1.unify(t1_, s)
       val Solution(s2, _, never2) = t2.unify(t2_, s1 ++ s)
       Solution(s1 ++ s2, Seq(), never1 ++ never2)
-    case TVarInternal(x) => other.unify(this, s)
+    case UVar(x) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
   override def toString= s"($t1 --> $t2)"
