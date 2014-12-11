@@ -30,8 +30,11 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
     def apply(i: Int) = _kids(i)
     def update[U](i: Int, e: Exp_[U]): Unit = {
       val ee = e.asInstanceOf[Exp_[T]]
+      if (ee._valid)
+        _valid = false
+      else
+        ee._typ = kids(i)._typ
       _kids(i) = ee
-      _valid = false
       ee.parent = Exp_.this
       ee.pos = i
     }
