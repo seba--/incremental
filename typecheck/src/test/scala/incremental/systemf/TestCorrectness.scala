@@ -1,4 +1,4 @@
-package systemf
+package incremental.systemf
 
 import incremental.Exp._
 import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
@@ -78,6 +78,9 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTestError("\\x. (x [Num]) + 1", Abs('x, Add(TApp(TNum, Var('x)), Num(1))))
 
   //typecheckTest("\\x: \\a.a->a. x \\a.a->a x" ,(Abs('x, TAbs('a, TFun(TVar('a),TVar('a))), App(Var('x), App(TAbs('a, TFun(TVar('a),TVar('a))),Var('x))))))(TFun((TUniv('a, TFun(TVar('a), TVar('a)))),(TUniv('a, TFun(TVar('a), TVar('a))))))
+
+  typecheckTestError("\\x:X. x", Abs('x, TVar('X), Var('x)))
+  typecheckTestError("(\\X.\\x:X. x)[Y]", TApp(TVar('Y), TAbs('X, Abs('x, TVar('X), Var('x)))))
 }
 
 //class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
