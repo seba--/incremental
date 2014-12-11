@@ -92,8 +92,8 @@ class BottomUpKeepSubstChecker extends TypeChecker[Type] {
         case Some(treq) =>
           val otherReqs = reqs - x
           if (e.lits.size == 2) {
-            val sol = solve(EqConstraint(e.lits(1).asInstanceOf[Type], treq))
-            (TFun(treq, t), otherReqs, subsol <++ sol)
+            val sol = solve(EqConstraint(e.lits(1).asInstanceOf[Type], treq), subsol)
+            (TFun(treq, t), otherReqs, sol)
           }
           else
             (TFun(treq, t), otherReqs, subsol)
@@ -139,8 +139,8 @@ class BottomUpKeepSubstChecker extends TypeChecker[Type] {
       val (t, reqs, subsol) = e.kids(0).typ
       val X = freshTVar()
       val fixCons = EqConstraint(t, TFun(X, X))
-      val sol = solve(fixCons)
-      (X, reqs, subsol <++ sol)
+      val sol = solve(fixCons, subsol)
+      (X, reqs, sol)
   }
 }
 
