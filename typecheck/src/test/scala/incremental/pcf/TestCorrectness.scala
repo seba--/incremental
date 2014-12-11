@@ -35,10 +35,10 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTest("17", Num(17))(TNum)
   typecheckTest("17+(10+2)", Add(Num(17), Add(Num(10), Num(2))))(TNum)
   typecheckTest("17+(10+5)", Add(Num(17), Add(Num(10), Num(5))))(TNum)
-  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(TVar('x$0), TNum))
+  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(TVarInternal('x$0), TNum))
   typecheckTest("\\x. x+x", Abs('x, Add(Var('x), Var('x))))(TFun(TNum, TNum))
   typecheckTestError("\\x. err+x", Abs('x, Add(Var('err), Var('x))))
-  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(TVar('x$1), TVar('x$2)), TFun(TVar('x$1), TVar('x$2))))
+  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(TVarInternal('x$1), TVarInternal('x$2)), TFun(TVarInternal('x$1), TVarInternal('x$2))))
   typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
   typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
 
@@ -76,9 +76,9 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
           App(Var('f), Add(Var('n), Num(-2)))))))))
   typecheckTest("fibonacci", fib)(TFun(TNum, TNum))
   typecheckTest("factorial + fibonacci", Abs('x, Add(App(fac, Var('x)), App(fib, Var('x)))))(TFun(TNum, TNum))
-  typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(TVar('x$0), TVar('x$0)))
+  typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(TVarInternal('x$0), TVarInternal('x$0)))
   typecheckTestError("\\x. x x",
-    Abs(Seq('x, TVar('T)), Seq(App(Var('x), Var('x))))
+    Abs(Seq('x, TVarInternal('T)), Seq(App(Var('x), Var('x))))
   )
 }
 

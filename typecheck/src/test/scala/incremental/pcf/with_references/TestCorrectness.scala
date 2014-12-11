@@ -42,8 +42,8 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTest("17+Deref(Ref(10+2))", Add(Num(17), Deref(Ref(Add(Num(10), Num(2))))))(TNum)
   typecheckTest("\\x. Deref(x)+Deref(x)", Abs('x, Add(Deref(Var('x)), Deref(Var('x)))))(TFun(TRef(TNum), TNum))
   typecheckTestError("\\x. x+Deref(x)", Abs('x, Add(Var('x), Deref(Var('x)))))
-  typecheckTest("\\x. \\y. x=y", Abs('x, Abs('y, Assign(Var('x), Var('y))))){case TFun(TRef(TVar(x)), TFun(TVar(y), TUnit)) => x==y}
-  typecheckTest("\\x. \\y. x=y; y", Abs('x, Abs('y, Seq(Assign(Var('x), Var('y)), Var('y))))){case TFun(TRef(TVar(x)), TFun(TVar(y), TVar(z))) => x==y && y==z}
+  typecheckTest("\\x. \\y. x=y", Abs('x, Abs('y, Assign(Var('x), Var('y))))){case TFun(TRef(TVarInternal(x)), TFun(TVarInternal(y), TUnit)) => x==y}
+  typecheckTest("\\x. \\y. x=y; y", Abs('x, Abs('y, Seq(Assign(Var('x), Var('y)), Var('y))))){case TFun(TRef(TVarInternal(x)), TFun(TVarInternal(y), TVarInternal(z))) => x==y && y==z}
 }
 
 class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)

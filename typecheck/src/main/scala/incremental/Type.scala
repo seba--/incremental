@@ -20,8 +20,8 @@ object TypCompanion {
 
 //Type class for types
 trait Typ[T] {
+  def freeTVars: Set[Symbol]
   def occurs(x: Symbol): Boolean
-
   def subst(s: Map[Symbol, T]): T
 }
 

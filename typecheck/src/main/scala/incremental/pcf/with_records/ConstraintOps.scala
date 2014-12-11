@@ -3,7 +3,7 @@ package incremental.pcf.with_records
 import incremental.ConstraintOps._
 import incremental.Type.Companion.TSubst
 import incremental._
-import incremental.pcf.TVar
+import incremental.pcf.TVarInternal
 
 /**
  * Created by seba on 13/11/14.
@@ -19,7 +19,7 @@ case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) e
           case None => never(EqRecordProjectConstraint(trec, label, field))
           case Some(t) => EqConstraint(t, field).solve(s)
         }
-      case TVar(_) => notyet(EqRecordProjectConstraint(trec, label, field))
+      case TVarInternal(_) => notyet(EqRecordProjectConstraint(trec, label, field))
       case _ => never(EqRecordProjectConstraint(trec, label, field))
     }
   }
@@ -32,10 +32,10 @@ case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) e
           case None => never(EqRecordProjectConstraint(trec, label, field))
           case Some(t) => EqConstraint(t, field).solve(s)
         }
-      case TVar(x) =>
+      case TVarInternal(x) =>
         var cons = Seq[Constraint]()
         var fields = Map(label -> field.subst(s.solution))
-        for (EqRecordProjectConstraint(TVar(`x`), l, field) <- s.notyet)
+        for (EqRecordProjectConstraint(TVarInternal(`x`), l, field) <- s.notyet)
           if (!fields.isDefinedAt(l))
             fields += l -> field.subst(s.solution)
           else

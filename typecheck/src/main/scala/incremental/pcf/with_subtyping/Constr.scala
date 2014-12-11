@@ -59,14 +59,14 @@ class Constr {
   def isProperNegative(a: Symbol): Boolean = !_pos(a) && _neg(a)
 
   private var _nextId = 0
-  def freshTVar(positive: Boolean = true): TVar = {
-    val v = TVar(Symbol("x$" + _nextId))
+  def freshTVar(positive: Boolean = true): TVarInternal = {
+    val v = TVarInternal(Symbol("x$" + _nextId))
     _nextId += 1
     if (positive) _pos += v.x
     else _neg += v.x
     v
   }
-  def freshBiVar(): TVar = {
+  def freshBiVar(): TVarInternal = {
     val res = freshTVar(true)
     _neg += res.x
     res
@@ -160,7 +160,7 @@ class Constr {
     private[CSet] def normalizeSub(s: Type, t: Type): Unit = (s,t) match {
       case (t1, t2) if t1 == t2 =>
       case (_, Top) =>
-      case (TVar(a), TVar(b)) =>
+      case (TVarInternal(a), TVarInternal(b)) =>
         if (isNegative(a))
           addUpperBound(a, t)
         else {
@@ -168,12 +168,12 @@ class Constr {
           addLowerBound(b, s)
         }
 
-      case (TVar(a), t2) =>
+      case (TVarInternal(a), t2) =>
         if (t2.occurs(a))
           never(Subtype(s, t))
         else
           addUpperBound(a, t2)
-      case (t1, TVar(a)) =>
+      case (t1, TVarInternal(a)) =>
         if (t1.occurs(a))
           never(Subtype(s, t))
         else
@@ -197,7 +197,7 @@ class Constr {
             never(Join(errorl))
           if(erroru.nonEmpty)
             never(Meet(erroru))
-          val t = TVar(tv).subst(sol)
+          val t = TVarInternal(tv).subst(sol)
           for(tpe <- newLb.ground.toSet ++ newLb.nonground)
             temp.normalizeSub(tpe, t)
           for(tpe <- newUb.ground.toSet ++ newUb.nonground)
