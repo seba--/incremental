@@ -17,8 +17,10 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
     val (res, ctime) = Util.timed {
       root.visitUninitialized {e =>
         val t = typecheckStep(e)
-        if (e.typ != null && sameResult(e.typ, t))
+        if (e.typ != null && sameResult(e.typ, t)) {
+          e.typ = t
           false
+        }
         else {
           e.typ = t
           true
@@ -52,10 +54,11 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
     val (mcons, _) = constraint.mergeReqMaps(reqs1, reqs2)
     val sol = ConstraintOps.solve(EqConstraint(t1, t2) +: mcons).trySolveNow
 
-    if (!sol.isSolved)
+    val s = sol.solution
+    val isRenaming = s.foldLeft(true)((b, p) => b && p._2.isInstanceOf[TVar])
+    if (!sol.isSolved || !isRenaming)
       return false
 
-    val s = sol.solution
     val notyetEquiv = sol1.never.zip(sol2.never).foldLeft(true)((b,p) => b && p._1.subst(s) == p._2.subst(s))
     val neverEquiv = sol1.never.zip(sol2.never).foldLeft(true)((b,p) => b && p._1.subst(s) == p._2.subst(s))
     notyetEquiv && neverEquiv
