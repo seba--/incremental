@@ -96,12 +96,13 @@ class BottomUpChecker extends TypeChecker[Type] {
       reqs.get(x) match {
         case None =>
           val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshTVar()
-          (TFun(X, t), reqs,treqs, subsol)
+          (TFun(X, t), reqs, treqs ++ X.freeTVars, subsol)
         case Some(treq) =>
           val otherReqs = reqs - x
           if (e.lits.size == 2) {
-            val sol = solve(EqConstraint(e.lits(1).asInstanceOf[Type], treq))
-            (TFun(treq, t).subst(sol.solution), otherReqs.mapValues(_.subst(sol.solution)), treqs, subsol <++ sol)
+            val X = e.lits(1).asInstanceOf[Type]
+            val sol = solve(EqConstraint(X, treq))
+            (TFun(treq, t).subst(sol.solution), otherReqs.mapValues(_.subst(sol.solution)), treqs ++ X.freeTVars, subsol <++ sol)
           }
           else
             (TFun(treq, t), otherReqs, treqs, subsol)
@@ -167,7 +168,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
       val sol = solve(Seq(ucons, vcons))
 
-      (Xres.subst(sol.solution), reqs1.mapValues(_.subst(sol.solution)), treqs, subsol <++ sol)
+      (Xres.subst(sol.solution), reqs1.mapValues(_.subst(sol.solution)), treqs ++ t.freeTVars, subsol <++ sol)
   }
 }
 
