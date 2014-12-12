@@ -20,13 +20,13 @@ object TypCompanion {
 
 //Type class for types
 trait Typ[T] {
-  def freeTVars: Set[Symbol]
   def occurs(x: Symbol): Boolean
   def subst(s: Map[Symbol, T]): T
 }
 
 //Type class for types which support unification
 trait UType[T] extends Typ[T] {
+  def freeTVars: Set[Symbol]
   def unify(other: T, s: Map[Symbol, T]): Solution
   def unify(other: T): Solution = unify(other, Map())
 }

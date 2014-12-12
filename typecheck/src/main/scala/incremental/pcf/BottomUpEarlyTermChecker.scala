@@ -29,7 +29,7 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
 
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
-      val t = t_.subst(sol.solution)
+      val t = t_.subst(sol.substitution)
 
       if (!reqs.isEmpty)
         Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
@@ -54,7 +54,7 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
     val (mcons, _) = constraint.mergeReqMaps(reqs1, reqs2)
     val sol = ConstraintOps.solve(EqConstraint(t1, t2) +: mcons).trySolveNow
 
-    val s = sol.solution
+    val s = sol.substitution
     val isRenaming = s.foldLeft(true)((b, p) => b && p._2.isInstanceOf[UVar])
     if (!sol.isSolved || !isRenaming)
       return false

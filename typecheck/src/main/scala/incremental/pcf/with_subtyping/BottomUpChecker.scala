@@ -1,10 +1,9 @@
 package incremental.pcf.with_subtyping
 
-import incremental.ConstraintOps._
+
 import incremental.Exp.Exp
-import incremental.Exp._
 import incremental.pcf._
-import incremental.{TypeCheckerFactory, Exp_, TypeChecker, Util}
+import incremental.{Type => _, _}
 import incremental.pcf.with_subtyping.Type.Companion
 import TypeOps._
 
@@ -15,16 +14,19 @@ class BottomUpChecker extends TypeChecker[Type] {
   var preparationTime = 0.0
   var typecheckTime = 0.0
 
-  val constraint = new Constr
-  import constraint._
-  def constraintCount = constraint.constraintCount
-  def mergeReqsTime = constraint.mergeReqsTime
-  def constraintSolveTime = constraint.constraintSolveTime
-  def mergeSolutionTime = constraint.mergeSolutionTime
+  val cs: SubtypeConstraintSystem = CS
+  val instance = cs.mkInstance
+  import cs._
+  import instance._
+  import instance.gen._
 
-  type Reqs = Map[Symbol, Type]
+  def constraintCount = instance.stats.constraintCount
+  def mergeReqsTime = instance.stats.mergeReqsTime
+  def constraintSolveTime = instance.stats.constraintSolveTime
+  def mergeSolutionTime = instance.stats.mergeSolutionTime
 
-  type Result = (Type, Reqs, CSet)
+
+  type Result = (Type, Requirements, CSet)
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
@@ -39,7 +41,8 @@ class BottomUpChecker extends TypeChecker[Type] {
       }
 
       val (t_, reqs, sol_) = root.typ
-      val (sigma, notyet, unsat) = sol_.tryFinalize.state
+      val sol = sol_.tryFinalize
+      val (sigma, notyet, unsat) = sol.solution
       val t = t_.subst(sigma)
 
       if (!reqs.isEmpty)
@@ -55,25 +58,25 @@ class BottomUpChecker extends TypeChecker[Type] {
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
     case Num =>
-      (TNum, Map(), CSet())
+      (TNum, Map(), emptyCSet)
     case op if op == Add || op == Mul =>
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-      val sol = sol1 <-- sol2 <-- Equal(TNum, t1) <-- Equal(TNum, t2) <-- mcons
-      (TNum, mreqs.mapValues(_.subst(sol.solution)), sol)
+      val sol = (sol1 ++ sol2 + Equal(TNum, t1) + Equal(TNum, t2) ++ mcons).trySolve
+      (TNum, mreqs.mapValues(_.subst(sol.substitution)), sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshTVar()
-      (X, Map(x -> X), CSet())
+      (X, Map(x -> X), emptyCSet)
     case App =>
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
       val X = freshTVar(false)
       val Y = freshTVar()
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-      val sol = sol1 <-- sol2 + Equal(t1, X -->: Y) <-- Subtype(t2, X) <-- mcons
-      (Y.subst(sol.solution), mreqs.mapValues(_.subst(sol.solution)), sol)
+      val sol = (sol1 ++ sol2 + Equal(t1, X -->: Y) + Subtype(t2, X) ++ mcons).trySolve
+      (Y.subst(sol.substitution), mreqs.mapValues(_.subst(sol.substitution)), sol)
     case Abs if e.lits(0).isInstanceOf[Symbol] =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val annotatedT = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshTVar()
@@ -84,8 +87,8 @@ class BottomUpChecker extends TypeChecker[Type] {
           (TFun(annotatedT, t), reqs - x, subsol)
         case Some(treq) =>
           val otherReqs = reqs - x
-          val sol = subsol <-- Subtype(annotatedT, treq)
-          (TFun(annotatedT, t).subst(sol.solution), otherReqs.mapValues(_.subst(sol.solution)), sol)
+          val sol = (subsol + Subtype(annotatedT, treq)).trySolve
+          (TFun(annotatedT, t).subst(sol.substitution), otherReqs.mapValues(_.subst(sol.substitution)), sol)
       }
     case If0 =>
       val (t1, reqs1, sol1) = e.kids(0).typ
@@ -94,15 +97,15 @@ class BottomUpChecker extends TypeChecker[Type] {
       val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
       val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
       val Xjoin = freshTVar()
-      val sol = sol1 <-- sol2 <-- sol3 + Equal(TNum, t1) + Subtype(t2, Xjoin) <-- Subtype(t3, Xjoin) <-- mcons12 <-- mcons23
-      (Xjoin.subst(sol.solution), mreqs123.mapValues(_.subst(sol.solution)), sol)
+      val sol = (sol1 ++ sol2 ++ sol3 + Equal(TNum, t1) + Subtype(t2, Xjoin) + Subtype(t3, Xjoin) ++ mcons12 ++ mcons23).trySolve
+      (Xjoin.subst(sol.substitution), mreqs123.mapValues(_.subst(sol.substitution)), sol)
 
     case Fix =>
       val (t, reqs, subsol) = e.kids(0).typ
       val X = freshTVar(false)
       val Y = freshTVar()
-      val sol = subsol + Equal(t, X -->: Y) <-- Subtype(Y, X)
-      (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), sol)
+      val sol = (subsol + Equal(t, X -->: Y) + Subtype(Y, X)).trySolve
+      (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), sol)
   }
 }
 

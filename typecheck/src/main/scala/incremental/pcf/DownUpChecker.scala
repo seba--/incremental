@@ -30,9 +30,9 @@ class DownUpChecker extends TypeChecker[Type] {
         val (t, sol_) = typecheck(root, Map())
         val sol = sol_.tryFinalize
         if (sol.isSolved)
-          Left(t.subst(sol.solution))
+          Left(t.subst(sol.substitution))
         else
-          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.solution)}, subst ${sol.solution}")
+          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.substitution)}, subst ${sol.substitution}")
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
       }
@@ -68,7 +68,7 @@ class DownUpChecker extends TypeChecker[Type] {
       val fcons = EqConstraint(TFun(t2, X), t1)
       val sol = solve(fcons, subsol)
 
-      (X.subst(sol.solution), sol)
+      (X.subst(sol.substitution), sol)
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X =
@@ -78,7 +78,7 @@ class DownUpChecker extends TypeChecker[Type] {
           freshTVar()
 
       val (t, subsol) = typecheck(e.kids(0), ctx + (x -> X))
-      (TFun(X.subst(subsol.solution), t), subsol)
+      (TFun(X.subst(subsol.substitution), t), subsol)
     case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
       val Xs = xs map (_ => freshTVar())
@@ -88,7 +88,7 @@ class DownUpChecker extends TypeChecker[Type] {
       var tfun = t
       for (i <- xs.size-1 to 0 by -1) {
         val X = Xs(i)
-        tfun = TFun(X.subst(subsol.solution), tfun)
+        tfun = TFun(X.subst(subsol.substitution), tfun)
       }
 
       (tfun, subsol)
@@ -102,7 +102,7 @@ class DownUpChecker extends TypeChecker[Type] {
       val body = EqConstraint(t2, t3)
       val sol = solve(Seq(cond, body), subsol)
 
-      (t2.subst(sol.solution), sol)
+      (t2.subst(sol.substitution), sol)
     case Fix =>
       val (t, subsol) = typecheck(e.kids(0), ctx)
 
@@ -110,7 +110,7 @@ class DownUpChecker extends TypeChecker[Type] {
       val fixCons = EqConstraint(t, TFun(X, X))
       val sol = solve(fixCons, subsol)
 
-      (X.subst(sol.solution), sol)
+      (X.subst(sol.substitution), sol)
   }
 }
 

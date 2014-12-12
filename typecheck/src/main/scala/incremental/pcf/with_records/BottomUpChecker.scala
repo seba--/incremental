@@ -30,7 +30,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
       val sol = solve(mcons)
 
       val fields = keys.zip(subs).toMap
-      (TRecord(fields), mreqs.mapValues(_.subst(sol.solution)), msol <++ sol)
+      (TRecord(fields), mreqs.mapValues(_.subst(sol.substitution)), msol <++ sol)
 
     case Project =>
       val label = e.lits(0).asInstanceOf[Symbol]
@@ -39,7 +39,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
 
       val sol = solve(EqRecordProjectConstraint(t1, label, X))
 
-      (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), subsol <++ sol)
+      (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), subsol <++ sol)
 
     case _ => super.typecheckStep(e)
   }

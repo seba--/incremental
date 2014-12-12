@@ -18,7 +18,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
       val (t1, subsol) = typecheck(e.kids(0), ctx)
       val X = freshTVar()
       val sol = solve(EqConstraint(TRef(X), t1), subsol)
-      (X.subst(sol.solution), sol)
+      (X.subst(sol.substitution), sol)
     case Assign =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)
       val (t2, sol2) = typecheck(e.kids(1), ctx)
@@ -34,7 +34,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
 
       val t1cons = EqConstraint(TUnit, t1)
       val sol = solve(t1cons, subsol)
-      (t2.subst(sol.solution), sol)
+      (t2.subst(sol.substitution), sol)
     case _ => super.typecheck(e, ctx)
   }
 }
