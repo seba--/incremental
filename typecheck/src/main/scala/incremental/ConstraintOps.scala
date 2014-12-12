@@ -134,3 +134,37 @@ case class EqConstraint(expected: Type, actual: Type) extends Constraint {
   def finalize(s: Solution) = solve(s)
   def subst(s: TSubst) = EqConstraint(expected.subst(s), actual.subst(s))
 }
+
+abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
+  final type TSubst = definitions.TSubst
+  final type TError = definitions.TError
+
+  type Solution
+  type Constraint
+  type Requirements
+  type TVar  //TODO move this into the typcompanion
+  //subclasses may override this
+  type NotYetSolvable = Set[Constraint]
+  type Unsolvable = Set[Constraint]
+
+  trait CSet {
+    def solve(): TSubst
+    def isSolvable: Boolean
+    def state: (TSubst, NotYetSolvable, Unsolvable)
+    def ++(that: CSet): CSet
+    def + (that: Constraint): CSet
+  }
+
+  def freshTVar(): TVar
+  def mergeReqMaps(reqs1: Requirements, reqs2: Requirements) = {
+    val (res, time) = Util.timed(_mergeReqMaps(reqs1, reqs2))
+    mergeReqsTime += time
+    res
+  }
+  def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements): (CSet, Requirements) 
+  
+  var mergeSolutionTime = 0.0
+  var constraintCount = 0
+  var constraintSolveTime = 0.0
+  var mergeReqsTime = 0.0
+}
