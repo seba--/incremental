@@ -53,23 +53,6 @@ class BottomUpSolveEndChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheckSpine(e: Exp_[Result]): Unit ={
-    var current = e
-    while (current != null && current.allKidTypesAvailable) {
-      val isFirstTime = !current.valid
-      val isRoot = current.parent == null
-
-      val t = typecheckStep(current)
-//      println(s"$current -> $t")
-//      println(s"  old: ${current.typ}")
-
-      current.typ = t
-      if (!isRoot && isFirstTime)
-        current.parent.markKidTypeAvailable(current.pos)
-      current = current.parent
-    }
-  }
-
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
     case Num => (TNum, Map(), Seq())
     case op if op == Add || op == Mul =>
