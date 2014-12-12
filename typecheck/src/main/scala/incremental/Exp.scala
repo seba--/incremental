@@ -13,7 +13,7 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   private var _typ: T = _
   private var _valid = false
 
-  def valid = _valid
+  def valid = _valid // needed for propagation pruning
   def typ = _typ
   def typ_=(t: T): Unit = {
     _typ = t
@@ -68,10 +68,10 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
   def visitUninitialized2(f: Exp_[T] => (T, Boolean)): Boolean = {
     val hasSubchange = _kids.foldLeft(false)((changed, k) =>  k.visitUninitialized2(f) || changed)
     if (!valid || hasSubchange) {
-      val (t, change) = f(this)
+      val (t, doContinue) = f(this)
       _typ = t
       _valid = true
-      change
+      doContinue
     }
     else
       false
