@@ -39,7 +39,7 @@ class BottomUpKeepSubstChecker extends TypeChecker[Type] {
 
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
-      val t = t_.subst(sol.solution)
+      val t = t_.subst(sol.substitution)
 
       if (!reqs.isEmpty)
         Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")

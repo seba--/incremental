@@ -31,7 +31,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
       val (t1, subsol) = typecheck(e.kids(0), ctx)
       val X = freshTVar()
       val sol = solve(EqRecordProjectConstraint(t1, label, X), subsol)
-      (X.subst(sol.solution), sol)
+      (X.subst(sol.substitution), sol)
 
     case _ => super.typecheck(e, ctx)
   }

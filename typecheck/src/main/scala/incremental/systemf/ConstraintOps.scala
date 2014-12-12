@@ -64,7 +64,7 @@ class ConstraintOps {
   }
 
   case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean, substitute: Type, result: Type) extends Constraint {
-    private def withResult(t: Type, s: Solution) = t.unify(result, s.solution)
+    private def withResult(t: Type, s: Solution) = t.unify(result, s.substitution)
 
     private def substAlpha(s: TSubst) = if (!alphaIsInternal) (alpha, false) else s.get(alpha) match {
       case Some(TVar(beta)) => (beta, false)
@@ -74,8 +74,8 @@ class ConstraintOps {
     }
 
     def solve(s: Solution) = {
-      val tbody = body.subst(s.solution)
-      val (beta, betaIsInternal) = substAlpha(s.solution)
+      val tbody = body.subst(s.substitution)
+      val (beta, betaIsInternal) = substAlpha(s.substitution)
 
       tbody match {
         case TVar(`beta`) | UVar(`beta`) => withResult(substitute, s)

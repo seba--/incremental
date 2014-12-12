@@ -42,7 +42,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
       val (t_, reqs, treqs, sol_) = root.typ
       val sol = sol_.tryFinalize
-      val t = t_.subst(sol.solution)
+      val t = t_.subst(sol.substitution)
       
       if (!reqs.isEmpty)
         Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
@@ -69,7 +69,7 @@ class BottomUpChecker extends TypeChecker[Type] {
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
       val sol = solve(lcons +: rcons +: mcons )
-      (TNum, mreqs.mapValues(_.subst(sol.solution)), treqs1 ++ treqs2, sol1 +++ sol2 <++ sol)
+      (TNum, mreqs.mapValues(_.subst(sol.substitution)), treqs1 ++ treqs2, sol1 +++ sol2 <++ sol)
 
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -87,7 +87,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
 
       val sol = solve(fcons +: mcons)
-      (X.subst(sol.solution), mreqs.mapValues(_.subst(sol.solution)), treqs1 ++ treqs2, sol1 +++ sol2 <++ sol)
+      (X.subst(sol.substitution), mreqs.mapValues(_.subst(sol.substitution)), treqs1 ++ treqs2, sol1 +++ sol2 <++ sol)
 
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -102,7 +102,7 @@ class BottomUpChecker extends TypeChecker[Type] {
           if (e.lits.size == 2) {
             val X = e.lits(1).asInstanceOf[Type]
             val sol = solve(EqConstraint(X, treq))
-            (TFun(treq, t).subst(sol.solution), otherReqs.mapValues(_.subst(sol.solution)), treqs ++ X.freeTVars, subsol <++ sol)
+            (TFun(treq, t).subst(sol.substitution), otherReqs.mapValues(_.subst(sol.substitution)), treqs ++ X.freeTVars, subsol <++ sol)
           }
           else
             (TFun(treq, t), otherReqs, treqs, subsol)
@@ -141,14 +141,14 @@ class BottomUpChecker extends TypeChecker[Type] {
 
       val sol = solve(cond +: body +: (mcons12 ++ mcons23))
 
-      (t2.subst(sol.solution), mreqs123.mapValues(_.subst(sol.solution)), treqs1 ++ treqs2 ++ treqs3, sol1 +++ sol2 +++ sol3 <++ sol)
+      (t2.subst(sol.substitution), mreqs123.mapValues(_.subst(sol.substitution)), treqs1 ++ treqs2 ++ treqs3, sol1 +++ sol2 +++ sol3 <++ sol)
 
     case Fix =>
       val (t, reqs, treqs, subsol) = e.kids(0).typ
       val X = freshTVar()
       val fixCons = EqConstraint(t, TFun(X, X))
       val sol = solve(fixCons)
-      (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), treqs, subsol <++ sol)
+      (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), treqs, subsol <++ sol)
 
     case TAbs if (e.lits(0).isInstanceOf[Symbol]) =>
       val alpha = e.lits(0).asInstanceOf[Symbol]
@@ -168,7 +168,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
       val sol = solve(Seq(ucons, vcons))
 
-      (Xres.subst(sol.solution), reqs1.mapValues(_.subst(sol.solution)), treqs ++ t.freeTVars, subsol <++ sol)
+      (Xres.subst(sol.substitution), reqs1.mapValues(_.subst(sol.substitution)), treqs ++ t.freeTVars, subsol <++ sol)
   }
 }
 

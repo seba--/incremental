@@ -30,9 +30,9 @@ class DownUpSolveEndChecker extends TypeChecker[Type] {
         val (t, cons) = typecheck(root, Map())
         val sol = solve(cons)
         if (sol.isSolved)
-          Left(t.subst(sol.solution))
+          Left(t.subst(sol.substitution))
         else
-          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.solution)}, subst ${sol.solution}")
+          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.substitution)}, subst ${sol.substitution}")
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
       }

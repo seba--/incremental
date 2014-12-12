@@ -18,7 +18,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
       val (t, reqs, subsol) = e.kids(0).typ
       val X = freshTVar()
       val sol = solve(EqConstraint(TRef(X), t))
-      (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), subsol <++ sol)
+      (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), subsol <++ sol)
     case Assign =>
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
@@ -27,7 +27,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
       val sol = solve(refcons +: mcons)
-      (TUnit, mreqs.mapValues(_.subst(sol.solution)), sol1 +++ sol2 <++ sol)
+      (TUnit, mreqs.mapValues(_.subst(sol.substitution)), sol1 +++ sol2 <++ sol)
     case Seq =>
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
@@ -36,7 +36,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
       val sol = solve(t1cons +: mcons)
-      (t2, mreqs.mapValues(_.subst(sol.solution)), sol1 +++ sol2 <++ sol)
+      (t2, mreqs.mapValues(_.subst(sol.substitution)), sol1 +++ sol2 <++ sol)
     case _ => super.typecheckStep(e)
   }
 }
