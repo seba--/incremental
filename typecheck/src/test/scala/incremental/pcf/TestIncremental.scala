@@ -52,7 +52,7 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   incTypecheckTest("add4 again", add4)(TNum)(0)
 
   lazy val fun1 = Abs('x, add4)
-  incTypecheckTest("\\x. add4", fun1)(TFun(TVar('x$0), TNum))(0)
+  incTypecheckTest("\\x. add4", fun1)(TFun(UVar('x$0), TNum))(0)
   incTypecheckTest("\\x. x + x", fun1, fun1.kids(0) = Add(Var('x), Var('x)))(TFun(TNum, TNum))(3)
   lazy val app1 = Add(App(fun1, Num(3)), Add(Num(1), Num(2)))
   incTypecheckTest("(\\x. x+x) 3 + (1 + 2)", app1)(TNum)(5)

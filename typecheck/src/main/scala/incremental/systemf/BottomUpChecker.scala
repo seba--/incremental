@@ -24,7 +24,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
   type Reqs = Map[Symbol, Type]
 
-  type TReqs = Map[Symbol, Type]
+  type TReqs = Set[Symbol]
 
   type Result = (Type, Reqs, TReqs, Solution)
 
@@ -58,24 +58,23 @@ class BottomUpChecker extends TypeChecker[Type] {
   }
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
-    case Num => (TNum, Map(),Map(), emptySol)
+    case Num => (TNum, Map(),Set(), emptySol)
     case op if op == Add || op == Mul =>
-      val (t1, reqs1,treqs1, sol1) = e.kids(0).typ
-      val (t2, reqs2,treqs2, sol2) = e.kids(1).typ
+      val (t1, reqs1, treqs1, sol1) = e.kids(0).typ
+      val (t2, reqs2, treqs2, sol2) = e.kids(1).typ
 
       val lcons = EqConstraint(TNum, t1)
       val rcons = EqConstraint(TNum, t2)
 
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-      val (mcons1, mreqs1) = tmergeReqMaps(treqs1, treqs2)
 
       val sol = solve(lcons +: rcons +: mcons )
-      (TNum, mreqs.mapValues(_.subst(sol.solution)),mreqs1.mapValues(_.subst(sol.solution)), sol1 +++ sol2 <++ sol)
+      (TNum, mreqs.mapValues(_.subst(sol.solution)), treqs1 ++ treqs2, sol1 +++ sol2 <++ sol)
 
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshTVar()
-      (X, Map(x -> X), Map(), emptySol)
+      (X, Map(x -> X), Set(), emptySol)
 
     case App =>
 
@@ -85,31 +84,32 @@ class BottomUpChecker extends TypeChecker[Type] {
       val X = freshTVar()
       val fcons = EqConstraint(TFun(t2, X), t1)
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-      val (mcons1, mreqs1) = tmergeReqMaps(treqs1, treqs2)
+
 
       val sol = solve(fcons +: mcons)
-      (X.subst(sol.solution), mreqs.mapValues(_.subst(sol.solution)),mreqs1.mapValues(_.subst(sol.solution)), sol1 +++ sol2 <++ sol)
+      (X.subst(sol.solution), mreqs.mapValues(_.subst(sol.solution)), treqs1 ++ treqs2, sol1 +++ sol2 <++ sol)
 
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val (t, reqs,treqs, subsol) = e.kids(0).typ
+      val (t, reqs, treqs, subsol) = e.kids(0).typ
 
       reqs.get(x) match {
         case None =>
           val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshTVar()
-          (TFun(X, t), reqs,treqs, subsol)
+          (TFun(X, t), reqs, treqs ++ X.freeTVars, subsol)
         case Some(treq) =>
           val otherReqs = reqs - x
           if (e.lits.size == 2) {
-            val sol = solve(EqConstraint(e.lits(1).asInstanceOf[Type], treq))
-            (TFun(treq, t).subst(sol.solution), otherReqs.mapValues(_.subst(sol.solution)),treqs, subsol <++ sol)
+            val X = e.lits(1).asInstanceOf[Type]
+            val sol = solve(EqConstraint(X, treq))
+            (TFun(treq, t).subst(sol.solution), otherReqs.mapValues(_.subst(sol.solution)), treqs ++ X.freeTVars, subsol <++ sol)
           }
           else
             (TFun(treq, t), otherReqs, treqs, subsol)
       }
     case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
-      val (t, reqs,treqs, subsol) = e.kids(0).typ
+      val (t, reqs, treqs, subsol) = e.kids(0).typ
 
       val Xs = xs map (_ => freshTVar())
 
@@ -128,48 +128,47 @@ class BottomUpChecker extends TypeChecker[Type] {
       }
 
       (tfun, restReqs, treqs, subsol)
-//    case If0 =>
-//      val (t1, reqs1, sol1) = e.kids(0).typ
-//      val (t2, reqs2, sol2) = e.kids(1).typ
-//      val (t3, reqs3, sol3) = e.kids(2).typ
-//
-//      val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
-//      val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
-//
-//      val cond = EqConstraint(TNum, t1)
-//      val body = EqConstraint(t2, t3)
-//
-//      val sol = solve(cond +: body +: (mcons12 ++ mcons23))
-//
-//      (t2.subst(sol.solution), mreqs123.mapValues(_.subst(sol.solution)), sol1 +++ sol2 +++ sol3 <++ sol)
-//
-//    case Fix =>
-//      val (t, reqs, subsol) = e.kids(0).typ
-//      val X = freshTVar()
-//      val fixCons = EqConstraint(t, TFun(X, X))
-//      val sol = solve(fixCons)
-//      (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), subsol <++ sol)
-//
+    case If0 =>
+      val (t1, reqs1, treqs1, sol1) = e.kids(0).typ
+      val (t2, reqs2, treqs2, sol2) = e.kids(1).typ
+      val (t3, reqs3, treqs3, sol3) = e.kids(2).typ
+
+      val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
+      val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
+
+      val cond = EqConstraint(TNum, t1)
+      val body = EqConstraint(t2, t3)
+
+      val sol = solve(cond +: body +: (mcons12 ++ mcons23))
+
+      (t2.subst(sol.solution), mreqs123.mapValues(_.subst(sol.solution)), treqs1 ++ treqs2 ++ treqs3, sol1 +++ sol2 +++ sol3 <++ sol)
+
+    case Fix =>
+      val (t, reqs, treqs, subsol) = e.kids(0).typ
+      val X = freshTVar()
+      val fixCons = EqConstraint(t, TFun(X, X))
+      val sol = solve(fixCons)
+      (X.subst(sol.solution), reqs.mapValues(_.subst(sol.solution)), treqs, subsol <++ sol)
 
     case TAbs if (e.lits(0).isInstanceOf[Symbol]) =>
       val alpha = e.lits(0).asInstanceOf[Symbol]
       val (t, reqs, treqs, subsol) = e.kids(0).typ
-      (TUniv(alpha, t), reqs,treqs-alpha, subsol)
+      (TUniv(alpha, t), reqs, treqs-alpha, subsol)
 
     case TApp =>
-      val (t1, reqs1,treqs, subsol) = e.kids(0).typ
+      val (t1, reqs1, treqs, subsol) = e.kids(0).typ
       val t = e.lits(0).asInstanceOf[Type]
 
       val Xalpha = freshTVar().x
       val Xbody = freshTVar()
       val Xres = freshTVar()
 
-      val ucons = EqConstraint(TUnivInternal(Xalpha, Xbody), t1)
+      val ucons = EqConstraint(UUniv(Xalpha, Xbody), t1)
       val vcons = EqSubstConstraint(Xbody, Xalpha, true, t, Xres) // Xbody[Xalpha:=t] == Xres
 
       val sol = solve(Seq(ucons, vcons))
 
-      (Xres.subst(sol.solution), reqs1.mapValues(_.subst(sol.solution)),treqs, subsol <++ sol)
+      (Xres.subst(sol.solution), reqs1.mapValues(_.subst(sol.solution)), treqs ++ t.freeTVars, subsol <++ sol)
   }
 }
 

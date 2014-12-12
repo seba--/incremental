@@ -55,7 +55,7 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
     val sol = ConstraintOps.solve(EqConstraint(t1, t2) +: mcons).trySolveNow
 
     val s = sol.solution
-    val isRenaming = s.foldLeft(true)((b, p) => b && p._2.isInstanceOf[TVar])
+    val isRenaming = s.foldLeft(true)((b, p) => b && p._2.isInstanceOf[UVar])
     if (!sol.isSolved || !isRenaming)
       return false
 
