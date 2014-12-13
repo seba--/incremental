@@ -77,7 +77,7 @@ class DownUpChecker extends TypeChecker[Type] {
       val (t2, sol2) = typecheck(e.kids(1), ctx)
       val (t3, sol3) = typecheck(e.kids(2), ctx)
       val Xjoin = freshTVar()
-      val sol = (sol1 ++ sol2 ++ sol3 + Equal(t1, TNum) + Subtype(t2, Xjoin) + Subtype(t3, Xjoin)).trySolve
+      val sol = (sol1 ++ sol2 ++ sol3 + Equal(t1, TNum) + Join(Xjoin, Set(t2, t3))).trySolve
       (Xjoin.subst(sol.substitution), sol)
     case Fix =>
       val (t, subsol) = typecheck(e.kids(0), ctx)

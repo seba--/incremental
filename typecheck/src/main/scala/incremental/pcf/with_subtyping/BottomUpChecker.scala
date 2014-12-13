@@ -97,7 +97,7 @@ class BottomUpChecker extends TypeChecker[Type] {
       val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
       val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
       val Xjoin = freshTVar()
-      val sol = (sol1 ++ sol2 ++ sol3 + Equal(TNum, t1) + Subtype(t2, Xjoin) + Subtype(t3, Xjoin) ++ mcons12 ++ mcons23).trySolve
+      val sol = (sol1 ++ sol2 ++ sol3 + Equal(TNum, t1) + Join(Xjoin, Set(t2, t3)) ++ mcons12 ++ mcons23).trySolve
       (Xjoin.subst(sol.substitution), mreqs123.mapValues(_.subst(sol.substitution)), sol)
 
     case Fix =>

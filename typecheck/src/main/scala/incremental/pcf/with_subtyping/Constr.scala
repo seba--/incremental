@@ -16,10 +16,9 @@ abstract class SubtypeConstraintSystem extends ConstraintSystem[Type] {
 
   sealed trait Constraint
   case class Subtype(lower: Type, upper: Type) extends Constraint
-  //the following are not actually used, they just serve for error reporting
   case class Equal(expected: Type, actual: Type) extends Constraint
-  case class Join(ts: Set[Type]) extends Constraint
-  case class Meet(ts: Set[Type]) extends Constraint
+  case class Join(target: Type, ts: Set[Type]) extends Constraint
+  case class Meet(target: Type, ts: Set[Type]) extends Constraint
 
   class GenPlusMinus extends GenBase {
     private var _pos: Set[Symbol] = Set()
@@ -158,7 +157,7 @@ object CS extends SubtypeConstraintSystem {
           case None => mreqs += x -> r2
           case Some(r1) =>
             val Xmeet = gen.freshTVar(false)
-            mcons = mcons + Subtype(Xmeet, r1) + Subtype(Xmeet, r2)
+            mcons = mcons + Meet(Xmeet, Set(r1, r2))
             mreqs += x -> Xmeet
         }
       (mcons, mreqs)
@@ -200,9 +199,9 @@ object CS extends SubtypeConstraintSystem {
         val (newL, errorl) = l2 merge l1
         val (newU, erroru) = u2 merge u1
         if(errorl.nonEmpty)
-          res.gameOver(Join(errorl))
+          res.gameOver(Join(UVar(tv), errorl))
         if(erroru.nonEmpty)
-          res.gameOver(Meet(erroru))
+          res.gameOver(Meet(UVar(tv), erroru))
         val merged = (newL, newU)
         res.bounds += tv -> merged
       }
@@ -235,7 +234,13 @@ object CS extends SubtypeConstraintSystem {
           res.normalizeSub(t2, t1)
         case Subtype(lower, upper) =>
           res.normalizeSub(lower, upper)
-        case _ =>
+        case Join(target, ts) =>
+          for(t <- ts)
+            res.normalizeSub(t, target)
+        case Meet(target, ts) =>
+          for(t <- ts)
+            res.normalizeSub(target, t)
+        case _ => ???
       }
       res
     }
@@ -298,9 +303,9 @@ object CS extends SubtypeConstraintSystem {
         for ((tv, (lb, ub)) <- bounds) {
           val ((newLb, errorl), (newUb, erroru)) = (lb.subst(sol), ub.subst(sol))
           if(errorl.nonEmpty)
-            gameOver(Join(errorl))
+            gameOver(Join(UVar(tv).subst(sol), errorl))
           if(erroru.nonEmpty)
-            gameOver(Meet(erroru))
+            gameOver(Meet(UVar(tv).subst(sol), erroru))
           val t = UVar(tv).subst(sol)
           for(tpe <- newLb.ground.toSet ++ newLb.nonground)
             temp.normalizeSub(tpe, t)
@@ -339,7 +344,7 @@ object CS extends SubtypeConstraintSystem {
       val (lower, upper) = bounds(v)
       val (newLower, error) = lower.add(t)
       if (error.nonEmpty)
-        gameOver(Join(error))
+        gameOver(Join(UVar(v), error))
       bounds += v -> (newLower, upper)
       val changed = if (t.isGround) newLower.ground.get else t
       for(t2 <- upper.ground.toSet ++ upper.nonground)
@@ -350,7 +355,7 @@ object CS extends SubtypeConstraintSystem {
       val (lower, upper) = bounds(v)
       val (newUpper, error) = upper.add(t)
       if (error.nonEmpty)
-        gameOver(Meet(error))
+        gameOver(Meet(UVar(v), error))
       bounds += v -> (lower, newUpper)
       val changed = if (t.isGround) newUpper.ground.get else t
       var subst: TSubst = Map()
