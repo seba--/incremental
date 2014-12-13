@@ -45,7 +45,7 @@ abstract class SubtypeConstraintSystem extends ConstraintSystem[Type] {
       res
     }
 
-    def freshTVar() = freshTVar(true)
+    def freshUVar() = freshTVar(true)
   }
   type Gen = GenPlusMinus
 

@@ -35,7 +35,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
     case Project =>
       val label = e.lits(0).asInstanceOf[Symbol]
       val (t1, reqs, subsol) = e.kids(0).typ
-      val X = freshTVar()
+      val X = freshUVar()
 
       val sol = solve(EqRecordProjectConstraint(t1, label, X))
 

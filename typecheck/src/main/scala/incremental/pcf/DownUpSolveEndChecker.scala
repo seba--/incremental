@@ -61,7 +61,7 @@ class DownUpSolveEndChecker extends TypeChecker[Type] {
       val (t1, sol1) = typecheck(e.kids(0), ctx)
       val (t2, sol2) = typecheck(e.kids(1), ctx)
 
-      val X = freshTVar()
+      val X = freshUVar()
       val fcons = EqConstraint(TFun(t2, X), t1)
 
       (X, fcons +: (sol1 ++ sol2))
@@ -71,13 +71,13 @@ class DownUpSolveEndChecker extends TypeChecker[Type] {
         if (e.lits.size == 2)
           e.lits(1).asInstanceOf[Type]
         else
-          freshTVar()
+          freshUVar()
 
       val (t, subsol) = typecheck(e.kids(0), ctx + (x -> X))
       (TFun(X, t), subsol)
     case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
-      val Xs = xs map (_ => freshTVar())
+      val Xs = xs map (_ => freshUVar())
 
       val (t, subsol) = typecheck(e.kids(0), ctx ++ (xs zip Xs))
 
@@ -101,7 +101,7 @@ class DownUpSolveEndChecker extends TypeChecker[Type] {
     case Fix =>
       val (t, subsol) = typecheck(e.kids(0), ctx)
 
-      val X = freshTVar()
+      val X = freshUVar()
       val fixCons = EqConstraint(t, TFun(X, X))
 
       (X, fixCons +: subsol)

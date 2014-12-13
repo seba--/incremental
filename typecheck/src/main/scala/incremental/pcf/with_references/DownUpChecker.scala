@@ -16,7 +16,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
       (TRef(t), subsol)
     case Deref =>
       val (t1, subsol) = typecheck(e.kids(0), ctx)
-      val X = freshTVar()
+      val X = freshUVar()
       val sol = solve(EqConstraint(TRef(X), t1), subsol)
       (X.subst(sol.substitution), sol)
     case Assign =>

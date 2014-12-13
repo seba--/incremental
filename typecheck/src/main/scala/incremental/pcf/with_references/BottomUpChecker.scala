@@ -16,7 +16,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
       (TRef(t), reqs, subsol)
     case Deref =>
       val (t, reqs, subsol) = e.kids(0).typ
-      val X = freshTVar()
+      val X = freshUVar()
       val sol = solve(EqConstraint(TRef(X), t))
       (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), subsol <++ sol)
     case Assign =>

@@ -67,19 +67,19 @@ class BottomUpChecker extends TypeChecker[Type] {
       (TNum, mreqs.mapValues(_.subst(sol.substitution)), sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val X = freshTVar()
+      val X = freshUVar()
       (X, Map(x -> X), emptyCSet)
     case App =>
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
       val X = freshTVar(false)
-      val Y = freshTVar()
+      val Y = freshUVar()
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
       val sol = (sol1 ++ sol2 + Equal(t1, X -->: Y) + Subtype(t2, X) ++ mcons).trySolve
       (Y.subst(sol.substitution), mreqs.mapValues(_.subst(sol.substitution)), sol)
     case Abs if e.lits(0).isInstanceOf[Symbol] =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val annotatedT = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshTVar()
+      val annotatedT = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshUVar()
       val (t, reqs, subsol) = e.kids(0).typ
 
       reqs.get(x) match {
@@ -96,14 +96,14 @@ class BottomUpChecker extends TypeChecker[Type] {
       val (t3, reqs3, sol3) = e.kids(2).typ
       val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
       val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
-      val Xjoin = freshTVar()
+      val Xjoin = freshUVar()
       val sol = (sol1 ++ sol2 ++ sol3 + Equal(TNum, t1) + Subtype(t2, Xjoin) + Subtype(t3, Xjoin) ++ mcons12 ++ mcons23).trySolve
       (Xjoin.subst(sol.substitution), mreqs123.mapValues(_.subst(sol.substitution)), sol)
 
     case Fix =>
       val (t, reqs, subsol) = e.kids(0).typ
       val X = freshTVar(false)
-      val Y = freshTVar()
+      val Y = freshUVar()
       val sol = (subsol + Equal(t, X -->: Y) + Subtype(Y, X)).trySolve
       (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), sol)
   }
