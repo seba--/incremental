@@ -14,16 +14,15 @@ class BottomUpChecker extends TypeChecker[Type] {
   var preparationTime = 0.0
   var typecheckTime = 0.0
 
-  val cs: SubtypeConstraintSystem = CS
-  val instance = cs.mkInstance
+  val cs = new SubtypeSystem
   import cs._
-  import instance._
-  import instance.gen._
+  import defs._
+  import gen._
 
-  def constraintCount = instance.stats.constraintCount
-  def mergeReqsTime = instance.stats.mergeReqsTime
-  def constraintSolveTime = instance.stats.constraintSolveTime
-  def mergeSolutionTime = instance.stats.mergeSolutionTime
+  def constraintCount = stats.constraintCount
+  def mergeReqsTime = stats.mergeReqsTime
+  def constraintSolveTime = stats.constraintSolveTime
+  def mergeSolutionTime = stats.mergeSolutionTime
 
 
   type Result = (Type, Requirements, CSet)
@@ -47,7 +46,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
       if (!reqs.isEmpty)
         Right(s"Unresolved context requirements $reqs, type $t, unres ${notyet}")
-      else if (!(notyet.isEmpty && unsat.isEmpty))
+      else if (!sol.isSolved)
         Right(s"Unresolved constraints notyet: $notyet\nunsat: ${unsat}, type $t")
       else
         Left(t)

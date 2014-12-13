@@ -20,7 +20,7 @@ class DownUpChecker extends TypeChecker[Type] {
   def constraintSolveTime = constraint.constraintSolveTime
   def mergeSolutionTime = constraint.mergeSolutionTime
 
-  type Result = (Type, Solution)
+  type Result = (Type, CSet)
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]

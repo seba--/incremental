@@ -23,7 +23,7 @@ class BottomUpKeepSubstChecker extends TypeChecker[Type] {
 
   type Reqs = Map[Symbol, Type]
 
-  type Result = (Type, Reqs, Solution)
+  type Result = (Type, Reqs, CSet)
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]

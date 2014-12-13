@@ -1,31 +1,29 @@
 package incremental
 
-import incremental.ConstraintOps.Solution
+import incremental.ConstraintOps.CSet
 import incremental.Type.Companion._
 
 /**
  * Created by seba on 13/11/14.
  */
-object ConstraintOps {
-  var mergeSolutionTime = 0.0
-  var constraintCount = 0
-  var constraintSolveTime = 0.0
-
+object ConstraintOps extends ConstraintDefs[Type] {
+  type Constraint = incremental.Constraint
   type NotYetSolvable = Seq[Constraint]
   type Unsolvable = Seq[Constraint]
 
-  def emptySol = Solution(Map(), Seq(), Seq())
-  def solution(s: TSubst) = Solution(s, Seq(), Seq())
-  def notyet(c: Constraint) = Solution(Map(), Seq(c), Seq())
-  def never(c: Constraint) = Solution(Map(), Seq(), Seq(c))
-  case class Solution(substitution: TSubst, notyet: NotYetSolvable, never: Unsolvable) {
+  def emptySol = CSet(Map(), Seq(), Seq())
+  def solution(s: TSubst) = CSet(s, Seq(), Seq())
+  def notyet(c: Constraint) = CSet(Map(), Seq(c), Seq())
+  def never(c: Constraint) = CSet(Map(), Seq(), Seq(c))
+
+  case class CSet(substitution: TSubst, notyet: NotYetSolvable, never: Unsolvable) extends CSetAlg[CSet] {
     def unsolved = notyet ++ never
 
     def isSolved = notyet.isEmpty && never.isEmpty
 
     def solvable = !never.isEmpty
 
-    def ++(other: Solution): Solution = {
+    def ++(other: CSet): CSet = {
       val (res, time) = Util.timed {
         var msolution = substitution mapValues (_.subst(other.substitution))
         val mnotyet = notyet ++ other.notyet
@@ -41,43 +39,48 @@ object ConstraintOps {
           }
         }
 
-        Solution(msolution, mnotyet, mnever)
+        CSet(msolution, mnotyet, mnever)
       }
       mergeSolutionTime += time
       res
     }
 
     // if solutions are not needed
-    def +++(other: Solution): Solution = {
+    def +++(other: CSet): CSet = {
       val (res, time) = Util.timed {
         val mnotyet = notyet ++ other.notyet
         val mnever = never ++ other.never
-        Solution(Map(), mnotyet, mnever)
+        CSet(Map(), mnotyet, mnever)
       }
       mergeSolutionTime += time
       res
     }
 
-    def ++++(other: Solution): Solution = {
+    def ++++(other: CSet): CSet = {
       val (res, time) = Util.timed {
         val msolution = substitution ++ other.substitution
         val mnotyet = notyet ++ other.notyet
         val mnever = never ++ other.never
-        Solution(msolution, mnotyet, mnever)
+        CSet(msolution, mnotyet, mnever)
       }
       mergeSolutionTime += time
       res
     }
 
-    def <++(other: Solution): Solution = {
+    def <++(other: CSet): CSet = {
       val (res, time) = Util.timed {
         var mnotyet = notyet.map(_.subst(other.substitution)) ++ other.notyet
         var mnever = never.map(_.subst(other.substitution)) ++ other.never
-        Solution(Map(), mnotyet, mnever)
+        CSet(Map(), mnotyet, mnever)
       }
       mergeSolutionTime += time
       res
     }
+
+    def +(that: Constraint): CSet = CSet(substitution, that +: notyet, never)
+    def isSolvable: Boolean = never.isEmpty
+    def solution = (substitution, notyet, never)
+    def trySolve: incremental.ConstraintOps.CSet = trySolveNow
 
     private def trySolve(finalize: Boolean) = {
       var rest = notyet
@@ -88,21 +91,21 @@ object ConstraintOps {
         val next = rest.head
         rest = rest.tail
         val wasNotyet = newNotyet ++ rest
-        val current = Solution(newSolution, wasNotyet, newNever)
+        val current = CSet(newSolution, wasNotyet, newNever)
         val sol = if (finalize) next.finalize(current) else next.solve(current)
 
         newSolution = newSolution.mapValues(_.subst(sol.substitution)) ++ sol.substitution
         newNever = newNever ++ sol.never
         newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
       }
-      Solution(newSolution, newNotyet, newNever)
+      CSet(newSolution, newNotyet, newNever)
     }
 
     def trySolveNow = trySolve(false)
     def tryFinalize = trySolve(true)
   }
 
-  def solve(cs: Iterable[Constraint], sol: Solution = emptySol): Solution = {
+  def solve(cs: Iterable[Constraint], sol: CSet = emptySol): CSet = {
     constraintCount += cs.size
     val (res, time) = Util.timed {
       cs.foldLeft(sol)((sol,c) => sol ++ c.solve(sol))
@@ -110,13 +113,13 @@ object ConstraintOps {
     constraintSolveTime += time
     res
   }
-  def solve(c: Constraint): Solution = {
+  def solve(c: Constraint): CSet = {
     constraintCount += 1
     val (res, time) = Util.timed(c.solve(emptySol))
     constraintSolveTime += time
     res
   }
-  def solve(c: Constraint, sol: Solution): Solution = {
+  def solve(c: Constraint, sol: CSet): CSet = {
     constraintCount += 1
     val (res, time) = Util.timed(sol ++ c.solve(sol))
     constraintSolveTime += time
@@ -125,30 +128,40 @@ object ConstraintOps {
 }
 
 trait Constraint {
-  def solve(s: Solution): Solution
+  def solve(s: CSet): CSet
   def subst(s: TSubst): Constraint
-  def finalize(s: Solution): Solution
+  def finalize(s: CSet): CSet
 }
 case class EqConstraint(expected: Type, actual: Type) extends Constraint {
-  def solve(s: Solution) = expected.unify(actual, s.substitution)
-  def finalize(s: Solution) = solve(s)
+  def solve(s: CSet) = expected.unify(actual, s.substitution)
+  def finalize(s: CSet) = solve(s)
   def subst(s: TSubst) = EqConstraint(expected.subst(s), actual.subst(s))
 }
 
-abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
+//TODO make TypeChecker depend on Statistics
+class Statistics {
+  var preparationTime = 0.0
+  var typecheckTime = 0.0
+  var mergeSolutionTime = 0.0
+  var constraintCount = 0
+  var constraintSolveTime = 0.0
+  var mergeReqsTime = 0.0
+}
+
+abstract class ConstraintDefs[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
   final type TSubst = definitions.TSubst
   final type TError = definitions.TError
 
+  var mergeSolutionTime = 0.0
+  var constraintCount = 0
+  var constraintSolveTime = 0.0
+
   type Constraint
-  type Requirements
-  type UVar <: Type  //TODO move this into the typcompanion
-  //subclasses may override this
+  type Requirements = Map[Symbol, Type]
   type Solution = (TSubst, NotYetSolvable, Unsolvable)
   type NotYetSolvable
   type Unsolvable
   type CSet <: CSetAlg[CSet]
-
-
 
   trait CSetAlg[CS] {
     def isSolved: Boolean
@@ -163,32 +176,27 @@ abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: Typ
     def trySolve: CS
   }
 
-  class Statistics {
-    var mergeSolutionTime = 0.0
-    var constraintCount = 0
-    var constraintSolveTime = 0.0
-    var mergeReqsTime = 0.0
-  }
-
   trait GenBase {
-    def freshUVar(): UVar
+    type V <: Type
+    def freshUVar(): V
   }
   type Gen <: GenBase
+}
 
-  trait Instance {
-    val stats: Statistics
-    val gen: Gen
+trait ConstraintSystem[Type <: Typ[Type], CDef <: ConstraintDefs[Type]] {
+  val defs: CDef
+  import defs._
 
-    def mergeReqMaps(reqs1: Requirements, reqs2: Requirements) = {
-      val (res, time) = Util.timed(_mergeReqMaps(reqs1, reqs2))
-      stats.mergeReqsTime += time
-      res
-    }
+  implicit val stats: Statistics
+  implicit val gen: defs.Gen
 
-    def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements): (CSet, Requirements)
-
-    def emptyCSet: CSet
+  def mergeReqMaps(reqs1: Requirements, reqs2: Requirements) = {
+    val (res, time) = Util.timed(_mergeReqMaps(reqs1, reqs2))
+    stats.mergeReqsTime += time
+    res
   }
 
-  def mkInstance: Instance
+  def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements): (defs.CSet, Requirements)
+
+  def emptyCSet: defs.CSet
 }

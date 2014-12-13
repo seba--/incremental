@@ -11,16 +11,15 @@ import incremental.{TypeCheckerFactory, Exp_, TypeChecker, Util}
  */
 class DownUpChecker extends TypeChecker[Type] {
 
-  val cs: SubtypeConstraintSystem = CS
-  val instance = cs.mkInstance
+  val cs = new SubtypeSystem
   import cs._
-  import instance._
-  import instance.gen._
+  import defs._
+  import gen._
 
-  def constraintCount = instance.stats.constraintCount
-  def mergeReqsTime = instance.stats.mergeReqsTime
-  def constraintSolveTime = instance.stats.constraintSolveTime
-  def mergeSolutionTime = instance.stats.mergeSolutionTime
+  def constraintCount = stats.constraintCount
+  def mergeReqsTime = stats.mergeReqsTime
+  def constraintSolveTime = stats.constraintSolveTime
+  def mergeSolutionTime = stats.mergeSolutionTime
 
   val preparationTime = 0.0
   var typecheckTime = 0.0
@@ -32,9 +31,10 @@ class DownUpChecker extends TypeChecker[Type] {
     val (res, ctime) = Util.timed(
       try {
         val (t_, sol_) = typecheck(root, Map())
-        val (sigma, notyet, unsat) = sol_.tryFinalize.solution
+        val sol = sol_.tryFinalize
+        val (sigma, notyet, unsat) = sol.solution
         val t = t_.subst(sigma)
-        if (!(notyet.isEmpty && unsat.isEmpty))
+        if (!sol.isSolved)
           Right(s"Unresolved constraints notyet: $notyet\nunsat: ${unsat}, type $t")
         else
           Left(t)

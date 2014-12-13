@@ -11,7 +11,7 @@ import incremental.pcf.UVar
 class ConstraintOps extends incremental.pcf.ConstraintOps
 
 case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) extends Constraint {
-  def solve(s: Solution) = {
+  def solve(s: CSet) = {
     val trec = record.subst(s.substitution)
     trec match {
       case TRecord(fields) =>
@@ -24,7 +24,7 @@ case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) e
     }
   }
 
-  def finalize(s: Solution) = {
+  def finalize(s: CSet) = {
     val trec = record.subst(s.substitution)
     trec match {
       case TRecord(fields) =>

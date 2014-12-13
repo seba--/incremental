@@ -64,7 +64,7 @@ class ConstraintOps {
   }
 
   case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean, substitute: Type, result: Type) extends Constraint {
-    private def withResult(t: Type, s: Solution) = t.unify(result, s.substitution)
+    private def withResult(t: Type, s: CSet) = t.unify(result, s.substitution)
 
     private def substAlpha(s: TSubst) = if (!alphaIsInternal) (alpha, false) else s.get(alpha) match {
       case Some(TVar(beta)) => (beta, false)
@@ -73,7 +73,7 @@ class ConstraintOps {
       case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
     }
 
-    def solve(s: Solution) = {
+    def solve(s: CSet) = {
       val tbody = body.subst(s.substitution)
       val (beta, betaIsInternal) = substAlpha(s.substitution)
 
@@ -103,7 +103,7 @@ class ConstraintOps {
       }
     }
 
-    def finalize(s: Solution) = solve(s)
+    def finalize(s: CSet) = solve(s)
 //    {
 //      val trec = record.subst(s.solution)
 //      trec match {

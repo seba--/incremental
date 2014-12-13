@@ -26,7 +26,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
   type TReqs = Set[Symbol]
 
-  type Result = (Type, Reqs, TReqs, Solution)
+  type Result = (Type, Reqs, TReqs, CSet)
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
