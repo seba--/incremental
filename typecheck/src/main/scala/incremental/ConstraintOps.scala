@@ -171,6 +171,9 @@ abstract class ConstraintDefs[Type <: Typ[Type]](implicit val definitions: TypCo
     def notyet: NotYetSolvable
     def never: Unsolvable
     def ++(that: CS): CS
+    def +++(that: CS): CS
+    def ++++(that: CS): CS
+    def <++(that: CS): CS
     def + (that: Constraint): CS
     def tryFinalize: CS
     def trySolve: CS
