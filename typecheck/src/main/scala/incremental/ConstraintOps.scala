@@ -171,7 +171,7 @@ abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: Typ
   }
 
   trait GenBase {
-    def freshTVar(): UVar
+    def freshUVar(): UVar
   }
   type Gen <: GenBase
 

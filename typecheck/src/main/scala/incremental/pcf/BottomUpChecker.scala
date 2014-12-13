@@ -67,13 +67,13 @@ class BottomUpChecker extends TypeChecker[Type] {
       (TNum, mreqs.mapValues(_.subst(sol.substitution)), sol1 +++ sol2 <++ sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val X = freshTVar()
+      val X = freshUVar()
       (X, Map(x -> X), emptySol)
     case App =>
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
 
-      val X = freshTVar()
+      val X = freshUVar()
       val fcons = EqConstraint(TFun(t2, X), t1)
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
@@ -85,7 +85,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
       reqs.get(x) match {
         case None =>
-          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshTVar()
+          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshUVar()
           (TFun(X, t), reqs, subsol)
         case Some(treq) =>
           val otherReqs = reqs - x
@@ -100,7 +100,7 @@ class BottomUpChecker extends TypeChecker[Type] {
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
       val (t, reqs, subsol) = e.kids(0).typ
 
-      val Xs = xs map (_ => freshTVar())
+      val Xs = xs map (_ => freshUVar())
 
       var restReqs = reqs
       var tfun = t
@@ -108,7 +108,7 @@ class BottomUpChecker extends TypeChecker[Type] {
         val x = xs(i)
         restReqs.get(x) match {
           case None =>
-            val X = freshTVar()
+            val X = freshUVar()
             tfun = TFun(X, tfun)
           case Some(treq) =>
             restReqs = restReqs - x
@@ -134,7 +134,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
     case Fix =>
       val (t, reqs, subsol) = e.kids(0).typ
-      val X = freshTVar()
+      val X = freshUVar()
       val fixCons = EqConstraint(t, TFun(X, X))
       val sol = solve(fixCons)
       (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), subsol <++ sol)

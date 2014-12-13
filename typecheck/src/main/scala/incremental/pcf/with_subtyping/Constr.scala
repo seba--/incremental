@@ -31,7 +31,7 @@ abstract class SubtypeConstraintSystem extends ConstraintSystem[Type] {
     def isProperNegative(a: Symbol): Boolean = !_pos(a) && _neg(a)
 
     private var _nextId = 0
-    def freshTVar(positive: Boolean): UVar = {
+    def freshUVar(positive: Boolean): UVar = {
       val v = UVar(Symbol("x$" + _nextId))
       _nextId += 1
       if (positive) _pos += v.x
@@ -39,12 +39,12 @@ abstract class SubtypeConstraintSystem extends ConstraintSystem[Type] {
       v
     }
     def freshBiVar(): UVar = {
-      val res = freshTVar(true)
+      val res = freshUVar(true)
       _neg += res.x
       res
     }
 
-    def freshTVar() = freshTVar(true)
+    def freshUVar() = freshUVar(true)
   }
   type Gen = GenPlusMinus
 
@@ -156,7 +156,7 @@ object CS extends SubtypeConstraintSystem {
         reqs1.get(x) match {
           case None => mreqs += x -> r2
           case Some(r1) =>
-            val Xmeet = gen.freshTVar(false)
+            val Xmeet = gen.freshUVar(false)
             mcons = mcons + Meet(Xmeet, Set(r1, r2))
             mreqs += x -> Xmeet
         }

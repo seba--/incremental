@@ -10,20 +10,17 @@ abstract class ExpKind(val arity: Int) {
 }
 
 class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
-  var parent: Exp_[T] = _
-  var pos: Int = _
-
   private var _typ: T = _
   private var _valid = false
 
-  def valid = _valid
+  def valid = _valid // needed for propagation pruning
   def typ = _typ
   def typ_=(t: T): Unit = {
     _typ = t
     _valid = true
   }
 
-  private val _kids: collection.mutable.ArrayBuffer[Exp_[T]] = collection.mutable.ArrayBuffer() ++= kidsArg
+  private val _kids: Array[Exp_[T]] = Array(kidsArg:_*)
   private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
 
   object kids {
@@ -35,15 +32,8 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
       else
         ee._typ = kids(i)._typ
       _kids(i) = ee
-      ee.parent = Exp_.this
-      ee.pos = i
     }
     def seq: Seq[Exp_[T]] = _kids
-  }
-
-  for (i <- 0 until _kids.size) {
-    _kids(i).parent = this
-    _kids(i).pos = i
   }
 
   def withType[T] = this.asInstanceOf[Exp_[T]]
@@ -71,6 +61,18 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
     val hasSubchange = _kids.foldLeft(false)((changed, k) =>  k.visitUninitialized(f) || changed)
     if (!valid || hasSubchange)
       f(this)
+    else
+      false
+  }
+
+  def visitUninitialized2(f: Exp_[T] => (T, Boolean)): Boolean = {
+    val hasSubchange = _kids.foldLeft(false)((changed, k) =>  k.visitUninitialized2(f) || changed)
+    if (!valid || hasSubchange) {
+      val (t, doContinue) = f(this)
+      _typ = t
+      _valid = true
+      doContinue
+    }
     else
       false
   }
