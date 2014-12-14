@@ -8,6 +8,9 @@ import incremental._
  */
 class BottomUpEarlyTermChecker extends BottomUpChecker {
 
+  import cs.defs._
+  import cs._
+
   override def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
 
@@ -45,14 +48,14 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
   def sameResult(r1: Result, r2: Result): Boolean = {
     val (t1, reqs1, sol1_) = r1
     val (t2, reqs2, sol2_) = r2
-    val sol1 = sol1_.trySolveNow
-    val sol2 = sol2_.trySolveNow
+    val sol1 = sol1_.trySolve
+    val sol2 = sol2_.trySolve
 
     if (sol1.never.size != sol2.never.size || sol1.notyet.size != sol2.notyet.size)
       return false
 
-    val (mcons, _) = constraint.mergeReqMaps(reqs1, reqs2)
-    val sol = ConstraintOps.solve(EqConstraint(t1, t2) +: mcons).trySolveNow
+    val (mcons, _) = mergeReqMaps(reqs1, reqs2)
+    val sol = (emptyCSet ++! (EqConstraint(t1, t2) +: mcons)).trySolve
 
     val s = sol.substitution
     val isRenaming = s.foldLeft(true)((b, p) => b && p._2.isInstanceOf[UVar])

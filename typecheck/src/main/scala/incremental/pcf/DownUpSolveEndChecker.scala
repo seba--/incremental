@@ -11,15 +11,17 @@ import incremental._
  */
 class DownUpSolveEndChecker extends TypeChecker[Type] {
 
-  val constraint = new ConstraintOps
-  import constraint._
+  val cs = new DefaultConstraintSystem
+  import cs.defs._
+  import cs._
+  import gen._
 
-  val preparationTime = 0.0
+  var preparationTime = 0.0
   var typecheckTime = 0.0
-  def constraintCount = constraint.constraintCount
-  def mergeReqsTime = constraint.mergeReqsTime
-  def constraintSolveTime = constraint.constraintSolveTime
-  def mergeSolutionTime = constraint.mergeSolutionTime
+  def constraintCount = stats.constraintCount
+  def mergeReqsTime = stats.mergeReqsTime
+  def constraintSolveTime = stats.constraintSolveTime
+  def mergeSolutionTime = stats.mergeSolutionTime
 
   type Result = (Type, Seq[Constraint])
 
@@ -28,7 +30,7 @@ class DownUpSolveEndChecker extends TypeChecker[Type] {
     val (res, ctime) = Util.timed(
       try {
         val (t, cons) = typecheck(root, Map())
-        val sol = solve(cons)
+        val sol = emptyCSet ++! cons
         if (sol.isSolved)
           Left(t.subst(sol.substitution))
         else

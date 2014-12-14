@@ -4,6 +4,7 @@ import incremental.ConstraintOps._
 import incremental._
 
 
+/*
 class ConstraintOps {
   incremental.ConstraintOps.constraintCount = 0
   incremental.ConstraintOps.constraintSolveTime = 0
@@ -40,4 +41,4 @@ class ConstraintOps {
 
     (mcons, mreqs)
   }
-}
+}*/

@@ -11,15 +11,17 @@ import incremental._
  */
 class DownUpChecker extends TypeChecker[Type] {
 
-  val constraint = new ConstraintOps
-  import constraint._
+  val cs = new DefaultConstraintSystem
+  import cs.defs._
+  import cs._
+  import gen._
 
-  val preparationTime = 0.0
+  var preparationTime = 0.0
   var typecheckTime = 0.0
-  def constraintCount = constraint.constraintCount
-  def mergeReqsTime = constraint.mergeReqsTime
-  def constraintSolveTime = constraint.constraintSolveTime
-  def mergeSolutionTime = constraint.mergeSolutionTime
+  def constraintCount = stats.constraintCount
+  def mergeReqsTime = stats.mergeReqsTime
+  def constraintSolveTime = stats.constraintSolveTime
+  def mergeSolutionTime = stats.mergeSolutionTime
 
   type Result = (Type, CSet)
 
@@ -50,7 +52,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
       val lcons = EqConstraint(TNum, t1)
       val rcons = EqConstraint(TNum, t2)
-      val sol = solve(Seq(lcons, rcons), subsol)
+      val sol = subsol ++! Seq(lcons, rcons)
 
       (TNum, sol)
     case Var =>
@@ -66,7 +68,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
       val X = freshUVar()
       val fcons = EqConstraint(TFun(t2, X), t1)
-      val sol = solve(fcons, subsol)
+      val sol = subsol +! fcons
 
       (X.subst(sol.substitution), sol)
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
@@ -100,7 +102,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
       val cond = EqConstraint(TNum, t1)
       val body = EqConstraint(t2, t3)
-      val sol = solve(Seq(cond, body), subsol)
+      val sol = subsol ++! Seq(cond, body)
 
       (t2.subst(sol.substitution), sol)
     case Fix =>
@@ -108,7 +110,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
       val X = freshUVar()
       val fixCons = EqConstraint(t, TFun(X, X))
-      val sol = solve(fixCons, subsol)
+      val sol = subsol +! fixCons
 
       (X.subst(sol.substitution), sol)
   }

@@ -11,19 +11,20 @@ import incremental._
  */
 class BottomUpSolveEndChecker extends TypeChecker[Type] {
 
-  val constraint = new ConstraintOps
-  import constraint._
+  val cs = new DefaultConstraintSystem
+  import cs.defs._
+  import cs._
+  import gen._
 
   var preparationTime = 0.0
   var typecheckTime = 0.0
-  def constraintCount = constraint.constraintCount
-  def mergeReqsTime = constraint.mergeReqsTime
-  def constraintSolveTime = constraint.constraintSolveTime
-  def mergeSolutionTime = constraint.mergeSolutionTime
+  def constraintCount = stats.constraintCount
+  def mergeReqsTime = stats.mergeReqsTime
+  def constraintSolveTime = stats.constraintSolveTime
+  def mergeSolutionTime = stats.mergeSolutionTime
 
-  type Reqs = Map[Symbol, Type]
 
-  type Result = (Type, Reqs, Seq[Constraint])
+  type Result = (Type, Requirements, Seq[Constraint])
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
@@ -39,7 +40,7 @@ class BottomUpSolveEndChecker extends TypeChecker[Type] {
 
       val (t_, reqs, cons) = root.typ
       println(s"Solve ${cons.size} constraints")
-      val sol = solve(cons)
+      val sol = emptyCSet ++! cons
       val t = t_.subst(sol.substitution)
 
       if (!reqs.isEmpty)

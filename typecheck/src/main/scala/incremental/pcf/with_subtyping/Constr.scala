@@ -12,14 +12,14 @@ class SubtypeSystem extends ConstraintSystem[Type, CD.type] {
   import defs._
 
   def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements) = {
-    var mcons = emptyCSet
+    var mcons = Seq[Meet]()
     var mreqs = reqs1
     for ((x, r2) <- reqs2)
       reqs1.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
           val Xmeet = gen.freshUVar(false)
-          mcons = mcons + Meet(Xmeet, Set(r1, r2))
+          mcons = Meet(Xmeet, Set(r1, r2)) +: mcons
           mreqs += x -> Xmeet
       }
     (mcons, mreqs)
@@ -31,7 +31,8 @@ class SubtypeSystem extends ConstraintSystem[Type, CD.type] {
   implicit val stats: Statistics = new Statistics
 }
 
-object CD extends ConstraintDefs[Type] {
+object CD extends ConstraintDefs[Type]()(Type.Companion) {
+  override val definitions = Type.Companion
   sealed trait Constraint
   case class Subtype(lower: Type, upper: Type) extends Constraint
   case class Equal(expected: Type, actual: Type) extends Constraint
@@ -39,7 +40,6 @@ object CD extends ConstraintDefs[Type] {
   case class Meet(target: Type, ts: Set[Type]) extends Constraint
 
   class Gen extends GenBase {
-    type V = UVar
     private var _pos: Set[Symbol] = Set()
     private var _neg: Set[Symbol] = Set()
 
@@ -50,14 +50,14 @@ object CD extends ConstraintDefs[Type] {
     def isProperNegative(a: Symbol): Boolean = !_pos(a) && _neg(a)
 
     private var _nextId = 0
-    def freshUVar(positive: Boolean): UVar = {
+    def freshUVar(positive: Boolean): definitions.UVar = {
       val v = UVar(Symbol("x$" + _nextId))
       _nextId += 1
       if (positive) _pos += v.x
       else _neg += v.x
       v
     }
-    def freshBiVar(): UVar = {
+    def freshBiVar(): definitions.UVar = {
       val res = freshUVar(true)
       _neg += res.x
       res
@@ -83,14 +83,13 @@ object CD extends ConstraintDefs[Type] {
       res.saturateSolution()
       res
     }
-    def isSolvable = unsat.isEmpty
     def isSolved = bounds.isEmpty && unsat.isEmpty
     def solution = (_solution, bounds, unsat)
     def notyet = bounds
     def never = unsat
     def substitution = _solution
 
-    def ++(that: CSet): CSet = {
+    def +++(that: CSet) = {
       val res = copy
       res.unsat ++= that.unsat
       for((tv, (l1, u1)) <- that.bounds) {
@@ -104,7 +103,35 @@ object CD extends ConstraintDefs[Type] {
         val merged = (newL, newU)
         res.bounds += tv -> merged
       }
+      res
+    }
+
+    def ++++(that: CSet) = {
+      val res = this +++ that
       res._solution = res._solution ++ that._solution
+      res
+    }
+
+    def ++++(cs: Iterable[Constraint]) = {
+      val res = copy
+      for(c <- cs)
+        res.add(c)
+      res
+    }
+
+    def <++(that: CSet) = {
+      val res = copy
+      res._solution = that._solution
+      res.saturateSolution()
+      res._solution = Map()
+      res.bounds ++= that.bounds
+      res.unsat ++= that.unsat
+      res
+    }
+
+    def ++(that: CSet): CSet = {
+      val res = this ++++ that
+      res.saturateSolution()
       res
     }
 
@@ -127,21 +154,25 @@ object CD extends ConstraintDefs[Type] {
     //add but do not solve immediately
     def +(c: Constraint): CSet = {
       val res = copy
+      res.add(c)
+    }
+
+    private[CSet] def add(c: Constraint): CSet = {
       c match {
         case Equal(t1, t2) =>
-          res.normalizeSub(t1, t2)
-          res.normalizeSub(t2, t1)
+          normalizeSub(t1, t2)
+          normalizeSub(t2, t1)
         case Subtype(lower, upper) =>
-          res.normalizeSub(lower, upper)
+          normalizeSub(lower, upper)
         case Join(target, ts) =>
           for(t <- ts)
-            res.normalizeSub(t, target)
+            normalizeSub(t, target)
         case Meet(target, ts) =>
           for(t <- ts)
-            res.normalizeSub(target, t)
+            normalizeSub(target, t)
         case _ => ???
       }
-      res
+      this
     }
 
     def tryFinalize: CSet = {

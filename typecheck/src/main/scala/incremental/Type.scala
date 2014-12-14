@@ -12,6 +12,7 @@ import scala.language.implicitConversions
 trait TypCompanion[T <: Typ[T]] {
   type TError = String
   type TSubst = Map[Symbol, T]
+  type UVar <: T
 }
 
 object TypCompanion {
@@ -39,5 +40,7 @@ trait SType[T] extends Typ[T] {
 //always define a type class instance together with its companion
 trait Type extends UType[Type]
 object Type {
-  implicit object Companion extends TypCompanion[Type]
+  implicit object Companion extends TypCompanion[Type] {
+    type UVar = incremental.pcf.UVar
+  }
 }
