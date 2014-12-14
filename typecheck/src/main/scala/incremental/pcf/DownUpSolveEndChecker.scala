@@ -11,7 +11,7 @@ import incremental._
  */
 class DownUpSolveEndChecker extends TypeChecker[Type] {
 
-  type CD = ConstraintOps.type
+  type CSystem = ConstraintOps.type
   val cs = ConstraintOps
   import cs._
   import localState.gen._

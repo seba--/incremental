@@ -9,8 +9,8 @@ abstract class TypeChecker[Type <: Typ[Type]](implicit val definitions: TypCompa
   final type TError = definitions.TError
   final type TSubst = definitions.TSubst
   type Result
-  type CD <: ConstraintDefs[Type]
-  val cs: CD
+  type CSystem <: ConstraintSystem[Type]
+  val cs: CSystem
 
   lazy val localState = cs.freshState
 

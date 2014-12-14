@@ -11,8 +11,8 @@ import TypeOps._
  * Created by oliver on 20.11.14.
  */
 class BottomUpChecker extends BUChecker[Type] {
-  type CD = CD.type
-  val cs = CD
+  type CSystem = ConstraintOps.type
+  val cs = ConstraintOps
   import cs._
   import localState.gen._
 

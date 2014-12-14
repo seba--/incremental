@@ -1,13 +1,13 @@
 package incremental.pcf.with_subtyping
 
-import incremental.{ConstraintDefs, Util, Statistics}
+import incremental.{ConstraintSystem, Util, Statistics}
 import TypeOps._
 import incremental.pcf.with_subtyping.Type.Companion._
 
 /**
  * Created by oliver on 03.12.14.
  */
-object CD extends ConstraintDefs[Type] {
+object ConstraintOps extends ConstraintSystem[Type] {
   def freshState = new State(new Gen, new Statistics)
 
   def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements) = {
@@ -73,10 +73,10 @@ object CD extends ConstraintDefs[Type] {
     import gen._
 
     //invariant: values are ground types
-    private[CD] var _solution: TSubst = Map()
+    private[ConstraintOps] var _solution: TSubst = Map()
     //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
-    private[CD] var bounds: Map[Symbol, (LBound, UBound)] = Map().withDefaultValue((LBound(Set(), None), UBound(Set(), None)))
-    private[CD] var unsat: Set[Constraint] = Set()
+    private[ConstraintOps] var bounds: Map[Symbol, (LBound, UBound)] = Map().withDefaultValue((LBound(Set(), None), UBound(Set(), None)))
+    private[ConstraintOps] var unsat: Set[Constraint] = Set()
 
 
     def trySolve = {

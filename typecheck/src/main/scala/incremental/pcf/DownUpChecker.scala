@@ -10,7 +10,7 @@ import incremental._
  * Created by seba on 14/11/14.
  */
 class DownUpChecker extends DUChecker[Type] {
-  type CD = ConstraintOps.type
+  type CSystem = ConstraintOps.type
   val cs = ConstraintOps
   import cs._
   import localState.gen._

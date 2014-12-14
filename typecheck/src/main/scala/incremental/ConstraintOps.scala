@@ -10,7 +10,7 @@ import scala.util.DynamicVariable
 /**
  * Created by seba on 13/11/14.
  */
-object ConstraintOps extends ConstraintDefs[Type] {
+object ConstraintOps extends ConstraintSystem[Type] {
   type Constraint = incremental.Constraint
   type NotYetSolvable = Seq[Constraint]
   type Unsolvable = Seq[Constraint]
@@ -170,7 +170,7 @@ class Statistics {
   var mergeReqsTime = 0.0
 }
 
-abstract class ConstraintDefs[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
+abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
   final type TSubst = definitions.TSubst
 
   type Constraint

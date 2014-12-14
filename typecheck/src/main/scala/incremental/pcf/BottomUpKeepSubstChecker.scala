@@ -11,7 +11,7 @@ import incremental._
  */
 class BottomUpKeepSubstChecker extends BUChecker[Type] {
 
-  type CD = ConstraintOps.type
+  type CSystem = ConstraintOps.type
   val cs = ConstraintOps
   import cs._
   import localState.gen._
