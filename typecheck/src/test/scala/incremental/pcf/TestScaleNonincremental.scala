@@ -1,10 +1,11 @@
 package incremental.pcf
 
+import benchmark.ExpGenerator
 import incremental.Exp.Exp
 import incremental.Exp._
 import incremental._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
-import Generator._
+import ExpGenerator._
 
 /**
  * Created by seba on 14/11/14.

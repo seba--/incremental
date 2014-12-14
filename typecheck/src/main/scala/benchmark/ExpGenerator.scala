@@ -1,14 +1,13 @@
-package incremental.pcf
+package benchmark
 
 import incremental.Exp._
+import incremental.pcf.TFun
 import incremental.{ExpKind, Type}
-
-import scala.collection.mutable.ArrayBuffer
 
 /**
  * Created by seba on 05/11/14.
  */
-object Generator {
+object ExpGenerator {
   trait LeaveMaker {
     def reset()
     def next(): Exp

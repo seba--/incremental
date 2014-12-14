@@ -19,6 +19,11 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) {
     _typ = t
     _valid = true
   }
+  def invalidate: Unit = {
+    _typ = null.asInstanceOf[T]
+    _valid = false
+    _kids foreach (_.invalidate)
+  }
 
   private val _kids: Array[Exp_[T]] = Array(kidsArg:_*)
   private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
