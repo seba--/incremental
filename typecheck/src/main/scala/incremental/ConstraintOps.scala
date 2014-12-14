@@ -200,7 +200,7 @@ abstract class ConstraintDefs[Type <: Typ[Type]](implicit val definitions: TypCo
 
   class State(val gen: Gen, val stats: Statistics)
   def freshState: State
-  val state: DynamicVariable[State] = new DynamicVariable[State](new State(???, ???))
+  val state: DynamicVariable[State] = new DynamicVariable[State](null)
 
   def emptyCSet: CSet
   def solution(s: TSubst): CSet

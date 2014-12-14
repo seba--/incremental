@@ -9,16 +9,16 @@ import incremental._
 /**
  * Created by seba on 14/11/14.
  */
-class DownUpSolveEndChecker extends DUChecker[Type] {
+class DownUpSolveEndChecker extends TypeChecker[Type] {
 
   type CD = ConstraintOps.type
   val cs = ConstraintOps
   import cs._
   import localState.gen._
 
-  override type Result = (Type, Seq[Constraint])
+  type Result = (Type, Seq[Constraint])
 
-  override def typecheck(e: Exp): Either[Type, TError] = {
+  def typecheck(e: Exp): Either[Type, TError] = {
     cs.state.withValue(localState) {
       val root = e.withType[Result]
       val (res, ctime) = Util.timed(

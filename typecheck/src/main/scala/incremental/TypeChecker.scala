@@ -12,7 +12,7 @@ abstract class TypeChecker[Type <: Typ[Type]](implicit val definitions: TypCompa
   type CD <: ConstraintDefs[Type]
   val cs: CD
 
-  val localState = cs.freshState
+  lazy val localState = cs.freshState
 
   def preparationTime: Double = localState.stats.preparationTime
   def typecheckTime: Double = localState.stats.typecheckTime

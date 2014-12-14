@@ -9,14 +9,14 @@ import incremental._
 /**
  * Created by seba on 13/11/14.
  */
-class BottomUpSolveEndChecker extends BUChecker[Type] {
+class BottomUpSolveEndChecker extends TypeChecker[Type] {
 
   type CD = ConstraintOps.type
   val cs = ConstraintOps
   import cs._
   import localState.gen._
 
-  override type Result = (Type, Requirements, Seq[Constraint])
+  type Result = (Type, Requirements, Seq[Constraint])
 
   def typecheck(e: Exp): Either[Type, TError] = {
     cs.state.withValue(localState) {
