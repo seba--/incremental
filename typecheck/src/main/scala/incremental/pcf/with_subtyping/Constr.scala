@@ -31,8 +31,7 @@ class SubtypeSystem extends ConstraintSystem[Type, CD.type] {
   implicit val stats: Statistics = new Statistics
 }
 
-object CD extends ConstraintDefs[Type]()(Type.Companion) {
-  override val definitions = Type.Companion
+object CD extends ConstraintDefs[Type] {
   sealed trait Constraint
   case class Subtype(lower: Type, upper: Type) extends Constraint
   case class Equal(expected: Type, actual: Type) extends Constraint
@@ -40,6 +39,7 @@ object CD extends ConstraintDefs[Type]()(Type.Companion) {
   case class Meet(target: Type, ts: Set[Type]) extends Constraint
 
   class Gen extends GenBase {
+    type V = UVar
     private var _pos: Set[Symbol] = Set()
     private var _neg: Set[Symbol] = Set()
 
@@ -50,14 +50,14 @@ object CD extends ConstraintDefs[Type]()(Type.Companion) {
     def isProperNegative(a: Symbol): Boolean = !_pos(a) && _neg(a)
 
     private var _nextId = 0
-    def freshUVar(positive: Boolean): definitions.UVar = {
+    def freshUVar(positive: Boolean): UVar = {
       val v = UVar(Symbol("x$" + _nextId))
       _nextId += 1
       if (positive) _pos += v.x
       else _neg += v.x
       v
     }
-    def freshBiVar(): definitions.UVar = {
+    def freshBiVar(): UVar = {
       val res = freshUVar(true)
       _neg += res.x
       res
@@ -89,7 +89,7 @@ object CD extends ConstraintDefs[Type]()(Type.Companion) {
     def never = unsat
     def substitution = _solution
 
-    def +++(that: CSet) = {
+    def ++(that: CSet) = {
       val res = copy
       res.unsat ++= that.unsat
       for((tv, (l1, u1)) <- that.bounds) {
@@ -103,35 +103,14 @@ object CD extends ConstraintDefs[Type]()(Type.Companion) {
         val merged = (newL, newU)
         res.bounds += tv -> merged
       }
-      res
-    }
-
-    def ++++(that: CSet) = {
-      val res = this +++ that
       res._solution = res._solution ++ that._solution
       res
     }
 
-    def ++++(cs: Iterable[Constraint]) = {
+    def ++(cs: Iterable[Constraint]) = {
       val res = copy
       for(c <- cs)
         res.add(c)
-      res
-    }
-
-    def <++(that: CSet) = {
-      val res = copy
-      res._solution = that._solution
-      res.saturateSolution()
-      res._solution = Map()
-      res.bounds ++= that.bounds
-      res.unsat ++= that.unsat
-      res
-    }
-
-    def ++(that: CSet): CSet = {
-      val res = this ++++ that
-      res.saturateSolution()
       res
     }
 

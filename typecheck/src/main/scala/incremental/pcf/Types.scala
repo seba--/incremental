@@ -16,7 +16,7 @@ case object TNum extends Type {
   def occurs(x: Symbol) = false
   def subst(s: TSubst) = this
   def unify(other: Type, s: TSubst) = other match {
-    case TNum => emptySol
+    case TNum => emptyCSet
     case UVar(x) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
@@ -27,13 +27,13 @@ case class UVar(x: Symbol) extends Type {
   def occurs(x2: Symbol) = x == x2
   def subst(s: TSubst) = s.getOrElse(x, this)
   def unify(other: Type, s: TSubst) =
-    if (other == this) emptySol
+    if (other == this) emptyCSet
     else s.get(x) match {
       case Some(t) => t.unify(other, s)
       case None =>
         val t = other.subst(s)
         if (this == t)
-          emptySol
+          emptyCSet
         else if (t.occurs(x))
           never(EqConstraint(this, t))
         else

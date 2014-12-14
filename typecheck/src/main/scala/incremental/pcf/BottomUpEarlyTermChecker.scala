@@ -7,42 +7,43 @@ import incremental._
  * Created by seba on 14/11/14.
  */
 class BottomUpEarlyTermChecker extends BottomUpChecker {
-
-  import cs.defs._
   import cs._
+  import localState.gen._
 
   override def typecheck(e: Exp): Either[Type, TError] = {
-    val root = e.withType[Result]
+    cs.state.withValue(localState) {
+      val root = e.withType[Result]
 
-    //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
-    //    preparationTime += ptime
+      //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
+      //    preparationTime += ptime
 
-    val (res, ctime) = Util.timed {
-      root.visitUninitialized {e =>
-        val t = typecheckStep(e)
-        if (e.typ != null && sameResult(e.typ, t)) {
-          e.typ = t
-          false
+      val (res, ctime) = Util.timed {
+        root.visitUninitialized { e =>
+          val t = typecheckStep(e)
+          if (e.typ != null && sameResult(e.typ, t)) {
+            e.typ = t
+            false
+          }
+          else {
+            e.typ = t
+            true
+          }
         }
-        else {
-          e.typ = t
-          true
-        }
+
+        val (t_, reqs, sol_) = root.typ
+        val sol = sol_.tryFinalize
+        val t = t_.subst(sol.substitution)
+
+        if (!reqs.isEmpty)
+          Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
+        else if (!sol.isSolved)
+          Right(s"Unresolved constraints ${sol.unsolved}, type $t")
+        else
+          Left(t)
       }
-
-      val (t_, reqs, sol_) = root.typ
-      val sol = sol_.tryFinalize
-      val t = t_.subst(sol.substitution)
-
-      if (!reqs.isEmpty)
-        Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
-      else if (!sol.isSolved)
-        Right(s"Unresolved constraints ${sol.unsolved}, type $t")
-      else
-        Left(t)
+      localState.stats.typecheckTime += ctime
+      res
     }
-    typecheckTime += ctime
-    res
   }
 
   def sameResult(r1: Result, r2: Result): Boolean = {
@@ -55,7 +56,7 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
       return false
 
     val (mcons, _) = mergeReqMaps(reqs1, reqs2)
-    val sol = (emptyCSet ++! (EqConstraint(t1, t2) +: mcons)).trySolve
+    val sol = (emptyCSet ++ (EqConstraint(t1, t2) +: mcons)).trySolve
 
     val s = sol.substitution
     val isRenaming = s.foldLeft(true)((b, p) => b && p._2.isInstanceOf[UVar])

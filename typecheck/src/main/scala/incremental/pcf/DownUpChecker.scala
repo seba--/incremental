@@ -9,42 +9,14 @@ import incremental._
 /**
  * Created by seba on 14/11/14.
  */
-class DownUpChecker extends TypeChecker[Type] {
-
-  val cs = new DefaultConstraintSystem
-  import cs.defs._
+class DownUpChecker extends DUChecker[Type] {
+  type CD = ConstraintOps.type
+  val cs = ConstraintOps
   import cs._
-  import gen._
-
-  var preparationTime = 0.0
-  var typecheckTime = 0.0
-  def constraintCount = stats.constraintCount
-  def mergeReqsTime = stats.mergeReqsTime
-  def constraintSolveTime = stats.constraintSolveTime
-  def mergeSolutionTime = stats.mergeSolutionTime
-
-  type Result = (Type, CSet)
-
-  def typecheck(e: Exp): Either[Type, TError] = {
-    val root = e.withType[Result]
-    val (res, ctime) = Util.timed(
-      try {
-        val (t, sol_) = typecheck(root, Map())
-        val sol = sol_.tryFinalize
-        if (sol.isSolved)
-          Left(t.subst(sol.substitution))
-        else
-          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.substitution)}, subst ${sol.substitution}")
-      } catch {
-        case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
-      }
-    )
-    typecheckTime += ctime
-    res
-  }
+  import localState.gen._
 
   def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
-    case Num => (TNum, emptySol)
+    case Num => (TNum, emptyCSet)
     case k if k == Add || k == Mul =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)
       val (t2, sol2) = typecheck(e.kids(1), ctx)
@@ -52,14 +24,14 @@ class DownUpChecker extends TypeChecker[Type] {
 
       val lcons = EqConstraint(TNum, t1)
       val rcons = EqConstraint(TNum, t2)
-      val sol = subsol ++! Seq(lcons, rcons)
+      val sol = subsol ++ Seq(lcons, rcons)
 
       (TNum, sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       ctx.get(x) match {
         case None => throw UnboundVariable(x, ctx)
-        case Some(t) => (t, emptySol)
+        case Some(t) => (t, emptyCSet)
       }
     case App =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)
@@ -68,7 +40,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
       val X = freshUVar()
       val fcons = EqConstraint(TFun(t2, X), t1)
-      val sol = subsol +! fcons
+      val sol = subsol + fcons
 
       (X.subst(sol.substitution), sol)
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
@@ -102,7 +74,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
       val cond = EqConstraint(TNum, t1)
       val body = EqConstraint(t2, t3)
-      val sol = subsol ++! Seq(cond, body)
+      val sol = subsol ++ Seq(cond, body)
 
       (t2.subst(sol.substitution), sol)
     case Fix =>
@@ -110,7 +82,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
       val X = freshUVar()
       val fixCons = EqConstraint(t, TFun(X, X))
-      val sol = subsol +! fixCons
+      val sol = subsol + fixCons
 
       (X.subst(sol.substitution), sol)
   }

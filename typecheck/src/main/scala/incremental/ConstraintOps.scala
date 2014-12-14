@@ -5,6 +5,8 @@ import incremental.Type.Companion.UVar
 import incremental.Type.Companion._
 import incremental.pcf.UVar
 
+import scala.util.DynamicVariable
+
 /**
  * Created by seba on 13/11/14.
  */
@@ -13,16 +15,7 @@ object ConstraintOps extends ConstraintDefs[Type] {
   type NotYetSolvable = Seq[Constraint]
   type Unsolvable = Seq[Constraint]
 
-  class Gen {
-    private var _nextId = 0
-    def freshUVar(): UVar = {
-      val v = UVar(Symbol("x$" + _nextId))
-      _nextId += 1
-      v
-    }
-  }
-
-  case class CSet(substitution: TSubst, notyet: NotYetSolvable, never: Unsolvable)(implicit stat: Statistics) extends CSetAlg[CSet] {
+  case class CSet(substitution: TSubst, notyet: NotYetSolvable, never: Unsolvable) extends CSetAlg[CSet] {
     def unsolved = notyet ++ never
 
     def isSolved = notyet.isEmpty && never.isEmpty
@@ -47,7 +40,7 @@ object ConstraintOps extends ConstraintDefs[Type] {
 
         CSet(msolution, mnotyet, mnever)
       }
-      stat.mergeSolutionTime += time
+      state.value.stats.mergeSolutionTime += time
       res
     }
 
@@ -58,7 +51,7 @@ object ConstraintOps extends ConstraintDefs[Type] {
         val mnever = never ++ other.never
         CSet(Map(), mnotyet, mnever)
       }
-      stat.mergeSolutionTime += time
+      state.value.stats.mergeSolutionTime += time
       res
     }
 
@@ -69,7 +62,7 @@ object ConstraintOps extends ConstraintDefs[Type] {
         val mnever = never ++ other.never
         CSet(msolution, mnotyet, mnever)
       }
-      stat.mergeSolutionTime += time
+      state.value.stats.mergeSolutionTime += time
       res
     }
 
@@ -79,34 +72,23 @@ object ConstraintOps extends ConstraintDefs[Type] {
         var mnever = never.map(_.subst(other.substitution)) ++ other.never
         CSet(Map(), mnotyet, mnever)
       }
-      stat.mergeSolutionTime += time
+      state.value.stats.mergeSolutionTime += time
       res
     }
 
-    def +(that: Constraint): CSet = CSet(substitution, that +: notyet, never)
-
-    def +!(that: Constraint): CSet = {
-      stat.constraintCount += 1
+    def +(that: Constraint): CSet = {
+      state.value.stats.constraintCount += 1
       val (res, time) = Util.timed(this ++ that.solve(this))
-      stat.constraintSolveTime += time
+      state.value.stats.constraintSolveTime += time
       res
     }
 
-    def ++!(cs: Iterable[Constraint]): CSet = {
-      stat.constraintCount += cs.size
+    def ++(cs: Iterable[Constraint]): CSet = {
+      state.value.stats.constraintCount += cs.size
       val (res, time) = Util.timed {
         cs.foldLeft(this)((sol,c) => sol ++ c.solve(sol))
       }
-      stat.constraintSolveTime += time
-      res
-    }
-
-    def ++++(cs: Iterable[Constraint]): CSet = {
-      stat.constraintCount += cs.size
-      val (res, time) = Util.timed {
-        cs.foldLeft(this)((sol,c) => sol ++ c.solve(sol))
-      }
-      stat.constraintSolveTime += time
+      state.value.stats.constraintSolveTime += time
       res
     }
 
@@ -137,6 +119,33 @@ object ConstraintOps extends ConstraintDefs[Type] {
     def tryFinalize = trySolve(true)
   }
 
+  class Gen extends GenBase {
+    type V = UVar
+    private var _nextId = 0
+    def freshUVar(): UVar = {
+      val v = UVar(Symbol("x$" + _nextId))
+      _nextId += 1
+      v
+    }
+  }
+
+  def emptyCSet = CSet(Map(), Seq(), Seq())
+  def solution(s: TSubst): CSet = CSet(s, Seq(), Seq())
+  def notyet(c: Constraint): CSet = CSet(Map(), Seq(c), Seq())
+  def never(c: Constraint): CSet = CSet(Map(), Seq(), Seq(c))
+
+  def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements) = {
+    var mcons = Seq[EqConstraint]()
+    var mreqs = reqs1
+    for ((x, r2) <- reqs2)
+      reqs1.get(x) match {
+        case None => mreqs += x -> r2
+        case Some(r1) =>
+          mcons = EqConstraint(r1, r2) +: mcons
+      }
+
+    (mcons, mreqs)
+  }
 }
 
 trait Constraint {
@@ -150,7 +159,6 @@ case class EqConstraint(expected: Type, actual: Type) extends Constraint {
   def subst(s: TSubst) = EqConstraint(expected.subst(s), actual.subst(s))
 }
 
-//TODO make TypeChecker depend on Statistics
 class Statistics {
   var preparationTime = 0.0
   var typecheckTime = 0.0
@@ -162,11 +170,6 @@ class Statistics {
 
 abstract class ConstraintDefs[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
   final type TSubst = definitions.TSubst
-  final type TError = definitions.TError
-
- /* var mergeSolutionTime = 0.0
-  var constraintCount = 0
-  var constraintSolveTime = 0.0*/
 
   type Constraint
   type Requirements = Map[Symbol, Type]
@@ -182,63 +185,31 @@ abstract class ConstraintDefs[Type <: Typ[Type]](implicit val definitions: TypCo
     def notyet: NotYetSolvable
     def never: Unsolvable
     def ++(that: CS): CS
-    def +++(that: CS): CS
-    def ++++(that: CS): CS
-    def <++(that: CS): CS
     def + (that: Constraint): CS
-    def ++++(cs: Iterable[Constraint]): CS
+    def ++(cs: Iterable[Constraint]): CS
     def tryFinalize: CS
-    def trySolve: CS
   }
 
   trait GenBase {
-    def freshUVar(): definitions.UVar
+    type V <: Type
+    def freshUVar(): V
   }
   type Gen <: GenBase
-}
 
-trait ConstraintSystem[Type <: Typ[Type], CDef <: ConstraintDefs[Type]] {
-  val defs: CDef
-  import defs._
+  class State(val gen: Gen, val stats: Statistics)
+  def freshState: State
+  val state: DynamicVariable[State] = new DynamicVariable[State](new State(???, ???))
 
-  implicit val stats: Statistics
-  implicit val gen: defs.Gen
+  def emptyCSet: CSet
+  def solution(s: TSubst): CSet
+  def notyet(c: Constraint): CSet
+  def never(c: Constraint): CSet
 
-  final def mergeReqMaps(reqs1: Requirements, reqs2: Requirements): (Seq[defs.Constraint], Requirements) = {
+  final def mergeReqMaps(reqs1: Requirements, reqs2: Requirements): (Seq[Constraint], Requirements) = {
     val (res, time) = Util.timed(_mergeReqMaps(reqs1, reqs2))
-    stats.mergeReqsTime += time
+    state.value.stats.mergeReqsTime += time
     res
   }
 
-  def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements): (Seq[defs.Constraint], Requirements)
-
-  def emptyCSet: defs.CSet
-}
-
-class DefaultConstraintSystem extends ConstraintSystem[Type, ConstraintOps.type] {
-  val defs = ConstraintOps
-  import defs._
-
-  def emptySol = emptyCSet
-  def solution(s: TSubst) = CSet(s, Seq(), Seq())
-  def notyet(c: defs.Constraint) = CSet(Map(), Seq(c), Seq())
-  def never(c: defs.Constraint) = CSet(Map(), Seq(), Seq(c))
-
-  def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements) = {
-    var mcons = Seq[EqConstraint]()
-    var mreqs = reqs1
-    for ((x, r2) <- reqs2)
-      reqs1.get(x) match {
-        case None => mreqs += x -> r2
-        case Some(r1) =>
-          mcons = EqConstraint(r1, r2) +: mcons
-      }
-
-    (mcons, mreqs)
-  }
-
-  def emptyCSet = CSet(Map(), Seq(), Seq())
-
-  implicit val gen = new Gen
-  implicit val stats = new Statistics
+  def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements): (Seq[Constraint], Requirements)
 }

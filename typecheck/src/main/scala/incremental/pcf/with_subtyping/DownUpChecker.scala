@@ -52,7 +52,7 @@ class DownUpChecker extends TypeChecker[Type] {
     case k if k == Add || k == Mul =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)
       val (t2, sol2) = typecheck(e.kids(1), ctx)
-      val sol = (sol1 ++++ sol2 + Equal(TNum, t1) + Equal(TNum, t2)).trySolve
+      val sol = (sol1 ++ sol2 + Equal(TNum, t1) + Equal(TNum, t2)).trySolve
       (TNum, sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -65,7 +65,7 @@ class DownUpChecker extends TypeChecker[Type] {
       val (t2, sol2) = typecheck(e.kids(1), ctx)
       val X = freshUVar(false)
       val Y = freshUVar()
-      val sol = (sol1 ++++ sol2 + Equal(X -->: Y, t1) + Subtype(t2, X)).trySolve
+      val sol = (sol1 ++ sol2 + Equal(X -->: Y, t1) + Subtype(t2, X)).trySolve
       (Y.subst(sol.substitution), sol)
     case Abs if e.lits(0).isInstanceOf[Symbol] =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -77,7 +77,7 @@ class DownUpChecker extends TypeChecker[Type] {
       val (t2, sol2) = typecheck(e.kids(1), ctx)
       val (t3, sol3) = typecheck(e.kids(2), ctx)
       val Xjoin = freshUVar()
-      val sol = (sol1 ++++ sol2 ++++ sol3 + Equal(t1, TNum) + Join(Xjoin, Set(t2, t3))).trySolve
+      val sol = (sol1 ++ sol2 ++ sol3 + Equal(t1, TNum) + Join(Xjoin, Set(t2, t3))).trySolve
       (Xjoin.subst(sol.substitution), sol)
     case Fix =>
       val (t, subsol) = typecheck(e.kids(0), ctx)

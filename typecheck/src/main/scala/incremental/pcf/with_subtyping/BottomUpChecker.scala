@@ -62,7 +62,7 @@ class BottomUpChecker extends TypeChecker[Type] {
       val (t1, reqs1, sol1) = e.kids(0).typ
       val (t2, reqs2, sol2) = e.kids(1).typ
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-      val sol = (sol1 ++++ sol2 + Equal(TNum, t1) + Equal(TNum, t2) ++++ mcons).trySolve
+      val sol = (sol1 ++ sol2 + Equal(TNum, t1) + Equal(TNum, t2) ++ mcons).trySolve
       (TNum, mreqs.mapValues(_.subst(sol.substitution)), sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -74,7 +74,7 @@ class BottomUpChecker extends TypeChecker[Type] {
       val X = freshUVar(false)
       val Y = freshUVar()
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-      val sol = (sol1 ++++ sol2 + Equal(t1, X -->: Y) + Subtype(t2, X) ++++ mcons).trySolve
+      val sol = (sol1 ++ sol2 + Equal(t1, X -->: Y) + Subtype(t2, X) ++ mcons).trySolve
       (Y.subst(sol.substitution), mreqs.mapValues(_.subst(sol.substitution)), sol)
     case Abs if e.lits(0).isInstanceOf[Symbol] =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -96,7 +96,7 @@ class BottomUpChecker extends TypeChecker[Type] {
       val (mcons12, mreqs12) = mergeReqMaps(reqs1, reqs2)
       val (mcons23, mreqs123) = mergeReqMaps(mreqs12, reqs3)
       val Xjoin = freshUVar()
-      val sol = (sol1 ++++ sol2 ++++ sol3 + Equal(TNum, t1) + Join(Xjoin, Set(t2, t3)) ++++ mcons12 ++++ mcons23).trySolve
+      val sol = (sol1 ++ sol2 ++ sol3 + Equal(TNum, t1) + Join(Xjoin, Set(t2, t3)) ++ mcons12 ++ mcons23).trySolve
       (Xjoin.subst(sol.substitution), mreqs123.mapValues(_.subst(sol.substitution)), sol)
 
     case Fix =>
