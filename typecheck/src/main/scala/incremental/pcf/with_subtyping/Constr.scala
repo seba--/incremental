@@ -1,15 +1,14 @@
 package incremental.pcf.with_subtyping
 
-import incremental.{ConstraintSystem, ConstraintDefs, Util, Statistics}
+import incremental.{ConstraintDefs, Util, Statistics}
 import TypeOps._
 import incremental.pcf.with_subtyping.Type.Companion._
 
 /**
  * Created by oliver on 03.12.14.
  */
-class SubtypeSystem extends ConstraintSystem[Type, CD.type] {
-  val defs = CD
-  import defs._
+object CD extends ConstraintDefs[Type] {
+  def freshState = new State(new Gen, new Statistics)
 
   def _mergeReqMaps(reqs1: Requirements, reqs2: Requirements) = {
     var mcons = Seq[Meet]()
@@ -18,20 +17,21 @@ class SubtypeSystem extends ConstraintSystem[Type, CD.type] {
       reqs1.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-          val Xmeet = gen.freshUVar(false)
+          val Xmeet = state.value.gen.freshUVar(false)
           mcons = Meet(Xmeet, Set(r1, r2)) +: mcons
           mreqs += x -> Xmeet
       }
     (mcons, mreqs)
   }
 
-  def emptyCSet = new CSet()
+  def emptyCSet = new CSet
 
-  implicit val gen: Gen = new Gen
-  implicit val stats: Statistics = new Statistics
-}
+  //TODO remove these from interface, we don't need them
+  def solution(s: TSubst) = ???
+  def never(c: Constraint) = ???
+  def notyet(c: Constraint) = ???
 
-object CD extends ConstraintDefs[Type] {
+
   sealed trait Constraint
   case class Subtype(lower: Type, upper: Type) extends Constraint
   case class Equal(expected: Type, actual: Type) extends Constraint
@@ -68,14 +68,15 @@ object CD extends ConstraintDefs[Type] {
   type NotYetSolvable = Map[Symbol, (LBound, UBound)]
   type Unsolvable = Set[Constraint]
 
-  class CSet(implicit val stat: Statistics, val gen: Gen) extends CSetAlg[CSet] {
+  class CSet extends CSetAlg[CSet] {
+    private val gen = state.value.gen
     import gen._
-    import stat._
+
     //invariant: values are ground types
-    private[CSet] var _solution: TSubst = Map()
+    private[CD] var _solution: TSubst = Map()
     //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
-    private[CSet] var bounds: Map[Symbol, (LBound, UBound)] = Map().withDefaultValue((LBound(Set(), None), UBound(Set(), None)))
-    private[CSet] var unsat: Set[Constraint] = Set()
+    private[CD] var bounds: Map[Symbol, (LBound, UBound)] = Map().withDefaultValue((LBound(Set(), None), UBound(Set(), None)))
+    private[CD] var unsat: Set[Constraint] = Set()
 
 
     def trySolve = {

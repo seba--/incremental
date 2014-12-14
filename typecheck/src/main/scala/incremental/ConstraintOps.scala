@@ -129,6 +129,8 @@ object ConstraintOps extends ConstraintDefs[Type] {
     }
   }
 
+  def freshState = new State(new Gen, new Statistics)
+
   def emptyCSet = CSet(Map(), Seq(), Seq())
   def solution(s: TSubst): CSet = CSet(s, Seq(), Seq())
   def notyet(c: Constraint): CSet = CSet(Map(), Seq(c), Seq())
