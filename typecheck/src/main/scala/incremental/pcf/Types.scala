@@ -44,7 +44,19 @@ case class UVar(x: Symbol) extends Type {
 case class TFun(t1: Type, t2: Type) extends Type {
   def freeTVars = t1.freeTVars ++ t2.freeTVars
   def occurs(x: Symbol) = t1.occurs(x) || t2.occurs(x)
-  def subst(s: TSubst) = TFun(t1.subst(s), t2.subst(s))
+  def subst(s: TSubst) = {
+    var args = List(t1.subst(s))
+    var res = t2
+    while (res.isInstanceOf[TFun]) {
+      val resfun = res.asInstanceOf[TFun]
+      args = resfun.t1.subst(s) :: args
+      res = resfun.t2
+    }
+    res = res.subst(s)
+    for (a <- args)
+      res = TFun(a, res)
+    res
+  }
   def unify(other: Type, s: TSubst) = other match {
     case TFun(t1_, t2_) =>
       val Solution(s1, _, never1) = t1.unify(t1_, s)
