@@ -155,7 +155,7 @@ object Nonincremental {
     val kind = args(0).toLowerCase
     val maxHeight = args(1).toInt
 
-    val scalameterArgs = Array("-CresultDir", "./benchmark")
+    val scalameterArgs = Array("-CresultDir", "./benchmark/nonincremental")
 
     if (kind == "report" || kind == "offlinereport")
       new NonincrementalOfflineReport(maxHeight).main(scalameterArgs)
