@@ -28,7 +28,7 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) exte
   private val _kids: Array[Exp_[T]] = Array(kidsArg:_*)
   private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
 
-  object kids extends Serializable {
+  object kids {
     def apply(i: Int) = _kids(i)
     def update[U](i: Int, e: Exp_[U]): Unit = {
       val ee = e.asInstanceOf[Exp_[T]]
