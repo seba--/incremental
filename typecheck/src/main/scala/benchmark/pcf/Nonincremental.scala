@@ -16,6 +16,11 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureT("BottomUpSolveEnd", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
     measureT("BottomUpIncrementalSolve", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
     measureT("BottomUpEagerSubst", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT(s"BottomUpSometimesEagerSubst-10", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
+
+//    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
+//    val tupled = Gen.tupled(trees,thresholds)
+//    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
   }
 
   def measureT(name: String, check: Exp => _)(trees: Gen[Exp]): Unit = {
@@ -23,6 +28,14 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
       using(trees).
       setUp { _.invalidate }.
       in { check }
+    }
+  }
+
+  def measureTwith[T](name: String, check: ((Exp,T)) => _)(trees: Gen[(Exp,T)]): Unit = {
+    measure method (name) in {
+      using(trees).
+        setUp { _._1.invalidate }.
+        in { check }
     }
   }
 
@@ -66,10 +79,26 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
+  performance of "Abs{x,Tree{App,[x.1..x.n]}}" in {
+    val trees: Gen[Exp] = for {
+      height <- heights
+    } yield Abs('x, makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => if (i%2==0) Var('x) else Num(i))))
+
+    measureCheckers(trees)
+  }
+
   performance of "Abs{x,Tree{App,[x1..xn]}}" in {
     val trees: Gen[Exp] = for {
       height <- heights
     } yield Abs(usedVars(height), makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
+
+    measureCheckers(trees)
+  }
+
+  performance of "Abs{x,Tree{App,[x1.1..xn.n]}}" in {
+    val trees: Gen[Exp] = for {
+      height <- heights
+    } yield Abs(usedVars(height), makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
 
     measureCheckers(trees)
   }
