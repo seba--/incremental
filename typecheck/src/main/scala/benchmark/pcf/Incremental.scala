@@ -13,9 +13,9 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
 
   def measureCheckers(maxtree: Exp, heights: Gen[Int]): Unit = {
     measureIncremental("DownUp", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(maxtree, heights)
-//    measureIncremental("BottomUpSolveEnd", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(maxtree))(maxtree, heights)
-//    measureIncremental("BottomUpIncrementalSolve", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(maxtree, heights)
-//    measureIncremental("BottomUpEagerSubst", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(maxtree, heights)
+    measureIncremental("BottomUpSolveEnd", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(maxtree))(maxtree, heights)
+    measureIncremental("BottomUpIncrementalSolve", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(maxtree, heights)
+    measureIncremental("BottomUpEagerSubst", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(maxtree, heights)
     measureIncremental(s"BottomUpSometimesEagerSubst-10", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(maxtree, heights)
 
     //    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
