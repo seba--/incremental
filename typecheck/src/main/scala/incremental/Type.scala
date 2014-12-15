@@ -9,7 +9,7 @@ import incremental.ConstraintOps.Solution
 import scala.language.implicitConversions
 
 //implicits trick for per-type class instance common definitions
-trait TypCompanion[T <: Typ[T]] {
+trait TypCompanion[T <: Typ[T]] extends Serializable {
   type TError = String
   type TSubst = Map[Symbol, T]
 }

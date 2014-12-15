@@ -5,7 +5,7 @@ import incremental.Exp.Exp
 /**
  * Created by seba on 13/11/14.
  */
-abstract class TypeChecker[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
+abstract class TypeChecker[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) extends Serializable {
   final type TError = definitions.TError
   final type TSubst = definitions.TSubst
 

@@ -4,7 +4,7 @@ import incremental.ConstraintOps._
 import incremental._
 
 
-class ConstraintOps {
+class ConstraintOps extends Serializable {
   incremental.ConstraintOps.constraintCount = 0
   incremental.ConstraintOps.constraintSolveTime = 0
   incremental.ConstraintOps.mergeSolutionTime = 0
