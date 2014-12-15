@@ -145,5 +145,5 @@ class BottomUpIncrementalSolveChecker extends TypeChecker[Type] {
 }
 
 object BottomUpIncrementalSolveCheckerFactory extends TypeCheckerFactory[Type] {
-  def makeChecker = new BottomUpSometimesEagerSubstChecker
+  def makeChecker = new BottomUpIncrementalSolveChecker
 }

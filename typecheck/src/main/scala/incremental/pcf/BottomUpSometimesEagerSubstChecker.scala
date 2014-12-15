@@ -9,7 +9,7 @@ import incremental._
 /**
  * Created by seba on 13/11/14.
  */
-class BottomUpSometimesEagerSubstChecker extends TypeChecker[Type] {
+class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends TypeChecker[Type] {
 
   val constraint = new ConstraintOps
   import constraint._
@@ -33,7 +33,7 @@ class BottomUpSometimesEagerSubstChecker extends TypeChecker[Type] {
 
     val (res, ctime) = Util.timed {
       root.visitUninitialized { e =>
-        e.typ = typecheckStep(e)
+        e.typ = normalizedTypecheckStep(e)
         true
       }
 
@@ -50,6 +50,16 @@ class BottomUpSometimesEagerSubstChecker extends TypeChecker[Type] {
     }
     typecheckTime += ctime
     res
+  }
+
+  def normalizedTypecheckStep(e: Exp_[Result]) = {
+    val res = typecheckStep(e)
+    val sol = res._3
+    val s = sol.substitution
+    if (s.size > SUBST_THRESHOLD)
+      (res._1.subst(s), res._2.mapValues(_.subst(s)), Solution(Map(), sol.notyet.map(_.subst(s)), sol.never.map(_.subst(s))))
+    else
+      res
   }
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
@@ -145,5 +155,6 @@ class BottomUpSometimesEagerSubstChecker extends TypeChecker[Type] {
 }
 
 object BottomUpSometimesEagerSubstCheckerFactory extends TypeCheckerFactory[Type] {
-  def makeChecker = new BottomUpSometimesEagerSubstChecker
+  def makeChecker = new BottomUpSometimesEagerSubstChecker(1000)
+  def makeChecker(SUBST_THRESHOLD: Int) = new BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD)
 }
