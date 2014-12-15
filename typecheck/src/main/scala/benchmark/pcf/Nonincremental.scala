@@ -31,13 +31,17 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     }
   }
 
-  def measureTwith[T](name: String, check: ((Exp,T)) => _)(trees: Gen[(Exp,T)]): Unit = {
-    measure method (name) in {
-      using(trees).
-        setUp { _._1.invalidate }.
-        in { check }
-    }
-  }
+//  def measureTwith[T](name: String, check: ((Exp,T)) => _)(trees: Gen[(Exp,T)]): Unit = {
+//    measure method (name) in {
+//      using(trees).
+//        setUp { _._1.invalidate }.
+//        in { check }
+//    }
+//  }
+
+
+
+  /* ADD */
 
   performance of "Tree{Add,[1..1]}" in {
     val trees: Gen[Exp] = for {
@@ -63,10 +67,46 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
+  performance of "Abs{x,Tree{Add,[x.1..x.n]}}" in {
+    val trees: Gen[Exp] = for {
+      height <- heights
+    } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var('x) else Num(i))))
+
+    measureCheckers(trees)
+  }
+
   performance of "Abs{x,Tree{Add,[x1..xn]}}" in {
     val trees: Gen[Exp] = for {
       height <- heights
     } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
+
+    measureCheckers(trees)
+  }
+
+  performance of "Abs{x,Tree{Add,[x1.1..xn.n]}}" in {
+    val trees: Gen[Exp] = for {
+      height <- heights
+    } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
+
+    measureCheckers(trees)
+  }
+
+
+
+  /* APP */
+
+  performance of "Tree{App,[1..1]}" in {
+    val trees: Gen[Exp] = for {
+      height <- heights
+    } yield makeBinTree(height, App, constantLeaveMaker(Num(1)))
+
+    measureCheckers(trees)
+  }
+
+  performance of "Tree{App,[1..n]}" in {
+    val trees: Gen[Exp] = for {
+      height <- heights
+    } yield makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
 
     measureCheckers(trees)
   }
@@ -109,8 +149,11 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
 
 object Nonincremental {
   def main(args: Array[String]): Unit = {
-    val kind = if (args.size > 0) args(0).toLowerCase else "report"
-    val maxHeight = if (args.size > 1) args(1).toInt else 16
+    if (args.size != 2)
+      throw new IllegalArgumentException("Expected arguments: (report|micro) maxHeight")
+
+    val kind = args(0).toLowerCase
+    val maxHeight = args(1).toInt
 
     val scalameterArgs = Array("-CresultDir", "./benchmark")
 
