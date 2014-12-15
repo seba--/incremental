@@ -9,7 +9,7 @@ import incremental._
 /**
  * Created by seba on 13/11/14.
  */
-class BottomUpKeepSubstChecker extends TypeChecker[Type] {
+class BottomUpIncrementalSolveChecker extends TypeChecker[Type] {
 
   val constraint = new ConstraintOps
   import constraint._
@@ -144,6 +144,6 @@ class BottomUpKeepSubstChecker extends TypeChecker[Type] {
   }
 }
 
-object BottomUpKeepSubstCheckerFactory extends TypeCheckerFactory[Type] {
-  def makeChecker = new BottomUpKeepSubstChecker
+object BottomUpIncrementalSolveCheckerFactory extends TypeCheckerFactory[Type] {
+  def makeChecker = new BottomUpIncrementalSolveChecker
 }

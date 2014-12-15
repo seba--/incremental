@@ -9,11 +9,13 @@ import incremental.pcf._
 import incremental.Exp._
 
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
-  val heights: Gen[Int] = Gen.range("height")(5, maxHeight, 5)
+  val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
   def measureCheckers(trees: Gen[Exp]): Unit = {
     measureT("DownUp", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUp", (e:Exp) => BottomUpCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BottomUpSolveEnd", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BottomUpKeepSubst", (e:Exp) => BottomUpIncrementalSolveCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BottomUp", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
   }
 
   def measureT(name: String, check: Exp => _)(trees: Gen[Exp]): Unit = {
@@ -56,6 +58,14 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
+  performance of "Abs{x,Tree{App,[x..x]}}" in {
+    val trees: Gen[Exp] = for {
+      height <- heights
+    } yield Abs('x, makeBinTree(height, App, constantLeaveMaker(Var('x))))
+
+    measureCheckers(trees)
+  }
+
   performance of "Abs{x,Tree{App,[x1..xn]}}" in {
     val trees: Gen[Exp] = for {
       height <- heights
@@ -71,7 +81,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
 object Nonincremental {
   def main(args: Array[String]): Unit = {
     val kind = if (args.size > 0) args(0).toLowerCase else "report"
-    val maxHeight = if (args.size > 1) args(1).toInt else 15
+    val maxHeight = if (args.size > 1) args(1).toInt else 16
 
     val scalameterArgs = Array("-CresultDir", "./benchmark")
 

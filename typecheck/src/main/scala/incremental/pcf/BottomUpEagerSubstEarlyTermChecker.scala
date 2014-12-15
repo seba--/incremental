@@ -6,7 +6,7 @@ import incremental._
 /**
  * Created by seba on 14/11/14.
  */
-class BottomUpEarlyTermChecker extends BottomUpChecker {
+class BottomUpEagerSubstEarlyTermChecker extends BottomUpEagerSubstChecker {
 
   override def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
@@ -65,6 +65,6 @@ class BottomUpEarlyTermChecker extends BottomUpChecker {
   }
 }
 
-object BottomUpEarlyTermCheckerFactory extends TypeCheckerFactory[Type] {
-  def makeChecker = new BottomUpEarlyTermChecker
+object BottomUpEagerSubstEarlyTermCheckerFactory extends TypeCheckerFactory[Type] {
+  def makeChecker = new BottomUpEagerSubstEarlyTermChecker
 }

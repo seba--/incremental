@@ -6,7 +6,7 @@ import incremental._
 /**
  * Created by seba on 15/11/14.
  */
-trait BottomUpChecker extends pcf.BottomUpChecker {
+trait BottomUpEagerSubstChecker extends pcf.BottomUpEagerSubstChecker {
 
   import constraint._
 
@@ -41,7 +41,7 @@ trait BottomUpChecker extends pcf.BottomUpChecker {
   }
 }
 
-object BottomUpCheckerFactory extends TypeCheckerFactory[Type] {
-  object PCFRefBottomUpChecker extends BottomUpChecker
+object BottomUpEagerSubstCheckerFactory extends TypeCheckerFactory[Type] {
+  object PCFRefBottomUpChecker extends BottomUpEagerSubstChecker
   def makeChecker = PCFRefBottomUpChecker
 }

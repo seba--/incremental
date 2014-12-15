@@ -63,5 +63,5 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   incTypecheckTest("factorial base 1", fac, fac match {case Fix(Abs(Abs(e@If0(_,_,_)))) => e.kids(1) = Num(1)})(TFun(TNum, TNum))(4)
 }
 
-class TestBottomUpIncremental extends TestIncremental("BottomUp", BottomUpCheckerFactory)
+class TestBottomUpIncremental extends TestIncremental("BottomUp", BottomUpEagerSubstCheckerFactory)
 //class TestBottomUpEarlyTermIncremental extends TestIncremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
