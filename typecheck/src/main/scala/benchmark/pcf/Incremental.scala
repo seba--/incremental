@@ -12,11 +12,17 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight-2, 2)
 
   def measureCheckers(maxtree: Exp, heights: Gen[Int]): Unit = {
-    measureIncremental("DownUp", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(maxtree, heights)
-    measureIncremental("BottomUpSolveEnd", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(maxtree))(maxtree, heights)
-    measureIncremental("BottomUpIncrementalSolve", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(maxtree, heights)
-    measureIncremental("BottomUpEagerSubst", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(maxtree, heights)
-    measureIncremental(s"BottomUpSometimesEagerSubst-10", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(maxtree, heights)
+    val du = DownUpCheckerFactory.makeChecker
+    val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
+    val bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
+    val bu3 = BottomUpEagerSubstCheckerFactory.makeChecker
+    val bu4 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10)
+
+    measureIncremental("DownUp", (e:Exp) => du.typecheck(e))(maxtree, heights)
+    measureIncremental("BottomUpSolveEnd", (e:Exp) => bu1.typecheck(maxtree))(maxtree, heights)
+    measureIncremental("BottomUpIncrementalSolve", (e:Exp) => bu2.typecheck(e))(maxtree, heights)
+    measureIncremental("BottomUpEagerSubst", (e:Exp) => bu3.typecheck(e))(maxtree, heights)
+    measureIncremental(s"BottomUpSometimesEagerSubst-10", (e:Exp) => bu4.typecheck(e))(maxtree, heights)
 
     //    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
     //    val tupled = Gen.tupled(trees,thresholds)
@@ -24,10 +30,14 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
   }
 
   def measureIncremental(name: String, check: Exp => _)(maxtree: Exp, heights: Gen[Int]): Unit = {
+    var firstime = true
     measure method (name) in {
       using(heights).
       setUp { h =>
-        check(maxtree)
+        if (firstime) {
+          check(maxtree)
+          firstime = false
+        }
 
         var e = maxtree
         while (Abs.unapplySeq(e).isDefined)
@@ -52,11 +62,6 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
 
   /* ADD */
 
-  performance of "Tree{Add,[1..1]}" in {
-    val maxtree = makeBinTree(maxHeight, Add, constantLeaveMaker(Num(1)))
-    measureCheckers(maxtree, heights)
-  }
-
   performance of "Tree{Add,[1..n]}" in {
     val maxtree = makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
     measureCheckers(maxtree, heights)
@@ -67,29 +72,24 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
     measureCheckers(maxtree, heights)
   }
 
-  performance of "Abs{x,Tree{Add,[x.1..x.n]}}" in {
-    val maxtree = Abs('x, makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var('x) else Num(i))))
-    measureCheckers(maxtree, heights)
-  }
+//  performance of "Abs{x,Tree{Add,[x.1..x.n]}}" in {
+//    val maxtree = Abs('x, makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var('x) else Num(i))))
+//    measureCheckers(maxtree, heights)
+//  }
 
   performance of "Abs{x,Tree{Add,[x1..xn]}}" in {
     val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
     measureCheckers(maxtree, heights)
   }
 
-  performance of "Abs{x,Tree{Add,[x1.1..xn.n]}}" in {
-    val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
-    measureCheckers(maxtree, heights)
-  }
+//  performance of "Abs{x,Tree{Add,[x1.1..xn.n]}}" in {
+//    val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
+//    measureCheckers(maxtree, heights)
+//  }
 
 
 
   /* APP */
-
-  performance of "Tree{App,[1..1]}" in {
-    val maxtree = makeBinTree(maxHeight, App, constantLeaveMaker(Num(1)))
-    measureCheckers(maxtree, heights)
-  }
 
   performance of "Tree{App,[1..n]}" in {
     val maxtree = makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
@@ -101,20 +101,20 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
     measureCheckers(maxtree, heights)
   }
 
-  performance of "Abs{x,Tree{App,[x.1..x.n]}}" in {
-    val maxtree = Abs('x, makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => if (i%2==0) Var('x) else Num(i))))
-    measureCheckers(maxtree, heights)
-  }
+//  performance of "Abs{x,Tree{App,[x.1..x.n]}}" in {
+//    val maxtree = Abs('x, makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => if (i%2==0) Var('x) else Num(i))))
+//    measureCheckers(maxtree, heights)
+//  }
 
   performance of "Abs{x,Tree{App,[x1..xn]}}" in {
     val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
     measureCheckers(maxtree, heights)
   }
 
-  performance of "Abs{x,Tree{App,[x1.1..xn.n]}}" in {
-    val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
-    measureCheckers(maxtree, heights)
-  }
+//  performance of "Abs{x,Tree{App,[x1.1..xn.n]}}" in {
+//    val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
+//    measureCheckers(maxtree, heights)
+//  }
 }
 
 
