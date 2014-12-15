@@ -70,7 +70,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   performance of "Abs{x,Tree{Add,[x.1..x.n]}}" in {
     val trees: Gen[Exp] = for {
       height <- heights
-    } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var('x) else Num(i))))
+    } yield Abs('x, makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var('x) else Num(i))))
 
     measureCheckers(trees)
   }
