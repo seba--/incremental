@@ -38,7 +38,6 @@ class BottomUpSolveEndChecker extends TypeChecker[Type] {
       }
 
       val (t_, reqs, cons) = root.typ
-      println(s"Solve ${cons.size} constraints")
       val sol = solve(cons)
       val t = t_.subst(sol.substitution)
 
