@@ -9,7 +9,7 @@ import incremental._
 /**
  * Created by seba on 13/11/14.
  */
-class BottomUpIncrementalSolveChecker extends TypeChecker[Type] {
+class BottomUpSometimesEagerSubstChecker extends TypeChecker[Type] {
 
   val constraint = new ConstraintOps
   import constraint._
@@ -28,8 +28,8 @@ class BottomUpIncrementalSolveChecker extends TypeChecker[Type] {
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
 
-//    val (uninitialized, ptime) = Util.timed {root.uninitialized}
-//    preparationTime += ptime
+    //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
+    //    preparationTime += ptime
 
     val (res, ctime) = Util.timed {
       root.visitUninitialized { e =>
@@ -144,6 +144,6 @@ class BottomUpIncrementalSolveChecker extends TypeChecker[Type] {
   }
 }
 
-object BottomUpIncrementalSolveCheckerFactory extends TypeCheckerFactory[Type] {
+object BottomUpSometimesEagerSubstCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new BottomUpSometimesEagerSubstChecker
 }

@@ -14,8 +14,8 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   def measureCheckers(trees: Gen[Exp]): Unit = {
     measureT("DownUp", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
     measureT("BottomUpSolveEnd", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUpKeepSubst", (e:Exp) => BottomUpIncrementalSolveCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUp", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BottomUpIncrementalSolve", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BottomUpEagerSubst", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
   }
 
   def measureT(name: String, check: Exp => _)(trees: Gen[Exp]): Unit = {

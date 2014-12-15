@@ -84,7 +84,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
 
 class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
 class TestDownUpSolveEndCorrectness extends TestCorrectness("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
-class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpEagerSubstCheckerFactory)
+class TestBottomUpCorrectness extends TestCorrectness("BottomUpEagerSubst", BottomUpEagerSubstCheckerFactory)
 class TestBottomUpSolveEndCorrectness extends TestCorrectness("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
-class TestBottomUpEarlyTermCorrectness extends TestCorrectness("BottomUpEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
-class TestBottomKeepSubstUpCorrectness extends TestCorrectness("BottomUpKeepSubst", BottomUpIncrementalSolveCheckerFactory)
+class TestBottomUpEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
+class TestBottomKeepSubstUpCorrectness extends TestCorrectness("BottomUpIncrementalSolve", BottomUpSometimesEagerSubstCheckerFactory)
