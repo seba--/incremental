@@ -11,7 +11,7 @@ import incremental.Exp._
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
 
 
-  val heights: Gen[Int] = Gen.range("height")(4, maxHeight, 4)
+  val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
   def measureCheckers(trees: Gen[Exp]): Unit = {
     measureT("DownUp", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
