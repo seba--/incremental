@@ -9,7 +9,9 @@ import incremental.pcf._
 import incremental.Exp._
 
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
-  val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
+
+
+  val heights: Gen[Int] = Gen.range("height")(4, maxHeight, 4)
 
   def measureCheckers(trees: Gen[Exp]): Unit = {
     measureT("DownUp", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
@@ -59,14 +61,6 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
-//  performance of "Abs{x,Tree{Add,[x.1..x.n]}}" in {
-//    val trees: Gen[Exp] = for {
-//      height <- heights
-//    } yield Abs('x, makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var('x) else Num(i))))
-//
-//    measureCheckers(trees)
-//  }
-
   performance of "Abs{x,Tree{Add,[x1..xn]}}" in {
     val trees: Gen[Exp] = for {
       height <- heights
@@ -75,13 +69,6 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
-//  performance of "Abs{x,Tree{Add,[x1.1..xn.n]}}" in {
-//    val trees: Gen[Exp] = for {
-//      height <- heights
-//    } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
-//
-//    measureCheckers(trees)
-//  }
 
 
 
@@ -103,14 +90,6 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
-//  performance of "Abs{x,Tree{App,[x.1..x.n]}}" in {
-//    val trees: Gen[Exp] = for {
-//      height <- heights
-//    } yield Abs('x, makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => if (i%2==0) Var('x) else Num(i))))
-//
-//    measureCheckers(trees)
-//  }
-
   performance of "Abs{x,Tree{App,[x1..xn]}}" in {
     val trees: Gen[Exp] = for {
       height <- heights
@@ -118,14 +97,6 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
 
     measureCheckers(trees)
   }
-
-//  performance of "Abs{x,Tree{App,[x1.1..xn.n]}}" in {
-//    val trees: Gen[Exp] = for {
-//      height <- heights
-//    } yield Abs(usedVars(height), makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
-//
-//    measureCheckers(trees)
-//  }
 }
 
 
@@ -154,4 +125,11 @@ class NonincrementalMicroBenchmark(maxHeight: Int)
 
 class NonincrementalOfflineReport(maxHeight: Int)
   extends NonincrementalPerformanceTest(maxHeight)
-  with PerformanceTest.OfflineReport
+  with PerformanceTest.OfflineReport {
+
+  override def reporter: Reporter = Reporter.Composite(
+    new RegressionReporter(tester, historian),
+    DsvReporter(' '),
+    HtmlReporter(!online)
+  )
+}

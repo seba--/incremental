@@ -72,20 +72,10 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
     measureCheckers(maxtree, heights)
   }
 
-//  performance of "Abs{x,Tree{Add,[x.1..x.n]}}" in {
-//    val maxtree = Abs('x, makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var('x) else Num(i))))
-//    measureCheckers(maxtree, heights)
-//  }
-
   performance of "Abs{x,Tree{Add,[x1..xn]}}" in {
     val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
     measureCheckers(maxtree, heights)
   }
-
-//  performance of "Abs{x,Tree{Add,[x1.1..xn.n]}}" in {
-//    val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
-//    measureCheckers(maxtree, heights)
-//  }
 
 
 
@@ -101,20 +91,10 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
     measureCheckers(maxtree, heights)
   }
 
-//  performance of "Abs{x,Tree{App,[x.1..x.n]}}" in {
-//    val maxtree = Abs('x, makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => if (i%2==0) Var('x) else Num(i))))
-//    measureCheckers(maxtree, heights)
-//  }
-
   performance of "Abs{x,Tree{App,[x1..xn]}}" in {
     val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
     measureCheckers(maxtree, heights)
   }
-
-//  performance of "Abs{x,Tree{App,[x1.1..xn.n]}}" in {
-//    val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => if(i%2==0) Var(Symbol(s"x$i")) else Num(i))))
-//    measureCheckers(maxtree, heights)
-//  }
 }
 
 
@@ -143,4 +123,11 @@ class IncrementalMicroBenchmark(maxHeight: Int)
 
 class IncrementalOfflineReport(maxHeight: Int)
   extends IncrementalPerformanceTest(maxHeight)
-  with PerformanceTest.OfflineReport
+  with PerformanceTest.OfflineReport {
+
+  override def reporter: Reporter = Reporter.Composite(
+    new RegressionReporter(tester, historian),
+    DsvReporter(' '),
+    HtmlReporter(!online)
+  )
+}
