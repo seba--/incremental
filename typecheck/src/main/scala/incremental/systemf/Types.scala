@@ -80,7 +80,7 @@ case class TUniv(alpha : Symbol, t : Type) extends Type {
 
   def unify(other: Type, s: TSubst) = other match {
     case UUniv(alpha2, t2) => solution(Map(alpha2 -> TVar(alpha))) ++ t.unify(t2, s + (alpha2 -> TVar(alpha)))
-    case TUniv(`alpha`, t2) => t.unify(t2, s)
+    case TUniv(alpha2, t2) => t.unify(t2, s + (alpha2 -> TVar(alpha)))
     case UVar(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
