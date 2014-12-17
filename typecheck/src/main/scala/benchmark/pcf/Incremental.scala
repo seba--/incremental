@@ -9,17 +9,17 @@ import incremental.pcf._
 import incremental.Exp._
 
 abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
-  val heights: Gen[Int] = Gen.range("height")(2, maxHeight-2, 2)
+  val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
   def measureCheckers(maxtree: Exp, heights: Gen[Int]): Unit = {
     val du = DownUpCheckerFactory.makeChecker
-    val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
+//    val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
     val bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
     val bu3 = BottomUpEagerSubstCheckerFactory.makeChecker
     val bu4 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10)
 
     measureIncremental("DownUp", (e:Exp) => du.typecheck(e))(maxtree, heights)
-    measureIncremental("BottomUpSolveEnd", (e:Exp) => bu1.typecheck(maxtree))(maxtree, heights)
+//    measureIncremental("BottomUpSolveEnd", (e:Exp) => bu1.typecheck(maxtree))(maxtree, heights)
     measureIncremental("BottomUpIncrementalSolve", (e:Exp) => bu2.typecheck(e))(maxtree, heights)
     measureIncremental("BottomUpEagerSubst", (e:Exp) => bu3.typecheck(e))(maxtree, heights)
     measureIncremental(s"BottomUpSometimesEagerSubst-10", (e:Exp) => bu4.typecheck(e))(maxtree, heights)
