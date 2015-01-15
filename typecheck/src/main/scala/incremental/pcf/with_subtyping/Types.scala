@@ -8,7 +8,9 @@ import incremental.{TypCompanion, SType}
  */
 trait Type extends SType[Type]
 object Type {
-  implicit object Companion extends TypCompanion[Type]
+  implicit object Companion extends TypCompanion[Type] {
+    type UVar = incremental.pcf.with_subtyping.UVar
+  }
 }
 
 import Type.Companion._

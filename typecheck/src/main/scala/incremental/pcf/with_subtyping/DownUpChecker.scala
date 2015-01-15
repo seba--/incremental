@@ -4,47 +4,16 @@ import incremental.Exp.Exp
 import TypeOps._
 import Type.Companion._
 import incremental.pcf._
-import incremental.{TypeCheckerFactory, Exp_, TypeChecker, Util}
+import incremental._
 
 /**
  * Created by oliver on 27.11.14.
  */
-class DownUpChecker extends TypeChecker[Type] {
-
-  val cs: SubtypeConstraintSystem = CS
-  val instance = cs.mkInstance
+class DownUpChecker extends DUChecker[Type] {
+  type CSystem = ConstraintOps.type
+  val cs = ConstraintOps
   import cs._
-  import instance._
-  import instance.gen._
-
-  def constraintCount = instance.stats.constraintCount
-  def mergeReqsTime = instance.stats.mergeReqsTime
-  def constraintSolveTime = instance.stats.constraintSolveTime
-  def mergeSolutionTime = instance.stats.mergeSolutionTime
-
-  val preparationTime = 0.0
-  var typecheckTime = 0.0
-
-  type Result = (Type, CSet)
-
-  def typecheck(e: Exp): Either[Type, TError] = {
-    val root = e.withType[Result]
-    val (res, ctime) = Util.timed(
-      try {
-        val (t_, sol_) = typecheck(root, Map())
-        val (sigma, notyet, unsat) = sol_.tryFinalize.solution
-        val t = t_.subst(sigma)
-        if (!(notyet.isEmpty && unsat.isEmpty))
-          Right(s"Unresolved constraints notyet: $notyet\nunsat: ${unsat}, type $t")
-        else
-          Left(t)
-      } catch {
-        case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
-      }
-    )
-    typecheckTime += ctime
-    res
-  }
+  import localState.gen._
 
   def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
     case Num =>
@@ -87,8 +56,6 @@ class DownUpChecker extends TypeChecker[Type] {
       (X.subst(sol.substitution), sol)
   }
 }
-
-case class UnboundVariable(x: Symbol, ctx: TSubst) extends RuntimeException
 
 object DownUpCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new DownUpChecker

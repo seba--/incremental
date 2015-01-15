@@ -10,51 +10,11 @@ import TypeOps._
 /**
  * Created by oliver on 20.11.14.
  */
-class BottomUpChecker extends TypeChecker[Type] {
-  var preparationTime = 0.0
-  var typecheckTime = 0.0
-
-  val cs: SubtypeConstraintSystem = CS
-  val instance = cs.mkInstance
+class BottomUpChecker extends BUChecker[Type] {
+  type CSystem = ConstraintOps.type
+  val cs = ConstraintOps
   import cs._
-  import instance._
-  import instance.gen._
-
-  def constraintCount = instance.stats.constraintCount
-  def mergeReqsTime = instance.stats.mergeReqsTime
-  def constraintSolveTime = instance.stats.constraintSolveTime
-  def mergeSolutionTime = instance.stats.mergeSolutionTime
-
-
-  type Result = (Type, Requirements, CSet)
-
-  def typecheck(e: Exp): Either[Type, TError] = {
-    val root = e.withType[Result]
-
-//    val (uninitialized, ptime) = Util.timed {root.uninitialized}
-//    preparationTime += ptime
-
-    val (res, ctime) = Util.timed {
-      root.visitUninitialized { e =>
-        e.typ = typecheckStep(e)
-        true
-      }
-
-      val (t_, reqs, sol_) = root.typ
-      val sol = sol_.tryFinalize
-      val (sigma, notyet, unsat) = sol.solution
-      val t = t_.subst(sigma)
-
-      if (!reqs.isEmpty)
-        Right(s"Unresolved context requirements $reqs, type $t, unres ${notyet}")
-      else if (!(notyet.isEmpty && unsat.isEmpty))
-        Right(s"Unresolved constraints notyet: $notyet\nunsat: ${unsat}, type $t")
-      else
-        Left(t)
-    }
-    typecheckTime += ctime
-    res
-  }
+  import localState.gen._
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
     case Num =>

@@ -4,7 +4,7 @@ package incremental
  * Created by seba on 13/11/14.
  */
 import Type._
-import incremental.ConstraintOps.Solution
+import incremental.ConstraintOps.CSet
 
 import scala.language.implicitConversions
 
@@ -12,6 +12,7 @@ import scala.language.implicitConversions
 trait TypCompanion[T <: Typ[T]] extends Serializable {
   type TError = String
   type TSubst = Map[Symbol, T]
+  type UVar <: T
 }
 
 object TypCompanion {
@@ -27,8 +28,8 @@ trait Typ[T] {
 //Type class for types which support unification
 trait UType[T] extends Typ[T] {
   def freeTVars: Set[Symbol]
-  def unify(other: T, s: Map[Symbol, T]): Solution
-  def unify(other: T): Solution = unify(other, Map())
+  def unify(other: T, s: Map[Symbol, T]): CSet
+  def unify(other: T): CSet = unify(other, Map())
 }
 
 //Type class for types with groundness test
@@ -39,5 +40,7 @@ trait SType[T] extends Typ[T] {
 //always define a type class instance together with its companion
 trait Type extends UType[Type]
 object Type {
-  implicit object Companion extends TypCompanion[Type]
+  implicit object Companion extends TypCompanion[Type] {
+    type UVar = incremental.pcf.UVar
+  }
 }

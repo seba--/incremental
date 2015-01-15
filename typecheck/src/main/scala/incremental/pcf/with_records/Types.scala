@@ -14,7 +14,7 @@ case class TRecord(fields: Map[Symbol, Type]) extends Type {
   def subst(s: TSubst) = TRecord(fields.mapValues(_.subst(s)))
   def unify(other: Type, s: TSubst) = other match {
     case TRecord(fields2) if fields.keys == fields2.keys => {
-      var sol = emptySol
+      var sol = emptyCSet
       for (k <- fields.keys)
         sol = sol ++ fields(k).unify(fields2(k), s)
       sol
