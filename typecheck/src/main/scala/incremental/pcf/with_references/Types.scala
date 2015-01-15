@@ -24,7 +24,7 @@ case object TUnit extends Type {
   def occurs(x: Symbol) = false
   def subst(s: TSubst) = TUnit
   def unify(other: Type, s: TSubst) = other match {
-    case TUnit => emptySol
+    case TUnit => emptyCSet
     case UVar(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }

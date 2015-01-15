@@ -9,15 +9,16 @@ import Type._
 */
 trait BottomUpEagerSubstChecker extends pcf.BottomUpEagerSubstChecker {
 
-  import constraint._
+  import cs._
+  import localState.gen._
 
   override def typecheckStep(e: Exp_[Result]): Result = e.kind match {
     case Record =>
       val keys = e.lits.asInstanceOf[Seq[Symbol]]
 
       var mcons = Seq[Constraint]()
-      var mreqs: Reqs = Map()
-      var msol = emptySol
+      var mreqs: Requirements = Map()
+      var msol = emptyCSet
       val subs = for (sub <- e.kids.seq) yield {
         val (t, subreqs, subsol) = sub.typ
         msol = msol +++ subsol
@@ -27,7 +28,7 @@ trait BottomUpEagerSubstChecker extends pcf.BottomUpEagerSubstChecker {
         t
       }
 
-      val sol = solve(mcons)
+      val sol = emptyCSet ++ mcons
 
       val fields = keys.zip(subs).toMap
       (TRecord(fields), mreqs.mapValues(_.subst(sol.substitution)), msol <++ sol)
@@ -37,7 +38,7 @@ trait BottomUpEagerSubstChecker extends pcf.BottomUpEagerSubstChecker {
       val (t1, reqs, subsol) = e.kids(0).typ
       val X = freshUVar()
 
-      val sol = solve(EqRecordProjectConstraint(t1, label, X))
+      val sol = emptyCSet + EqRecordProjectConstraint(t1, label, X)
 
       (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), subsol <++ sol)
 

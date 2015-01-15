@@ -9,14 +9,15 @@ import incremental.ConstraintOps._
 */
 trait DownUpChecker extends pcf.DownUpChecker {
 
-  override val constraint = new ConstraintOps
-  import constraint._
+  import cs._
+  import localState.gen._
+
 
   override def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
     case Record =>
       val keys = e.lits.asInstanceOf[Seq[Symbol]]
 
-      var sol = emptySol
+      var sol = emptyCSet
       val subs = for (sub <- e.kids.seq) yield {
         val (t, kidsol) = typecheck(sub, ctx)
         sol = sol ++ kidsol
@@ -30,7 +31,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
       val label = e.lits(0).asInstanceOf[Symbol]
       val (t1, subsol) = typecheck(e.kids(0), ctx)
       val X = freshUVar()
-      val sol = solve(EqRecordProjectConstraint(t1, label, X), subsol)
+      val sol = subsol + EqRecordProjectConstraint(t1, label, X)
       (X.subst(sol.substitution), sol)
 
     case _ => super.typecheck(e, ctx)

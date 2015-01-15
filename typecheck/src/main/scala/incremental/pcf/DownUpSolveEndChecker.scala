@@ -11,34 +11,31 @@ import incremental._
  */
 class DownUpSolveEndChecker extends TypeChecker[Type] {
 
-  val constraint = new ConstraintOps
-  import constraint._
-
-  val preparationTime = 0.0
-  var typecheckTime = 0.0
-  def constraintCount = constraint.constraintCount
-  def mergeReqsTime = constraint.mergeReqsTime
-  def constraintSolveTime = constraint.constraintSolveTime
-  def mergeSolutionTime = constraint.mergeSolutionTime
+  type CSystem = ConstraintOps.type
+  val cs = ConstraintOps
+  import cs._
+  import localState.gen._
 
   type Result = (Type, Seq[Constraint])
 
   def typecheck(e: Exp): Either[Type, TError] = {
-    val root = e.withType[Result]
-    val (res, ctime) = Util.timed(
-      try {
-        val (t, cons) = typecheck(root, Map())
-        val sol = solve(cons)
-        if (sol.isSolved)
-          Left(t.subst(sol.substitution))
-        else
-          Right(s"Unresolved constraints ${sol.unsolved}, type ${t.subst(sol.substitution)}, subst ${sol.substitution}")
-      } catch {
-        case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
-      }
-    )
-    typecheckTime += ctime
-    res
+    cs.state.withValue(localState) {
+      val root = e.withType[Result]
+      val (res, ctime) = Util.timed(
+        try {
+          val (t, cons) = typecheck(root, Map[Symbol, Type]())
+          val sol = emptyCSet ++ cons
+          if (sol.isSolved)
+            Left(t.subst(sol.substitution))
+          else
+            Right(s"Unresolved constraints ${sol.notyet}, unsat ${sol.never}, type ${t.subst(sol.substitution)}, subst ${sol.substitution}")
+        } catch {
+          case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
+        }
+      )
+      localState.stats.typecheckTime += ctime
+      res
+    }
   }
 
   def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {

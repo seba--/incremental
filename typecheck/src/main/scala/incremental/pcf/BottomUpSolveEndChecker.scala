@@ -11,45 +11,37 @@ import incremental._
  */
 class BottomUpSolveEndChecker extends TypeChecker[Type] {
 
-  val constraint = new ConstraintOps
-  import constraint._
+  type CSystem = ConstraintOps.type
+  val cs = ConstraintOps
+  import cs._
+  import localState.gen._
 
-  var preparationTime = 0.0
-  var typecheckTime = 0.0
-  def constraintCount = constraint.constraintCount
-  def mergeReqsTime = constraint.mergeReqsTime
-  def constraintSolveTime = constraint.constraintSolveTime
-  def mergeSolutionTime = constraint.mergeSolutionTime
-
-  type Reqs = Map[Symbol, Type]
-
-  type Result = (Type, Reqs, Seq[Constraint])
+  type Result = (Type, Requirements, Seq[Constraint])
 
   def typecheck(e: Exp): Either[Type, TError] = {
-    val root = e.withType[Result]
+    cs.state.withValue(localState) {
+      val root = e.withType[Result]
 
-//    val (uninitialized, ptime) = Util.timed {root.uninitialized}
-//    preparationTime += ptime
+      val (res, ctime) = Util.timed {
+        root.visitUninitialized { e =>
+          e.typ = typecheckStep(e)
+          true
+        }
 
-    val (res, ctime) = Util.timed {
-      root.visitUninitialized { e =>
-        e.typ = typecheckStep(e)
-        true
+        val (t_, reqs, cons) = root.typ
+        val sol = emptyCSet ++ cons
+        val t = t_.subst(sol.substitution)
+
+        if (!reqs.isEmpty)
+          Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.notyet}, unsat ${sol.never}")
+        else if (!sol.isSolved)
+          Right(s"Unresolved constraints ${sol.notyet}, unsat ${sol.never}, type $t")
+        else
+          Left(t)
       }
-
-      val (t_, reqs, cons) = root.typ
-      val sol = solve(cons)
-      val t = t_.subst(sol.substitution)
-
-      if (!reqs.isEmpty)
-        Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
-      else if (!sol.isSolved)
-        Right(s"Unresolved constraints ${sol.unsolved}, type $t")
-      else
-        Left(t)
+      localState.stats.typecheckTime += ctime
+      res
     }
-    typecheckTime += ctime
-    res
   }
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {

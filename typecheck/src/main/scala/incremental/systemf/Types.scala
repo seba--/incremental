@@ -1,5 +1,7 @@
 package incremental.systemf
 
+import incremental.Type.Companion.UVar
+import incremental.pcf.UVar
 import incremental.{TypCompanion, UType, EqConstraint, Type}
 import incremental.ConstraintOps._
 import incremental.Type.Companion._
@@ -16,7 +18,7 @@ case object TNum extends Type {
   def occurs(x: Symbol) = false
   def subst(s: TSubst) = this
   def unify(other: Type, s: Map[Symbol, Type]) = other match {
-    case TNum => emptySol
+    case TNum => emptyCSet
     case UVar(x) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
@@ -46,30 +48,30 @@ case class TVar(alpha : Symbol) extends Type {
   def subst(s: TSubst) = this//subst(s + (alpha -> TUsVar(alpha)))
   // def subst(s: Map[Symbol, Type]) =  //s.apply(alpha) //(Map(alpha -> TUsVar(alpha))
   def unify(other: Type, s :TSubst) = other match {
-      case TVar(`alpha`) => emptySol
+      case TVar(`alpha`) => emptyCSet
     case UVar(x) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
 }
 
-case class UVar(x: Symbol) extends Type {
+/*case class UVar(x: Symbol) extends Type {
   def freeTVars = Set()
   def occurs(x2: Symbol) = x == x2
   def subst(s: Map[Symbol, Type]) = s.getOrElse(x, this)
   def unify(other: Type, s: TSubst) =
-    if (other == this) emptySol
+    if (other == this) emptyCSet
     else s.get(x) match {
       case Some(t) => t.unify(other, s)
       case None =>
         val t = other.subst(s)
         if (this == t)
-          emptySol
+          emptyCSet
         else if (t.occurs(x))
           never(EqConstraint(this, t))
         else
           solution(Map(x -> t))
     }
-}
+}*/
 
 case class TUniv(alpha : Symbol, t : Type) extends Type {
   def freeTVars = t.freeTVars - alpha
