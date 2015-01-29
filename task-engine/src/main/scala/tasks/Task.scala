@@ -21,11 +21,16 @@ abstract class Task(val parents : mutable.Set[Task])(val params : Any*) {
 	def isValid = valid()
 	def result = res()
 
+	//Is called when the task is created.
+	def initialize() : Unit
+	//Is called when a child task is updated. TODO: should also be called if the data changes
+	def update() : Unit
+
 	object children {
 		def apply(i : Int) : Task = _children(i)
 		def +=(t : Task) = {
 			_children += t
-		//	valid.update(b = false)   TODO: Should we update here?
+			valid.update(b = false)  // TODO: Should we update here?
 		}
 
 		def foreach(f : Task => Unit): Unit = {
@@ -45,22 +50,30 @@ abstract class Task(val parents : mutable.Set[Task])(val params : Any*) {
 		def update(e : Any) {
 			if (e != _res) {
 				_res = e
-				valid.update(b = true)
+				valid.updateNoPush(b = true)
+				pushUpdate()
 			}
-			//TODO: Do we need to push updates here?
 		}
 	}
 
+
+	private def pushUpdate(): Unit = {
+		parents.foreach(_.update())
+	}
 
 	private object valid {
 		private var _valid : Boolean = false
 
 		def apply() : Boolean = _valid
 
+		def updateNoPush(b : Boolean) =
+			_valid = b
+
+
 		def update(b : Boolean) {
 			if (_valid != b) {
 				_valid = b
-				parents.foreach(_.update)
+				pushUpdate()
 			}
 		}
 	}
@@ -82,11 +95,10 @@ abstract class Task(val parents : mutable.Set[Task])(val params : Any*) {
 	}
 
 	override def toString: String = {
-		s"Task<${this.getClass.getSimpleName}>(${params.mkString(",")}) = ${if(isValid) result else null}"
+		s"Task<${this.getClass.getSimpleName}>(${params.mkString(", ")}) = ${if(isValid) result else null}"
 	}
 
-	def initialize() : Unit
-	def update() : Unit
+
 
 
 

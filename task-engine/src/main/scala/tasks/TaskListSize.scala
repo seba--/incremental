@@ -19,7 +19,7 @@ class TaskListSize(p : mutable.Set[Task])(l : IList) extends Task(p)(l){
 		l match {
 			case IListEmpty =>
 				res.update(0)
-			case IListElement(_, _) if children(0).isValid =>
+			case IListElement(_, _) if children.count == 1 && children(0).isValid =>
 				res.update(children(0).result.asInstanceOf[Int] + 1)
 			case _ => invalidate()
 		}

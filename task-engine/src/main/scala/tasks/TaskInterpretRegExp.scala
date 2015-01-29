@@ -12,14 +12,13 @@ class TaskInterpretRegExp(p : mutable.Set[Task])(e : Exp, s : IList) extends Tas
 
 	override def initialize(): Unit = e match {
 		case Exp(RegExpTerminal, _, _) => update()
-		case Exp(RegExpAlt, _, childs) => {
+		case Exp(RegExpAlt, _, childs) =>
 			spawn(TaskInterpretRegExpFactory, childs(0), s)
 			spawn(TaskInterpretRegExpFactory, childs(1), s)
-		}
 	}
 
 	override def update(): Unit = {
-		println ("before update: " + this.toStringTree)
+		println ("before update: " + this.toString)
 
 		e match {
 			case Exp(RegExpTerminal, param, _) if s.head == param(0) =>
@@ -27,12 +26,14 @@ class TaskInterpretRegExp(p : mutable.Set[Task])(e : Exp, s : IList) extends Tas
 			case Exp(RegExpTerminal, param, _) if s.head != param(0) =>
 				res.update(Set())
 
-			case Exp(RegExpAlt, _, _) if children(0).isValid && children(1).isValid =>
+			case Exp(RegExpAlt, _, _) if children.count == 2 && children(0).isValid && children(1).isValid =>
 				res.update(children(0).result.asInstanceOf[Set[IList]] ++ children(1).result.asInstanceOf[Set[IList]])
 
 			case _ => invalidate()
 
 		}
+
+		println ("after update: " + this.toString)
 	}
 
 }
