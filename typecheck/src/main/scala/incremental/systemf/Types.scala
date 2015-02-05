@@ -74,7 +74,7 @@ case class UVar(x: Symbol) extends Type {
 case class TUniv(alpha : Symbol, t : Type) extends Type {
   def freeTVars = t.freeTVars - alpha
 
-  def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2
+  def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
 
   def subst(s: Map[Symbol, Type]) = TUniv(alpha, t.subst(s - alpha))
 
@@ -89,7 +89,7 @@ case class TUniv(alpha : Symbol, t : Type) extends Type {
 case class UUniv(alpha: Symbol, t : Type) extends Type {
   def freeTVars = t.freeTVars
 
-  def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2
+  def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
 
   def subst(s : Map[Symbol, Type]) = s.get(alpha) match {
     case Some(TVar(beta)) => TUniv(beta, t.subst(s))
