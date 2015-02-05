@@ -1,7 +1,7 @@
 package engine
 
 import data._
-import tasks.{TaskInterpretRegExp, Task, TaskListSize}
+import tasks.{Task, TaskListSize}
 
 import scala.collection.mutable
 
@@ -11,15 +11,14 @@ import scala.collection.mutable
 object Main {
 
 	def main(args : Array[String]): Unit = {
-		val l : IList = IListElement('a', IListElement('b', IListEmpty))
+		val l = IListElement('a', IListElement('b', IListEmpty[Char]()))
 		val e0 = Exp(RegExpTerminal, mutable.Seq('a'), mutable.Seq())
 		val e1 : Exp = Exp(RegExpAlt, mutable.Seq(), mutable.Seq(
 			e0,
 			Exp(RegExpTerminal, mutable.Seq('c'), mutable.Seq())
 		))
 
-		val t : Task = new TaskInterpretRegExp(mutable.Set.empty)(e1, l)
-		//new TaskListSize(mutable.Set.empty)(l)
+		val t : Task[Int] = new TaskListSize(mutable.Set.empty)(l)
 
 		//BottomUpUpdate.updateTask(t)
 
@@ -34,7 +33,7 @@ object Main {
 		println(t.toStringTree)
 		println("> result = " + t.result)
 
-		l.updateHead('b')
+		l.head.update('b')
 		t.children(0).update() //TODO: this is not how it is supposed to be!
 
 		println("task tree #########################################")

@@ -3,30 +3,46 @@ package data
 /**
  * @author Mirko Köhler
  */
-trait IList {
+trait IList[T]extends Data {
 	def isEmpty : Boolean
-	def head : Any
-	def tail : IList
 
-	def updateHead(h : Any)
-	def updateTail(t : IList)
+
 }
 
-case class IListElement(var head : Any, var tail : IList) extends IList {
+case class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 	val isEmpty = false
 
-	override def updateHead(h: Any): Unit = head = h
+	private var _head: T = h
+	private var _tail: IList[T] = t
 
-	override def updateTail(t: IList): Unit = tail = t
+	object head {
+		def apply() = _head
+
+		def update(h: T) {
+			if (h != head) {
+				_dirty = true
+				_head = h
+			}
+		}
+	}
+
+	object tail {
+		def apply() = _tail
+
+		def update(t: IList[T]): Unit = {
+			if (t != _tail) {
+				_dirty = true
+				_tail = t
+			}
+		}
+	}
+
+
+
 }
 
-case object IListEmpty extends IList {
+case class IListEmpty[T]() extends IList[T] {
 	val isEmpty = true
-	def head = throw new IllegalStateException("Can not get head of empty list.")
-	def tail = throw new IllegalStateException("Can not get tail of empty list.")
-
-	override def updateHead(h: Any): Unit = throw new UnsupportedOperationException("Can not update head of empty list.")
-	override def updateTail(t: IList): Unit = throw new UnsupportedOperationException("Can not update tail of empty list.")
 }
 
 

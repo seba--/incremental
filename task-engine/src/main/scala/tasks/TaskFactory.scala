@@ -6,6 +6,6 @@ import scala.collection.mutable
 /**
  * @author Mirko Köhler
  */
-trait TaskFactory {
-	def create(parents : mutable.Set[Task])(params : Any*) : Task
+trait TaskFactory[Result] {
+	def create(parents : mutable.Set[Task[_]])(params : Any*) : Task[Result]
 }

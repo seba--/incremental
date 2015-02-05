@@ -7,7 +7,7 @@ import scala.collection.mutable
 /**
  * @author Mirko Köhler
  */
-class TaskInterpretRegExp(p : mutable.Set[Task])(e : Exp, s : IList) extends Task(p)(e,s) {
+/*class TaskInterpretRegExp(p : mutable.Set[Task])(e : Exp, s : IList) extends Task(p)(e,s) {
 
 
 	override def initialize(): Unit = e match {
@@ -87,3 +87,4 @@ object TaskInterpretRegExpFactory extends TaskFactory {
 	}
 
  */
+         */

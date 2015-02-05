@@ -6,7 +6,7 @@ import scala.collection.mutable
 /**
  * @author Mirko Köhler
  */
-case class Exp(kind : ExpKind, values : mutable.Seq[Any], children : mutable.Seq[Exp])
+case class Exp(kind : ExpKind, values : mutable.Seq[Any], children : mutable.Seq[Exp]) extends Data
 
 trait ExpKind
 object RegExpTerminal extends ExpKind

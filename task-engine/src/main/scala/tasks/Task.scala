@@ -1,24 +1,20 @@
 package tasks
 
+import data.Data
+
 import scala.collection.Seq
 import scala.collection.mutable
 
 /**
  * @author Mirko Köhler
  */
-abstract class Task(val parents : mutable.Set[Task])(val params : Any*) {
-	def this(p : Task)(pa : Any*) = this(mutable.Set(p))(pa : _*)
+abstract class Task[Result](val parents : mutable.Set[Task[_]])(val params : Data*) extends Node {
 
-	private val _children : mutable.Buffer[Task] = mutable.Buffer()
+	private val _children : mutable.Buffer[Task[_]] = mutable.Buffer()
 
 	parents.foreach(p => p.children += this)
 	initialize()
 
-	def invalidate() : Unit = {
-		valid.update(b = false)
-	}
-
-	def isValid = valid()
 	def result = res()
 
 	//Is called when the task is created.
@@ -27,13 +23,13 @@ abstract class Task(val parents : mutable.Set[Task])(val params : Any*) {
 	def update() : Unit
 
 	object children {
-		def apply(i : Int) : Task = _children(i)
-		def +=(t : Task) = {
+		def apply(i : Int) : Task[_] = _children(i)
+		def +=(t : Task[_]) = {
 			_children += t
-			valid.update(b = false)  // TODO: Should we update here?
+			_dirty = true  // TODO: Should we update here?
 		}
 
-		def foreach(f : Task => Unit): Unit = {
+		def foreach(f : Task[_] => Unit): Unit = {
 			_children.foreach(f)
 		}
 
@@ -41,45 +37,22 @@ abstract class Task(val parents : mutable.Set[Task])(val params : Any*) {
 	}
 
 	//Manages the result of the task. Whenever the result is changed, updates are pushed to the parents
-	object res {
+	protected object res {
 		//The result of the computation.
-		private var _res : Any = null
+		private var _res : Result = null.asInstanceOf[Result]
 
-		def apply() : Any = if (isValid) _res else throw new IllegalStateException("res is not available for task: " + toString())
+		def apply() : Any = if (!isDirty) _res else throw new IllegalStateException("res is not available for task: " + toString)
 
-		def update(e : Any) {
+		def update(e : Result) {
 			if (e != _res) {
 				_res = e
-				valid.updateNoPush(b = true)
-				pushUpdate()
+				_dirty = true
 			}
 		}
 	}
 
-
-	private def pushUpdate(): Unit = {
-		parents.foreach(_.update())
-	}
-
-	private object valid {
-		private var _valid : Boolean = false
-
-		def apply() : Boolean = _valid
-
-		def updateNoPush(b : Boolean) =
-			_valid = b
-
-
-		def update(b : Boolean) {
-			if (_valid != b) {
-				_valid = b
-				pushUpdate()
-			}
-		}
-	}
-
-	def spawn(factory : TaskFactory, params: Any*) : Task = {
-		val t : Task = factory.create(mutable.Set(this))(params : _*)
+	def spawn[T](factory : TaskFactory[T], params: Any*) : Task[T] = {
+		val t : Task[T] = factory.create(mutable.Set(this))(params : _*)
 	//	children += t
 		t
 	}
@@ -95,18 +68,8 @@ abstract class Task(val parents : mutable.Set[Task])(val params : Any*) {
 	}
 
 	override def toString: String = {
-		s"Task<${this.getClass.getSimpleName}>(${params.mkString(", ")}) = ${if(isValid) result else null}"
+		s"Task<${this.getClass.getSimpleName}>(${params.mkString(", ")}) = ${if(!isDirty) result else null}"
 	}
-
-
-
-
-
-}
-
-object Task {
-
-
 }
 
 
