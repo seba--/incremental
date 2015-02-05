@@ -83,8 +83,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTestError("(\\X.\\x:X. x)[Y]", TApp(TVar('Y), TAbs('X, Abs('x, TVar('X), Var('x)))))
 }
 
-//class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
-
+class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpCheckerFactory)
 
 //class TestBottomUpEarlyTermCorrectness extends TestCorrectness("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
