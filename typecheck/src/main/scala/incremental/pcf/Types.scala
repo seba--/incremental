@@ -14,6 +14,7 @@ import incremental.Type.Companion.TSubst
 case object TNum extends Type {
   def freeTVars = Set()
   def occurs(x: Symbol) = false
+  def normalize = this
   def subst(s: TSubst) = this
   def unify(other: Type, s: TSubst) = other match {
     case TNum => emptySol
@@ -25,6 +26,7 @@ case object TNum extends Type {
 case class UVar(x: Symbol) extends Type {
   def freeTVars = Set()
   def occurs(x2: Symbol) = x == x2
+  def normalize = this
   def subst(s: TSubst) = s.getOrElse(x, this)
   def unify(other: Type, s: TSubst) =
     if (other == this) emptySol
@@ -44,6 +46,7 @@ case class UVar(x: Symbol) extends Type {
 case class TFun(t1: Type, t2: Type) extends Type {
   def freeTVars = t1.freeTVars ++ t2.freeTVars
   def occurs(x: Symbol) = t1.occurs(x) || t2.occurs(x)
+  def normalize = TFun(t1.normalize, t2.normalize)
   def subst(s: TSubst) = {
     var args = List(t1.subst(s))
     var res = t2

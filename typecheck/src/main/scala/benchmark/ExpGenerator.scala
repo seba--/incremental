@@ -63,4 +63,17 @@ object ExpGenerator {
     }
     t
   }
+
+  def makeBinType(height: Int, returnType: Type, argMaker: () => Type, tconstr: (Type, Type) => Type): Type = {
+    val length = Math.pow(2,height-1).toInt
+    var argTypes = Seq[Type]()
+    for (i <- 1 to length)
+      argTypes = argMaker() +: argTypes
+    var t = returnType
+    for (i <- 1 to length) {
+      t = tconstr(argTypes.head, t)
+      argTypes = argTypes.tail
+    }
+    t
+  }
 }

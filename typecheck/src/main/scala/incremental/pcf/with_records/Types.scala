@@ -11,6 +11,7 @@ import incremental.pcf.UVar
 case class TRecord(fields: Map[Symbol, Type]) extends Type {
   def freeTVars = fields.values.foldLeft(Set[Symbol]())(_++_.freeTVars)
   def occurs(x: Symbol) = fields.exists(_._2.occurs(x))
+  def normalize = TRecord(fields.mapValues(_.normalize))
   def subst(s: TSubst) = TRecord(fields.mapValues(_.subst(s)))
   def unify(other: Type, s: TSubst) = other match {
     case TRecord(fields2) if fields.keys == fields2.keys => {

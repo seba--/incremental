@@ -11,6 +11,7 @@ import incremental.pcf.UVar
 case class TRef(t: Type) extends Type {
   def freeTVars = t.freeTVars
   def occurs(x: Symbol) = t.occurs(x)
+  def normalize = TRef(t.normalize)
   def subst(s: TSubst) = TRef(t.subst(s))
   def unify(other: Type, s: TSubst) = other match {
     case TRef(t2) => t.unify(t2, s)
@@ -22,6 +23,7 @@ case class TRef(t: Type) extends Type {
 case object TUnit extends Type {
   def freeTVars = Set()
   def occurs(x: Symbol) = false
+  def normalize = this
   def subst(s: TSubst) = TUnit
   def unify(other: Type, s: TSubst) = other match {
     case TUnit => emptySol

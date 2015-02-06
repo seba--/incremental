@@ -14,6 +14,7 @@ import incremental.Type.Companion._
 case object TNum extends Type {
   def freeTVars = Set()
   def occurs(x: Symbol) = false
+  def normalize = this
   def subst(s: TSubst) = this
   def unify(other: Type, s: Map[Symbol, Type]) = other match {
     case TNum => emptySol
@@ -25,6 +26,7 @@ case object TNum extends Type {
 case class TFun(t1: Type, t2: Type) extends Type {
   def freeTVars = t1.freeTVars ++ t2.freeTVars
   def occurs(x: Symbol) = t1.occurs(x) || t2.occurs(x)
+  def normalize = TFun(t1.normalize, t2.normalize)
   def subst(s: Map[Symbol, Type]) = TFun(t1.subst(s), t2.subst(s))
   def unify(other: Type, s: TSubst) = other match {
     case TFun(t1_, t2_) =>
@@ -41,6 +43,8 @@ case class TFun(t1: Type, t2: Type) extends Type {
 case class TVar(alpha : Symbol) extends Type {
   def freeTVars = Set(alpha)
 
+  def normalize = this
+
   def occurs(x2: Symbol) = alpha == x2
 
   def subst(s: TSubst) = this//subst(s + (alpha -> TUsVar(alpha)))
@@ -55,6 +59,7 @@ case class TVar(alpha : Symbol) extends Type {
 case class UVar(x: Symbol) extends Type {
   def freeTVars = Set()
   def occurs(x2: Symbol) = x == x2
+  def normalize = this
   def subst(s: Map[Symbol, Type]) = s.getOrElse(x, this)
   def unify(other: Type, s: TSubst) =
     if (other == this) emptySol
@@ -76,6 +81,8 @@ case class TUniv(alpha : Symbol, t : Type) extends Type {
 
   def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
 
+  def normalize = TUniv(alpha, t.normalize)
+
   def subst(s: Map[Symbol, Type]) = TUniv(alpha, t.subst(s - alpha))
 
   def unify(other: Type, s: TSubst) = other match {
@@ -88,6 +95,8 @@ case class TUniv(alpha : Symbol, t : Type) extends Type {
 
 case class UUniv(alpha: Symbol, t : Type) extends Type {
   def freeTVars = t.freeTVars
+
+  def normalize = UUniv(alpha, t.normalize)
 
   def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
 
