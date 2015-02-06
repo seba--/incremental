@@ -1,0 +1,228 @@
+[info] TestDownUpScaleNonincremental:
+[info] - DownUp: Type check non-shared Add-tree(h=5) with leaves 1 .. 1 (51 milliseconds)
+Preparation time	0.000ms
+Type-check time		18.984ms
+Constraint count	30
+Cons. solve time	5.230ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=10) with leaves 1 .. 1 (16 milliseconds)
+Preparation time	0.000ms
+Type-check time		10.971ms
+Constraint count	1022
+Cons. solve time	3.423ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=15) with leaves 1 .. 1 (263 milliseconds)
+Preparation time	0.000ms
+Type-check time		162.146ms
+Constraint count	32766
+Cons. solve time	46.776ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=20) with leaves 1 .. 1 (1 second, 885 milliseconds)
+Preparation time	0.000ms
+Type-check time		1070.996ms
+Constraint count	1048574
+Cons. solve time	108.897ms
+Merge reqs time		0.000ms
+
+[info] - DownUp: Type check non-shared Add-tree(h=5) with leaves 1 .. n (0 milliseconds)
+Preparation time	0.000ms
+Type-check time		0.021ms
+Constraint count	30
+Cons. solve time	0.005ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=10) with leaves 1 .. n (1 millisecond)
+Preparation time	0.000ms
+Type-check time		0.481ms
+Constraint count	1022
+Cons. solve time	0.092ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=15) with leaves 1 .. n (53 milliseconds)
+Preparation time	0.000ms
+Type-check time		30.191ms
+Constraint count	32766
+Cons. solve time	7.196ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=20) with leaves 1 .. n (2 seconds, 72 milliseconds)
+Preparation time	0.000ms
+Type-check time		982.047ms
+Constraint count	1048574
+Cons. solve time	102.146ms
+Merge reqs time		0.000ms
+
+
+[info] - DownUp: Type check non-shared Add-tree(h=5) with leaves x .. x (7 milliseconds)
+Preparation time	0.000ms
+Type-check time		6.207ms
+Constraint count	30
+Cons. solve time	0.559ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=10) with leaves x .. x (14 milliseconds)
+Preparation time	0.000ms
+Type-check time		12.010ms
+Constraint count	1022
+Cons. solve time	3.092ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=15) with leaves x .. x (115 milliseconds)
+Preparation time	0.000ms
+Type-check time		95.185ms
+Constraint count	32766
+Cons. solve time	42.993ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=20) with leaves x .. x (2 seconds, 218 milliseconds)
+Preparation time	0.000ms
+Type-check time		1459.945ms
+Constraint count	1048574
+Cons. solve time	557.636ms
+Merge reqs time		0.000ms
+
+
+
+[info] - DownUp: Type check non-shared Add-tree(h=5) with leaves x1 .. xn (4 milliseconds)
+Preparation time	0.000ms
+Type-check time		2.820ms
+Constraint count	30
+Cons. solve time	0.398ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=10) with leaves x1 .. xn (22 milliseconds)
+Preparation time	0.000ms
+Type-check time		16.977ms
+Constraint count	1022
+Cons. solve time	1.949ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=15) with leaves x1 .. xn (363 milliseconds)
+Preparation time	0.000ms
+Type-check time		297.020ms
+Constraint count	32766
+Cons. solve time	26.158ms
+Merge reqs time		0.000ms
+[info] - DownUp: Type check non-shared Add-tree(h=18) with leaves x1 .. xn (1 second, 933 milliseconds)
+Preparation time	0.000ms
+Type-check time		1536.735ms
+Constraint count	262142
+Cons. solve time	114.200ms
+Merge reqs time		0.000ms
+[info] Run completed in 9 seconds, 392 milliseconds.
+[info] Total number of tests run: 16
+[info] Suites: completed 1, aborted 0
+[info] Tests: succeeded 16, failed 0, canceled 0, ignored 0, pending 0
+[info] All tests passed.
+[success] Total time: 26 s, completed Dec 1, 2014 11:39:41 PM
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> test-only incremental.pcf.TestBottomUpScaleNonincremental
+[info] TestBottomUpScaleNonincremental:
+[info] - BottomUp: Type check non-shared Add-tree(h=5) with leaves 1 .. 1 (46 milliseconds)
+Preparation time	0.886ms
+Type-check time		25.082ms
+Constraint count	30
+Cons. solve time	3.024ms
+Merge reqs time		2.249ms
+[info] - BottomUp: Type check non-shared Add-tree(h=10) with leaves 1 .. 1 (20 milliseconds)
+Preparation time	0.533ms
+Type-check time		16.201ms
+Constraint count	1022
+Cons. solve time	2.170ms
+Merge reqs time		0.724ms
+[info] - BottomUp: Type check non-shared Add-tree(h=15) with leaves 1 .. 1 (175 milliseconds)
+Preparation time	5.309ms
+Type-check time		118.891ms
+Constraint count	32766
+Cons. solve time	27.032ms
+Merge reqs time		9.573ms
+[info] - BottomUp: Type check non-shared Add-tree(h=20) with leaves 1 .. 1 (2 seconds, 608 milliseconds)
+Preparation time	42.607ms
+Type-check time		1873.616ms
+Constraint count	1048574
+Cons. solve time	304.164ms
+Merge reqs time		137.978ms
+
+[info] - BottomUp: Type check non-shared Add-tree(h=5) with leaves 1 .. n (1 millisecond)
+Preparation time	0.010ms
+Type-check time		0.043ms
+Constraint count	30
+Cons. solve time	0.007ms
+Merge reqs time		0.005ms
+[info] - BottomUp: Type check non-shared Add-tree(h=10) with leaves 1 .. n (3 milliseconds)
+Preparation time	0.026ms
+Type-check time		1.019ms
+Constraint count	1022
+Cons. solve time	0.221ms
+Merge reqs time		0.091ms
+[info] - BottomUp: Type check non-shared Add-tree(h=15) with leaves 1 .. n (78 milliseconds)
+Preparation time	2.746ms
+Type-check time		38.494ms
+Constraint count	32766
+Cons. solve time	8.113ms
+Merge reqs time		3.086ms
+[info] - BottomUp: Type check non-shared Add-tree(h=20) with leaves 1 .. n (2 seconds, 835 milliseconds)
+Preparation time	50.465ms
+Type-check time		1901.796ms
+Constraint count	1048574
+Cons. solve time	718.961ms
+Merge reqs time		88.091ms
+
+
+[info] - BottomUp: Type check non-shared Add-tree(h=5) with leaves x .. x (5 milliseconds)
+Preparation time	0.005ms
+Type-check time		4.643ms
+Constraint count	45
+Cons. solve time	0.335ms
+Merge reqs time		0.876ms
+[info] - BottomUp: Type check non-shared Add-tree(h=10) with leaves x .. x (10 milliseconds)
+Preparation time	0.045ms
+Type-check time		9.035ms
+Constraint count	1533
+Cons. solve time	3.522ms
+Merge reqs time		1.384ms
+[info] - BottomUp: Type check non-shared Add-tree(h=15) with leaves x .. x (182 milliseconds)
+Preparation time	1.833ms
+Type-check time		156.500ms
+Constraint count	49149
+Cons. solve time	60.649ms
+Merge reqs time		23.557ms
+[info] - BottomUp: Type check non-shared Add-tree(h=20) with leaves x .. x (4 seconds, 11 milliseconds)
+Preparation time	44.564ms
+Type-check time		3020.395ms
+Constraint count	1572861
+Cons. solve time	602.017ms
+Merge reqs time		154.831ms
+
+
+
+[info] - BottomUp: Type check non-shared Add-tree(h=5) with leaves x1 .. xn (4 milliseconds)
+Preparation time	0.007ms
+Type-check time		2.502ms
+Constraint count	30
+Cons. solve time	0.031ms
+Merge reqs time		0.261ms
+[info] - BottomUp: Type check non-shared Add-tree(h=10) with leaves x1 .. xn (16 milliseconds)
+Preparation time	0.098ms
+Type-check time		12.014ms
+Constraint count	1022
+Cons. solve time	0.882ms
+Merge reqs time		5.434ms
+[info] - BottomUp: Type check non-shared Add-tree(h=15) with leaves x1 .. xn (311 milliseconds)
+Preparation time	3.003ms
+Type-check time		228.107ms
+Constraint count	32766
+Cons. solve time	20.093ms
+Merge reqs time		74.063ms
+[info] - BottomUp: Type check non-shared Add-tree(h=18) with leaves x1 .. xn (1 second, 951 milliseconds)
+Preparation time	15.086ms
+Type-check time		1697.473ms
+Constraint count	262142
+Cons. solve time	114.616ms
+Merge reqs time		1156.166ms
+[info] Run completed in 12 seconds, 426 milliseconds.
+[info] Total number of tests run: 16
+[info] Suites: completed 1, aborted 0
+[info] Tests: succeeded 16, failed 0, canceled 0, ignored 0, pending 0
+[info] All tests passed.
