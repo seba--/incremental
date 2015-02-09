@@ -15,27 +15,16 @@ case object TNum extends Type {
   def freeTVars = Set()
   def occurs(x: Symbol) = false
   def normalize = this
-  def subst(s: TSubst) = this
+  def subst(s: TSubst) = {
+    throw new UnsupportedOperationException
+    this
+  }
   def unify(other: Type, s: TSubst) = other match {
     case TNum => emptySol
     case TUnifiable(_) => other.unify(this, s)
     case _ => never(EqConstraint(this, other))
   }
 }
-
-//case class TVar(alpha : Symbol) extends Type {
-//  def freeTVars = Set(alpha)
-//
-//  def occurs(x2: Symbol) = alpha == x2
-//
-//  def normalize = this
-//  def subst(s: TSubst) = this
-//  def unify(other: Type) = other match {
-//      case TVar(`alpha`) => emptySol
-//      case TUnifiable(_) => other.unify(this)
-//      case _ => never(EqConstraint(this, other))
-//    }
-//}
 
 case class TUnifiable(alpha: Symbol) extends Type {
   var t: Type = null
@@ -48,12 +37,14 @@ case class TUnifiable(alpha: Symbol) extends Type {
 
   def normalize = if (isVar) this else t.normalize
 
-  def subst(s: TSubst) =
+  def subst(s: TSubst) = {
+    throw new UnsupportedOperationException
     if (isVar) s.get(alpha) match {
       case None => this
       case Some(t2) => t2
     }
     else t.subst(s)
+  }
 
   def unify(other: Type, s: TSubst) =
     if (isVar) {
@@ -85,7 +76,7 @@ case class TFun(t1: Type, t2: Type) extends Type {
       res = TFun(a, res)
     res
   }
-  def subst(s: TSubst) = {
+  def subst(s: TSubst) = { throw new UnsupportedOperationException
     var args = List(t1.subst(s))
     var res = t2
     while (res.isInstanceOf[TFun]) {
