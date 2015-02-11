@@ -1,6 +1,7 @@
 package tasks
 
 import data.Data
+import engine.Update
 
 import scala.collection.Seq
 import scala.collection.mutable
@@ -8,25 +9,35 @@ import scala.collection.mutable
 /**
  * @author Mirko Köhler
  */
-abstract class Task[Result](val parents : mutable.Set[Task[_]])(val params : Data*) extends Node {
+abstract class Task[Result](val params : Data*) extends Node {
 
 	private val _children : mutable.Buffer[Task[_]] = mutable.Buffer()
 
-	parents.foreach(p => p.children += this)
-	initialize()
+
 
 	def result = res()
 
-	//Is called when the task is created.
-	def initialize() : Unit
-	//Is called when a child task is updated. TODO: should also be called if the data changes
-	def update() : Unit
+	def recompute(u : Update) : Unit = {
+		internalRecompute(u)
+	}
+
+	def visit(u : Update) : Unit = {
+		internalVisit(u)
+	}
+
+	protected def internalRecompute(u : Update) : Unit = throw new UnsupportedOperationException("Don't know how to recompute task " + toString)
+	protected def internalVisit(u : Update) : Unit = throw new UnsupportedOperationException("Don't know how to visit task " + toString)
+
+	def hasDirtyParams : Boolean =
+		params.foldRight(false)((data, b) => data.isDirty || b)
+
+	def hasDirtyChildren : Boolean =
+		_children.foldRight(false)((task, b) => task.isDirty || b)
 
 	object children {
 		def apply(i : Int) : Task[_] = _children(i)
 		def +=(t : Task[_]) = {
 			_children += t
-			_dirty = true  // TODO: Should we update here?
 		}
 
 		def foreach(f : Task[_] => Unit): Unit = {
@@ -41,7 +52,7 @@ abstract class Task[Result](val parents : mutable.Set[Task[_]])(val params : Dat
 		//The result of the computation.
 		private var _res : Result = null.asInstanceOf[Result]
 
-		def apply() : Any = if (!isDirty) _res else throw new IllegalStateException("res is not available for task: " + toString)
+		def apply() : Any = _res//if (!isDirty) _res else throw new IllegalStateException("res is not available for task: " + toString)
 
 		def update(e : Result) {
 			if (e != _res) {
@@ -51,9 +62,10 @@ abstract class Task[Result](val parents : mutable.Set[Task[_]])(val params : Dat
 		}
 	}
 
-	def spawn[T](factory : TaskFactory[T], params: Any*) : Task[T] = {
-		val t : Task[T] = factory.create(mutable.Set(this))(params : _*)
-	//	children += t
+	def spawn[T](u : Update)(factory : TaskFactory[T], params: Data*) : Task[T] = {
+		val t : Task[T] = factory.create(params : _*)
+		children += t
+		u.notifySpawnTask(this, t)
 		t
 	}
 
@@ -67,9 +79,9 @@ abstract class Task[Result](val parents : mutable.Set[Task[_]])(val params : Dat
 		s
 	}
 
-	override def toString: String = {
-		s"Task<${this.getClass.getSimpleName}>(${params.mkString(", ")}) = ${if(!isDirty) result else null}"
-	}
+	override def toString: String =
+		s"Task<${this.getClass.getSimpleName}>(${params.mkString(", ")}) = ${if(!isDirty) result else "<Dirty> " + result}"
+
 }
 
 

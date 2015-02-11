@@ -1,6 +1,7 @@
 package tasks
 
-import data.{IListEmpty, IList, IListElement}
+import data._
+import engine.Update
 
 import scala.collection.mutable
 
@@ -12,32 +13,36 @@ import scala.collection.mutable
  *
  * @author Mirko Köhler
  */
-class TaskListSize(p : mutable.Set[Task[_]])(l : IList[_]) extends Task[Int](p)(l){
+class TaskListSize(l : IList[_]) extends Task[Int](l){
 
-	def update(): Unit =  {
-		println("before update: " + this)
+	override def internalRecompute(u : Update) : Unit = {
+
+		println("recompute : " + toString)
+
 		l match {
 			case IListEmpty() =>
 				res.update(0)
-			case IListElement(_, _) if children.count == 1 && !children(0).isDirty =>
+			case IListElement(head, tail) if children.count == 0 =>
+				spawn(u)(TaskListSizeFactory, tail)
 				res.update(children(0).result.asInstanceOf[Int] + 1)
-			case _ => _dirty = true
+			case IListElement(_, _) if children.count == 1 =>
+				res.update(children(0).result.asInstanceOf[Int] + 1)
+			case _ => super.internalRecompute(u)
 		}
-		println("after update: " + this)
+
+		println("recomputed : " + toString)
+
 	}
 
-	def initialize(): Unit = l match {
-		case IListEmpty() => update()
-		case IListElement(head, tail) => spawn(TaskListSizeFactory, tail)
-	}
+
 
 }
 
 object TaskListSizeFactory extends TaskFactory[Int] {
-	override def create(parents : mutable.Set[Task[_]])(params: Any*): Task[Int] = {
+	override def create(params: Data*): Task[Int] = {
 		if (params.size != 1)
 			throw new IllegalArgumentException("List.size needs 1 parameter, got " + params)
-		new TaskListSize(parents)(params(0).asInstanceOf[IList[_]])
+		new TaskListSize(params(0).asInstanceOf[IList[_]])
 	}
 }
 

@@ -9,7 +9,7 @@ trait IList[T]extends Data {
 
 }
 
-case class IListElement[T](h : T, t : IList[T]) extends IList[T] {
+class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 	val isEmpty = false
 
 	private var _head: T = h
@@ -18,7 +18,7 @@ case class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 	object head {
 		def apply() = _head
 
-		def update(h: T) {
+		def <=(h: T) {
 			if (h != head) {
 				_dirty = true
 				_head = h
@@ -29,7 +29,7 @@ case class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 	object tail {
 		def apply() = _tail
 
-		def update(t: IList[T]): Unit = {
+		def <=(t: IList[T]): Unit = {
 			if (t != _tail) {
 				_dirty = true
 				_tail = t
@@ -37,12 +37,23 @@ case class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 		}
 	}
 
+	override def toString =
+		head() + " :: " + tail()
+}
 
+object IListElement {
+	def apply[T](h : T, t: IList[T]) =
+		new IListElement[T](h,t)
 
+	def unapply[T](e : IListElement[T]) =
+		Some(e.head(), e.tail())
 }
 
 case class IListEmpty[T]() extends IList[T] {
 	val isEmpty = true
 }
+
+
+
 
 
