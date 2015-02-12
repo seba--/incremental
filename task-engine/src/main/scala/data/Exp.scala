@@ -10,17 +10,7 @@ import scala.collection.mutable
  */
 class Exp(k : ExpKind, val values : mutable.Seq[Any], val children : mutable.Seq[Exp]) extends Data {
 
-	private var _kind = k
-
-	object kind extends Updateable[ExpKind] {
-		override def get: ExpKind = _kind
-
-		override def <=(t: ExpKind): Unit =
-			if (t != _kind) {
-				_kind = t
-				_dirty = true
-			}
-	}
+	object kind extends UpdateableValue[ExpKind](k)
 }
 
 trait ExpKind

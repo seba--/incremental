@@ -69,21 +69,7 @@ abstract class Task[Result](val params : Data*) extends Node {
 	}
 
 	//Manages the result of the task. Whenever the result is changed, the task is marked dirty
-	object result {
-		//The result of the computation.
-		private var _res : Result = null.asInstanceOf[Result]
-
-		def get = _res//if (!isDirty) _res else throw new IllegalStateException("res is not available for task: " + toString)
-
-		def apply() : Result = get
-
-		def update(e : Result) {
-			if (e != _res) {
-				_res = e
-				_dirty = true
-			}
-		}
-	}
+	object result extends UpdateableValue[Result](null.asInstanceOf[Result])
 
 	def spawn[T](factory : TaskFactory[T], params: Data*) : Task[T] = {
 		val t : Task[T] = factory.create(params : _*)

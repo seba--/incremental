@@ -14,31 +14,8 @@ trait IList[T]extends Data {
 class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 	val isEmpty = false
 
-	private var _head: T = h
-	private var _tail: IList[T] = t
-
-	object head extends Updateable[T] {
-
-		def get = _head
-
-		def <=(h: T) {
-			if (h != head) {
-				_dirty = true
-				_head = h
-			}
-		}
-	}
-
-	object tail extends Updateable[IList[T]]{
-		def get = _tail
-
-		def <=(t: IList[T]): Unit = {
-			if (t != _tail) {
-				_dirty = true
-				_tail = t
-			}
-		}
-	}
+	object head extends UpdateableValue[T](h)
+	object tail extends UpdateableValue[IList[T]](t)
 
 	override def toString =
 		head() + " :: " + tail()

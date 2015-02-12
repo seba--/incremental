@@ -1,8 +1,10 @@
 package data
 
-import tasks.Node
+import tasks.{Updateable, Node}
 
 /**
  * @author Mirko Köhler
  */
-trait Data extends Node
+trait Data extends Node {
+
+}
