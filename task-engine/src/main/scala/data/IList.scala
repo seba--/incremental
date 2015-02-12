@@ -1,5 +1,7 @@
 package data
 
+import tasks.Updateable
+
 /**
  * @author Mirko Köhler
  */
@@ -15,8 +17,9 @@ class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 	private var _head: T = h
 	private var _tail: IList[T] = t
 
-	object head {
-		def apply() = _head
+	object head extends Updateable[T] {
+
+		def get = _head
 
 		def <=(h: T) {
 			if (h != head) {
@@ -26,8 +29,8 @@ class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 		}
 	}
 
-	object tail {
-		def apply() = _tail
+	object tail extends Updateable[IList[T]]{
+		def get = _tail
 
 		def <=(t: IList[T]): Unit = {
 			if (t != _tail) {

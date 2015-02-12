@@ -13,25 +13,42 @@ import scala.collection.mutable
  *
  * @author Mirko Köhler
  */
-class TaskListSize(l : IList[_]) extends Task[Int](l){
+class TaskListSize(val list : IList[_]) extends Task[Int](list){
 
-	override def internalRecompute(u : Update) : Unit = {
 
-		println("recompute : " + toString)
+	override protected def internalTraverse(u : Update) : Iterable[Task[_]] = {
 
-		l match {
+		list match {
 			case IListEmpty() =>
-				res.update(0)
-			case IListElement(head, tail) if children.count == 0 =>
+				children.clear()
+			case IListElement(head, tail) if children.count == 1 && children(0).checkTask(classOf[TaskListSize], tail) =>
+				//do nothing
+			case IListElement(head, tail) =>
+				children.clear()
 				spawn(u)(TaskListSizeFactory, tail)
-				res.update(children(0).result.asInstanceOf[Int] + 1)
-			case IListElement(_, _) if children.count == 1 =>
-				res.update(children(0).result.asInstanceOf[Int] + 1)
+			case _ => super.internalTraverse(u)
+		}
+
+		children
+	}
+
+	override protected def internalRecompute(u : Update) : Unit = {
+
+
+		list match {
+			case IListEmpty() =>
+				result.update(0)
+			case IListElement(head, tail) =>
+				result.update(children(0).result.get.asInstanceOf[Int] + 1)
 			case _ => super.internalRecompute(u)
 		}
 
-		println("recomputed : " + toString)
 
+	}
+
+	def canBeRecomputed : Boolean = list match {
+		case IListEmpty() => true
+		case IListElement(head, tail) => children.count == 1 //&& !children(0).isDirty
 	}
 
 
