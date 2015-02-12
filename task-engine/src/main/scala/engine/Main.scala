@@ -30,7 +30,7 @@ object Main {
 		println(t.result.get)
 
 		println("Update 2 ##########################################")
-		l.tail.get.asInstanceOf[IListElement[Char]].head <= 'c'
+		l.tail.get.asInstanceOf[IListElement[Char]].head := 'c'
 		BottomUpUpdate.update(t)
 
 		println("task tree #########################################")
@@ -38,7 +38,7 @@ object Main {
 		println("> result = " + t.result.get)
 
 		println("Update 3 ##########################################")
-		l.tail <= IListEmpty[Char]()
+		l.tail := IListEmpty[Char]()
 		BottomUpUpdate.update(t)
 
 		println("task tree:")
@@ -48,5 +48,36 @@ object Main {
 
 
 	}
+
+
+  def foo1(l: List[Int]): Int =  l match {
+    case Nil => 0
+    case hd::tl if hd > 5 => hd + foo1(tl)
+    case hd::tl => hd - foo1(tl)
+  }
+
+  def foo2(l: List[Int]): Int =  l match {
+    case Nil => 0
+    case hd::tl =>
+      val r = foo2(tl)
+      if (r > 5)
+        hd + r
+      else
+        hd - r
+  }
+
+  def foo3(l: List[Int]) = foo3(0, l)
+  def foo3(acc: Int, l: List[Int]): Int =  l match {
+    case Nil => acc
+    case hd::tl => acc + foo3(hd, tl)
+  }
+
+  def foo4(l: List[Int]) = foo3(0, l)
+  def foo4(acc: Int, l: List[Int]): Int =  l match {
+    case Nil => acc
+    case hd::tl => foo4(acc + hd, tl)
+  }
+
+
 
 }

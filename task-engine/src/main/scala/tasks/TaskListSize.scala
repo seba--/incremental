@@ -37,9 +37,9 @@ class TaskListSize(val list : IList[_]) extends Task[Int](list){
 
 		list match {
 			case IListEmpty() =>
-				result <= 0
+				result := 0
 			case IListElement(head, tail) =>
-				result <= children(0).result.get.asInstanceOf[Int] + 1
+				result := children(0).result.get.asInstanceOf[Int] + 1
 			case _ => super.internalRecompute
 		}
 

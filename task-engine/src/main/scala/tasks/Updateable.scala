@@ -11,7 +11,7 @@ abstract class Updateable[T](init : T) {
 
 	def get : T = _e
 
-	def <=(newE : T) : Unit = {
+	def :=(newE : T) : Unit = {
 		if (_e != newE) {
 			_e = newE
 			updated()

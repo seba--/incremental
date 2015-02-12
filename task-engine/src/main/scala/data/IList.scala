@@ -14,8 +14,8 @@ trait IList[T]extends Data {
 class IListElement[T](h : T, t : IList[T]) extends IList[T] {
 	val isEmpty = false
 
-	object head extends UpdateableValue[T](h)
-	object tail extends UpdateableValue[IList[T]](t)
+	val head = new UpdateableValue[T](h)
+	val tail = new UpdateableValue[IList[T]](t)
 
 	override def toString =
 		head() + " :: " + tail()

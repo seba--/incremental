@@ -69,7 +69,7 @@ abstract class Task[Result](val params : Data*) extends Node {
 	}
 
 	//Manages the result of the task. Whenever the result is changed, the task is marked dirty
-	object result extends UpdateableValue[Result](null.asInstanceOf[Result])
+	val result = new UpdateableValue[Result](null.asInstanceOf[Result])
 
 	def spawn[T](factory : TaskFactory[T], params: Data*) : Task[T] = {
 		val t : Task[T] = factory.create(params : _*)
