@@ -7,6 +7,5 @@ import tasks.Task
  */
 trait Update {
 
-	def notifySpawnTask(parent : Task[_], spawnedTask : Task[_]) : Unit
 
 }

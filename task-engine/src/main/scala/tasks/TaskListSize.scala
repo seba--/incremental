@@ -16,7 +16,7 @@ import scala.collection.mutable
 class TaskListSize(val list : IList[_]) extends Task[Int](list){
 
 
-	override protected def internalTraverse(u : Update) : Iterable[Task[_]] = {
+	override protected def internalTraverse() : Iterable[Task[_]] = {
 
 		list match {
 			case IListEmpty() =>
@@ -25,14 +25,14 @@ class TaskListSize(val list : IList[_]) extends Task[Int](list){
 				//do nothing
 			case IListElement(head, tail) =>
 				children.clear()
-				spawn(u)(TaskListSizeFactory, tail)
-			case _ => super.internalTraverse(u)
+				spawn(TaskListSizeFactory, tail)
+			case _ => super.internalTraverse
 		}
 
 		children
 	}
 
-	override protected def internalRecompute(u : Update) : Unit = {
+	override protected def internalRecompute() : Unit = {
 
 
 		list match {
@@ -40,7 +40,7 @@ class TaskListSize(val list : IList[_]) extends Task[Int](list){
 				result.update(0)
 			case IListElement(head, tail) =>
 				result.update(children(0).result.get.asInstanceOf[Int] + 1)
-			case _ => super.internalRecompute(u)
+			case _ => super.internalRecompute
 		}
 
 

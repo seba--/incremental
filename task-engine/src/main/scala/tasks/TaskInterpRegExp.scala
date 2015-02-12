@@ -8,7 +8,7 @@ import data.{IList, Exp}
  */
 class TaskInterpRegExp(val exp : Exp, val s : IList[Char]) extends Task[IList[IList[Char]]](exp, s){
 
-	override def canBeRecomputed: Boolean = ???
+	override def canBeRecomputed: Boolean = true
 }
 
 /*

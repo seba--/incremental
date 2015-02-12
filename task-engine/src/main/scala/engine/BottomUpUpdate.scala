@@ -13,7 +13,7 @@ object BottomUpUpdate extends Update {
 	def update(parent : Task[_], t : Task[_]): Unit = {
 
 		//Step 1: Update children first
-		var children = t.traverse(this)
+		var children = t.traverse()
 		children.foreach(update(t, _))
 
 		//Step 2: Recompute when possible, else traverse
@@ -21,17 +21,17 @@ object BottomUpUpdate extends Update {
 		while (loop) {
 
 			if (children.isEmpty && t.hasDirtyParams) {
-				t.recompute(this)
+				t.recompute()
 				t.params.foreach(_.visited())
 				loop = false
 			} else if (children.nonEmpty && (t.hasDirtyChildren || t.hasDirtyParams)) {
 				if (t.canBeRecomputed) {
-					t.recompute(this)
+					t.recompute()
 					t.params.foreach(_.visited())
 					t.children.foreach(_.visited())
 					loop = false
 				} else {
-					val n = t.traverse(this)
+					val n = t.traverse()
 					n.drop(children.size).foreach(update(t, _))
 					children = n
 				}
@@ -62,8 +62,5 @@ object BottomUpUpdate extends Update {
         */
 
 	}
-
-	def notifySpawnTask(parent : Task[_], spawnedTask : Task[_]) : Unit = {}
-	//	update(parent)(spawnedTask)
 
 }

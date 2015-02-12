@@ -20,27 +20,25 @@ abstract class Task[Result](val params : Data*) extends Node {
 
 	/**
 	 * Recomputes the value of the task if all values of child tasks are available. If the new value differs from the previous one the task will be flagged as dirty.
-	 * @param u The class to which spawn updates are passed.
 	 */
-	def recompute(u : Update) : Unit = {
+	def recompute() : Unit = {
 		if (debug) print(toTypeString + ".recompute -> " + result.get)
-		internalRecompute(u)
+		internalRecompute()
 		if (debug) println(" ==> " + result.get)
 	}
 
 	/**
 	 * Traverses through a node and creates all child nodes that are currently available.
-	 * @param u The class to which spawn updates are passed.
 	 * @return All currently available child nodes.
 	 */
-	def traverse(u : Update) : Iterable[Task[_]] = {
-		val r = internalTraverse(u)
+	def traverse() : Iterable[Task[_]] = {
+		val r = internalTraverse()
 		if (debug) println(toTypeString + ".traverse -> " + children)
 		r
 	}
 
-	protected def internalRecompute(u : Update) : Unit = throw new UnsupportedOperationException("Don't know how to recompute task " + toString)
-	protected def internalTraverse(u : Update) : Iterable[Task[_]] = throw new UnsupportedOperationException("Don't know how to traverse task " + toString)
+	protected def internalRecompute() : Unit = throw new UnsupportedOperationException("Don't know how to recompute task " + toString)
+	protected def internalTraverse() : Iterable[Task[_]] = throw new UnsupportedOperationException("Don't know how to traverse task " + toString)
 
 	def canBeRecomputed : Boolean
 
@@ -87,10 +85,9 @@ abstract class Task[Result](val params : Data*) extends Node {
 		}
 	}
 
-	def spawn[T](u : Update)(factory : TaskFactory[T], params: Data*) : Task[T] = {
+	def spawn[T](factory : TaskFactory[T], params: Data*) : Task[T] = {
 		val t : Task[T] = factory.create(params : _*)
 		children += t
-		u.notifySpawnTask(this, t)
 		t
 	}
 
