@@ -10,7 +10,7 @@ import scala.collection.mutable
  */
 class Exp(k : ExpKind, val values : mutable.Seq[Any], val children : mutable.Seq[Exp]) extends Data {
 
-	object kind extends UpdateableValue[ExpKind](k)
+	object kind extends IBox[ExpKind](k)
 }
 
 trait ExpKind

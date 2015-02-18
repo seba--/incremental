@@ -7,10 +7,15 @@ import tasks.Task
  */
 object BottomUpUpdate extends Update {
 
-	def update(t : Task[_]) : Unit =
+	def update(t : Task[_]) : Int = {
+		recomputeCount = 0
 		update(null, t)
+		recomputeCount
+	}
 
-	def update(parent : Task[_], t : Task[_]): Unit = {
+	private var recomputeCount = 0
+
+	private def update(parent : Task[_], t : Task[_]): Unit = {
 
 		//Step 1: Update children first
 		var children = t.traverse()
@@ -22,18 +27,18 @@ object BottomUpUpdate extends Update {
 
 			if (children.isEmpty && t.hasDirtyParams) {
 				t.recompute()
+				recomputeCount = recomputeCount + 1
 				t.params.foreach(_.visited())
 				loop = false
 			} else if (children.nonEmpty && (t.hasDirtyChildren || t.hasDirtyParams)) {
 				if (t.canBeRecomputed) {
 					t.recompute()
+					recomputeCount = recomputeCount + 1
 					t.params.foreach(_.visited())
 					t.children.foreach(_.visited())
 					loop = false
 				} else {
-					val n = t.traverse()
-					n.drop(children.size).foreach(update(t, _))
-					children = n
+					children = t.traverse()
 				}
 			} else {
 				loop = false

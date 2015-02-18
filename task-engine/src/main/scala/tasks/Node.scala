@@ -1,19 +1,24 @@
 package tasks
 
+import data.IValue
+
 /**
  * @author Mirko Köhler
  */
 trait Node {
-	class UpdateableValue[T](init : T) extends Updateable[T](init) {
+	protected case class IBox[T](init : T) extends Updateable[T](init) {
 		def updated() =
-			_dirty = true
+			_changed = true
+
+		def toData =
+			IValue(init)
 	}
 	
-	protected var _dirty = true
+	protected var _changed = true
 
 	def visited() {
-		_dirty = false
+		_changed = false
 	}
 
-	def isDirty = _dirty
+	def hasChanged = _changed
 }

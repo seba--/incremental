@@ -1,5 +1,6 @@
 package tasks
 
+import com.sun.istack.internal.Nullable
 import data.Data
 import engine.Update
 
@@ -43,13 +44,13 @@ abstract class Task[Result](val params : Data*) extends Node {
 	def canBeRecomputed : Boolean
 
 	def checkTask(c : Class[_], p : Data*) : Boolean =
-		c.isInstance(this) && p == params
+		c.isInstance(this) && p.zip(params).forall(t => t._1 == t._2)
 
 	def hasDirtyParams : Boolean =
-		params.foldRight(false)((data, b) => data.isDirty || b)
+		params.foldRight(false)((data, b) => data.hasChanged || b)
 
 	def hasDirtyChildren : Boolean =
-		_children.foldRight(false)((task, b) => task.isDirty || b)
+		_children.foldRight(false)((task, b) => task.hasChanged || b)
 
 	object children extends Iterable[Task[_]] {
 		def apply(i : Int) : Task[_] = _children(i)
@@ -69,13 +70,7 @@ abstract class Task[Result](val params : Data*) extends Node {
 	}
 
 	//Manages the result of the task. Whenever the result is changed, the task is marked dirty
-	val result = new UpdateableValue[Result](null.asInstanceOf[Result])
-
-	def spawn[T](factory : TaskFactory[T], params: Data*) : Task[T] = {
-		val t : Task[T] = factory.create(params : _*)
-		children += t
-		t
-	}
+	val result = IBox(null.asInstanceOf[Result])
 
 	def toStringTree : String = {
 		toStringTree(0)
@@ -97,7 +92,7 @@ abstract class Task[Result](val params : Data*) extends Node {
 		s"Task<${this.getClass.getSimpleName}>(${params.mkString(", ")})"
 
 	override def toString: String =
-		s"$toTypeString = ${if(!isDirty) result.get else "<Dirty> " + result.get}"
+		s"$toTypeString = ${if(!hasChanged) result.get else "<Changed> " + result.get}"
 
 }
 

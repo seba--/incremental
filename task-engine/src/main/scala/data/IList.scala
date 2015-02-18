@@ -5,20 +5,39 @@ import tasks.Updateable
 /**
  * @author Mirko Köhler
  */
-trait IList[T]extends Data {
-	def isEmpty : Boolean
+trait IList[T] extends Data {
+	def toList : List[T]
 
+	def head : IBox[T]
+	def tail : IBox[IList[T]]
+}
+
+object IList {
+	def apply[T](ts : T*) : IList[T] =
+		if (ts.isEmpty)
+			IListEmpty()
+		else
+			IListElement(ts.head, apply(ts.tail : _*))
+
+	def empty[T] = IListEmpty[T]()
+}
+
+case class IListEmpty[T]() extends IList[T] {
+	override def toList = Nil
+
+	override def head = throw new NoSuchElementException("head of empty list")
+	override def tail = throw new NoSuchElementException("tail of empty list")
 
 }
 
 class IListElement[T](h : T, t : IList[T]) extends IList[T] {
-	val isEmpty = false
+	val head = IBox(h)
+	val tail = IBox(t)
 
-	val head = new UpdateableValue[T](h)
-	val tail = new UpdateableValue[IList[T]](t)
+	override def toList = head :: tail.toList
 
 	override def toString =
-		head() + " :: " + tail()
+		head.get + " :: " + tail.get
 }
 
 object IListElement {
@@ -26,12 +45,10 @@ object IListElement {
 		new IListElement[T](h,t)
 
 	def unapply[T](e : IListElement[T]) =
-		Some(e.head(), e.tail())
+		Some(e.head.get, e.tail.get)
 }
 
-case class IListEmpty[T]() extends IList[T] {
-	val isEmpty = true
-}
+
 
 
 

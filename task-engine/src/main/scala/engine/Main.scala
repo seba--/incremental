@@ -12,7 +12,7 @@ import scala.collection.mutable
 object Main {
 
 	def main(args : Array[String]): Unit = {
-		val l = new IListElement('a', new IListElement('b', new IListEmpty[Char]))
+		val l : IList[Char] = new IListElement('a', new IListElement('b', new IListEmpty[Char]))
 		val e0 = new Exp(RegExpTerminal, mutable.Seq('a'), mutable.Seq())
 		val e1 : Exp = new Exp(RegExpAlt, mutable.Seq(), mutable.Seq(
 			e0,
@@ -30,7 +30,7 @@ object Main {
 		println(t.result.get)
 
 		println("Update 2 ##########################################")
-		l.tail.get.asInstanceOf[IListElement[Char]].head := 'c'
+		l.tail.head <= 'c'
 		BottomUpUpdate.update(t)
 
 		println("task tree #########################################")
@@ -38,7 +38,7 @@ object Main {
 		println("> result = " + t.result.get)
 
 		println("Update 3 ##########################################")
-		l.tail := IListEmpty[Char]()
+		l.tail <= IListEmpty[Char]()
 		BottomUpUpdate.update(t)
 
 		println("task tree:")
@@ -66,7 +66,7 @@ object Main {
         hd - r
   }
 
-  def foo3(l: List[Int]) = foo3(0, l)
+  def foo3(l: List[Int]) : Int = foo3(0, l)
   def foo3(acc: Int, l: List[Int]): Int =  l match {
     case Nil => acc
     case hd::tl => acc + foo3(hd, tl)

@@ -21,15 +21,18 @@ class TaskListSize(val list : IList[_]) extends Task[Int](list){
 		list match {
 			case IListEmpty() =>
 				children.clear()
+				children
 			case IListElement(head, tail) if children.count == 1 && children(0).checkTask(classOf[TaskListSize], tail) =>
 				//do nothing
+				children
 			case IListElement(head, tail) =>
 				children.clear()
-				spawn(TaskListSizeFactory, tail)
+				children += new TaskListSize(tail)
+				children
 			case _ => super.internalTraverse
 		}
 
-		children
+
 	}
 
 	override protected def internalRecompute() : Unit = {
@@ -37,9 +40,9 @@ class TaskListSize(val list : IList[_]) extends Task[Int](list){
 
 		list match {
 			case IListEmpty() =>
-				result := 0
+				result <= 0
 			case IListElement(head, tail) =>
-				result := children(0).result.get.asInstanceOf[Int] + 1
+				result <= children(0).result.get.asInstanceOf[Int] + 1
 			case _ => super.internalRecompute
 		}
 
@@ -54,13 +57,4 @@ class TaskListSize(val list : IList[_]) extends Task[Int](list){
 
 
 }
-
-object TaskListSizeFactory extends TaskFactory[Int] {
-	override def create(params: Data*): Task[Int] = {
-		if (params.size != 1)
-			throw new IllegalArgumentException("List.size needs 1 parameter, got " + params)
-		new TaskListSize(params(0).asInstanceOf[IList[_]])
-	}
-}
-
 
