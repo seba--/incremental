@@ -1,5 +1,5 @@
 package incremental
-import incremental.FJava.*
+
 /**
  * Created by seba on 13/11/14.
  */
@@ -12,10 +12,6 @@ import scala.language.implicitConversions
 trait TypCompanion[T <: Typ[T]] extends Serializable {
   type TError = String
   type TSubst = Map[Symbol, T]
-  type Name = String
-  type Type = Name
-  //type Argument = Field
-  type Parameter = Name
 }
 
 object TypCompanion {
@@ -45,19 +41,13 @@ trait SType[T] extends Typ[T] {
 trait Type extends UType[Type]
 object Type {
   implicit object Companion extends TypCompanion[Type]
-}
 
-trait Name extends Type with UType[Type]
-object Type {
-  implicit object Companion extends TypCompanion[Type]
-}
+  type TError = String
+  type TSubst = Map[Symbol, Type]
+  type Name = String
+  type Type = Name
+  type Argument = Field
+  type Parameter = Name
+  type Assignment = (Name, Name)
 
-trait Argument extends Name
-object Type {
-  implicit object Companion extends TypCompanion[Type]
-}
-
-trait TypeC extends Name
-object Type {
-  implicit object Companion extends TypCompanion[Type]
 }
