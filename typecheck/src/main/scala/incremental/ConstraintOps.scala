@@ -141,7 +141,8 @@ abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: Typ
 
   type Constraint
   type Requirements
-  type UVar <: Type  //TODO move this into the typcompanion
+  type UVar <: Type
+  //TODO move this into the typcompanion
   //subclasses may override this
   type Solution = (TSubst, NotYetSolvable, Unsolvable)
   type NotYetSolvable
@@ -149,17 +150,25 @@ abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: Typ
   type CSet <: CSetAlg[CSet]
 
 
-
   trait CSetAlg[CS] {
     def isSolved: Boolean
+
     def isSolvable: Boolean
+
     def solution: Solution
+
     def substitution: TSubst
+
     def notyet: NotYetSolvable
+
     def never: Unsolvable
+
     def ++(that: CS): CS
-    def + (that: Constraint): CS
+
+    def +(that: Constraint): CS
+
     def tryFinalize: CS
+
     def trySolve: CS
   }
 
@@ -173,6 +182,7 @@ abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: Typ
   trait GenBase {
     def freshUVar(): UVar
   }
+
   type Gen <: GenBase
 
   trait Instance {

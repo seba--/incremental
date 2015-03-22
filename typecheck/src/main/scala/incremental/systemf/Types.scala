@@ -1,8 +1,8 @@
 package incremental.systemf
 
-import incremental.Type.TSubst
-import incremental.{TypCompanion, UType, EqConstraint, Type}
-import incremental.Type.Companion._
+import incremental.{EqConstraint, Type}
+import incremental.ConstraintOps._
+import incremental.Type.Companion.TSubst
 
 /**
  * Created by seba on 13/11/14.

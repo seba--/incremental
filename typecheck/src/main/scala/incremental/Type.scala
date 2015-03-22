@@ -10,8 +10,9 @@ import scala.language.implicitConversions
 
 //implicits trick for per-type class instance common definitions
 trait TypCompanion[T <: Typ[T]] extends Serializable {
+
   type TError = String
-  type TSubst = Map[Symbol, T]
+  type TSubst = Map[Symbol, Type]
 }
 
 object TypCompanion {
@@ -39,15 +40,17 @@ trait SType[T] extends Typ[T] {
 
 //always define a type class instance together with its companion
 trait Type extends UType[Type]
-object Type {
-  implicit object Companion extends TypCompanion[Type]
 
-  type TError = String
-  type TSubst = Map[Symbol, Type]
+object ClassT {
+  implicit object Companion extends TypCompanion[Type]
   type Name = String
   type Type = Name
   type Argument = Field
   type Parameter = Name
   type Assignment = (Name, Name)
+}
+
+object Type {
+  implicit object Companion extends TypCompanion[Type]
 
 }

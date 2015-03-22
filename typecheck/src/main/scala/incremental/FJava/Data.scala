@@ -1,9 +1,10 @@
 package incremental
 
+import incremental.ClassT
 import incremental.Exp.Exp
-import incremental.Type.{Argument, Name}
+import incremental.FJava.Name
+import incremental.ClassT.{Name,Argument}
 import sun.security.krb5.internal.crypto.EType
-
 /**
  * Created by lirakuci on 3/2/15.
  */

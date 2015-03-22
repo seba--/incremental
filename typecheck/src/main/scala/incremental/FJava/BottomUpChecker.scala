@@ -1,5 +1,6 @@
 package incremental.FJava
 
+import incremental.ClassT.Name
 import incremental.ConstraintOps._
 import incremental.Exp.Exp
 import incremental.Exp._
