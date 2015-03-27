@@ -1,7 +1,7 @@
 package incremental
 
 import Exp._
-abstract class ExpKind(val arity: Int) extends Serializable {
+abstract class ExpKind extends Serializable {
   def unapplySeq(e: Exp_[_]): Option[Seq[Exp_[_]]] =
     if (e.kind == this)
       Some(e.kids.seq)
