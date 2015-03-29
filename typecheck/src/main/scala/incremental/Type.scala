@@ -42,10 +42,8 @@ trait SType[T] extends Typ[T] {
 trait Type extends UType[Type]
 
 object ClassT {
-  implicit object Companion extends TypCompanion[Type]
   type Name = String
   type Type = Name
-  type Argument = Field
   type Parameter = Name
   type Assignment = (Name, Name)
 }

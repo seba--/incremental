@@ -103,5 +103,6 @@ object Exp {
     def apply(l1: Lit, l2: Lit, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(l1, l2), Seq(sub:_*))
     def apply(e: Exp, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(), e +: Seq(sub:_*))
     def apply(lits: Seq[Lit], sub: Seq[Exp]): Exp = new Exp_[Nothing](k, lits, sub)
+
   }
 }
