@@ -100,6 +100,8 @@ object Exp {
   class KindExpression(k: ExpKind) {
     def apply(): Exp = new Exp_[Nothing](k, Seq(), Seq())
     def apply(l: Lit, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(l), Seq(sub:_*))
+    def apply(e: Exp,l: Lit, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(l), e +: Seq(sub:_*))
+
     def apply(l1: Lit, l2: Lit, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(l1, l2), Seq(sub:_*))
     def apply(e: Exp, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(), e +: Seq(sub:_*))
     def apply(lits: Seq[Lit], sub: Seq[Exp]): Exp = new Exp_[Nothing](k, lits, sub)
