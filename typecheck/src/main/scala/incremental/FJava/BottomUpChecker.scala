@@ -22,10 +22,7 @@ class Fields(fname: Symbol, val fType: Type)
 
 class Methods(val mtype: Type, mname: Name, margs: List[Parameter])
 
-class ClassDecl(cName: Symbol, cSuper: Symbol, cFld: List[Fields], cMethods: List[Methods]) {
-
-  //val cFields = cFld
-}
+class ClassDecl(cName: Symbol, cSuper: Symbol, cFld: List[Fields], cMethods: List[Methods])
 
 class BottomUpChecker extends TypeChecker[Type] {
   val constraint = new ConstraintOps
@@ -91,24 +88,6 @@ class BottomUpChecker extends TypeChecker[Type] {
   }
     def typecheckStep(e: Exp_[Result]): Result = e.kind match{
 
-      case Sub =>
-        val t1 = e.lits(0).asInstanceOf[Symbol]
-        val t2 = e.lits(0).asInstanceOf[Symbol]
-        val ct = new ClassDecl(t1, t2, List(), List())
-        (null, Map(),Map(t1 -> ct), emptySol)
-
-//      case Fields =>
-//        val c = e.lits(0).asInstanceOf[Symbol]
-//        val u = e.lits(1).asInstanceOf[Symbol]
-//        val (t1, reqs1, creqs1, subsol1) = e.kids(0).typ
-//        val (t2, reqs2, creqs2, subsol2) = e.kids(1).typ
-//        val ct = new ClassDecl(t1, t2, List(), List())
-//        creqs1.get(t1) match {
-//          case None => (t1, reqs1 ++ reqs2, creqs2 + (t1 -> ct),  subsol1 +++ subsol2)
-//          case Some(ctreq) =>
-//            (t1, reqs1 ++ reqs2, creqs1 ++ creqs2 + (t1 -> ct), subsol1 +++ subsol2)
-//        }
-
       case Var =>
         val x = e.lits(0).asInstanceOf[Symbol]
         val X = freshUVar()
@@ -117,16 +96,15 @@ class BottomUpChecker extends TypeChecker[Type] {
       case Field if (e.lits(0).isInstanceOf[Symbol]) =>
         val f = e.lits(0).asInstanceOf[Symbol]
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-//val e0 = t.asInstanceOf[Symbol]
+        //val e0 = t.asInstanceOf[Symbol]
         val U = freshUVar()
         val fld = new Fields(f,U)
         val ct = new ClassDecl(f, null, List(fld), List())
         (U, reqs, creqs + (f -> ct), subsol)
 
       case New =>
-        val e0 = e.lits(0).asInstanceOf[Symbol]
+        val c = e.lits(0).asInstanceOf[Symbol]
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-        val c = e0.asInstanceOf[Symbol]
         val U = freshUVar()
         val d = U.x
         (t, reqs, creqs ++ Subtype(c, d), subsol)
