@@ -7,6 +7,9 @@ import incremental.Exp.Exp
 import incremental.Exp._
 import incremental.Type
 import incremental._
+
+import scala.concurrent.SyncChannel
+
 //import incremental.systemf.{Var, TNum, Num, ConstraintOps}
 
 
@@ -52,6 +55,11 @@ class BottomUpChecker extends TypeChecker[Type] {
 
   type Result = (Type, Reqs, CReqs, Solution)
 
+
+  def Subtype(C: Symbol, D : Symbol) : CReqs = {
+    val cld = new ClassDecl(C, D, List(), List())
+    Map(C -> cld)
+  }
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
@@ -106,15 +114,22 @@ class BottomUpChecker extends TypeChecker[Type] {
         val X = freshUVar()
         (X, Map(x -> X), Map(), emptySol)
 
-      case Field  =>
+      case Field if (e.lits(0).isInstanceOf[Symbol]) =>
         val f = e.lits(0).asInstanceOf[Symbol]
         val (t, reqs, creqs, subsol) = e.kids(0).typ
+//val e0 = t.asInstanceOf[Symbol]
         val U = freshUVar()
-
-       val fld = new Fields(f,U)
-
+        val fld = new Fields(f,U)
         val ct = new ClassDecl(f, null, List(fld), List())
-        (t, reqs, creqs, subsol)
+        (U, reqs, creqs + (f -> ct), subsol)
+
+      case New =>
+        val e0 = e.lits(0).asInstanceOf[Symbol]
+        val (t, reqs, creqs, subsol) = e.kids(0).typ
+        val c = e0.asInstanceOf[Symbol]
+        val U = freshUVar()
+        val d = U.x
+        (t, reqs, creqs ++ Subtype(c, d), subsol)
 
 
     }
