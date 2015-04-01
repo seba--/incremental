@@ -108,8 +108,9 @@ class BottomUpChecker extends TypeChecker[Type] {
 
       case UCast =>
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-        val c = e.lits(0).asInstanceOf[CName]
-        (c, reqs, creqs ++ Subtype(t, c), subsol)
+        val c = e.lits(0).asInstanceOf[Type]
+        val sol = solve(NotEqConstraint(t,c))
+        (c, reqs, creqs ++ Subtype(t, c), subsol ++ sol)
 
 
 

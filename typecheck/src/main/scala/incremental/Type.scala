@@ -31,6 +31,7 @@ trait UType[T] extends Typ[T] {
   def normalize: T
   def unify(other: T, s: Map[Symbol, T]): Solution
   def unify(other: T): Solution = unify(other, Map())
+  def notUnify(other: T): Solution = notUnify(other)
 }
 
 //Type class for types with groundness test

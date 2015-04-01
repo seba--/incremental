@@ -8,10 +8,11 @@ import incremental.EqConstraint
 import incremental.Type
 import incremental.Type
 import incremental.Type
+import incremental.Type.Companion._
 import incremental.Util
 import incremental._
 
-
+import incremental.Constraint
 class ConstraintOps extends Serializable {
   incremental.ConstraintOps.constraintCount = 0
   incremental.ConstraintOps.constraintSolveTime = 0
@@ -20,6 +21,13 @@ class ConstraintOps extends Serializable {
   def constraintCount = incremental.ConstraintOps.constraintCount
   def constraintSolveTime = incremental.ConstraintOps.constraintSolveTime
   def mergeSolutionTime = incremental.ConstraintOps.mergeSolutionTime
+
+
+  case class NotEqConstraint(expected: Type, actual: Type) extends Constraint {
+    def solve(s: Solution) = expected.notUnify(actual)
+    def finalize(s: Solution) = solve(s)
+    def subst(s: TSubst) = EqConstraint(expected.subst(s), actual.subst(s))
+  }
 
   private var _nextId = 0
   def freshUVar(): UVar = {

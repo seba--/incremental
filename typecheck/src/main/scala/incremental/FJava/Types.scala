@@ -9,10 +9,9 @@ import incremental.Type.Companion.TSubst
 case class CName(x: Symbol) extends Type {
   def freeTVars = Set()
   def normalize = this
-  def occurs(x: Symbol) = false
+  def occurs(x2: Symbol) = x == x2
 
   def subst(s : TSubst) = this
-
   def unify(other: Type, s: TSubst) = other match {
     case UVar(_) => other.unify(this, s)
  }

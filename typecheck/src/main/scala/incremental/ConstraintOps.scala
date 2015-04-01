@@ -135,6 +135,7 @@ case class EqConstraint(expected: Type, actual: Type) extends Constraint {
   def subst(s: TSubst) = EqConstraint(expected.subst(s), actual.subst(s))
 }
 
+
 abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
   final type TSubst = definitions.TSubst
   final type TError = definitions.TError
