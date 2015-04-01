@@ -1,16 +1,10 @@
 package incremental.FJava
 
-import incremental.FJava
 import incremental.ClassT._
 import incremental.ConstraintOps._
 import incremental.Exp.Exp
-import incremental.Exp._
 import incremental.Type
 import incremental._
-
-import scala.concurrent.SyncChannel
-
-//import incremental.systemf.{Var, TNum, Num, ConstraintOps}
 
 
 /**
@@ -53,16 +47,21 @@ class BottomUpChecker extends TypeChecker[Type] {
   type Result = (Type, Reqs, CReqs, Solution)
 
 
-  def Subtype(C: Symbol, D : Symbol) : CReqs = {
-    val cld = new ClassDecl(C, D, List(), List())
-    Map(C -> cld)
+  def Subtype(C: Type, D : Type) : CReqs = {
+    val cld = new ClassDecl(C.asInstanceOf[CName].x, D.asInstanceOf[CName].x, List(), List())
+    Map(C.asInstanceOf[CName].x -> cld)
+  }
+
+  def getX(t : Type,reqs : Reqs) : Symbol = {
+    val xs = reqs.keysIterator
+    var x : Symbol = xs.next()
+      reqs.get(x) match {
+      case t => x
+    }
   }
 
   def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
-
-    //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
-    //    preparationTime += ptime
 
     val (res, ctime) = Util.timed {
       root.visitUninitialized { e =>
@@ -86,7 +85,7 @@ class BottomUpChecker extends TypeChecker[Type] {
     typecheckTime += ctime
     res
   }
-    def typecheckStep(e: Exp_[Result]): Result = e.kind match{
+    def typecheckStep(e: Exp_[Result]): Result = e.kind match {
 
       case Var =>
         val x = e.lits(0).asInstanceOf[Symbol]
@@ -96,18 +95,22 @@ class BottomUpChecker extends TypeChecker[Type] {
       case Field if (e.lits(0).isInstanceOf[Symbol]) =>
         val f = e.lits(0).asInstanceOf[Symbol]
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-        //val e0 = t.asInstanceOf[Symbol]
+        val e0 = getX(t, reqs)
         val U = freshUVar()
-        val fld = new Fields(f,U)
-        val ct = new ClassDecl(f, null, List(fld), List())
-        (U, reqs, creqs + (f -> ct), subsol)
+        val fld = new Fields(f, U)
+        val ct = new ClassDecl(e0, null, List(fld), List())
+        (U, reqs, creqs + (e0 -> ct), subsol)
 
       case New =>
-        val c = e.lits(0).asInstanceOf[Symbol]
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-        val U = freshUVar()
-        val d = U.x
-        (t, reqs, creqs ++ Subtype(c, d), subsol)
+        val c = e.lits(0).asInstanceOf[Type]
+        (c, reqs, creqs, subsol)
+
+      case UCast =>
+        val (t, reqs, creqs, subsol) = e.kids(0).typ
+        val c = e.lits(0).asInstanceOf[CName]
+        (c, reqs, creqs ++ Subtype(t, c), subsol)
+
 
 
     }
