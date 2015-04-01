@@ -1,7 +1,8 @@
 package incremental
 
 import Exp._
-abstract class ExpKind extends Serializable {
+
+abstract class ExpKind(syntax: SyntaxChecker = IgnoreSyntax) extends Serializable {
   def unapplySeq(e: Exp_[_]): Option[Seq[Exp_[_]]] =
     if (e.kind == this)
       Some(e.kids.seq)
@@ -104,4 +105,29 @@ object Exp {
     def apply(e: Exp, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(), e +: Seq(sub:_*))
     def apply(lits: Seq[Lit], sub: Seq[Exp]): Exp = new Exp_[Nothing](k, lits, sub)
   }
+}
+
+abstract class SyntaxChecker {
+  def apply(lits: Seq[Lit], kids: Seq[Exp]): Option[String]
+}
+
+object IgnoreSyntax extends SyntaxChecker {
+  def apply(lits: Seq[Lit], kids: Seq[Exp]) = None
+}
+
+case class Syntax(kidsLength: Int, litTypes: java.lang.Class[_]*) extends SyntaxChecker {
+  def apply(lits: Seq[Lit], kids: Seq[Exp]): Option[String] = {
+    if (kids.size != kidsLength)
+      return Some(s"Expected $kidsLength subexpressions but found ${kids.size} subexpressions")
+
+    if (lits.size != litTypes.size)
+      return Some(s"Expected ${litTypes.size} literals but found ${lits.size} literals")
+
+    for (i <- 0 until lits.size)
+      if (!litTypes(i).isAssignableFrom(lits(i).getClass))
+        return Some(s"Expected literal of type ${litTypes(i)} at position $i but found ${lits(i).getClass}")
+
+    None
+  }
+
 }
