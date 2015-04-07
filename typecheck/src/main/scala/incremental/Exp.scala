@@ -2,7 +2,7 @@ package incremental
 
 import Exp._
 
-abstract class ExpKind(syntax: SyntaxChecker = IgnoreSyntax) extends Serializable {
+abstract class ExpKind(val syntaxcheck: ExpKind => SyntaxChecker = Exp.ignore) extends Serializable {
   def unapplySeq(e: Exp_[_]): Option[Seq[Exp_[_]]] =
     if (e.kind == this)
       Some(e.kids.seq)
@@ -11,6 +11,8 @@ abstract class ExpKind(syntax: SyntaxChecker = IgnoreSyntax) extends Serializabl
 }
 
 class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) extends Serializable {
+  kind.syntaxcheck(kind).check(lits, kidsArg)
+
   private var _typ: T = _
   private var _valid = false
 
@@ -94,41 +96,59 @@ class Exp_[T](val kind: ExpKind, val lits: Seq[Lit], kidsArg: Seq[Exp_[T]]) exte
 
 object Exp {
   type Lit = Any
-  type Exp = Exp_[Nothing]
+  type Exp = Exp_[Any]
 
   import scala.language.implicitConversions
   implicit def kindExpression(k: ExpKind) = new KindExpression(k)
   class KindExpression(k: ExpKind) {
-    def apply(): Exp = new Exp_[Nothing](k, Seq(), Seq())
-    def apply(l: Lit, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(l), Seq(sub:_*))
-    def apply(l1: Lit, l2: Lit, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(l1, l2), Seq(sub:_*))
-    def apply(e: Exp, sub: Exp*): Exp = new Exp_[Nothing](k, scala.Seq(), e +: Seq(sub:_*))
-    def apply(lits: Seq[Lit], sub: Seq[Exp]): Exp = new Exp_[Nothing](k, lits, sub)
+    def apply(): Exp = new Exp_[Any](k, Seq(), Seq())
+    def apply(l: Lit, sub: Exp*): Exp = new Exp_[Any](k, scala.Seq(l), Seq(sub:_*))
+    def apply(l1: Lit, l2: Lit, sub: Exp*): Exp = new Exp_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
+    def apply(e: Exp, sub: Exp*): Exp = new Exp_[Any](k, scala.Seq(), e +: Seq(sub:_*))
+    def apply(lits: Seq[Lit], sub: Seq[Exp]): Exp = new Exp_[Any](k, lits, sub)
+  }
+  
+  val ignore = (k: ExpKind) => new IgnoreSyntax(k)
+  def simple(kidsLength: Int, litTypes: java.lang.Class[_]*) = (k: ExpKind) => new SimpleSyntax(k, kidsLength, Seq(litTypes:_*))
+
+  implicit def makeSyntaxCheckOps(f: ExpKind => SyntaxChecker) = new SyntaxCheckOps(f)
+  class SyntaxCheckOps(f: ExpKind => SyntaxChecker) {
+    def orElse(g: ExpKind => SyntaxChecker) = (k: ExpKind) => new AlternativeSyntax(k, f, g)
   }
 }
 
-abstract class SyntaxChecker {
-  type ErrorOption = Option[String]
-  def apply(lits: Seq[Lit], kids: Seq[Exp]): ErrorOption
+abstract class SyntaxChecker(k: ExpKind) {
+  class SyntaxError(val k: ExpKind, val msg: String) extends IllegalArgumentException(msg) {
+    override def getMessage(): String = s"Syntax error in $k node: $msg"
+  }
+  def error(msg: String) = throw new SyntaxError(k, msg)
+  def check[T](lits: Seq[Lit], kids: Seq[Exp_[T]])
 }
 
-object IgnoreSyntax extends SyntaxChecker {
-  def apply(lits: Seq[Lit], kids: Seq[Exp]) = None
+class IgnoreSyntax(k: ExpKind) extends SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Exp_[T]]) = {}
 }
 
-case class Syntax(kidsLength: Int, litTypes: java.lang.Class[_]*) extends SyntaxChecker {
-  def apply(lits: Seq[Lit], kids: Seq[Exp]): ErrorOption = {
+case class SimpleSyntax(k: ExpKind, kidsLength: Int, litTypes: Seq[java.lang.Class[_]]) extends SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Exp_[T]]) {
     if (kids.size != kidsLength)
-      return Some(s"Expected $kidsLength subexpressions but found ${kids.size} subexpressions")
+      error(s"Expected $kidsLength subexpressions but found ${kids.size} subexpressions")
 
     if (lits.size != litTypes.size)
-      return Some(s"Expected ${litTypes.size} literals but found ${lits.size} literals")
+      error(s"Expected ${litTypes.size} literals but found ${lits.size} literals")
 
     for (i <- 0 until lits.size)
-      if (!litTypes(i).isAssignableFrom(lits(i).getClass))
-        return Some(s"Expected literal of type ${litTypes(i)} at position $i but found ${lits(i).getClass}")
-
-    None
+      if (!litTypes(i).isInstance(lits(i)))
+        error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
   }
+}
 
+case class AlternativeSyntax(k: ExpKind, f: ExpKind => SyntaxChecker, g: ExpKind => SyntaxChecker) extends SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Exp_[T]]): Unit = {
+    try { f(k).check(lits, kids) } catch {
+      case e1: SyntaxError => try {g(k).check(lits, kids)} catch {
+        case e2: SyntaxError => error(s"Alternative syntax failed \n\t${e1.msg}\nor\n\t${e2.msg})")
+      }
+    }
+  }
 }

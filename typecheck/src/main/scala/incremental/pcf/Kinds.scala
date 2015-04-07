@@ -1,16 +1,18 @@
 package incremental.pcf
 
-import incremental.{Syntax, ExpKind}
+import incremental.Exp._
+import incremental.Type
+import incremental.{SimpleSyntax, ExpKind}
 
 /**
  * Created by seba on 13/11/14.
  */
 
-case object Num extends ExpKind(Syntax(0))
-case object Add extends ExpKind(Syntax(2))
-case object Mul extends ExpKind(Syntax(2))
-case object Var extends ExpKind(Syntax(0, Symbol.getClass))
-case object Abs extends ExpKind(Syntax(1, Symbol.getClass))
-case object App extends ExpKind(Syntax(2))
-case object If0 extends ExpKind(Syntax(3))
-case object Fix extends ExpKind(Syntax(1))
+case object Num extends ExpKind(simple(0, classOf[Integer]))
+case object Add extends ExpKind(simple(2))
+case object Mul extends ExpKind(simple(2))
+case object Var extends ExpKind(simple(0, classOf[Symbol]))
+case object Abs extends ExpKind(simple(1, classOf[Symbol]) orElse simple(1, classOf[Symbol], classOf[Type]))
+case object App extends ExpKind(simple(2))
+case object If0 extends ExpKind(simple(3))
+case object Fix extends ExpKind(simple(1))
