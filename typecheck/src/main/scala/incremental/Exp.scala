@@ -108,7 +108,8 @@ object Exp {
 }
 
 abstract class SyntaxChecker {
-  def apply(lits: Seq[Lit], kids: Seq[Exp]): Option[String]
+  type ErrorOption = Option[String]
+  def apply(lits: Seq[Lit], kids: Seq[Exp]): ErrorOption
 }
 
 object IgnoreSyntax extends SyntaxChecker {
@@ -116,7 +117,7 @@ object IgnoreSyntax extends SyntaxChecker {
 }
 
 case class Syntax(kidsLength: Int, litTypes: java.lang.Class[_]*) extends SyntaxChecker {
-  def apply(lits: Seq[Lit], kids: Seq[Exp]): Option[String] = {
+  def apply(lits: Seq[Lit], kids: Seq[Exp]): ErrorOption = {
     if (kids.size != kidsLength)
       return Some(s"Expected $kidsLength subexpressions but found ${kids.size} subexpressions")
 
