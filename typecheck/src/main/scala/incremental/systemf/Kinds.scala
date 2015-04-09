@@ -1,7 +1,7 @@
 package incremental.systemf
 
 import incremental.Exp._
-import incremental.Type
+import incremental.Typ
 import incremental.{SimpleSyntax, ExpKind}
 
 /**
@@ -12,7 +12,7 @@ case object Num  extends ExpKind(simple(0, classOf[Integer]))
 case object Add  extends ExpKind(simple(2))
 case object Mul  extends ExpKind(simple(2))
 case object Var  extends ExpKind(simple(0, classOf[Symbol]))
-case object Abs  extends ExpKind(simple(1, classOf[Symbol]) orElse simple(1, classOf[Symbol], classOf[Type]))
+case object Abs  extends ExpKind(simple(1, classOf[Symbol]) orElse simple(1, classOf[Symbol], classOf[Typ[_]]))
 case object TAbs extends ExpKind(simple(1, classOf[Symbol]))
 case object App  extends ExpKind(simple(2))
 case object TApp extends ExpKind(simple(1, classOf[Type]))

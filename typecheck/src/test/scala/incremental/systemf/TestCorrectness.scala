@@ -63,7 +63,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
 
   typecheckTestError("\\x.y", Abs('x, Var('y)))
 
-  typecheckTestError("\\x: a . x", TAbs('x, TVar('a), Var('x)))
+  typecheckTestError("\\x: a . x", Abs('x, TVar('a), Var('x)))
 
   typecheckTest("\\a. \\x : a. x", TAbs('a, Abs('x, TVar('a), Var('x))))(TUniv('a, TFun(TVar('a), TVar('a))))
   typecheckTestError("\\a. \\x : a. x + x", TAbs('a, Abs('x, TVar('a), Add(Var('x), Var('x)))))
