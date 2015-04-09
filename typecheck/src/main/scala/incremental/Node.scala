@@ -2,7 +2,7 @@ package incremental
 
 import Node._
 
-abstract class NodeKind(val syntaxcheck: NodeKind => SyntaxChecking.SyntaxChecker = Node.ignore) extends Serializable {
+abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck = Node.ignore) extends Serializable {
   def unapplySeq(e: Node_[_]): Option[Seq[Node_[_]]] =
     if (e.kind == this)
       Some(e.kids.seq)
@@ -111,10 +111,11 @@ object Node {
   val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)
   def simple[K <: NodeKind](kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
   def simple[K <: NodeKind](litTypes: Seq[Class[_]], kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
-  implicit def makeSyntaxCheckOps(f: NodeKind => SyntaxChecking.SyntaxChecker) = new SyntaxChecking.SyntaxCheckOps(f)
+  implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 
 object SyntaxChecking {
+  type SyntaxCheck = NodeKind => SyntaxChecker
 
   abstract class SyntaxChecker(k: NodeKind) {
     class SyntaxError(val k: NodeKind, val msg: String) extends IllegalArgumentException(msg) {

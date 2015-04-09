@@ -7,7 +7,7 @@ import incremental.{SyntaxChecking, NodeKind, Typ}
  * Created by seba on 13/11/14.
  */
 
-abstract class Exp(syntaxcheck: NodeKind => SyntaxChecking.SyntaxChecker) extends NodeKind(syntaxcheck)
+abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 object Exp {
   val cExp = classOf[Exp]
 }
