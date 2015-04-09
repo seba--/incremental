@@ -1,7 +1,7 @@
 package incremental.pcf.with_subtyping
 
 import incremental.pcf._
-import incremental.Exp._
+import incremental.Node._
 import incremental.{Util, TypeChecker, TypeCheckerFactory}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import TypeOps._

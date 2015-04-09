@@ -1,7 +1,7 @@
 package incremental.systemf
 import incremental.ConstraintOps._
-import incremental.Exp.Exp
-import incremental.Exp._
+import incremental.Node.Exp
+import incremental.Node._
 import incremental.Type.Companion._
 import incremental._
 
@@ -41,7 +41,7 @@ class DownUpChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheck(e: Exp_[Result], ctx: TSubst, tctx: Set[Symbol]): Result = e.kind match {
+  def typecheck(e: Node_[Result], ctx: TSubst, tctx: Set[Symbol]): Result = e.kind match {
     case Num => (TNum, emptySol)
     case k if k == Add || k == Mul =>
       val (t1, sol1) = typecheck(e.kids(0), ctx, tctx)

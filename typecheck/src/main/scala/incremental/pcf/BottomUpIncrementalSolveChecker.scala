@@ -1,9 +1,9 @@
 package incremental.pcf
 
 import incremental.ConstraintOps._
-import incremental.Exp.Exp
+import incremental.Node.Exp
 import incremental.Type.Companion._
-import incremental.Exp._
+import incremental.Node._
 import incremental._
 
 /**
@@ -52,7 +52,7 @@ class BottomUpIncrementalSolveChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheckStep(e: Exp_[Result]): Result = e.kind match {
+  def typecheckStep(e: Node_[Result]): Result = e.kind match {
     case Num => (TNum, Map(), emptySol)
     case op if op == Add || op == Mul =>
       val (t1, reqs1, sol1) = e.kids(0).typ

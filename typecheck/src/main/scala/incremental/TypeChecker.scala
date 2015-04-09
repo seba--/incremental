@@ -1,6 +1,6 @@
 package incremental
 
-import incremental.Exp.Exp
+import incremental.Node.Exp
 
 /**
  * Created by seba on 13/11/14.

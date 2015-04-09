@@ -6,7 +6,7 @@ import org.scalameter.api._
 import benchmark.ExpGenerator._
 
 import incremental.pcf._
-import incremental.Exp._
+import incremental.Node._
 
 abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)

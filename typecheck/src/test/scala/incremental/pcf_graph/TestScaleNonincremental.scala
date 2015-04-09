@@ -1,8 +1,8 @@
 package incremental.pcf_graph
 
 import benchmark.ExpGenerator
-import incremental.Exp.Exp
-import incremental.Exp._
+import incremental.Node.Exp
+import incremental.Node._
 import incremental._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import ExpGenerator._
@@ -32,11 +32,11 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
       assertResult(Left(expected))(actual)
     }
 
-  def scaleTests(heights: Set[Int], kind: ExpKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Exp) => Exp = (_,e) => e)(expected: Int => Type) =
+  def scaleTests(heights: Set[Int], kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Exp) => Exp = (_,e) => e)(expected: Int => Type) =
     for (h <- heights)
       scaleTest(h, kind, leaveMaker, sharing, leaveDesc, wrap)(expected)
 
-  def scaleTest(height: Int, kind: ExpKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Exp) => Exp = (_,e) => e)(expected: Int => Type) =
+  def scaleTest(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Exp) => Exp = (_,e) => e)(expected: Int => Type) =
     typecheckTest(
       s"${if(sharing) "shared" else "non-shared"} $kind-tree(h=$height)${if(leaveDesc.isEmpty)"" else " with leaves " + leaveDesc}",
       wrap(height, makeBinTree(height, kind, leaveMaker, sharing)))(expected(height))

@@ -1,16 +1,16 @@
 package incremental.pcf_graph
 
-import incremental.ExpKind
+import incremental.NodeKind
 
 /**
  * Created by seba on 13/11/14.
  */
 
-case object Num extends ExpKind
-case object Add extends ExpKind
-case object Mul extends ExpKind
-case object Var extends ExpKind
-case object Abs extends ExpKind
-case object App extends ExpKind
-case object If0 extends ExpKind
-case object Fix extends ExpKind
+case object Num extends NodeKind
+case object Add extends NodeKind
+case object Mul extends NodeKind
+case object Var extends NodeKind
+case object Abs extends NodeKind
+case object App extends NodeKind
+case object If0 extends NodeKind
+case object Fix extends NodeKind

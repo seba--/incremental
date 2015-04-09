@@ -1,8 +1,8 @@
 package benchmark
 
-import incremental.Exp._
+import incremental.Node._
 import incremental.pcf.TFun
-import incremental.{ExpKind, Type}
+import incremental.{NodeKind, Type}
 
 /**
  * Created by seba on 05/11/14.
@@ -29,7 +29,7 @@ object ExpGenerator {
     maker
   }
 
-  def makeBinTree(height: Int, kind: ExpKind, leaveMaker: LeaveMaker, sharing: Boolean = false): Exp = {
+  def makeBinTree(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false): Exp = {
     val leaveCount = Math.pow(2, height-1).toInt
     val ts = Array.ofDim[Exp](leaveCount)
     leaveMaker.reset()

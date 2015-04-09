@@ -6,7 +6,7 @@ import org.scalameter.api._
 import benchmark.ExpGenerator._
 
 import incremental.pcf._
-import incremental.Exp._
+import incremental.Node._
 
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
 

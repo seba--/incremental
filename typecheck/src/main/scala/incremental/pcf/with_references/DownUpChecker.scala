@@ -10,7 +10,7 @@ import incremental._
 trait DownUpChecker extends pcf.DownUpChecker {
   import constraint._
 
-  override def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
+  override def typecheck(e: Node_[Result], ctx: TSubst): Result = e.kind match {
     case Ref =>
       val (t, subsol) = typecheck(e.kids(0), ctx)
       (TRef(t), subsol)

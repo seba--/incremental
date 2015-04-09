@@ -1,6 +1,6 @@
 package incremental.pcf.with_references
 
-import incremental.Exp._
+import incremental.Node._
 import incremental.pcf._
 import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}

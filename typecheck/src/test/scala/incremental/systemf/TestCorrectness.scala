@@ -1,6 +1,6 @@
 package incremental.systemf
 
-import incremental.Exp._
+import incremental.Node._
 import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import incremental.systemf._

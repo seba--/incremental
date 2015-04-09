@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import incremental.Exp._
+import incremental.Node._
 import incremental._
 
 /**

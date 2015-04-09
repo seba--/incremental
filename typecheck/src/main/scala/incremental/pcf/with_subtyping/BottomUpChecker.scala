@@ -1,7 +1,7 @@
 package incremental.pcf.with_subtyping
 
 
-import incremental.Exp.Exp
+import incremental.Node.Exp
 import incremental.pcf._
 import incremental.{Type => _, _}
 import incremental.pcf.with_subtyping.Type.Companion
@@ -56,7 +56,7 @@ class BottomUpChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheckStep(e: Exp_[Result]): Result = e.kind match {
+  def typecheckStep(e: Node_[Result]): Result = e.kind match {
     case Num =>
       (TNum, Map(), emptyCSet)
     case op if op == Add || op == Mul =>
