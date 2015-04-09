@@ -21,8 +21,8 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
   }
 
-  def incTypecheckTest(desc: String, e: =>Exp)(expected: Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
-  def incTypecheckTest(desc: String, e: =>Exp, mod: =>Unit)(expected: Type)(consCount: Int): Unit =
+  def incTypecheckTest(desc: String, e: =>Node)(expected: Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
+  def incTypecheckTest(desc: String, e: =>Node, mod: =>Unit)(expected: Type)(consCount: Int): Unit =
     test (s"$classdesc: Type check $desc") {
       val Unit = mod
       val actual = checker.typecheck(e)
@@ -30,7 +30,7 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
       assertResult(consCount, "solved constraint(s)")(checker.constraintCount)
     }
 
-  def typecheckTestError(e: =>Exp) =
+  def typecheckTestError(e: =>Node) =
     test (s"$classdesc: Type check $e") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")

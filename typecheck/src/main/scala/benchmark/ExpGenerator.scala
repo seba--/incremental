@@ -10,16 +10,16 @@ import incremental.{NodeKind, Type}
 object ExpGenerator {
   trait LeaveMaker {
     def reset()
-    def next(): Exp
+    def next(): Node
   }
-  def constantLeaveMaker(c: => Exp): LeaveMaker = new LeaveMaker {
-    override def next(): Exp = c
+  def constantLeaveMaker(c: => Node): LeaveMaker = new LeaveMaker {
+    override def next(): Node = c
     override def reset(): Unit = {}
   }
-  def stateLeaveMaker[T](stateInit: T, stateUpdate: T => T, treeMaker: T => Exp): LeaveMaker = {
+  def stateLeaveMaker[T](stateInit: T, stateUpdate: T => T, treeMaker: T => Node): LeaveMaker = {
     object maker extends LeaveMaker {
       var state: T = stateInit
-      override def next(): Exp = {
+      override def next(): Node = {
         val t = treeMaker(state)
         state = stateUpdate(state)
         t
@@ -29,9 +29,9 @@ object ExpGenerator {
     maker
   }
 
-  def makeBinTree(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false): Exp = {
+  def makeBinTree(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false): Node = {
     val leaveCount = Math.pow(2, height-1).toInt
-    val ts = Array.ofDim[Exp](leaveCount)
+    val ts = Array.ofDim[Node](leaveCount)
     leaveMaker.reset()
 
     for (i <- 0 until leaveCount)

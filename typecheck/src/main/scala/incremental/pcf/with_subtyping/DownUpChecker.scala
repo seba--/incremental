@@ -1,6 +1,6 @@
 package incremental.pcf.with_subtyping
 
-import incremental.Node.Exp
+import incremental.Node.Node
 import TypeOps._
 import Type.Companion._
 import incremental.pcf._
@@ -27,7 +27,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
   type Result = (Type, CSet)
 
-  def typecheck(e: Exp): Either[Type, TError] = {
+  def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
     val (res, ctime) = Util.timed(
       try {

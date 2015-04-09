@@ -1,7 +1,7 @@
 package incremental.pcf_graph
 
 import incremental.ConstraintOps._
-import incremental.Node.Exp
+import incremental.Node.Node
 import incremental.Node._
 import incremental.Type.Companion._
 import incremental._
@@ -23,7 +23,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
   type Result = (Type, Solution)
 
-  def typecheck(e: Exp): Either[Type, TError] = {
+  def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
     val (res, ctime) = Util.timed(
       try {

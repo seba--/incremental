@@ -13,19 +13,19 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
-  def measureCheckers(trees: Gen[Exp]): Unit = {
-    measureT("DownUp", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUpSolveEnd", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUpIncrementalSolve", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUpEagerSubst", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT(s"BottomUpSometimesEagerSubst-10", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
+  def measureCheckers(trees: Gen[Node]): Unit = {
+    measureT("DownUp", (e:Node) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BottomUpSolveEnd", (e:Node) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BottomUpIncrementalSolve", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BottomUpEagerSubst", (e:Node) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT(s"BottomUpSometimesEagerSubst-10", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
 
 //    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
 //    val tupled = Gen.tupled(trees,thresholds)
 //    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
   }
 
-  def measureT(name: String, check: Exp => _)(trees: Gen[Exp]): Unit = {
+  def measureT(name: String, check: Node => _)(trees: Gen[Node]): Unit = {
     measure method (name) in {
       using(trees).
       setUp { _.invalidate }.
@@ -46,7 +46,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   /* ADD */
 
   performance of "Tree{Add,[1..n]}" in {
-    val trees: Gen[Exp] = for {
+    val trees: Gen[Node] = for {
       height <- heights
     } yield makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
 
@@ -54,7 +54,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   }
 
   performance of "Abs{x,Tree{Add,[x..x]}}" in {
-    val trees: Gen[Exp] = for {
+    val trees: Gen[Node] = for {
       height <- heights
     } yield Abs('x, makeBinTree(height, Add, constantLeaveMaker(Var('x))))
 
@@ -62,7 +62,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   }
 
   performance of "Abs{x,Tree{Add,[x1..xn]}}" in {
-    val trees: Gen[Exp] = for {
+    val trees: Gen[Node] = for {
       height <- heights
     } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
 
@@ -75,7 +75,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   /* APP */
 
   performance of "Tree{App,[1..n]}" in {
-    val trees: Gen[Exp] = for {
+    val trees: Gen[Node] = for {
       height <- heights
     } yield makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
 
@@ -83,7 +83,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   }
 
   performance of "Abs{x,Tree{App,[x..x]}}" in {
-    val trees: Gen[Exp] = for {
+    val trees: Gen[Node] = for {
       height <- heights
     } yield Abs('x, makeBinTree(height, App, constantLeaveMaker(Var('x))))
 
@@ -91,7 +91,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   }
 
   performance of "Abs{x,Tree{App,[x1..xn]}}" in {
-    val trees: Gen[Exp] = for {
+    val trees: Gen[Node] = for {
       height <- heights
     } yield Abs(usedVars(height), makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
 

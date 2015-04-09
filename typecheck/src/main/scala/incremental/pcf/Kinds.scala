@@ -2,17 +2,24 @@ package incremental.pcf
 
 import incremental.Node._
 import incremental.NodeKind
+import incremental.SyntaxChecking
 import incremental.Typ
 
 /**
  * Created by seba on 13/11/14.
  */
 
-case object Num extends NodeKind(simple(0, classOf[Integer]))
-case object Add extends NodeKind(simple(2))
-case object Mul extends NodeKind(simple(2))
-case object Var extends NodeKind(simple(0, classOf[Symbol]))
-case object Abs extends NodeKind(simple(1, classOf[Symbol]) orElse simple(1, classOf[Symbol], classOf[Typ[_]]))
-case object App extends NodeKind(simple(2))
-case object If0 extends NodeKind(simple(3))
-case object Fix extends NodeKind(simple(1))
+abstract class Exp(syntaxcheck: NodeKind => SyntaxChecking.SyntaxChecker) extends NodeKind(syntaxcheck)
+object Exp {
+  val cExp = classOf[Exp]
+}
+import Exp._
+
+case object Num extends Exp(simple(Seq(classOf[Integer])))
+case object Add extends Exp(simple(cExp, cExp))
+case object Mul extends Exp(simple(cExp, cExp))
+case object Var extends Exp(simple(Seq(classOf[Symbol])))
+case object Abs extends Exp(simple(Seq(classOf[Symbol]), cExp) orElse simple(Seq(classOf[Symbol], classOf[Typ[_]]), cExp))
+case object App extends Exp(simple(cExp, cExp))
+case object If0 extends Exp(simple(cExp, cExp, cExp))
+case object Fix extends Exp(simple(cExp))

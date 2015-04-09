@@ -1,7 +1,7 @@
 package incremental.systemf
 
 import incremental.ConstraintOps._
-import incremental.Node.Exp
+import incremental.Node.Node
 import incremental.Type.Companion._
 import incremental.Node._
 import incremental._
@@ -28,7 +28,7 @@ class BottomUpChecker extends TypeChecker[Type] {
 
   type Result = (Type, Reqs, TReqs, Solution)
 
-  def typecheck(e: Exp): Either[Type, TError] = {
+  def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
 //    val (uninitialized, ptime) = Util.timed {root.uninitialized}

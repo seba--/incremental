@@ -1,7 +1,7 @@
 package incremental.pcf
 
 import benchmark.ExpGenerator
-import incremental.Node.Exp
+import incremental.Node.Node
 import incremental.Node._
 import incremental._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
@@ -26,17 +26,17 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
     Util.log(f"Merge sol time\t\t${checker.mergeSolutionTime}%.3fms")
   }
 
-  def typecheckTest(desc: String, e: => Exp)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: => Node)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
     }
 
-  def scaleTests(heights: Set[Int], kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Exp) => Exp = (_,e) => e)(expected: Int => Type) =
+  def scaleTests(heights: Set[Int], kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => Type) =
     for (h <- heights)
       scaleTest(h, kind, leaveMaker, sharing, leaveDesc, wrap)(expected)
 
-  def scaleTest(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Exp) => Exp = (_,e) => e)(expected: Int => Type) =
+  def scaleTest(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => Type) =
     typecheckTest(
       s"${if(sharing) "shared" else "non-shared"} $kind-tree(h=$height)${if(leaveDesc.isEmpty)"" else " with leaves " + leaveDesc}",
       wrap(height, makeBinTree(height, kind, leaveMaker, sharing)))(expected(height))

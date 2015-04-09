@@ -1,6 +1,6 @@
 package incremental
 
-import incremental.Node.Exp
+import incremental.Node.Node
 
 /**
  * Created by seba on 13/11/14.
@@ -9,7 +9,7 @@ abstract class TypeChecker[Type <: Typ[Type]](implicit val definitions: TypCompa
   final type TError = definitions.TError
   final type TSubst = definitions.TSubst
 
-  def typecheck(e: Exp): Either[Type, TError]
+  def typecheck(e: Node): Either[Type, TError]
 
   def preparationTime: Double
   def typecheckTime: Double

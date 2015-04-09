@@ -8,7 +8,7 @@ import incremental._
  */
 class BottomUpEagerSubstEarlyTermChecker extends BottomUpEagerSubstChecker {
 
-  override def typecheck(e: Exp): Either[Type, TError] = {
+  override def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
     //    val (uninitialized, ptime) = Util.timed {root.uninitialized}

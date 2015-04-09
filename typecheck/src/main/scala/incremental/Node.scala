@@ -96,21 +96,21 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
 
 object Node {
   type Lit = Any
-  type Exp = Node_[Any]
+  type Node = Node_[Any]
 
   import scala.language.implicitConversions
   implicit def kindExpression(k: NodeKind) = new KindExpression(k)
   class KindExpression(k: NodeKind) {
-    def apply(): Exp = new Node_[Any](k, Seq(), Seq())
-    def apply(l: Lit, sub: Exp*): Exp = new Node_[Any](k, scala.Seq(l), Seq(sub:_*))
-    def apply(l1: Lit, l2: Lit, sub: Exp*): Exp = new Node_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
-    def apply(e: Exp, sub: Exp*): Exp = new Node_[Any](k, scala.Seq(), e +: Seq(sub:_*))
-    def apply(lits: Seq[Lit], sub: Seq[Exp]): Exp = new Node_[Any](k, lits, sub)
+    def apply(): Node = new Node_[Any](k, Seq(), Seq())
+    def apply(l: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l), Seq(sub:_*))
+    def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
+    def apply(e: Node, sub: Node*): Node = new Node_[Any](k, scala.Seq(), e +: Seq(sub:_*))
+    def apply(lits: Seq[Lit], sub: Seq[Node]): Node = new Node_[Any](k, lits, sub)
   }
   
   val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)
-  def simple(kidsLength: Int, litTypes: Class[_]*) = (k: NodeKind) => new SyntaxChecking.KidLengthLitTypesSyntax(k, Seq(litTypes:_*), kidsLength)
-  def simple(kidsTypes: Seq[Class[Node_[_]]], litTypes: Class[_]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(litTypes:_*), kidsTypes)
+  def simple[K <: NodeKind](kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
+  def simple[K <: NodeKind](litTypes: Seq[Class[_]], kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
   implicit def makeSyntaxCheckOps(f: NodeKind => SyntaxChecking.SyntaxChecker) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 
@@ -132,28 +132,14 @@ object SyntaxChecking {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) = {}
   }
 
-  case class KidLengthLitTypesSyntax(k: NodeKind, litTypes: Seq[Class[_]], kidsLength: Int) extends SyntaxChecker(k) {
-    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
-      if (kids.size != kidsLength)
-        error(s"Expected $kidsLength subexpressions but found ${kids.size} subexpressions")
-
-      if (lits.size != litTypes.size)
-        error(s"Expected ${litTypes.size} literals but found ${lits.size} literals")
-
-      for (i <- 0 until lits.size)
-        if (!litTypes(i).isInstance(lits(i)))
-          error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
-    }
-  }
-
-  case class KidTypesLitTypesSyntax(k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[Node_[_]]]) extends SyntaxChecker(k) {
+  case class KidTypesLitTypesSyntax[K <: NodeKind](k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[K]]) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
       if (kids.size != kidTypes.size)
         error(s"Expected ${kidTypes.size} subexpressions but found ${kids.size} subexpressions")
 
       for (i <- 0 until kids.size)
-        if (!kidTypes(i).isInstance(kids(i)))
-          error(s"Expected kid of ${kidTypes(i)} at position $i but found ${kids(i)} of ${kids(i).getClass}")
+        if (!kidTypes(i).isInstance(kids(i).kind))
+          error(s"Expected kid of ${kidTypes(i)} at position $i but found ${kids(i)} of ${kids(i).kind.getClass}")
 
       if (lits.size != litTypes.size)
         error(s"Expected ${litTypes.size} literals but found ${lits.size} literals")

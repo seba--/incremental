@@ -25,14 +25,14 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   import scala.language.implicitConversions
   implicit def eqType(t: Type): PartialFunction[Type,Boolean] = {case t2 => t == t2}
 
-  def typecheckTest(desc: String, e: =>Exp)(expected: Type) =
+  def typecheckTest(desc: String, e: =>Node)(expected: Type) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected resulting type but found type error ${actual.right}")
       assertResult(expected)(actual.left.get)
     }
 
-  def typecheckTestError(desc: String, e: =>Exp) =
+  def typecheckTestError(desc: String, e: =>Node) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")

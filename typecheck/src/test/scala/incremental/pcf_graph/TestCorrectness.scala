@@ -18,7 +18,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
   }
 
-  def typecheckTest(desc: String, e: =>Exp)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
@@ -26,7 +26,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
-  def typecheckTestError(desc: String, e: =>Exp) =
+  def typecheckTestError(desc: String, e: =>Node) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
