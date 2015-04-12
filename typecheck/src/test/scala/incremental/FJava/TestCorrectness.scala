@@ -35,11 +35,10 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
     }
 
   typecheckTestError("x", Var('x))
-  typecheckTestError("e0.f : U ", Field('e0,Var('f)))
-  typecheckTestError("new C(x):C", New(CName('c), Var('x)))
-
-
+  typecheckTestError("e0.f : U ", Field(CName('e0),Var('f)))
+  typecheckTestError("new C(x):C", New(CName('c),Var('x)))
 
 }
 
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp FJava", BottomUpCheckerFactory)
+
