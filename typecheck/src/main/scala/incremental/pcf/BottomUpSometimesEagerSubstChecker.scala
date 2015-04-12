@@ -1,9 +1,9 @@
 package incremental.pcf
 
 import incremental.ConstraintOps._
-import incremental.Exp.Exp
+import incremental.Node.Node
 import incremental.Type.Companion._
-import incremental.Exp._
+import incremental.Node._
 import incremental._
 
 /**
@@ -25,7 +25,7 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends TypeCheck
 
   type Result = (Type, Reqs, Solution)
 
-  def typecheck(e: Exp): Either[Type, TError] = {
+  def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
     //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
@@ -52,7 +52,7 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends TypeCheck
     res
   }
 
-  def normalizedTypecheckStep(e: Exp_[Result]) = {
+  def normalizedTypecheckStep(e: Node_[Result]) = {
     val res = typecheckStep(e)
     val sol = res._3
     val s = sol.substitution
@@ -62,7 +62,7 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends TypeCheck
       res
   }
 
-  def typecheckStep(e: Exp_[Result]): Result = e.kind match {
+  def typecheckStep(e: Node_[Result]): Result = e.kind match {
     case Num => (TNum, Map(), emptySol)
     case op if op == Add || op == Mul =>
       val (t1, reqs1, sol1) = e.kids(0).typ
