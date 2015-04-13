@@ -2,7 +2,7 @@ package incremental.FJava
 
 import incremental.ClassT._
 import incremental.ConstraintOps._
-import incremental.Exp.Exp
+import incremental.Node.Node
 import incremental.Type
 import incremental._
 
@@ -52,7 +52,7 @@ class BottomUpChecker extends TypeChecker[Type] {
     Map(C.asInstanceOf[UVar].x -> cld)
   }
 
-  def typecheck(e: Exp): Either[Type, TError] = {
+  def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
     val (res, ctime) = Util.timed {
@@ -77,7 +77,7 @@ class BottomUpChecker extends TypeChecker[Type] {
     typecheckTime += ctime
     res
   }
-    def typecheckStep(e: Exp_[Result]): Result = e.kind match {
+    def typecheckStep(e: Node_[Result]): Result = e.kind match {
 
       case Var =>
         val x = e.lits(0).asInstanceOf[Symbol]
@@ -86,11 +86,11 @@ class BottomUpChecker extends TypeChecker[Type] {
 
       case Field =>
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-        val f = e.lits(0).asInstanceOf[CName]
+        val f = e.lits(0).asInstanceOf[Symbol]
         val U = freshUVar()
-        val fld = new Fields(f.x, U)
-        val ct = new ClassDecl(f.x, null, List(fld), List())
-        (U, reqs, creqs + (f.x -> ct), subsol)
+        val fld = new Fields(f, U)
+        val ct = new ClassDecl(f, null, List(fld), List())
+        (U, reqs, creqs + (f -> ct), subsol)
       //have to look again and it should be t, instead of c
 
       case New =>
