@@ -15,7 +15,7 @@ class Class(val name: Name, superClass: Name, val fields: List[Fields], val m: L
 
 class Fields(fname: Symbol, val fType: Type)
 
-class Methods(val mtype: Type, margs: List[Type], mreturnT : Type)
+class Methods(val mtype: Symbol, margs: List[Type], mreturnT : Type)
 
 class ClassDecl(cName: Type , cSuper: Type, cFld: List[Fields], cMethods: List[Methods])
 
@@ -93,7 +93,16 @@ class BottomUpChecker extends TypeChecker[Type] {
         val fld = new Fields(f, U)
         val ct = new ClassDecl(t, null, List(fld), List())
         (U, reqs, creqs + (t -> ct), subsol)
-      //have to look again and it should be t, instead of c
+
+      case Invk =>
+        val (e0, reqs1, creqs1, subsol1) = e.kids(0).typ
+        val (ei, reqs2, creqs2, subsol2) = e.kids(1).typ
+        val m = e.lits(0).asInstanceOf[Symbol]
+        val C = freshUVar()
+        val D = freshUVar()
+        val method = new Methods(m, List(ei), C)
+        val cld = new ClassDecl(e0, null, List(), List(method))
+        (C, reqs1 ++ reqs2, creqs1 ++ creqs2 ++ Subtype(ei, D), subsol1 ++ subsol2)
 
       case New =>
         val c = e.lits(0).asInstanceOf[CName]
@@ -113,41 +122,35 @@ class BottomUpChecker extends TypeChecker[Type] {
       case DCast =>
         val (t, reqs, creqs, subsol) = e.kids(0).typ
         val c = e.lits(0).asInstanceOf[CName]
-        val sol = solve(NotEqConstraint(t,c))
+        val sol = solve(NotEqConstraint(t, c))
         (c, reqs, creqs ++ Subtype(c, c), subsol ++ sol)
 
       case UCast =>
         val c = e.lits(0).asInstanceOf[CName]
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-        (c, reqs, creqs ++ Subtype(t,c), subsol)
+        (c, reqs, creqs ++ Subtype(t, c), subsol)
 
       case SCast =>
         val (t, reqs, creqs, subsol) = e.kids(0).typ
         (t, reqs, creqs, subsol)
 
 
-      case Invk =>
-        val (t, reqs, creqs, subsol) = e.kids(0).typ
-        (t, reqs, creqs, subsol)
-
       case Method =>
-        val (e0, reqs1, creqs1, subsol1) = e.kids(0).typ
-        val (ei, reqs2, creqs2, subsol2) = e.kids(1).typ
-        val m = e.lits(0).asInstanceOf[Type]
-        val c = freshUVar()
-        val d = freshUVar()
-        val method = new Methods(m,List(ei),c)
-        val cld = new ClassDecl(e0.asInstanceOf[CName], null, List(), List(method))
-        (c, reqs1 ++ reqs2 , creqs1 ++ creqs2 ++ Subtype(ei,d), subsol1 ++ subsol2)
+        val C0 = e.lits(0).asInstanceOf[Type]
+        val m = e.lits(1).asInstanceOf[Symbol]
+        val x = e.lits(2).asInstanceOf[Type]
+        val C = e.lits(3).asInstanceOf[Type]
+        val (e0, reqs, creqs, subsol) = e.kids(0).typ
+        val method = new Methods(m, List(x), C)
+        val cld = new ClassDecl(C, null, List(), List(method))
+        (C0, reqs, creqs ++ Subtype(e0, C0) + (C -> cld), subsol)
 
       case TClass =>
         val (t, reqs, creqs, subsol) = e.kids(0).typ
         (t, reqs, creqs, subsol)
-
     }
-  }
+}
 
 object BottomUpCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new BottomUpChecker
 }
-

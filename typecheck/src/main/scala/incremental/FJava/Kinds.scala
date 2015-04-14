@@ -19,7 +19,7 @@ case object New extends Exp(simple(Seq(classOf[CName])) orElse simple(Seq(classO
 case object UCast extends Exp(simple(Seq(classOf[CName]),cExp))
 case object DCast extends Exp(simple(cExp))
 case object SCast extends Exp(simple(cExp))
-case object Invk extends Exp(simple(cExp))
+case object Invk extends Exp(simple(Seq(classOf[Symbol]),cExp, cExp))
 case object TClass extends Exp(simple(cExp))
 
 

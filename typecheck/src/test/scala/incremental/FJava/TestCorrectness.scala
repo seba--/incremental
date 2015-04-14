@@ -34,22 +34,23 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 
+
   typecheckTestError("x", Var('x))
- typecheckTestError("e0.f : U ", Field('f,Var('e0)))
- typecheckTestError("new C(x):C", New(CName('c),Var('x)))
-//  typecheckTestError("e0.m(e) : U", Invk(UCName('e0),'m, Var('e)))
- typecheckTestError("(C) e0 :C", UCast(CName('c),Var('e)))
-//  typecheckTestError("(C) e0 : C", DCast(CName('c),'e))
-//  typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-//  typecheckTestError("y", Var('x))
- typecheckTestError(" (new Pair(first)).first : U", Field('first,(New(CName('Pair),Var('first)))))
+  typecheckTestError("e0.f : U ", Field('f,Var('e0)))
+  typecheckTestError("new C(x):C", New(CName('c),Var('x)))
+  typecheckTestError("e0.m(e) : U", Invk('m, Var('e0), Var('e)))
+  typecheckTestError("(C) e0 :C", UCast(CName('c),Var('e)))
+  typecheckTestError("y", Var('x))
+  typecheckTestError(" (new Pair(first)).first : U", Field('first,New(CName('Pair),Var('first))))
   typecheckTestError("new Pair(first) : Pair", New(CName('Pair),Var('first)))
   typecheckTestError("new Pair(snd): Pair", New(CName('Pair),Var('object)))
-//  typecheckTestError("Pair.setfst(first) : U ", Invk(CName('Pair),'setfst, Var('first)))
-//  typecheckTestError("(Object)first : Object", UCast(CName('Object),'first))
- typecheckTestError("(Pair) first : Pair", New(CName('Pair),Var('first)))
+  typecheckTestError("Pair.setfst(first) : U ", Invk('setfst,New(CName('Pair),Var('first)), Var('first)))
+  typecheckTestError("(Object)first : Object", UCast(CName('Object),Var('first)))
+  typecheckTestError("(Pair) first : Pair", New(CName('Pair),Var('first)))
   typecheckTestError("new Object()", New(CName('Object)))
-
+  //  typecheckTestError("(C) e0 : C", DCast(CName('c),'e))
+  //  typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
+//  typecheckTestError("", Var())
 }
 
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp FJava", BottomUpCheckerFactory)
