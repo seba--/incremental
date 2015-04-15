@@ -47,7 +47,6 @@ object ClassT {
   type Type = Name
   type Parameter = Name
   type Assignment = (Name, Name)
-  type TOK = String
 }
 
 object Type {
