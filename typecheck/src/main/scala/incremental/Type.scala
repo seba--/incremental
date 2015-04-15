@@ -47,9 +47,10 @@ object ClassT {
   type Type = Name
   type Parameter = Name
   type Assignment = (Name, Name)
+  type TOK = String
 }
 
 object Type {
   implicit object Companion extends TypCompanion[Type]
-
 }
+

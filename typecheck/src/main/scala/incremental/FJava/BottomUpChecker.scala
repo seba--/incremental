@@ -8,6 +8,7 @@ import incremental.Type
 
 
 
+
 /**
  * Created by lirakuci on 3/2/15.
  */
@@ -26,8 +27,6 @@ class BottomUpChecker extends TypeChecker[Type] {
 
   var preparationTime = 0.0
   var typecheckTime = 0.0
-
-
 
   def constraintCount = constraint.constraintCount
 
@@ -141,6 +140,7 @@ class BottomUpChecker extends TypeChecker[Type] {
         val m = e.lits(1).asInstanceOf[Symbol]
         val x = e.lits(2).asInstanceOf[Symbol]
         val C = e.lits(3).asInstanceOf[Type]
+
         reqs.get(x) match {
           case None =>
             val Ci = if (e.lits == 5) e.lits(4).asInstanceOf[Type] else freshUVar()
@@ -164,7 +164,10 @@ class BottomUpChecker extends TypeChecker[Type] {
         val (t, reqs, creqs, subsol) = e.kids(0).typ
         (t, reqs, creqs, subsol)
     }
+
+
 }
+
 
 object BottomUpCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new BottomUpChecker

@@ -50,7 +50,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTestError("new Object()", New(CName('Object)))
   //  typecheckTestError("(C) e0 : C", DCast(CName('c),'e))
   //  typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-//  typecheckTestError("", Var())
+  typecheckTestError("Int getX(x) {return Int} in Number", Method( CName('Int), 'getX, CName('Int), CName('Number), Var('x)))
 }
 
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp FJava", BottomUpCheckerFactory)
