@@ -46,6 +46,8 @@ class BottomUpChecker extends TypeChecker[Type] {
 
   type Result = (Type, Reqs, CReqs, Solution)
 
+  type ResultMC = (Boolean, Reqs, CReqs, Solution)
+
 
   def Subtype(C: Type, D : Type) : CReqs = {
     val cld = new ClassDecl(C, D, List(), List())
@@ -133,8 +135,11 @@ class BottomUpChecker extends TypeChecker[Type] {
         val (t, reqs, creqs, subsol) = e.kids(0).typ
         (t, reqs, creqs, subsol)
 
+    }
 
+   def typechechMC(e: Node_[Result]): ResultMC = e.kind match {
       case Method =>
+
         val (e0, reqs, creqs, subsol) = e.kids(0).typ
         val C0 = e.lits(0).asInstanceOf[Type]
         val m = e.lits(1).asInstanceOf[Symbol]
@@ -146,7 +151,7 @@ class BottomUpChecker extends TypeChecker[Type] {
             val Ci = if (e.lits == 5) e.lits(4).asInstanceOf[Type] else freshUVar()
             val method = new Methods(m, List(Ci), C)
             val cld = new ClassDecl(C, null, List(), List(method))
-            (C, reqs,creqs ++ Subtype(e0, C0) + (C -> cld), subsol)
+            (true, reqs,creqs ++ Subtype(e0, C0) + (C -> cld), subsol)
           case Some(treq) =>
             val otherReqs = reqs - x
             if (e.lits.size == 5) {
@@ -154,15 +159,15 @@ class BottomUpChecker extends TypeChecker[Type] {
               val sol = solve(EqConstraint(Ci, treq))
               val method = new Methods(m, List(Ci), C)
               val cld = new ClassDecl(C, null, List(), List(method))
-              (C.subst(sol.substitution), otherReqs.mapValues(_.subst(sol.substitution)),creqs ++ Subtype(e0, C0) + (C -> cld), subsol <++ sol)
+              (true, otherReqs.mapValues(_.subst(sol.substitution)),creqs ++ Subtype(e0, C0) + (C -> cld), subsol <++ sol)
             }
             else
-              (C, otherReqs, creqs ++ Subtype(e0, C0), subsol)
+              (true, otherReqs, creqs ++ Subtype(e0, C0), subsol)
         }
 
       case TClass =>
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-        (t, reqs, creqs, subsol)
+        (true, reqs, creqs, subsol)
     }
 
 

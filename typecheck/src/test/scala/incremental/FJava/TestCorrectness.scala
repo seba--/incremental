@@ -28,6 +28,12 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
       assertResult(Left(expected))(actual)
     }
 
+  def typecheckTestMC(desc: String, e: =>Node)(expected: Boolean): Unit =
+  test (s"$classdesc: Type check $desc") {
+    val actual = checker.typecheck(e)
+    assertResult(Left(expected))(actual)
+  }
+
   def typecheckTestError(desc: String, e: =>Node) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
@@ -50,7 +56,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTestError("new Object()", New(CName('Object)))
   //  typecheckTestError("(C) e0 : C", DCast(CName('c),'e))
   //  typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-  typecheckTestError("Int getX(x) {return Int} in Number", Method( CName('Int), 'getX, CName('Int), CName('Number), Var('x)))
+  typecheckTestMC("Int getX(x) {return Int} in Number", Method( CName('Int), 'getX, CName('Int), CName('Number), Var('x)))(false)
 }
 
 class TestBottomUpCorrectness extends TestCorrectness("BottomUp FJava", BottomUpCheckerFactory)
