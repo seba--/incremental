@@ -7,9 +7,25 @@ trait Name {
 
 }
 
-case class PackageName(names: Seq[String]) extends Name
-//case class PackageName(p: PackageName, id :String) extends Name
+// {Id "."}+ -> PackageName {cons("PackageName")}
+case class PackageName(path: Seq[String]) extends Name
 
-case class ExpressionName(names: Seq[String]) extends Name
+trait AmbName extends Name{}
+case class AmbNameT(id: String) extends AmbName
+case class AmbNameExt(ext: AmbName, id: String) extends AmbName
 
-case class MethodName(names: Seq[String]) extends Name
+trait TypeName extends Name with TypeDecSpec with ArrayBaseType{}
+case class TypeNameT(id: String) extends TypeName
+case class TypeNameExt(ext: PackageOrTypeName, id: String) extends TypeName
+
+trait ExprName extends Name with LHS{}
+case class ExprNameT(id: String) extends ExprName
+case class ExprNameExt(ext: AmbName, id: String) extends ExprName
+
+trait MethodName extends Name{}
+case class MethodNameT(id: String) extends MethodName
+case class MethodNameExt(ext: AmbName, id: String) extends MethodName
+
+trait PackageOrTypeName extends Name{}
+case class PackageOrTypeNameT(id: String) extends PackageOrTypeName
+case class PackageOrTypeNameExt(ext: PackageOrTypeName, id: String) extends PackageOrTypeName
