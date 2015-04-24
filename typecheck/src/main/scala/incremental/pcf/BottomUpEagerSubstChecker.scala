@@ -1,10 +1,13 @@
 package incremental.pcf
 
+import akka.actor.{Props, Inbox, ActorSystem}
+import scala.concurrent.duration._
 import incremental.ConstraintOps._
 import incremental.Node.Node
 import incremental.Type.Companion._
 import incremental.Node._
 import incremental._
+import incremental.concurrent.{RootNodeActor, Done, NodeActor}
 
 /**
  * Created by seba on 13/11/14.
@@ -139,6 +142,39 @@ class BottomUpEagerSubstChecker extends TypeChecker[Type] {
       val sol = solve(fixCons)
       (X.subst(sol.substitution), reqs.mapValues(_.subst(sol.substitution)), subsol <++ sol)
   }
+}
+
+class BottomUpEagerSubstCheckerConcurrent(implicit system: ActorSystem)  extends BottomUpEagerSubstChecker {
+  override def typecheck(e: Node): Either[Type, TError] = {
+    val root = e.withType[Result]
+
+    val (res, ctime) = Util.timed {
+      val inbox = Inbox.create(system)
+      val actor = system.actorOf(Props(new RootNodeActor[Result](inbox.getRef(), root, 0, {e =>
+        e.typ = typecheckStep(e)
+        true
+      })))
+
+      val Done(0, res) = inbox.receive(20 seconds)
+
+      val (t_, reqs, sol_) = res.asInstanceOf[Result]
+      val sol = sol_.tryFinalize
+      val t = t_.subst(sol.substitution)
+
+      if (!reqs.isEmpty)
+        Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
+      else if (!sol.isSolved)
+        Right(s"Unresolved constraints ${sol.unsolved}, type $t")
+      else
+        Left(t)
+    }
+    typecheckTime += ctime
+    res
+  }
+}
+
+object BottomUpEagerSubstConcurrentCheckerFactory extends TypeCheckerFactory[Type] {
+  def makeChecker = new BottomUpEagerSubstCheckerConcurrent()(ActorSystem("PCFBottomUpEagerSubstCheckerConcurrent")) //TODO not sure where to put actor system
 }
 
 object BottomUpEagerSubstCheckerFactory extends TypeCheckerFactory[Type] {
