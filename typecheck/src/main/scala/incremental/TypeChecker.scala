@@ -1,5 +1,6 @@
 package incremental
 
+import constraints._
 import incremental.Node.Node
 
 /**

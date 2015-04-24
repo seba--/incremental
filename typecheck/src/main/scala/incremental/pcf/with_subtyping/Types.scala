@@ -1,6 +1,7 @@
 package incremental.pcf.with_subtyping
 
-import incremental.{TypCompanion, SType}
+import constraints._
+import incremental.SType
 
 
 /**

@@ -1,6 +1,6 @@
 package incremental.systemf
 
-import incremental.{TypCompanion, UType, EqConstraint, Type}
+import incremental.{EqConstraint, Type}
 import incremental.ConstraintOps._
 import incremental.Type.Companion._
 

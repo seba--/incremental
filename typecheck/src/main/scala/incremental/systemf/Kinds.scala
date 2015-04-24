@@ -1,7 +1,8 @@
 package incremental.systemf
 
+import constraints._
 import incremental.Node._
-import incremental.{SyntaxChecking, NodeKind, Typ}
+import incremental.{SyntaxChecking, NodeKind}
 
 /**
  * Created by seba on 13/11/14.

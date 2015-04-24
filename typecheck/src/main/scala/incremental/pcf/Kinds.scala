@@ -3,7 +3,7 @@ package incremental.pcf
 import incremental.Node._
 import incremental.NodeKind
 import incremental.SyntaxChecking
-import incremental.Typ
+import constraints._
 
 /**
  * Created by seba on 13/11/14.

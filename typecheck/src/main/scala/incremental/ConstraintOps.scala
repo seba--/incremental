@@ -1,5 +1,6 @@
 package incremental
 
+import constraints._
 import incremental.ConstraintOps.Solution
 import incremental.Type.Companion._
 
