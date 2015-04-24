@@ -1,4 +1,4 @@
-package constraints.unification
+package constraints.equality
 
 import constraints.Typ
 import incremental.ConstraintOps.Solution
