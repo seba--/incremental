@@ -12,7 +12,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
   override val constraint = new ConstraintOps
   import constraint._
 
-  override def typecheck(e: Node_[Result], ctx: TSubst): Result = e.kind match {
+  override def typecheck(e: Node_[StepResult], ctx: TSubst): StepResult = e.kind match {
     case Record =>
       val keys = e.lits.asInstanceOf[Seq[Symbol]]
 

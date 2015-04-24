@@ -11,7 +11,7 @@ trait BottomUpEagerSubstChecker extends pcf.BottomUpEagerSubstChecker {
 
   import constraint._
 
-  override def typecheckStep(e: Node_[Result]): Result = e.kind match {
+  override def typecheckStep(e: Node_[StepResult]): StepResult = e.kind match {
     case Record =>
       val keys = e.lits.asInstanceOf[Seq[Symbol]]
 

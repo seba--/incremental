@@ -8,7 +8,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
  * Created by seba on 14/11/14.
  */
 class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker[Type] = checkerFactory.makeChecker
+  var checker: BUTypeChecker[Type] = checkerFactory.makeChecker
 
   override def afterEach: Unit = {
     Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")

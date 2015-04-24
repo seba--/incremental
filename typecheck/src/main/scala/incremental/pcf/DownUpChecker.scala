@@ -9,7 +9,7 @@ import incremental._
 /**
  * Created by seba on 14/11/14.
  */
-class DownUpChecker extends TypeChecker[Type] {
+class DownUpChecker extends BUTypeChecker[Type] {
 
   val constraint = new ConstraintOps
   import constraint._
@@ -21,10 +21,10 @@ class DownUpChecker extends TypeChecker[Type] {
   def constraintSolveTime = constraint.constraintSolveTime
   def mergeSolutionTime = constraint.mergeSolutionTime
 
-  type Result = (Type, Solution)
+  type StepResult = (Type, Solution)
 
   def typecheck(e: Node): Either[Type, TError] = {
-    val root = e.withType[Result]
+    val root = e.withType[StepResult]
     val (res, ctime) = Util.timed(
       try {
         val (t, sol_) = typecheck(root, Map())
@@ -41,7 +41,7 @@ class DownUpChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheck(e: Node_[Result], ctx: TSubst): Result = e.kind match {
+  def typecheck(e: Node_[StepResult], ctx: TSubst): StepResult = e.kind match {
     case Num => (TNum, emptySol)
     case k if k == Add || k == Mul =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)

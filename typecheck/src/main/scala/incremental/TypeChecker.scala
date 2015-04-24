@@ -6,20 +6,35 @@ import incremental.Node.Node
 /**
  * Created by seba on 13/11/14.
  */
-abstract class TypeChecker[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) extends Serializable {
-  final type TError = definitions.TError
-  final type TSubst = definitions.TSubst
+abstract class TypeChecker[T <: Type, V <: T] extends Serializable {
+  type TError
+  type Constraint
+  type CS <: ConstraintSystem[CS, Constraint]
+  type CSFactory <: ConstraintSystemFactory[V, Constraint, CS]
+  val csFactory: CSFactory
 
-  def typecheck(e: Node): Either[Type, TError]
+  var localState: State[V] = _
 
-  def preparationTime: Double
-  def typecheckTime: Double
-  def constraintCount: Int
-  def mergeReqsTime: Double
-  def constraintSolveTime: Double
-  def mergeSolutionTime: Double
+  def preparationTime: Double = localState.stats.preparationTime
+  def typecheckTime: Double = localState.stats.typecheckTime
+  def constraintCount: Double = localState.stats.constraintCount
+  def mergeReqsTime: Double = localState.stats.mergeReqsTime
+  def constraintSolveTime: Double = localState.stats.constraintSolveTime
+  def mergeSolutionTime: Double = localState.stats.mergeSolutionTime
+
+  def freshUVar() = localState.gen.freshUVar()
+
+
+  def typecheck(e: Node): Either[Type, TError] = {
+    localState = csFactory.freshState
+    csFactory.state.withValue(localState) {
+      typecheckImpl(e)
+    }
+  }
+
+  protected def typecheckImpl(e: Node): Either[Type, TError]
 }
 
-trait TypeCheckerFactory[T <: Typ[T]] {
+trait TypeCheckerFactory[T <: Type] {
   def makeChecker: TypeChecker[T]
 }

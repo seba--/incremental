@@ -9,7 +9,7 @@ import incremental._
 /**
  * Created by seba on 13/11/14.
  */
-class BottomUpEagerSubstChecker extends TypeChecker[Type] {
+class BottomUpEagerSubstChecker extends BUTypeChecker[Type] {
 
   val constraint = new ConstraintOps
   import constraint._
@@ -23,10 +23,10 @@ class BottomUpEagerSubstChecker extends TypeChecker[Type] {
 
   type Reqs = Map[Symbol, Type]
 
-  type Result = (Type, Reqs, Solution)
+  type StepResult = (Type, Reqs, Solution)
 
   def typecheck(e: Node): Either[Type, TError] = {
-    val root = e.withType[Result]
+    val root = e.withType[StepResult]
 
 //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
 //    preparationTime += ptime
@@ -52,7 +52,7 @@ class BottomUpEagerSubstChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheckStep(e: Node_[Result]): Result = e.kind match {
+  def typecheckStep(e: Node_[StepResult]): StepResult = e.kind match {
     case Num => (TNum, Map(), emptySol)
     case op if op == Add || op == Mul =>
       val (t1, reqs1, sol1) = e.kids(0).typ

@@ -1,6 +1,6 @@
 package constraints.equality
 
-import constraints.equality.Type._
+import Type.Companion._
 import ConstraintSystemFactory._
 import incremental.Util
 

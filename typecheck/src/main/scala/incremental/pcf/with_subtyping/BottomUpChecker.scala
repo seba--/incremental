@@ -10,7 +10,7 @@ import TypeOps._
 /**
  * Created by oliver on 20.11.14.
  */
-class BottomUpChecker extends TypeChecker[Type] {
+class BottomUpChecker extends BUTypeChecker[Type] {
   var preparationTime = 0.0
   var typecheckTime = 0.0
 
@@ -26,10 +26,10 @@ class BottomUpChecker extends TypeChecker[Type] {
   def mergeSolutionTime = instance.stats.mergeSolutionTime
 
 
-  type Result = (Type, Requirements, CSet)
+  type StepResult = (Type, Requirements, CSet)
 
   def typecheck(e: Node): Either[Type, TError] = {
-    val root = e.withType[Result]
+    val root = e.withType[StepResult]
 
 //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
 //    preparationTime += ptime
@@ -56,7 +56,7 @@ class BottomUpChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheckStep(e: Node_[Result]): Result = e.kind match {
+  def typecheckStep(e: Node_[StepResult]): StepResult = e.kind match {
     case Num =>
       (TNum, Map(), emptyCSet)
     case op if op == Add || op == Mul =>

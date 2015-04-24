@@ -1,6 +1,6 @@
 package constraints.equality
 
-import Type._
+import Type.Companion._
 
 case class EqConstraint(expected: Type, actual: Type) {
   def solve(s: ConstraintSystem) = expected.unify(actual, s.substitution)

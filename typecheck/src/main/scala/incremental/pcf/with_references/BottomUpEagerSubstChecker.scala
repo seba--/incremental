@@ -10,7 +10,7 @@ trait BottomUpEagerSubstChecker extends pcf.BottomUpEagerSubstChecker {
 
   import constraint._
 
-  override def typecheckStep(e: Node_[Result]): Result = e.kind match {
+  override def typecheckStep(e: Node_[StepResult]): StepResult = e.kind match {
     case Ref =>
       val (t, reqs, subsol) = e.kids(0).typ
       (TRef(t), reqs, subsol)

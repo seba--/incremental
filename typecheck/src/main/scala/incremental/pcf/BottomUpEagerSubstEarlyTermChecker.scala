@@ -9,7 +9,7 @@ import incremental._
 class BottomUpEagerSubstEarlyTermChecker extends BottomUpEagerSubstChecker {
 
   override def typecheck(e: Node): Either[Type, TError] = {
-    val root = e.withType[Result]
+    val root = e.withType[StepResult]
 
     //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
     //    preparationTime += ptime
@@ -42,7 +42,7 @@ class BottomUpEagerSubstEarlyTermChecker extends BottomUpEagerSubstChecker {
     res
   }
 
-  def sameResult(r1: Result, r2: Result): Boolean = {
+  def sameResult(r1: StepResult, r2: StepResult): Boolean = {
     val (t1, reqs1, sol1_) = r1
     val (t2, reqs2, sol2_) = r2
     val sol1 = sol1_.trySolveNow

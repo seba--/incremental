@@ -1,28 +1,25 @@
 package constraints.equality
 
 import ConstraintSystemFactory._
+import constraints.TypeCompanion
 
 
 //Type that support unification
 trait Type extends constraints.Type {
   def occurs(x: Symbol): Boolean
-  def subst(s: Map[Symbol, Type]): Type
+  def subst(s: Type.Companion.TSubst): Type
   def freeTVars: Set[Symbol]
   def normalize: Type
-  def unify(other: Type, s: Map[Symbol, Type]): ConstraintSystem
+  def unify(other: Type, s: Type.Companion.TSubst): ConstraintSystem
   def unify(other: Type): ConstraintSystem = unify(other, Map())
-
-  final val emptySolution = ConstraintSystem(Map(), Seq(), Seq())
-  final def solved(s: Type.TSubst): ConstraintSystem = ConstraintSystem(s, Seq(), Seq())
-  final def notyet(c: Constraint): ConstraintSystem = ConstraintSystem(Map(), Seq(c), Seq())
-  final def never(c: Constraint): ConstraintSystem = ConstraintSystem(Map(), Seq(), Seq(c))
-
 }
 object Type {
-  type TError = String
-  type TSubst = Map[Symbol, Type]
+  implicit object Companion extends TypeCompanion {
+    type TError = String
+    type TSubst = Map[Symbol, Type]
+  }
 }
-import constraints.equality.Type._
+import constraints.equality.Type.Companion._
 
 case class UVar(x: Symbol) extends Type {
   def freeTVars = Set()
