@@ -11,6 +11,12 @@ trait Type extends constraints.Type {
   def normalize: Type
   def unify(other: Type, s: Map[Symbol, Type]): ConstraintSystem
   def unify(other: Type): ConstraintSystem = unify(other, Map())
+
+  final val emptySolution = ConstraintSystem(Map(), Seq(), Seq())
+  final def solved(s: Type.TSubst): ConstraintSystem = ConstraintSystem(s, Seq(), Seq())
+  final def notyet(c: Constraint): ConstraintSystem = ConstraintSystem(Map(), Seq(c), Seq())
+  final def never(c: Constraint): ConstraintSystem = ConstraintSystem(Map(), Seq(), Seq(c))
+
 }
 object Type {
   type TError = String
@@ -34,6 +40,6 @@ case class UVar(x: Symbol) extends Type {
         else if (t.occurs(x))
           never(EqConstraint(this, t))
         else
-          solution(Map(x -> t))
+          solved(Map(x -> t))
     }
 }
