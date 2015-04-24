@@ -4,14 +4,36 @@ import Type.Companion._
 import ConstraintSystemFactory._
 import incremental.Util
 
-case class ConstraintSystem(substitution: TSubst, notyet: NotYetSolvable, never: Unsolvable) extends constraints.ConstraintSystem[ConstraintSystem, EqConstraint] {
+case class ConstraintSystem(substitution: TSubst, notyet: NotYetSolvable, never: Unsolvable) extends constraints.ConstraintSystem[ConstraintSystem, EqConstraint, Type] {
   def unsolved = notyet ++ never
 
   def isSolved = notyet.isEmpty && never.isEmpty
 
   def solvable = !never.isEmpty
 
-  def ++(other: ConstraintSystem): ConstraintSystem = {
+  def mergeSubsystem(other: ConstraintSystem): ConstraintSystem = {
+    val (res, time) = Util.timed {
+      var msolution = substitution mapValues (_.subst(other.substitution))
+      val mnotyet = notyet ++ other.notyet
+      var mnever = never ++ other.never
+
+      for ((x, t2) <- other.substitution) {
+        msolution.get(x) match {
+          case None => msolution += x -> t2.subst(msolution)
+          case Some(t1) =>
+            val usol = t1.unify(t2, msolution)
+            msolution = msolution.mapValues(_.subst(usol.substitution)) ++ usol.substitution
+            mnever = mnever ++ usol.never
+        }
+      }
+
+      ConstraintSystem(msolution, mnotyet, mnever)
+    }
+    state.value.stats.mergeSolutionTime += time
+    res
+  }
+
+  def mergeApply(other: ConstraintSystem): ConstraintSystem = {
     val (res, time) = Util.timed {
       var msolution = substitution mapValues (_.subst(other.substitution))
       val mnotyet = notyet ++ other.notyet
@@ -65,21 +87,25 @@ case class ConstraintSystem(substitution: TSubst, notyet: NotYetSolvable, never:
     res
   }
 
-  def +(that: Constraint): ConstraintSystem = {
+  def addNewConstraint(that: Constraint): ConstraintSystem = {
     state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed(this ++ that.solve(this))
+    val (res, time) = Util.timed(this mergeApply that.solve(this))
     state.value.stats.constraintSolveTime += time
     res
   }
 
-  def <++(cs: Iterable[Constraint]): ConstraintSystem = {
+  def addNewConstraints(cs: Iterable[Constraint]): ConstraintSystem = {
     state.value.stats.constraintCount += cs.size
     val (res, time) = Util.timed {
-      cs.foldLeft(this)((sol,c) => sol ++ c.solve(sol))
+      cs.foldLeft(this)((sol,c) => sol mergeApply c.solve(sol))
     }
     state.value.stats.constraintSolveTime += time
     res
   }
+
+  def applyPartialSolution(t: Type) = t.subst(substitution)
+
+  def propagate = this
 
   def isSolvable: Boolean = never.isEmpty
   def solution = (substitution, notyet, never)

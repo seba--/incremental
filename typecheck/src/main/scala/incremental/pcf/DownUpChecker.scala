@@ -1,30 +1,27 @@
 package incremental.pcf
 
-import incremental.ConstraintOps._
+import constraints.equality.{ConstraintSystem, EqConstraint, UVar, Type,ConstraintSystemFactory}
 import incremental.Node.Node
-import incremental.Node._
-import incremental.Type.Companion._
-import incremental._
+import ConstraintSystemFactory._
+import incremental.{TypeChecker, Node_, Util}
 
 /**
  * Created by seba on 14/11/14.
  */
-class DownUpChecker extends BUTypeChecker[Type] {
+class DownUpChecker extends TypeChecker[Type, UVar] {
 
-  val constraint = new ConstraintOps
-  import constraint._
+  type TError = Type.Companion.TError
+  type TSubst = Type.Companion.TSubst
+  type Constraint = EqConstraint
+  type CS = ConstraintSystem
+  type CSFactory = ConstraintSystemFactory.type 
+  val csFactory = ConstraintSystemFactory
 
-  val preparationTime = 0.0
-  var typecheckTime = 0.0
-  def constraintCount = constraint.constraintCount
-  def mergeReqsTime = constraint.mergeReqsTime
-  def constraintSolveTime = constraint.constraintSolveTime
-  def mergeSolutionTime = constraint.mergeSolutionTime
+  type Result = (Type, ConstraintSystem)
+  type StepResult = (Type, Seq[Constraint])
 
-  type StepResult = (Type, Solution)
-
-  def typecheck(e: Node): Either[Type, TError] = {
-    val root = e.withType[StepResult]
+  def typecheckImpl(e: Node): Either[Type, TError] = {
+    val root = e.withType[Result]
     val (res, ctime) = Util.timed(
       try {
         val (t, sol_) = typecheck(root, Map())
@@ -41,8 +38,8 @@ class DownUpChecker extends BUTypeChecker[Type] {
     res
   }
 
-  def typecheck(e: Node_[StepResult], ctx: TSubst): StepResult = e.kind match {
-    case Num => (TNum, emptySol)
+  def typecheck(e: Node_[Result], ctx: TSubst): StepResult = e.kind match {
+    case Num => (TNum, emptySolution)
     case k if k == Add || k == Mul =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)
       val (t2, sol2) = typecheck(e.kids(1), ctx)
@@ -57,7 +54,7 @@ class DownUpChecker extends BUTypeChecker[Type] {
       val x = e.lits(0).asInstanceOf[Symbol]
       ctx.get(x) match {
         case None => throw UnboundVariable(x, ctx)
-        case Some(t) => (t, emptySol)
+        case Some(t) => (t, emptySolution)
       }
     case App =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)

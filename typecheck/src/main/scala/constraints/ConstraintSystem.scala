@@ -1,10 +1,12 @@
 package constraints
 
-trait ConstraintSystem[CS, Constraint] {
+trait ConstraintSystem[CS, Constraint, T <: Type] {
   def isSolved: Boolean
 //  def solution: Solution
-  def ++(that: CS): CS
-  def + (that: Constraint): CS
-  def <++(cs: Iterable[Constraint]): CS
+  def mergeSubsystem(that: CS): CS
+  def addNewConstraint (that: Constraint): CS
+  def addNewConstraints(cs: Iterable[Constraint]): CS
+  def applyPartialSolution(t: T): T
+  def propagate: CS
   def tryFinalize: CS
 }

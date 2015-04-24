@@ -24,9 +24,9 @@ abstract class BUTypeChecker extends incremental.TypeChecker[Type, equality.UVar
     val (res, ctime) = Util.timed {
       root.visitUninitialized {e =>
         val (t, reqs, cons) = typecheckStep(e)
-        val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs ++ res.typ._3)
-        val cs = subcs <++ cons
-        e.typ = (t, reqs, cs)
+        val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
+        val cs = subcs addNewConstraints cons
+        e.typ = (cs applyPartialSolution t, reqs.mapValues(cs applyPartialSolution _), cs.propagate)
         true
       }
 
