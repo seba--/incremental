@@ -1,6 +1,6 @@
 package constraints
 
-trait GenBase[Type <: Typ[Type]] {
-  type V <: Type
+trait GenBase[T <: Type] {
+  type V <: T
   def freshUVar(): V
 }

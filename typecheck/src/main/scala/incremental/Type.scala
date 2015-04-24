@@ -4,7 +4,7 @@ package incremental
  * Created by seba on 13/11/14.
  */
 import Type._
-import constraints.{Typ, TypCompanion}
+import constraints.TypCompanion
 import constraints.equality.UType
 import incremental.ConstraintOps.Solution
 
