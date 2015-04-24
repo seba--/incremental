@@ -72,7 +72,7 @@ case class ConstraintSystem(substitution: TSubst, notyet: NotYetSolvable, never:
     res
   }
 
-  def ++(cs: Iterable[Constraint]): ConstraintSystem = {
+  def <++(cs: Iterable[Constraint]): ConstraintSystem = {
     state.value.stats.constraintCount += cs.size
     val (res, time) = Util.timed {
       cs.foldLeft(this)((sol,c) => sol ++ c.solve(sol))
