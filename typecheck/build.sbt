@@ -19,6 +19,10 @@ scalacOptions ++= Seq("-feature")
 resolvers += "Sonatype OSS Snapshots" at
   "https://oss.sonatype.org/content/repositories/releases"
 
+resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.10"
+
 libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.6"
 
 testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
