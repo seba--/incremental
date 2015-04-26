@@ -180,13 +180,24 @@ object BottomUpEagerSubstConcurrentCheckerFactory extends TypeCheckerFactory[Typ
 
 class FuturisticBottomUpEagerSubstChecker extends BottomUpEagerSubstChecker {
   def bottomUpFuture(e: Node): Future[Result] = {
-    val kids = Future.sequence(e.kids.seq.map { k => bottomUpFuture(k) })
-    kids.map { _ =>
-      val ee = e.withType[Result]
-      val t = typecheckStep(ee)
-      ee.typ = t
-      t
+    val trigger: Promise[Unit] = Promise()
+    val fut = trigger.future
+    def recurse(e: Node): Future[Result] = {
+      val join =
+        if (e.kids.seq.length == 0)
+          fut
+        else Future.sequence(e.kids.seq.map { k => recurse(k) })
+      join.map { _ =>
+        val ee = e.withType[Result]
+        val t = typecheckStep(ee)
+        ee.typ = t
+        t
+      }
     }
+
+    val res = recurse(e)
+    trigger success ()
+    res
   }
 
   override def typecheck(e: Node): Either[Type, TError] = {
