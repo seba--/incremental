@@ -1,7 +1,9 @@
 package incremental.pcf
 
 import akka.actor.{Props, Inbox, ActorSystem}
+import scala.concurrent.{ExecutionContext, Await, Promise, Future}
 import scala.concurrent.duration._
+import ExecutionContext.Implicits.global
 import incremental.ConstraintOps._
 import incremental.Node.Node
 import incremental.Type.Companion._
@@ -156,7 +158,6 @@ class BottomUpEagerSubstCheckerConcurrent(implicit system: ActorSystem)  extends
       })))
 
       val Done(0, res) = inbox.receive(20 seconds)
-
       val (t_, reqs, sol_) = res.asInstanceOf[Result]
       val sol = sol_.tryFinalize
       val t = t_.subst(sol.substitution)
@@ -175,6 +176,41 @@ class BottomUpEagerSubstCheckerConcurrent(implicit system: ActorSystem)  extends
 
 object BottomUpEagerSubstConcurrentCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new BottomUpEagerSubstCheckerConcurrent()(ActorSystem("PCFBottomUpEagerSubstCheckerConcurrent")) //TODO not sure where to put actor system
+}
+
+class FuturisticBottomUpEagerSubstChecker extends BottomUpEagerSubstChecker {
+  def bottomUpFuture(e: Node): Future[Result] = {
+    val kids = Future.sequence(e.kids.seq.map { k => bottomUpFuture(k) })
+    kids.map { _ =>
+      val ee = e.withType[Result]
+      val t = typecheckStep(ee)
+      ee.typ = t
+      t
+    }
+  }
+
+  override def typecheck(e: Node): Either[Type, TError] = {
+    val root = e.withType[Result]
+
+    val (res, ctime) = Util.timed {
+      val (t_, reqs, sol_) = Await.result(bottomUpFuture(e), 1 minute)
+      val sol = sol_.tryFinalize
+      val t = t_.subst(sol.substitution)
+
+      if (!reqs.isEmpty)
+        Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
+      else if (!sol.isSolved)
+        Right(s"Unresolved constraints ${sol.unsolved}, type $t")
+      else
+        Left(t)
+    }
+    typecheckTime += ctime
+    res
+  }
+}
+
+object FuturisticBottomUpEagerSubstCheckerFactory extends TypeCheckerFactory[Type] {
+  def makeChecker = new FuturisticBottomUpEagerSubstChecker
 }
 
 object BottomUpEagerSubstCheckerFactory extends TypeCheckerFactory[Type] {

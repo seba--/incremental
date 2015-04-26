@@ -8,7 +8,8 @@ import scala.reflect.ClassTag
 
 
 trait Message
-case class Do(index: Int) extends Message
+case class Dirty(index: Int) extends Message
+case class Update[T](index: Int, value: Node_[T]) extends Message
 case class Done(index: Int, result: Any) extends Message //TODO try to come up with parameterized solution
 
 /**
@@ -30,7 +31,7 @@ class NodeActor[T: ClassTag](protected val node: Node_[T], protected val index: 
     if (_counter == 0) {
       f(node)
       sink ! Done(index, node.typ)
-      context.stop(self)
+      //context.stop(self)
     }
   }
 
