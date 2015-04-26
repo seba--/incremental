@@ -1,19 +1,19 @@
 package incremental.pcf
 
 import constraints.equality
-import constraints.equality.{ConstraintSystem, ConstraintSystemFactory, EqConstraint, Type}
+import constraints.equality.{ConstraintSystem, EqConstraint, Type}
 import constraints.equality.ConstraintSystemFactory._
-import incremental.{Node_, Util}
+import incremental.{TypeCheckerFactory, Node_, Util}
 import incremental.Node.Node
 
-abstract class BUTypeChecker extends incremental.TypeChecker[Type, equality.UVar] {
+abstract class BUTypeChecker extends incremental.TypeChecker[equality.Type, equality.UVar] {
 
   type TError = Type.Companion.TError
   type Reqs = Map[Symbol, Type]
   type Constraint = EqConstraint
-  type CS = ConstraintSystem
-  type CSFactory = ConstraintSystemFactory.type
-  val csFactory = ConstraintSystemFactory
+//  type CS = ConstraintSystem
+//  type CSFactory = ConstraintSystemFactory.type
+//  val csFactory = ConstraintSystemFactory
 
   type StepResult = (Type, Reqs, Seq[Constraint])
   type Result = (Type, Reqs, ConstraintSystem)
@@ -41,7 +41,7 @@ abstract class BUTypeChecker extends incremental.TypeChecker[Type, equality.UVar
       else
         Left(t)
     }
-    typecheckTime += ctime
+    localState.stats.typecheckTime += ctime
     res
   }
 
@@ -133,7 +133,7 @@ abstract class BUTypeChecker extends incremental.TypeChecker[Type, equality.UVar
     val (res, time) = Util.timed{
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
-    mergeReqsTime += time
+    localState.stats.mergeReqsTime += time
     res
   }
 
@@ -149,5 +149,6 @@ abstract class BUTypeChecker extends incremental.TypeChecker[Type, equality.UVar
       }
     (mcons, mreqs)
   }
-
 }
+
+trait BUTypeCheckerFactory extends TypeCheckerFactory[equality.Type, equality.UVar]

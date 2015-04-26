@@ -1,14 +1,16 @@
 package incremental.pcf
 
+import constraints.equality
+import constraints.equality.UVar
 import incremental.Node._
-import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
+import incremental.{TypeChecker, TypeCheckerFactory, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
  * Created by seba on 14/11/14.
  */
-class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
-  var checker: BUTypeChecker[Type] = _
+class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[equality.Type, equality.UVar]) extends FunSuite with BeforeAndAfterEach {
+  var checker: TypeChecker[equality.Type, equality.UVar] = _
 
   override def beforeEach: Unit = {
     checker = checkerFactory.makeChecker
@@ -21,8 +23,8 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
   }
 
-  def incTypecheckTest(desc: String, e: =>Node)(expected: Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
-  def incTypecheckTest(desc: String, e: =>Node, mod: =>Unit)(expected: Type)(consCount: Int): Unit =
+  def incTypecheckTest(desc: String, e: =>Node)(expected: equality.Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
+  def incTypecheckTest(desc: String, e: =>Node, mod: =>Unit)(expected: equality.Type)(consCount: Int): Unit =
     test (s"$classdesc: Type check $desc") {
       val Unit = mod
       val actual = checker.typecheck(e)
@@ -63,5 +65,5 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   incTypecheckTest("factorial base 1", fac, fac match {case Fix(Abs(Abs(e@If0(_,_,_)))) => e.kids(1) = Num(1)})(TFun(TNum, TNum))(4)
 }
 
-class TestBottomUpIncremental extends TestIncremental("BottomUp", BottomUpEagerSubstCheckerFactory)
+//class TestBottomUpIncremental extends TestIncremental("BottomUp", BottomUpEagerSubstCheckerFactory)
 //class TestBottomUpEarlyTermIncremental extends TestIncremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)

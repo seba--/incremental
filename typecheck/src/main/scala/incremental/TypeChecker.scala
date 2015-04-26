@@ -9,11 +9,11 @@ import incremental.Node.Node
 abstract class TypeChecker[T <: Type, V <: T] extends Serializable {
   type TError
   type Constraint
-  type CS <: ConstraintSystem[CS, Constraint]
-  type CSFactory <: ConstraintSystemFactory[V, Constraint, CS]
+  type CS <: ConstraintSystem[CS, Constraint,T]
+  type CSFactory <: ConstraintSystemFactory[T, V, Constraint, CS]
   val csFactory: CSFactory
 
-  var localState: State[V] = _
+  lazy val localState: State[V] = csFactory.freshState
 
   def preparationTime: Double = localState.stats.preparationTime
   def typecheckTime: Double = localState.stats.typecheckTime
@@ -25,16 +25,14 @@ abstract class TypeChecker[T <: Type, V <: T] extends Serializable {
   def freshUVar() = localState.gen.freshUVar()
 
 
-  def typecheck(e: Node): Either[Type, TError] = {
-    localState = csFactory.freshState
-    csFactory.state.withValue(localState) {
-      typecheckImpl(e)
-    }
+  def typecheck(e: Node): Either[T, TError] = {
+    csFactory.state.value = localState
+    typecheckImpl(e)
   }
 
-  protected def typecheckImpl(e: Node): Either[Type, TError]
+  protected def typecheckImpl(e: Node): Either[T, TError]
 }
 
-trait TypeCheckerFactory[T <: Type] {
-  def makeChecker: TypeChecker[T]
+trait TypeCheckerFactory[T <: Type, V <: T] {
+  def makeChecker: TypeChecker[T, V]
 }

@@ -2,7 +2,7 @@ package constraints.equality
 
 import constraints.GenBase
 
-class Gen extends GenBase[Type] {
+class Gen extends GenBase[UVar] {
   type V = UVar
   private var _nextId = 0
   def freshUVar(): UVar = {

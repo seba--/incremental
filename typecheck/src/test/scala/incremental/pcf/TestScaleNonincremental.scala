@@ -1,6 +1,7 @@
 package incremental.pcf
 
 import benchmark.ExpGenerator
+import constraints.equality
 import incremental.Node.Node
 import incremental.Node._
 import incremental._
@@ -10,8 +11,8 @@ import ExpGenerator._
 /**
  * Created by seba on 14/11/14.
  */
-class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
-  var checker: BUTypeChecker[Type] = _
+class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFactory[equality.Type, equality.UVar]) extends FunSuite with BeforeAndAfterEach {
+  var checker: TypeChecker[equality.Type, equality.UVar] = _
 
   override def beforeEach: Unit = {
     checker = checkerFactory.makeChecker
@@ -26,17 +27,17 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
     Util.log(f"Merge sol time\t\t${checker.mergeSolutionTime}%.3fms")
   }
 
-  def typecheckTest(desc: String, e: => Node)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: => Node)(expected: equality.Type): Unit =
     test(s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
     }
 
-  def scaleTests(heights: Set[Int], kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => Type) =
+  def scaleTests(heights: Set[Int], kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
     for (h <- heights)
       scaleTest(h, kind, leaveMaker, sharing, leaveDesc, wrap)(expected)
 
-  def scaleTest(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => Type) =
+  def scaleTest(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
     typecheckTest(
       s"${if(sharing) "shared" else "non-shared"} $kind-tree(h=$height)${if(leaveDesc.isEmpty)"" else " with leaves " + leaveDesc}",
       wrap(height, makeBinTree(height, kind, leaveMaker, sharing)))(expected(height))
@@ -46,9 +47,9 @@ class TestScaleNonincremental(classdesc: String, checkerFactory: TypeCheckerFact
   scaleTests(Set(5, 10, 15, 20), Add, constantLeaveMaker(Var('x)), leaveDesc="x .. x", wrap = (h, e) => Abs('x, e))(_=>TFun(TNum, TNum))
   scaleTests(Set(5, 10, 15, 18), Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i"))), leaveDesc="x1 .. xn", wrap = (h, e) => Abs(usedVars(h), e))(h => makeFunType(h, TNum, ()=>TNum))
 }
-class TestDownUpScaleNonincremental extends TestScaleNonincremental("DownUp", DownUpCheckerFactory)
+//class TestDownUpScaleNonincremental extends TestScaleNonincremental("DownUp", DownUpCheckerFactory)
 //class TestDownUpSolveEndScaleNonincremental extends TestScaleNonincremental("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
-class TestBottomUpScaleNonincremental extends TestScaleNonincremental("BottomUp", BottomUpEagerSubstCheckerFactory)
+//class TestBottomUpScaleNonincremental extends TestScaleNonincremental("BottomUp", BottomUpEagerSubstCheckerFactory)
 //class TestBottomUpSolveEndScaleNonincremental extends TestScaleNonincremental("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
 //class TestBottomUpEarlyTermScaleNonincremental extends TestScaleNonincremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
-class TestBottomKeepSubstUpScaleNonincremental extends TestScaleNonincremental("BottomUpKeepSubst", BottomUpSometimesEagerSubstCheckerFactory)
+//class TestBottomKeepSubstUpScaleNonincremental extends TestScaleNonincremental("BottomUpKeepSubst", BottomUpSometimesEagerSubstCheckerFactory)

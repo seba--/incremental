@@ -3,7 +3,7 @@ package constraints.equality
 import constraints.State
 import constraints.Statistics
 
-object ConstraintSystemFactory extends constraints.ConstraintSystemFactory[Type, EqConstraint, ConstraintSystem] {
+object ConstraintSystemFactory extends constraints.ConstraintSystemFactory[Type, UVar, EqConstraint, ConstraintSystem] {
   type Constraint = EqConstraint
   type NotYetSolvable = Seq[Constraint]
   type Unsolvable = Seq[Constraint]

@@ -1,14 +1,16 @@
 package incremental.pcf
 
+import constraints.equality
+import constraints.equality.UVar
 import incremental.Node._
-import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
+import incremental.{TypeChecker, TypeCheckerFactory, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
  * Created by seba on 14/11/14.
  */
-class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
-  var checker: BUTypeChecker[Type] = checkerFactory.makeChecker
+class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[equality.Type, equality.UVar]) extends FunSuite with BeforeAndAfterEach {
+  var checker: TypeChecker[equality.Type, equality.UVar] = checkerFactory.makeChecker
 
   override def afterEach: Unit = {
     Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
@@ -18,7 +20,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
   }
 
-  def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: =>Node)(expected: equality.Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
@@ -82,10 +84,10 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   )
 }
 
-class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
-class TestDownUpSolveEndCorrectness extends TestCorrectness("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
-class TestBottomUpEagerSubstCorrectness extends TestCorrectness("BottomUpEagerSubst", BottomUpEagerSubstCheckerFactory)
+//class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
+//class TestDownUpSolveEndCorrectness extends TestCorrectness("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
 class TestBottomUpSolveEndCorrectness extends TestCorrectness("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
-class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
-class TestBottomUpIncrementalSolveCorrectness extends TestCorrectness("BottomUpIncrementalSolve", BottomUpIncrementalSolveCheckerFactory)
-class TestBottomUpSometimesEagerSubstCorrectness extends TestCorrectness("BottomUpSometimesEagerSubst", BottomUpSometimesEagerSubstCheckerFactory)
+//class TestBottomUpEagerSubstCorrectness extends TestCorrectness("BottomUpEagerSubst", BottomUpEagerSubstCheckerFactory)
+//class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
+//class TestBottomUpIncrementalSolveCorrectness extends TestCorrectness("BottomUpIncrementalSolve", BottomUpIncrementalSolveCheckerFactory)
+//class TestBottomUpSometimesEagerSubstCorrectness extends TestCorrectness("BottomUpSometimesEagerSubst", BottomUpSometimesEagerSubstCheckerFactory)

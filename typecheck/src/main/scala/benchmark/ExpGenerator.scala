@@ -4,6 +4,7 @@ import incremental.Node._
 import incremental.NodeKind
 import incremental.pcf.TFun
 import constraints.Type
+import constraints.equality
 
 /**
  * Created by seba on 05/11/14.
@@ -52,9 +53,9 @@ object ExpGenerator {
 
   def usedVars(h: Int) = for (j <- (1 to Math.pow(2, h-1).toInt).toSeq) yield Symbol(s"x$j")
 
-  def makeFunType(height: Int, returnType: constraints.equality.Type, argMaker: () => constraints.equality. Type): Type = {
+  def makeFunType(height: Int, returnType: equality.Type, argMaker: () => equality.Type): equality.Type = {
     val length = Math.pow(2,height-1).toInt
-    var argTypes = Seq[constraints.equality.Type]()
+    var argTypes = Seq[equality.Type]()
     for (i <- 1 to length)
       argTypes = argMaker() +: argTypes
     var t = returnType

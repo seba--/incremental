@@ -2,9 +2,9 @@ package constraints
 
 import scala.util.DynamicVariable
 
-abstract class ConstraintSystemFactory[T <: Type, Constraint, CSet <: ConstraintSystem[CSet, Constraint]] {
-  val state: DynamicVariable[State[T]] = new DynamicVariable[State[T]](null)
+abstract class ConstraintSystemFactory[T <: Type, V <: T, Constraint, CSet <: ConstraintSystem[CSet, Constraint, T]] {
+  val state: DynamicVariable[State[V]] = new DynamicVariable[State[V]](null)
 
-  def freshState: State[T]
+  def freshState: State[V]
   def freshConstraintSystem: CSet
 }
