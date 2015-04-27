@@ -91,5 +91,4 @@ class TestBUSolveEndCorrectness extends TestCorrectness[SolveEndCS]("BottomUpSol
 class TestBUSolveContinuouslyCorrectness extends TestCorrectness[SolveContinuouslyCS]("BUSolveContinuously", BUSolveContinuouslyFactory)
 //class TestBottomUpEagerSubstCorrectness extends TestCorrectness("BottomUpEagerSubst", BottomUpEagerSubstCheckerFactory)
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
-//class TestBottomUpIncrementalSolveCorrectness extends TestCorrectness("BottomUpIncrementalSolve", BottomUpIncrementalSolveCheckerFactory)
 //class TestBottomUpSometimesEagerSubstCorrectness extends TestCorrectness("BottomUpSometimesEagerSubst", BottomUpSometimesEagerSubstCheckerFactory)

@@ -46,22 +46,4 @@ case class SolveEndCS(notyet: Seq[EqConstraint]) extends ConstraintSystem[SolveE
   def propagate = this
 
   override def tryFinalize = SolveContinuouslyCS(Map(), notyet, Seq()).tryFinalize
-//  private def trySolve(finalize: Boolean) = {
-//    var rest = notyet
-//    var newSolution = substitution
-//    var newNotyet = Seq[EqConstraint[SolveEndCS]]()
-//    var newNever = never
-//    while (!rest.isEmpty) {
-//      val next = rest.head
-//      rest = rest.tail
-//      val wasNotyet = newNotyet ++ rest
-//      val current = SolveEndCS(newSolution, wasNotyet, newNever)
-//      val sol = if (finalize) next.finalize(current) else next.solve(current)
-//
-//      newSolution = newSolution.mapValues(_.subst(sol.substitution)) ++ sol.substitution
-//      newNever = newNever ++ sol.never
-//      newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
-//    }
-//    SolveEndCS(newSolution, newNotyet, newNever)
-//  }
 }
