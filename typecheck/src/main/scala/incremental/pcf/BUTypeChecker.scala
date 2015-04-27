@@ -1,24 +1,24 @@
 package incremental.pcf
 
 import constraints.equality
-import constraints.equality.{ConstraintSystem, EqConstraint, Type}
-import constraints.equality.ConstraintSystemFactory._
+import constraints.equality._
 import incremental.{TypeCheckerFactory, Node_, Util}
 import incremental.Node.Node
 
-abstract class BUTypeChecker extends incremental.TypeChecker[equality.Type, equality.UVar] {
+abstract class BUTypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Type[CS], UVar[CS], EqConstraint[CS], CS] {
 
   type TError = Type.Companion.TError
-  type Reqs = Map[Symbol, Type]
-  type Constraint = EqConstraint
-//  type CS = ConstraintSystem
-//  type CSFactory = ConstraintSystemFactory.type
-//  val csFactory = ConstraintSystemFactory
+  type Reqs = Map[Symbol, Type[CS]]
+  type CSFactory <: ConstraintSystemFactory[CS]
+  import csFactory._
 
-  type StepResult = (Type, Reqs, Seq[Constraint])
-  type Result = (Type, Reqs, ConstraintSystem)
+  val types = new Types[CS]
+  import types._
 
-  def typecheckImpl(e: Node): Either[Type, TError] = {
+  type StepResult = (Type[CS], Reqs, Seq[EqConstraint[CS]])
+  type Result = (Type[CS], Reqs, CS)
+
+  def typecheckImpl(e: Node): Either[Type[CS], TError] = {
     val root = e.withType[Result]
 
     val (res, ctime) = Util.timed {
@@ -75,12 +75,12 @@ abstract class BUTypeChecker extends incremental.TypeChecker[equality.Type, equa
 
       reqs.get(x) match {
         case None =>
-          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshUVar()
+          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type[CS]] else freshUVar()
           (TFun(X, t), reqs, Seq())
         case Some(treq) =>
           val otherReqs = reqs - x
           if (e.lits.size == 2) {
-            (TFun(treq, t), otherReqs, Seq(EqConstraint(e.lits(1).asInstanceOf[Type], treq)))
+            (TFun(treq, t), otherReqs, Seq(EqConstraint(e.lits(1).asInstanceOf[Type[CS]], treq)))
           }
           else
             (TFun(treq, t), otherReqs, Seq())
@@ -127,17 +127,17 @@ abstract class BUTypeChecker extends incremental.TypeChecker[equality.Type, equa
 
 
 
-  private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
+  private val init: (Seq[EqConstraint[CS]], Reqs) = (Seq(), Map())
 
   def mergeReqMaps(reqs: Reqs*) = {
     val (res, time) = Util.timed{
-      reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
+      reqs.foldLeft[(Seq[EqConstraint[CS]], Reqs)](init)(_mergeReqMaps)
     }
     localState.stats.mergeReqsTime += time
     res
   }
 
-  private def _mergeReqMaps(was: (Seq[Constraint], Reqs), newReqs: Reqs) = {
+  private def _mergeReqMaps(was: (Seq[EqConstraint[CS]], Reqs), newReqs: Reqs) = {
     val wasReqs = was._2
     var mcons = was._1
     var mreqs = wasReqs
@@ -151,4 +151,4 @@ abstract class BUTypeChecker extends incremental.TypeChecker[equality.Type, equa
   }
 }
 
-trait BUTypeCheckerFactory extends TypeCheckerFactory[equality.Type, equality.UVar]
+trait BUTypeCheckerFactory[CS <: ConstraintSystem[CS]] extends TypeCheckerFactory[Type[CS], UVar[CS], EqConstraint[CS], CS]

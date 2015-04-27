@@ -53,14 +53,14 @@ object ExpGenerator {
 
   def usedVars(h: Int) = for (j <- (1 to Math.pow(2, h-1).toInt).toSeq) yield Symbol(s"x$j")
 
-  def makeFunType(height: Int, returnType: equality.Type, argMaker: () => equality.Type): equality.Type = {
+  def makeFunType[T <: Type](height: Int, returnType: T, argMaker: () => T, tfun: (T,T)=>T): T = {
     val length = Math.pow(2,height-1).toInt
-    var argTypes = Seq[equality.Type]()
+    var argTypes = Seq[T]()
     for (i <- 1 to length)
       argTypes = argMaker() +: argTypes
     var t = returnType
     for (i <- 1 to length) {
-      t = TFun(argTypes.head, t)
+      t = tfun(argTypes.head, t)
       argTypes = argTypes.tail
     }
     t

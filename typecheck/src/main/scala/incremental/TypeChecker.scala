@@ -6,12 +6,12 @@ import incremental.Node.Node
 /**
  * Created by seba on 13/11/14.
  */
-abstract class TypeChecker[T <: Type, V <: T] extends Serializable {
+abstract class TypeChecker[T <: Type, V <: T, Constraint, CS <: ConstraintSystem[CS, Constraint,T]] extends Serializable {
   type TError
-  type Constraint
-  type CS <: ConstraintSystem[CS, Constraint,T]
+//  type Constraint
+//  type CS <: ConstraintSystem[CS, Constraint,T]
   type CSFactory <: ConstraintSystemFactory[T, V, Constraint, CS]
-  val csFactory: CSFactory
+  implicit val csFactory: CSFactory
 
   lazy val localState: State[V] = csFactory.freshState
 
@@ -33,6 +33,6 @@ abstract class TypeChecker[T <: Type, V <: T] extends Serializable {
   protected def typecheckImpl(e: Node): Either[T, TError]
 }
 
-trait TypeCheckerFactory[T <: Type, V <: T] {
-  def makeChecker: TypeChecker[T, V]
+trait TypeCheckerFactory[T <: Type, V <: T, Constraint, CS <: ConstraintSystem[CS, Constraint, T]] {
+  def makeChecker: TypeChecker[T, V, Constraint, CS]
 }

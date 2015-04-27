@@ -2,19 +2,18 @@ package constraints.equality
 
 import constraints.State
 import constraints.Statistics
+import constraints.equality.Type.Companion.TSubst
 
-object ConstraintSystemFactory extends constraints.ConstraintSystemFactory[Type, UVar, EqConstraint, ConstraintSystem] {
-  type Constraint = EqConstraint
-  type NotYetSolvable = Seq[Constraint]
-  type Unsolvable = Seq[Constraint]
+abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystemFactory[Type[CS], UVar[CS], EqConstraint[CS], CS] {
+  def system(s: TSubst[CS], notyet: Seq[EqConstraint[CS]], never: Seq[EqConstraint[CS]]): CS
 
-  def freshState = new State(new Gen, new Statistics)
-  def freshConstraintSystem = ConstraintSystem(Map(), Seq(), Seq())
+  def freshState = new State(new Gen[CS](this), new Statistics)
+  def freshConstraintSystem = system(Map(), Seq(), Seq())
 
-  val emptySolution = ConstraintSystem(Map(), Seq(), Seq())
-  def solved(s: Type.Companion.TSubst): ConstraintSystem = ConstraintSystem(s, Seq(), Seq())
-  def notyet(c: Constraint): ConstraintSystem = ConstraintSystem(Map(), Seq(c), Seq())
-  def never(c: Constraint): ConstraintSystem = ConstraintSystem(Map(), Seq(), Seq(c))
+  val emptySolution = system(Map(), Seq(), Seq())
+  def solved(s: TSubst[CS]): CS = system(s, Seq(), Seq())
+  def notyet(c: EqConstraint[CS]): CS = system(Map(), Seq(c), Seq())
+  def never(c: EqConstraint[CS]): CS = system(Map(), Seq(), Seq(c))
 }
 
 
