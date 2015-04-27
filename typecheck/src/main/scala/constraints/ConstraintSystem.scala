@@ -8,5 +8,5 @@ trait ConstraintSystem[CS, Constraint, T <: Type] {
   def addNewConstraints(cs: Iterable[Constraint]): CS
   def applyPartialSolution(t: T): T
   def propagate: CS
-  def tryFinalize: CS
+  def tryFinalize: ConstraintSystem[_,Constraint,T]
 }

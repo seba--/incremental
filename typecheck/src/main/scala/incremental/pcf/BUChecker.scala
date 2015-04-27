@@ -6,15 +6,14 @@ import incremental.Node.Node
 
 abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
-  import types._
 
   type TError = Type.Companion.TError
-  type Reqs = Map[Symbol, Type[CS]]
+  type Reqs = Map[Symbol, Type]
 
-  type StepResult = (Type[CS], Reqs, Seq[EqConstraint[CS]])
-  type Result = (Type[CS], Reqs, CS)
+  type StepResult = (Type, Reqs, Seq[EqConstraint])
+  type Result = (Type, Reqs, CS)
 
-  def typecheckImpl(e: Node): Either[Type[CS], TError] = {
+  def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
     val (res, ctime) = Util.timed {
@@ -71,12 +70,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       reqs.get(x) match {
         case None =>
-          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type[CS]] else freshUVar()
+          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshUVar()
           (TFun(X, t), reqs, Seq())
         case Some(treq) =>
           val otherReqs = reqs - x
           if (e.lits.size == 2) {
-            (TFun(treq, t), otherReqs, Seq(EqConstraint(e.lits(1).asInstanceOf[Type[CS]], treq)))
+            (TFun(treq, t), otherReqs, Seq(EqConstraint(e.lits(1).asInstanceOf[Type], treq)))
           }
           else
             (TFun(treq, t), otherReqs, Seq())
@@ -123,17 +122,17 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
 
 
-  private val init: (Seq[EqConstraint[CS]], Reqs) = (Seq(), Map())
+  private val init: (Seq[EqConstraint], Reqs) = (Seq(), Map())
 
   def mergeReqMaps(reqs: Reqs*) = {
     val (res, time) = Util.timed{
-      reqs.foldLeft[(Seq[EqConstraint[CS]], Reqs)](init)(_mergeReqMaps)
+      reqs.foldLeft[(Seq[EqConstraint], Reqs)](init)(_mergeReqMaps)
     }
     localState.stats.mergeReqsTime += time
     res
   }
 
-  private def _mergeReqMaps(was: (Seq[EqConstraint[CS]], Reqs), newReqs: Reqs) = {
+  private def _mergeReqMaps(was: (Seq[EqConstraint], Reqs), newReqs: Reqs) = {
     val wasReqs = was._2
     var mcons = was._1
     var mreqs = wasReqs

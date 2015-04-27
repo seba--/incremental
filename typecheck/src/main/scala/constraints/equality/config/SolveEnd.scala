@@ -5,46 +5,47 @@ import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSys
 import incremental.Util
 
 object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
-  def freshConstraintSystem = SolveEndCSRep(Seq())
-  def solved(s: TSubst[SolveEndCS]) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
-  def notyet(c: EqConstraint[SolveEndCS]) = SolveEndCSRep(Seq(c))
-  def never(c: EqConstraint[SolveEndCS]) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
+  def freshConstraintSystem = SolveEndCS(Seq())
+  def solved(s: TSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
+  def notyet(c: EqConstraint) = SolveEndCS(Seq(c))
+  def never(c: EqConstraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
 }
 
-trait SolveEndCS extends ConstraintSystem[SolveEndCS]
-
-case class SolveEndCSRep(notyet: Seq[EqConstraint[SolveEndCS]]) extends ConstraintSystem[SolveEndCS] with SolveEndCS {
+case class SolveEndCS(notyet: Seq[EqConstraint]) extends ConstraintSystem[SolveEndCS] {
   lazy val csFactory = SolveEnd
   import csFactory.state
+
+  def substitution = Map()
+  def never = Seq()
 
   def mergeSubsystem(other: SolveEndCS): SolveEndCS = {
     val (res, time) = Util.timed {
       val mnotyet = notyet ++ other.notyet
-      SolveEndCSRep(mnotyet)
+      SolveEndCS(mnotyet)
     }
     state.value.stats.mergeSolutionTime += time
     res
   }
 
-  def addNewConstraint(c: EqConstraint[SolveEndCS]) = {
+  def addNewConstraint(c: EqConstraint) = {
     state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed(SolveEndCSRep(notyet :+ c))
+    val (res, time) = Util.timed(SolveEndCS(notyet :+ c))
     state.value.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cs: Iterable[EqConstraint[SolveEndCS]]) = {
+  def addNewConstraints(cs: Iterable[EqConstraint]) = {
     state.value.stats.constraintCount += cs.size
-    val (res, time) = Util.timed(SolveEndCSRep(notyet ++ cs))
+    val (res, time) = Util.timed(SolveEndCS(notyet ++ cs))
     state.value.stats.constraintSolveTime += time
     res
   }
 
-  def applyPartialSolution(t: Type[SolveEndCS]) = t
+  def applyPartialSolution(t: Type) = t
 
   def propagate = this
 
-  override def tryFinalize = SolveContinuouslyCSRep(Map(), notyet, Seq()).tryFinalize
+  override def tryFinalize = SolveContinuouslyCS(Map(), notyet, Seq()).tryFinalize
 //  private def trySolve(finalize: Boolean) = {
 //    var rest = notyet
 //    var newSolution = substitution

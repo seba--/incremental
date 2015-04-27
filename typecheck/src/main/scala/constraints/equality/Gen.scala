@@ -2,11 +2,11 @@ package constraints.equality
 
 import constraints.GenBase
 
-class Gen[CS <: ConstraintSystem[CS]](csFactory: ConstraintSystemFactory[CS]) extends GenBase[UVar[CS]] {
-  type V = UVar[CS]
+class Gen extends GenBase[UVar] {
+  type V = UVar
   private var _nextId = 0
-  def freshUVar(): UVar[CS] = {
-    val v = UVar[CS](Symbol("x$" + _nextId))(csFactory)
+  def freshUVar(): UVar = {
+    val v = UVar(Symbol("x$" + _nextId))
     _nextId += 1
     v
   }

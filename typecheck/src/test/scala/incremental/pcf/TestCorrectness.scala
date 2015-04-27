@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import constraints.equality.config.SolveEndCS
+import constraints.equality.config.{SolveContinuously, SolveEndCS}
 import constraints.equality._
 import incremental.Node._
 import incremental.Util
@@ -11,7 +11,6 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
  */
 class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
   val checker: TypeChecker[CS] = checkerFactory.makeChecker
-  import checker.types._
 
   override def afterEach: Unit = {
     Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
@@ -21,11 +20,12 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
   }
 
-  def typecheckTest(desc: String, e: =>Node)(expected: Type[CS]): Unit =
+  def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
-      val sol = expected.unify(actual.left.get)
+      SolveContinuously.state.value = checker.csFactory.state.value
+      val sol = expected.unify(actual.left.get)(SolveContinuously).tryFinalize
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 

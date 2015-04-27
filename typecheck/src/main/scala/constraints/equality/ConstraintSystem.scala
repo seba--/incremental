@@ -4,17 +4,18 @@ import Type.Companion._
 import incremental.Util
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
-  extends constraints.ConstraintSystem[CS, EqConstraint[CS], Type[CS]] {
+  extends constraints.ConstraintSystem[CS, EqConstraint, Type] {
 
-  def substitution: TSubst[CS]
-  def notyet: Seq[EqConstraint[CS]]
-  def never: Seq[EqConstraint[CS]]
+  def substitution: TSubst
+  def notyet: Seq[EqConstraint]
+  def never: Seq[EqConstraint]
 
   def unsolved = notyet ++ never
   def isSolved = notyet.isEmpty && never.isEmpty
   def solvable = !never.isEmpty
   def isSolvable: Boolean = never.isEmpty
 
+  def tryFinalize: ConstraintSystem[_]
 }
 
 //  val csFactory: ConstraintSystemFactory[CS]
