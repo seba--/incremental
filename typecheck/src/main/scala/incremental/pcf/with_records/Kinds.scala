@@ -16,6 +16,9 @@ object RecordSyntax extends SyntaxChecking.SyntaxChecker(Record) {
     if (lits.exists(!_.isInstanceOf[Symbol]))
       error(s"All literals must be record labels of type Symbol, but found ${lits.filter(!_.isInstanceOf[Symbol])}")
 
+    if (kids.exists(!_.kind.isInstanceOf[Exp]))
+      error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
+
     if (lits.size != kids.size)
       error(s"Mismatching number of record labels (${lits.size}}) and initializing expressions (${kids.size}})")
   }
