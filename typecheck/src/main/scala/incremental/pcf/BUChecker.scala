@@ -4,7 +4,7 @@ import constraints.equality._
 import incremental.{Node_, Util}
 import incremental.Node.Node
 
-abstract class BUTypeChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
+abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
   import types._
 
@@ -147,4 +147,4 @@ abstract class BUTypeChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS]
   }
 }
 
-trait BUTypeCheckerFactory[CS <: ConstraintSystem[CS]] extends TypeCheckerFactory[CS]
+trait BUCheckerFactory[CS <: ConstraintSystem[CS]] extends TypeCheckerFactory[CS]

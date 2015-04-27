@@ -39,59 +39,59 @@ abstract case class ConstraintSystem
 //    res
 //  }
 
-  def mergeApply(other: ConstraintSystem[CS]): CS = {
-    val (res, time) = Util.timed {
-      var msolution = substitution mapValues (_.subst(other.substitution))
-      val mnotyet = notyet ++ other.notyet
-      var mnever = never ++ other.never
-
-      for ((x, t2) <- other.substitution) {
-        msolution.get(x) match {
-          case None => msolution += x -> t2.subst(msolution)
-          case Some(t1) =>
-            val usol = t1.unify(t2, msolution)
-            msolution = msolution.mapValues(_.subst(usol.substitution)) ++ usol.substitution
-            mnever = mnever ++ usol.never
-        }
-      }
-
-      system(msolution, mnotyet, mnever)
-    }
-    state.value.stats.mergeSolutionTime += time
-    res
-  }
+//  def mergeApply(other: ConstraintSystem[CS]): CS = {
+//    val (res, time) = Util.timed {
+//      var msolution = substitution mapValues (_.subst(other.substitution))
+//      val mnotyet = notyet ++ other.notyet
+//      var mnever = never ++ other.never
+//
+//      for ((x, t2) <- other.substitution) {
+//        msolution.get(x) match {
+//          case None => msolution += x -> t2.subst(msolution)
+//          case Some(t1) =>
+//            val usol = t1.unify(t2, msolution)
+//            msolution = msolution.mapValues(_.subst(usol.substitution)) ++ usol.substitution
+//            mnever = mnever ++ usol.never
+//        }
+//      }
+//
+//      system(msolution, mnotyet, mnever)
+//    }
+//    state.value.stats.mergeSolutionTime += time
+//    res
+//  }
 
   // if solutions are not needed
-  def +++(other: ConstraintSystem[CS]): CS = {
-    val (res, time) = Util.timed {
-      val mnotyet = notyet ++ other.notyet
-      val mnever = never ++ other.never
-      system(Map(), mnotyet, mnever)
-    }
-    state.value.stats.mergeSolutionTime += time
-    res
-  }
+//  def +++(other: ConstraintSystem[CS]): CS = {
+//    val (res, time) = Util.timed {
+//      val mnotyet = notyet ++ other.notyet
+//      val mnever = never ++ other.never
+//      system(Map(), mnotyet, mnever)
+//    }
+//    state.value.stats.mergeSolutionTime += time
+//    res
+//  }
 
-  def ++++(other: ConstraintSystem[CS]): CS = {
-    val (res, time) = Util.timed {
-      val msolution = substitution ++ other.substitution
-      val mnotyet = notyet ++ other.notyet
-      val mnever = never ++ other.never
-      system(msolution, mnotyet, mnever)
-    }
-    state.value.stats.mergeSolutionTime += time
-    res
-  }
+//  def ++++(other: ConstraintSystem[CS]): CS = {
+//    val (res, time) = Util.timed {
+//      val msolution = substitution ++ other.substitution
+//      val mnotyet = notyet ++ other.notyet
+//      val mnever = never ++ other.never
+//      system(msolution, mnotyet, mnever)
+//    }
+//    state.value.stats.mergeSolutionTime += time
+//    res
+//  }
 
-  def <++(other: ConstraintSystem[CS]): CS = {
-    val (res, time) = Util.timed {
-      var mnotyet = notyet.map(_.subst(other.substitution)) ++ other.notyet
-      var mnever = never.map(_.subst(other.substitution)) ++ other.never
-      system(Map(), mnotyet, mnever)
-    }
-    state.value.stats.mergeSolutionTime += time
-    res
-  }
+//  def <++(other: ConstraintSystem[CS]): CS = {
+//    val (res, time) = Util.timed {
+//      var mnotyet = notyet.map(_.subst(other.substitution)) ++ other.notyet
+//      var mnever = never.map(_.subst(other.substitution)) ++ other.never
+//      system(Map(), mnotyet, mnever)
+//    }
+//    state.value.stats.mergeSolutionTime += time
+//    res
+//  }
 
 //  def addNewConstraint(that: EqConstraint[CS]): CS = {
 //    state.value.stats.constraintCount += 1

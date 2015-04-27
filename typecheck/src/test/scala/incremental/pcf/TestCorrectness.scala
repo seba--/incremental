@@ -87,7 +87,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
 //class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
 //class TestDownUpSolveEndCorrectness extends TestCorrectness("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
-class TestBottomUpSolveEndCorrectness extends TestCorrectness[SolveEndCS]("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
+class TestBottomUpSolveEndCorrectness extends TestCorrectness[SolveEndCS]("BottomUpSolveEnd", BUSolveEndFactory)
 //class TestBottomUpEagerSubstCorrectness extends TestCorrectness("BottomUpEagerSubst", BottomUpEagerSubstCheckerFactory)
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
 //class TestBottomUpIncrementalSolveCorrectness extends TestCorrectness("BottomUpIncrementalSolve", BottomUpIncrementalSolveCheckerFactory)

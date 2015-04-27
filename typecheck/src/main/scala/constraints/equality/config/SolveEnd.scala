@@ -5,7 +5,10 @@ import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSys
 import incremental.Util
 
 object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
-  def system(subst: TSubst[SolveEndCS], notyet: Seq[EqConstraint[SolveEndCS]], never: Seq[EqConstraint[SolveEndCS]]) = new SolveEndCS(subst, notyet, never)
+  val emptySolution = new SolveEndCS(Map(), Seq(), Seq())
+  def solved(s: TSubst[SolveEndCS) = new SolveEndCS(s, Seq(), Seq())
+  def notyet(c: EqConstraint[SolveEndCS]) = new SolveEndCS(Map(), Seq(c), Seq())
+  def never(c: EqConstraint[SolveEndCS]) = new SolveEndCS(Map(), Seq(), Seq(c))
 }
 
 class SolveEndCS(substitution: TSubst[SolveEndCS], notyet: Seq[EqConstraint[SolveEndCS]], never: Seq[EqConstraint[SolveEndCS]]) extends ConstraintSystem[SolveEndCS](substitution, notyet, never) {
