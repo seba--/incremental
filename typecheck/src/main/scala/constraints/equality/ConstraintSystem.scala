@@ -3,14 +3,13 @@ package constraints.equality
 import Type.Companion._
 import incremental.Util
 
-abstract class ConstraintSystem[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystem[CS, EqConstraint[CS], Type[CS]] {
-  val csFactory: ConstraintSystemFactory[CS]
-  import csFactory.state
-  import csFactory.system
+abstract case class ConstraintSystem
+  [CS <: ConstraintSystem[CS]]
+  (substitution: TSubst[CS], notyet: Seq[EqConstraint[CS]], never: Seq[EqConstraint[CS]])
+  extends constraints.ConstraintSystem[CS, EqConstraint[CS], Type[CS]] {
 
-  def substitution: TSubst[CS]
-  def notyet: Seq[EqConstraint[CS]]
-  def never: Seq[EqConstraint[CS]]
+  val csFactory: ConstraintSystemFactory[CS]
+  import csFactory._
 
   def unsolved = notyet ++ never
   def isSolved = notyet.isEmpty && never.isEmpty

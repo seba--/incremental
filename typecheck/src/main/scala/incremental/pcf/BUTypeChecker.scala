@@ -1,19 +1,15 @@
 package incremental.pcf
 
-import constraints.equality
 import constraints.equality._
-import incremental.{TypeCheckerFactory, Node_, Util}
+import incremental.{Node_, Util}
 import incremental.Node.Node
 
-abstract class BUTypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Type[CS], UVar[CS], EqConstraint[CS], CS] {
+abstract class BUTypeChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
+  import csFactory._
+  import types._
 
   type TError = Type.Companion.TError
   type Reqs = Map[Symbol, Type[CS]]
-  type CSFactory <: ConstraintSystemFactory[CS]
-  import csFactory._
-
-  val types = new Types[CS]
-  import types._
 
   type StepResult = (Type[CS], Reqs, Seq[EqConstraint[CS]])
   type Result = (Type[CS], Reqs, CS)
@@ -151,4 +147,4 @@ abstract class BUTypeChecker[CS <: ConstraintSystem[CS]] extends incremental.Typ
   }
 }
 
-trait BUTypeCheckerFactory[CS <: ConstraintSystem[CS]] extends TypeCheckerFactory[Type[CS], UVar[CS], EqConstraint[CS], CS]
+trait BUTypeCheckerFactory[CS <: ConstraintSystem[CS]] extends TypeCheckerFactory[CS]

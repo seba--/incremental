@@ -11,6 +11,7 @@ import constraints.equality.Type.Companion._
 //}
 
 class Types[CS <: ConstraintSystem[CS]](implicit val csFactory: ConstraintSystemFactory[CS]) {
+  val UVar = constraints.equality.UVar[CS](_)
   val TNum = incremental.pcf.TNum[CS]
   val TFun = incremental.pcf.TFun[CS](_,_)
 }

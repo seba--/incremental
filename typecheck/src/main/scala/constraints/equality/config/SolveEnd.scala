@@ -5,38 +5,32 @@ import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSys
 import incremental.Util
 
 object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
-
+  def system(subst: TSubst[SolveEndCS], notyet: Seq[EqConstraint[SolveEndCS]], never: Seq[EqConstraint[SolveEndCS]]) = new SolveEndCS(subst, notyet, never)
 }
 
-abstract class SolveEndCS extends ConstraintSystem[SolveEndCS] {
-  val csFactory = SolveEnd
-}
-
-case class SolveEndCSIntermediate(notyet: Seq[EqConstraint[SolveEndCS]]) extends SolveEndCS {
+class SolveEndCS(substitution: TSubst[SolveEndCS], notyet: Seq[EqConstraint[SolveEndCS]], never: Seq[EqConstraint[SolveEndCS]]) extends ConstraintSystem[SolveEndCS](substitution, notyet, never) {
+  lazy val csFactory = SolveEnd
   import csFactory.state
-  val substitution = Map()
-  val never = Seq()
 
   def mergeSubsystem(other: SolveEndCS): SolveEndCS = {
     val (res, time) = Util.timed {
       val mnotyet = notyet ++ other.notyet
-      SolveEndCSIntermediate(mnotyet)
+      new SolveEndCS(substitution, mnotyet, never)
     }
     state.value.stats.mergeSolutionTime += time
     res
   }
 
-
   def addNewConstraint(c: EqConstraint[SolveEndCS]) = {
     state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed(SolveEndCSIntermediate(notyet :+ c))
+    val (res, time) = Util.timed(new SolveEndCS(substitution, notyet :+ c, never))
     state.value.stats.constraintSolveTime += time
     res
   }
 
   def addNewConstraints(cs: Iterable[EqConstraint[SolveEndCS]]) = {
     state.value.stats.constraintCount += cs.size
-    val (res, time) = Util.timed(SolveEndCSIntermediate(notyet ++ cs))
+    val (res, time) = Util.timed(new SolveEndCS(substitution, notyet ++ cs, never))
     state.value.stats.constraintSolveTime += time
     res
   }
@@ -45,13 +39,7 @@ case class SolveEndCSIntermediate(notyet: Seq[EqConstraint[SolveEndCS]]) extends
 
   def propagate = this
 
-  def tryFinalize = SolveEndCSFinal(Map(), notyet, never).tryFinalize
-}
-
-case class SolveEndCSFinal(substitution: TSubst[SolveEndCS], notyet: Seq[EqConstraint[SolveEndCS]], never: Seq[EqConstraint[SolveEndCS]]) extends SolveEndCS {
-  import csFactory.state
-
-  def tryFinalize = trySolve(true)
+  override def tryFinalize = trySolve(true)
   private def trySolve(finalize: Boolean) = {
     var rest = notyet
     var newSolution = substitution
@@ -61,13 +49,13 @@ case class SolveEndCSFinal(substitution: TSubst[SolveEndCS], notyet: Seq[EqConst
       val next = rest.head
       rest = rest.tail
       val wasNotyet = newNotyet ++ rest
-      val current = SolveEndCSFinal(newSolution, wasNotyet, newNever)
+      val current = new SolveEndCS(newSolution, wasNotyet, newNever)
       val sol = if (finalize) next.finalize(current) else next.solve(current)
 
       newSolution = newSolution.mapValues(_.subst(sol.substitution)) ++ sol.substitution
       newNever = newNever ++ sol.never
       newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
     }
-    SolveEndCSFinal(newSolution, newNotyet, newNever)
+    new SolveEndCS(newSolution, newNotyet, newNever)
   }
 }

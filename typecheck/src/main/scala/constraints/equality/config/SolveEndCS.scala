@@ -1,1 +1,0 @@
-package constraints.equality.config
