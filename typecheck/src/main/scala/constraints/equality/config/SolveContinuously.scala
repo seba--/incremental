@@ -12,8 +12,7 @@ object SolveContinuously extends ConstraintSystemFactory[SolveContinuouslyCS] {
 }
 
 case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[EqConstraint], never: Seq[EqConstraint]) extends ConstraintSystem[SolveContinuouslyCS] {
-  lazy val csFactory = SolveContinuously
-  import csFactory.state
+  import SolveContinuously.state
 
   def mergeSubsystem(other: SolveContinuouslyCS): SolveContinuouslyCS = {
     val (res, time) = Util.timed {

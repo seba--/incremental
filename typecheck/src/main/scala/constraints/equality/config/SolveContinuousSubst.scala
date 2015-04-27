@@ -12,8 +12,7 @@ object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubst
 }
 
 case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[EqConstraint], never: Seq[EqConstraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
-  lazy val csFactory = SolveContinuousSubst
-  import csFactory.state
+  import SolveContinuousSubst.state
 
   def mergeSubsystem(other: SolveContinuousSubstCS): SolveContinuousSubstCS = {
     val (res, time) = Util.timed {
@@ -67,23 +66,5 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[EqConstraint
 
   def propagate = SolveContinuousSubstCS(Map(), notyet, never)
 
-  override def tryFinalize = trySolve(true)
-  private def trySolve(finalize: Boolean) = {
-    var rest = notyet
-    var newSolution = substitution
-    var newNotyet = Seq[EqConstraint]()
-    var newNever = never
-    while (!rest.isEmpty) {
-      val next = rest.head
-      rest = rest.tail
-      val wasNotyet = newNotyet ++ rest
-      val current = SolveContinuousSubstCS(newSolution, wasNotyet, newNever)
-      val sol = if (finalize) next.finalize(current, SolveContinuousSubst) else next.solve(current, SolveContinuousSubst)
-
-      newSolution = newSolution.mapValues(_.subst(sol.substitution)) ++ sol.substitution
-      newNever = newNever ++ sol.never
-      newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
-    }
-    SolveContinuousSubstCS(newSolution, newNotyet, newNever)
-  }
+  override def tryFinalize = SolveContinuouslyCS(substitution, notyet, never).tryFinalize
 }

@@ -12,8 +12,7 @@ object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
 }
 
 case class SolveEndCS(notyet: Seq[EqConstraint]) extends ConstraintSystem[SolveEndCS] {
-  lazy val csFactory = SolveEnd
-  import csFactory.state
+  import SolveEnd.state
 
   def substitution = Map()
   def never = Seq()

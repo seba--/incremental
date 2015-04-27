@@ -44,6 +44,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("\\x. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(UVar('x$1), UVar('x$2)), TFun(UVar('x$1), UVar('x$2))))
   typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
   typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
+  typecheckTestError("\\x. x + (x 5)", Abs('x, Add(Var('x), App(Var('x), Num(5)))))
 
   lazy val mul = Fix(Abs('f, TFun(TNum, TFun(TNum, TNum)),
                    Abs('m, TNum, Abs('n, TNum,
@@ -90,5 +91,5 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
 class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
-//class TestBottomUpSometimesEagerSubstCorrectness extends TestCorrectness("BottomUpSometimesEagerSubst", BottomUpSometimesEagerSubstCheckerFactory)
