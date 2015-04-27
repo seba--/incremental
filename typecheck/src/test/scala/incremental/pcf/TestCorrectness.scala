@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import constraints.equality.config.{SolveContinuously, SolveEndCS}
+import constraints.equality.config.{SolveContinuouslyCS, SolveContinuously, SolveEndCS}
 import constraints.equality._
 import incremental.Node._
 import incremental.Util
@@ -87,7 +87,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
 //class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
 //class TestDownUpSolveEndCorrectness extends TestCorrectness("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
-class TestBottomUpSolveEndCorrectness extends TestCorrectness[SolveEndCS]("BottomUpSolveEnd", BUSolveEndFactory)
+class TestBUSolveEndCorrectness extends TestCorrectness[SolveEndCS]("BottomUpSolveEnd", BUSolveEndFactory)
+class TestBUSolveContinuouslyCorrectness extends TestCorrectness[SolveContinuouslyCS]("BUSolveContinuously", BUSolveContinuouslyFactory)
 //class TestBottomUpEagerSubstCorrectness extends TestCorrectness("BottomUpEagerSubst", BottomUpEagerSubstCheckerFactory)
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
 //class TestBottomUpIncrementalSolveCorrectness extends TestCorrectness("BottomUpIncrementalSolve", BottomUpIncrementalSolveCheckerFactory)
