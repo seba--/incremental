@@ -3,19 +3,25 @@ package constraints.equality
 import Type.Companion._
 import incremental.Util
 
-abstract case class ConstraintSystem
-  [CS <: ConstraintSystem[CS]]
-  (substitution: TSubst[CS], notyet: Seq[EqConstraint[CS]], never: Seq[EqConstraint[CS]])
+abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   extends constraints.ConstraintSystem[CS, EqConstraint[CS], Type[CS]] {
 
-  val csFactory: ConstraintSystemFactory[CS]
-  import csFactory._
+  def substitution: TSubst[CS]
+  def notyet: Seq[EqConstraint[CS]]
+  def never: Seq[EqConstraint[CS]]
 
   def unsolved = notyet ++ never
   def isSolved = notyet.isEmpty && never.isEmpty
   def solvable = !never.isEmpty
+  def isSolvable: Boolean = never.isEmpty
 
-//  def mergeSubsystem(other: CS): CS = mergeSubsystem(other.asInstanceOf[ConstraintSystem[CS]])
+}
+
+//  val csFactory: ConstraintSystemFactory[CS]
+
+
+
+  //  def mergeSubsystem(other: CS): CS = mergeSubsystem(other.asInstanceOf[ConstraintSystem[CS]])
 
 //  def mergeSubsystem(other: ConstraintSystem[CS]): CS = {
 //    val (res, time) = Util.timed {
@@ -118,10 +124,7 @@ abstract case class ConstraintSystem
 
 //  def propagate = system(substitution, notyet, never)
 
-  def isSolvable: Boolean = never.isEmpty
-  def solution = (substitution, notyet, never)
-
 //  protected def trySolve(finalize: Boolean): CS
 //  def trySolveNow = trySolve(false)
 //  def trySolve: CS = trySolveNow
-}
+

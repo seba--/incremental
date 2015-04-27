@@ -8,7 +8,7 @@ abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends const
   def freshState = new State(new Gen[CS](this), new Statistics)
 
   def freshConstraintSystem: CS
-  val emptySolution: CS
+  val emptySolution = freshConstraintSystem
   def solved(s: TSubst[CS]): CS
   def notyet(c: EqConstraint[CS]): CS
   def never(c: EqConstraint[CS]): CS
