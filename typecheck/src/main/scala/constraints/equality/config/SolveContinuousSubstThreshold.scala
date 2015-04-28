@@ -5,7 +5,7 @@ import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSys
 import incremental.Util
 
 object SolveContinuousSubstThreshold extends ConstraintSystemFactory[SolveContinuousSubstThresholdCS] {
-  var threshold = 1
+  var threshold = 2
 
   val freshConstraintSystem = SolveContinuousSubstThresholdCS(Map(), Seq(), Seq())
   def solved(s: TSubst) = SolveContinuousSubstThresholdCS(s, Seq(), Seq())
@@ -21,9 +21,10 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[EqC
 
   def mergeSubsystem(other: SolveContinuousSubstThresholdCS): SolveContinuousSubstThresholdCS = {
     val (res, time) = Util.timed {
+      val msubstitution = substitution ++ other.substitution
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
-      SolveContinuousSubstThresholdCS(Map(), mnotyet, mnever)
+      SolveContinuousSubstThresholdCS(msubstitution, mnotyet, mnever)
     }
     state.value.stats.mergeSolutionTime += time
     res
