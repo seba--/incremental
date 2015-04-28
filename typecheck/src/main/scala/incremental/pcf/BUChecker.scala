@@ -148,7 +148,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
 case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
   def makeChecker = new BUChecker[CS] {
-    override type CSFactory = factory.type
-    override implicit val csFactory: CSFactory = factory
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
   }
 }
