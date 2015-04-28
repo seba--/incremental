@@ -71,12 +71,15 @@ class ConstraintOps extends Serializable {
   }
 
   def mergeCld(cld1: ClassDecl, cld2 : ClassDecl) : ClassDecl = {
-return cld1
-
+    val f = cld1.f ++ cld2.f
+    val m = cld1.m ++ cld2.m
+      cld1
   }
 
   def mergeCReqMaps(creqs1: Map[Type, ClassDecl], creqs2: Map[Type, ClassDecl]) = {
     val (cres, time) = Util.timed(_mergeCReqMaps(creqs1, creqs2))
+    cmergeReqsTime += time
+    cres
   }
 
 
@@ -84,13 +87,11 @@ return cld1
     var mcons = Seq[EqConstraint]()
     var mreqs = creqs1
     for ((t, cld2) <- creqs2)
-      creqs1.filterKeys { t => true } // match {
-    //case None => mreqs += t -> cld2
-    // case (t1, cld1) :: lt =>
-    //'mcons = EqConstraint(t, t1) +: mcons
-
- // }
-
+     creqs1.get(t) match {
+       case None => creqs2
+       case Some(cld1) => mreqs += t -> mergeCld(cld1,cld2)
+        // mcons =EqConstraint(cld1.c, cld2.c) +: mcons
+     }
     (mcons, mreqs)
   }
 }

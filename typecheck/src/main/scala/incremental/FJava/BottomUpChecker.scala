@@ -15,7 +15,10 @@ class Class(val name: Name, superClass: Name, val fields: List[Fields], val m: L
 
 class Fields(fname: Symbol, val fType: Type)
 
-class Methods(val mtype: Symbol, margs: List[Type], mreturnT : Type)
+class Methods(val mtype: Symbol, mparam: List[Type], mreturnT : Type)
+{
+  val param = this.mparam
+}
 
 class ClassDecl(cName: Type , cSuper: Type, cFld: List[Fields], cMethods: List[Methods])
 {
@@ -125,8 +128,8 @@ class BottomUpChecker extends TypeChecker[Type] {
           val (cons, reqs) = mergeReqMaps(subreqs, subreqs)
           val di = freshUVar()
           subcreqs ++ Subtype(ei,di)
-         // val (cCons, creqs ) = mergeCReqMaps(subcreqs, subcreqs)
-          mcons = mcons ++ cons //++ cCons
+         val (cCons, creqs ) = mergeCReqMaps(subcreqs, subcreqs)
+          mcons = mcons ++ cons ++ cCons
           mreqs = reqs
           mcreqs = subcreqs
           param ++= List(ei)
@@ -144,13 +147,37 @@ class BottomUpChecker extends TypeChecker[Type] {
         (c, Map(), Map(c -> cld), emptySol)
       }
       else {
-        val (t, reqs, creqs, subsol) = e.kids(0).typ
         val U = freshCName()
-        val f = U.x
-        val fld = new Fields(f, U)
-        val cld = new ClassDecl(c, null, List(fld), List())
-        (c, reqs, creqs + (c -> cld) ++ Subtype(t, U), subsol)
+        var mcons = Seq[Constraint]()
+        var mreqs: Reqs = Map()
+        var mcreqs: CReqs = Map()
+        var field = List[Fields]()
+        var msol = emptySol
+        val subs = for (sub <- e.kids.seq) yield {
+          val (ei, subreqs, subcreqs, subsol) = sub.typ
+          msol = msol +++ subsol
+          val (cons, reqs) = mergeReqMaps(subreqs, subreqs)
+          val di = freshUVar()
+          subcreqs ++ Subtype(ei,di)
+          val (cCons, creqs ) = mergeCReqMaps(subcreqs, subcreqs)
+          mcons = mcons ++ cons ++ cCons
+          mreqs = reqs
+          mcreqs = subcreqs
+          val fld = new Fields(di.x, di)
+          field ++= List(fld)
+        }
+        val sol = solve(mcons)
+        val cld = new ClassDecl(c, null, field, List())
+        (c, mreqs.mapValues(_.subst(sol.substitution)),mcreqs , msol <++ sol)
+
       }
+
+     // val (t, reqs, creqs, subsol) = e.kids(0).typ
+     // val f = U.x
+     // val fld = new Fields(f, U)
+     // val cld = new ClassDecl(c, null, List(fld), List())
+     // (c, reqs, creqs + (c -> cld) ++ Subtype(t, U), subsol)
+     // }
 
     case DCast =>
       val (t, reqs, creqs, subsol) = e.kids(0).typ

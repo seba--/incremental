@@ -48,6 +48,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTestError("Pair.setfst(first) : U ", Invk(Seq('setfst),Seq(New(CName('Pair),Var('first)), Var('first))))
   typecheckTestError("(Object)first : Object", UCast(CName('Object),Var('first)))
   typecheckTestError("(Pair) first : Pair", New(CName('Pair),Var('first)))
+  typecheckTestError("(Pair) first : Pair, second : Pair", New(CName('Pair),Var('first), Var('second)))
   typecheckTestError("new Object()", New(CName('Object)))
   typecheckTestError("new Pair(fst : First, snd : Second)", New(CName('Pair), Seq(Var('First), Var('Second))))
   //  typecheckTestError("(C) e0 : C", DCast(CName('c),'e))
