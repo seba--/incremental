@@ -6,13 +6,11 @@ package incremental.FJava
 import incremental.ConstraintOps._
 import incremental.EqConstraint
 import incremental.Type
-import incremental.Type
-import incremental.Type
 import incremental.Type.Companion._
 import incremental.Util
-import incremental._
-
 import incremental.Constraint
+import incremental.pcf.UVar
+
 class ConstraintOps extends Serializable {
   incremental.ConstraintOps.constraintCount = 0
   incremental.ConstraintOps.constraintSolveTime = 0
@@ -23,6 +21,12 @@ class ConstraintOps extends Serializable {
   def mergeSolutionTime = incremental.ConstraintOps.mergeSolutionTime
 
 
+  case class EqConstraintC(t1: Type, cld1: ClassDecl, t2: Type, cld2: ClassDecl) extends Constraint {
+    def solve(s: Solution) =t1.unify(t2, s.substitution)
+    def finalize(s: Solution) = solve(s)
+    def subst(s: TSubst) = EqConstraint(t1.subst(s), t2.subst(s))
+  }
+
   case class NotEqConstraint(expected: Type, actual: Type) extends Constraint {
     def solve(s: Solution) = expected.notUnify(actual)
     def finalize(s: Solution) = solve(s)
@@ -30,9 +34,16 @@ class ConstraintOps extends Serializable {
   }
 
   private var _nextId = 0
-  def freshUVar(): UCName = {
-    val v = UCName(Symbol("x$" + _nextId))
+  def freshUVar(): UVar = {
+    val v = UVar(Symbol("x$" + _nextId))
     _nextId += 1
+    v
+  }
+
+  private var _nextIdC = 0
+  def freshCName() : UCName = {
+    val v = UCName(Symbol("x$" + _nextIdC))
+    _nextIdC +=1
     v
   }
 
@@ -58,5 +69,28 @@ class ConstraintOps extends Serializable {
 
     (mcons, mreqs)
   }
-}
 
+  def mergeCld(cld1: ClassDecl, cld2 : ClassDecl) : ClassDecl = {
+return cld1
+
+  }
+
+  def mergeCReqMaps(creqs1: Map[Type, ClassDecl], creqs2: Map[Type, ClassDecl]) = {
+    val (cres, time) = Util.timed(_mergeCReqMaps(creqs1, creqs2))
+  }
+
+
+  def _mergeCReqMaps(creqs1: Map[Type, ClassDecl], creqs2: Map[Type, ClassDecl]) = {
+    var mcons = Seq[EqConstraint]()
+    var mreqs = creqs1
+    for ((t, cld2) <- creqs2)
+      creqs1.filterKeys { t => true } // match {
+    //case None => mreqs += t -> cld2
+    // case (t1, cld1) :: lt =>
+    //'mcons = EqConstraint(t, t1) +: mcons
+
+ // }
+
+    (mcons, mreqs)
+  }
+}

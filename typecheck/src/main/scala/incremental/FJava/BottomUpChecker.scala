@@ -8,7 +8,6 @@ import incremental.Type
 
 
 
-
 /**
  * Created by lirakuci on 3/2/15.
  */
@@ -19,6 +18,12 @@ class Fields(fname: Symbol, val fType: Type)
 class Methods(val mtype: Symbol, margs: List[Type], mreturnT : Type)
 
 class ClassDecl(cName: Type , cSuper: Type, cFld: List[Fields], cMethods: List[Methods])
+{
+  val c = this.cName
+  val s = this.cSuper
+  val f = this.cFld
+  val m = this.cMethods
+}
 
 class BottomUpChecker extends TypeChecker[Type] {
   val constraint = new ConstraintOps
@@ -46,10 +51,8 @@ class BottomUpChecker extends TypeChecker[Type] {
 
   type Result = (Type, Reqs, CReqs, Solution)
 
-  type ResultMC = (Boolean, Reqs, CReqs, Solution)
 
-
-  def Subtype(C: Type, D : Type) : CReqs = {
+  def Subtype(C: Type, D: Type): CReqs = {
     val cld = new ClassDecl(C, D, List(), List())
     Map(C -> cld)
   }
@@ -79,101 +82,129 @@ class BottomUpChecker extends TypeChecker[Type] {
     typecheckTime += ctime
     res
   }
-    def typecheckStep(e: Node_[Result]): Result = e.kind match {
 
-      case Var =>
-        val x = e.lits(0).asInstanceOf[Symbol]
-        val X = freshUVar()
-        (X, Map(x -> X), Map(), emptySol)
+  def typecheckStep(e: Node_[Result]): Result = e.kind match {
 
-      case Field =>
-        val f = e.lits(0).asInstanceOf[Symbol]
-        val (t, reqs, creqs, subsol) = e.kids(0).typ
-        //t.unify(e0)
-        val U = freshUVar()
-        val fld = new Fields(f, U)
-        val ct = new ClassDecl(t, null, List(fld), List())
-        (U, reqs, creqs + (t -> ct), subsol)
+    case Var =>
+      val x = e.lits(0).asInstanceOf[Symbol]
+      val X = freshUVar()
+      (X, Map(x -> X), Map(), emptySol)
 
-      case Invk =>
-        val (e0, reqs1, creqs1, subsol1) = e.kids(0).typ
-        val (ei, reqs2, creqs2, subsol2) = e.kids(1).typ
+    case Field =>
+      val f = e.lits(0).asInstanceOf[Symbol]
+      val (t, reqs, creqs, subsol) = e.kids(0).typ
+      //t.unify(e0)
+      val U = freshCName()
+      val fld = new Fields(f, U)
+      val ct = new ClassDecl(t, null, List(fld), List())
+      (U, reqs, creqs + (t -> ct), subsol)
+
+    case Invk =>
+      if (e.kids.seq.size == 1 ) {
         val m = e.lits(0).asInstanceOf[Symbol]
-        val C = freshUVar()
-        val D = freshUVar()
-        val method = new Methods(m, List(ei), C)
+        val (e0, reqs1, creqs1, subsol1) = e.kids(0).typ
+        val C = freshCName()
+        val method = new Methods(m, List(), C)
         val cld = new ClassDecl(e0, null, List(), List(method))
-        (C, reqs1 ++ reqs2, creqs1 ++ creqs2 ++ Subtype(ei, D), subsol1 ++ subsol2)
+        (C, reqs1, creqs1 + (e0 -> cld), subsol1)
 
-      case New =>
-        val c = e.lits(0).asInstanceOf[CName]
-        if (e.kids.seq == Seq()) {
-          val cld = new ClassDecl(c, null, List(), List())
-          (c, Map(), Map(c -> cld), emptySol)
+      }
+      else {
+        val m = e.lits(0).asInstanceOf[Symbol]
+        val C = freshCName()
+        var mcons = Seq[Constraint]()
+        var mreqs: Reqs = Map()
+        var mcreqs: CReqs = Map()
+        var param =  List[Type]()
+        var method = new Methods(m, param, C)
+        var msol = emptySol
+        val (e0, reqs1, creqs1, subsol1) = e.kids(0).typ
+        val subs = for (sub <- e.kids.seq drop(0)) yield {
+          val (ei, subreqs, subcreqs, subsol) = sub.typ
+          msol = msol +++ subsol
+          val (cons, reqs) = mergeReqMaps(subreqs, subreqs)
+          val di = freshUVar()
+          subcreqs ++ Subtype(ei,di)
+         // val (cCons, creqs ) = mergeCReqMaps(subcreqs, subcreqs)
+          mcons = mcons ++ cons //++ cCons
+          mreqs = reqs
+          mcreqs = subcreqs
+          param ++= List(ei)
         }
-        else {
-          val (t, reqs, creqs, subsol) = e.kids(0).typ
-          val U = freshUVar()
-          val f = U.x
-          val fld = new Fields(f, U)
-          val cld = new ClassDecl(c, null, List(fld), List())
-          (c, reqs, creqs + (c -> cld) ++ Subtype(t, U), subsol)
-        }
+        val sol = solve(mcons)
+        val cld = new ClassDecl(e0, null, List(), List(method))
+        (C, mreqs.mapValues(_.subst(sol.substitution)),mcreqs ++ creqs1 , msol <++ sol ++ subsol1)
 
-      case DCast =>
+      }
+
+    case New =>
+      val c = e.lits(0).asInstanceOf[CName]
+      if (e.kids.seq == Seq()) {
+        val cld = new ClassDecl(c, null, List(), List())
+        (c, Map(), Map(c -> cld), emptySol)
+      }
+      else {
         val (t, reqs, creqs, subsol) = e.kids(0).typ
-        val c = e.lits(0).asInstanceOf[CName]
-        val sol = solve(NotEqConstraint(t, c))
-        (c, reqs, creqs ++ Subtype(c, c), subsol ++ sol)
+        val U = freshCName()
+        val f = U.x
+        val fld = new Fields(f, U)
+        val cld = new ClassDecl(c, null, List(fld), List())
+        (c, reqs, creqs + (c -> cld) ++ Subtype(t, U), subsol)
+      }
 
-      case UCast =>
-        val c = e.lits(0).asInstanceOf[CName]
-        val (t, reqs, creqs, subsol) = e.kids(0).typ
-        (c, reqs, creqs ++ Subtype(t, c), subsol)
+    case DCast =>
+      val (t, reqs, creqs, subsol) = e.kids(0).typ
+      val c = e.lits(0).asInstanceOf[CName]
+      val sol = solve(NotEqConstraint(t, c))
+      (c, reqs, creqs ++ Subtype(c, c), subsol ++ sol)
 
-      case SCast =>
-        val (t, reqs, creqs, subsol) = e.kids(0).typ
-        (t, reqs, creqs, subsol)
+    case UCast =>
+      val c = e.lits(0).asInstanceOf[CName]
+      val (t, reqs, creqs, subsol) = e.kids(0).typ
 
-    }
+      (c, reqs, creqs ++ Subtype(t, c), subsol)
 
-   def typechechMC(e: Node_[Result]): ResultMC = e.kind match {
-      case Method =>
+    case SCast =>
+      val (t, reqs, creqs, subsol) = e.kids(0).typ
+      (t, reqs, creqs, subsol)
 
-        val (e0, reqs, creqs, subsol) = e.kids(0).typ
-        val C0 = e.lits(0).asInstanceOf[Type]
-        val m = e.lits(1).asInstanceOf[Symbol]
-        val x = e.lits(2).asInstanceOf[Symbol]
-        val C = e.lits(3).asInstanceOf[Type]
+    case Method =>
 
-        reqs.get(x) match {
-          case None =>
-            val Ci = if (e.lits == 5) e.lits(4).asInstanceOf[Type] else freshUVar()
+      val (e0, reqs, creqs, subsol) = e.kids(0).typ
+      val C0 = e.lits(0).asInstanceOf[Type]
+      val m = e.lits(1).asInstanceOf[Symbol]
+      val x = e.lits(2).asInstanceOf[Symbol]
+      val C = e.lits(3).asInstanceOf[Type]
+
+      reqs.get(x) match {
+        case None =>
+          val Ci = if (e.lits == 5) e.lits(4).asInstanceOf[Type] else freshUVar()
+          val method = new Methods(m, List(Ci), C)
+          val cld = new ClassDecl(C, null, List(), List(method))
+          (C0, reqs, creqs ++ Subtype(e0, C0) + (C -> cld), subsol)
+        case Some(treq) =>
+          val otherReqs = reqs - x
+          if (e.lits.size == 5) {
+            val Ci = e.lits(4).asInstanceOf[Type]
+            val sol = solve(EqConstraint(Ci, treq))
             val method = new Methods(m, List(Ci), C)
             val cld = new ClassDecl(C, null, List(), List(method))
-            (true, reqs,creqs ++ Subtype(e0, C0) + (C -> cld), subsol)
-          case Some(treq) =>
-            val otherReqs = reqs - x
-            if (e.lits.size == 5) {
-              val Ci = e.lits(4).asInstanceOf[Type]
-              val sol = solve(EqConstraint(Ci, treq))
-              val method = new Methods(m, List(Ci), C)
-              val cld = new ClassDecl(C, null, List(), List(method))
-              (true, otherReqs.mapValues(_.subst(sol.substitution)),creqs ++ Subtype(e0, C0) + (C -> cld), subsol <++ sol)
-            }
-            else
-              (true, otherReqs, creqs ++ Subtype(e0, C0), subsol)
-        }
+            (C0, otherReqs.mapValues(_.subst(sol.substitution)), creqs ++ Subtype(e0, C0) + (C -> cld), subsol <++ sol)
+          }
+          else
+            (C0, otherReqs, creqs ++ Subtype(e0, C0), subsol)
+      }
 
-      case TClass =>
-        val (t, reqs, creqs, subsol) = e.kids(0).typ
-        (true, reqs, creqs, subsol)
-    }
+    case TClass =>
+      val (t, reqs, creqs, subsol) = e.kids(0).typ
+      (t, reqs, creqs, subsol)
 
 
+  }
 }
 
 
 object BottomUpCheckerFactory extends TypeCheckerFactory[Type] {
   def makeChecker = new BottomUpChecker
 }
+

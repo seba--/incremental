@@ -39,10 +39,7 @@ trait SType[T] extends Typ[T] {
   val isGround: Boolean
 }
 
-trait MCType[T] extends Typ[T] {
-  val isOk : Boolean
 
-}
 //always define a type class instance together with its companion
 trait Type extends UType[Type]
 
