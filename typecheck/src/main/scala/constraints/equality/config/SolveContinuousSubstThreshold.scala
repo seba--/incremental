@@ -4,6 +4,8 @@ import constraints.equality.Type.Companion.TSubst
 import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSystemFactory}
 import incremental.Util
 
+import scala.collection.generic.CanBuildFrom
+
 object SolveContinuousSubstThreshold extends ConstraintSystemFactory[SolveContinuousSubstThresholdCS] {
   var threshold = 2
 
@@ -73,6 +75,15 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[EqC
       t.subst(substitution)
     else
       t
+
+  def applyPartialSolutionIt[U, C <: Iterable[U]]
+    (it: C, f: U=>Type)
+    (implicit bf: CanBuildFrom[Iterable[U], (U, Type), C]): C
+  = if (trigger)
+      it.map(u => (u, f(u).subst(substitution)))
+    else
+      it
+
 
   def propagate =
     if (trigger)

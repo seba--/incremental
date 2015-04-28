@@ -4,6 +4,9 @@ import constraints.equality._
 import incremental.{Node_, Util}
 import incremental.Node.Node
 
+import scala.collection.generic.CanBuildFrom
+import scala.collection.mutable
+
 abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
 
@@ -21,7 +24,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (t, reqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
         val cs = subcs addNewConstraints cons
-        e.typ = (cs applyPartialSolution t, reqs.mapValues(cs applyPartialSolution _), cs.propagate)
+        val reqs2 = cs.applyPartialSolutionIt[(Symbol,Type),Map[Symbol,Type]](reqs, p => p._2)
+        e.typ = (cs applyPartialSolution t, reqs2, cs.propagate)
         true
       }
 

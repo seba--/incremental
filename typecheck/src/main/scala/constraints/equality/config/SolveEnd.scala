@@ -4,6 +4,8 @@ import constraints.equality.Type.Companion.TSubst
 import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSystemFactory}
 import incremental.Util
 
+import scala.collection.generic.CanBuildFrom
+
 object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
   def freshConstraintSystem = SolveEndCS(Seq())
   def solved(s: TSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
@@ -41,6 +43,12 @@ case class SolveEndCS(notyet: Seq[EqConstraint]) extends ConstraintSystem[SolveE
   }
 
   def applyPartialSolution(t: Type) = t
+
+  def applyPartialSolutionIt[U, C <: Iterable[U]]
+    (it: C, f: U=>Type)
+    (implicit bf: CanBuildFrom[Iterable[U], (U, Type), C]): C
+  = it
+
 
   def propagate = this
 

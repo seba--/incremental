@@ -4,6 +4,8 @@ import constraints.equality.Type.Companion.TSubst
 import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSystemFactory}
 import incremental.Util
 
+import scala.collection.generic.CanBuildFrom
+
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
   val freshConstraintSystem = SolveContinuousSubstCS(Map(), Seq(), Seq())
   def solved(s: TSubst) = SolveContinuousSubstCS(s, Seq(), Seq())
@@ -63,6 +65,12 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[EqConstraint
   }
 
   def applyPartialSolution(t: Type) = t.subst(substitution)
+
+  def applyPartialSolutionIt[U, C <: Iterable[U]]
+    (it: C, f: U=>Type)
+    (implicit bf: CanBuildFrom[Iterable[U], (U, Type), C]): C
+  = it.map(u => (u, f(u).subst(substitution)))
+
 
   def propagate = SolveContinuousSubstCS(Map(), notyet, never)
 

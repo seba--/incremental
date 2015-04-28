@@ -1,5 +1,7 @@
 package incremental
 
+import scala.collection.mutable
+
 /**
  * Created by seba on 06/11/14.
  */
@@ -27,3 +29,11 @@ object Util {
       println(s)
   }
 }
+
+class MyBuilder[K,V] extends mutable.Builder[((K, V), V), Map[K, V]] {
+  var res = Map[K,V]()
+  def +=(el: ((K, V), V)) = {res = res + (el._1._1 -> el._2); this}
+  def clear() = res = Map()
+  def result() = res
+}
+
