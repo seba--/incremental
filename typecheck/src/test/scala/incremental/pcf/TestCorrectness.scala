@@ -24,7 +24,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
-      val sol = expected.unify(actual.left.get)(checker.csFactory).tryFinalize
+
+      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
+        expected.unify(actual.left.get)(SolveContinuously).tryFinalize
+      }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 

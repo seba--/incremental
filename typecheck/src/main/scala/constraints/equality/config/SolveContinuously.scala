@@ -75,29 +75,26 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[Constraint], ne
 
   def propagate = this
 
-  override def tryFinalize = trySolve(true)
+  override def tryFinalize = {
+    val (res, time) = Util.timed (trySolve(true))
+    state.value.stats.finalizeTime += time
+    res
+  }
 
   private def trySolve(finalize: Boolean): SolveContinuouslyCS = {
     var current = this
-//    var rest = notyet
-//    var newSolution = substitution
-//    var newNotyet = Seq[Constraint]()
-//    var newNever = never
     while (!current.notyet.isEmpty) {
       val next = current.notyet.head
       val rest = current.notyet.tail
-
       current = SolveContinuouslyCS(current.substitution, rest, current.never)
 
-      val sol = if (finalize) next.finalize(current, SolveContinuously) else next.solve(current, SolveContinuously)
-
-      if (sol.notyet.exists(c => rest.contains(c)))
-        return SolveContinuouslyCS(current.substitution, next +: rest, current.never)
+      val sol =
+        if (finalize)
+          next.finalize(current, SolveContinuously)
+        else
+          next.solve(current, SolveContinuously)
 
       current = current mergeApply sol
-//      newSolution = mergedSol.substitution
-//      newNever = newNever ++ sol.never
-//      newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
     }
     current
   }

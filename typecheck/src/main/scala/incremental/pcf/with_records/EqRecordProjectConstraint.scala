@@ -31,11 +31,17 @@ case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) e
       case v@UVar(x) =>
         var cons = Seq[Constraint]()
         var fields = Map(label -> field.subst(s.substitution))
-        for (EqRecordProjectConstraint(`v`, l, field) <- s.notyet)
-          if (!fields.isDefinedAt(l))
-            fields += l -> field.subst(s.substitution)
-          else
-            cons = EqConstraint(fields(l), field) +: cons
+        for (EqRecordProjectConstraint(t, l, field) <- s.notyet) t match {
+          case UVar(y) if x == y || v == s.substitution.getOrElse(y, t) =>
+            if (!fields.isDefinedAt(l))
+              fields += l -> field.subst(s.substitution)
+            else
+              cons = EqConstraint(fields(l), field) +: cons
+
+          case _ =>
+              return csf.notyet(EqRecordProjectConstraint(trec, label, fields(label)))
+
+        }
         csf.solved(Map(x -> TRecord(fields))) addNewConstraints cons
       case _ => csf.never(EqRecordProjectConstraint(trec, label, field))
     }

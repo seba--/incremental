@@ -87,7 +87,7 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[Con
 
   def propagate =
     if (trigger)
-      SolveContinuousSubstThresholdCS(Map(), notyet, never)
+      SolveContinuousSubstThresholdCS(Map(), notyet.map(_.subst(substitution)), never.map(_.subst(substitution)))
     else
       this
 

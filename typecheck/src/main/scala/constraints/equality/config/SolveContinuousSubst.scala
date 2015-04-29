@@ -72,7 +72,7 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint],
   = it.map(u => (u, f(u).subst(substitution)))
 
 
-  def propagate = SolveContinuousSubstCS(Map(), notyet.map(_.subst(substitution)), never)
+  def propagate = SolveContinuousSubstCS(Map(), notyet.map(_.subst(substitution)), never.map(_.subst(substitution)))
 
   override def tryFinalize =
     SolveContinuously.state.withValue(state.value) {

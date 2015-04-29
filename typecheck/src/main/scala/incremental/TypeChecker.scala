@@ -13,7 +13,7 @@ abstract class TypeChecker[T <: Type, V <: T, Constraint, CS <: ConstraintSystem
   type CSFactory <: ConstraintSystemFactory[T, V, Constraint, CS]
   implicit val csFactory: CSFactory
 
-  lazy val localState: State[V] = csFactory.freshState
+  lazy val localState = csFactory.freshState
 
   def preparationTime: Double = localState.stats.preparationTime
   def typecheckTime: Double = localState.stats.typecheckTime
@@ -21,11 +21,13 @@ abstract class TypeChecker[T <: Type, V <: T, Constraint, CS <: ConstraintSystem
   def mergeReqsTime: Double = localState.stats.mergeReqsTime
   def constraintSolveTime: Double = localState.stats.constraintSolveTime
   def mergeSolutionTime: Double = localState.stats.mergeSolutionTime
+  def finalizeTime: Double = localState.stats.finalizeTime
 
   def freshUVar() = localState.gen.freshUVar()
 
 
   def typecheck(e: Node): Either[T, TError] = {
+    localState.stats.reset
     csFactory.state.value = localState
     typecheckImpl(e)
   }
