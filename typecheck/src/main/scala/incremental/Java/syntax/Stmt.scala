@@ -1,4 +1,4 @@
-package incremental.Java
+package incremental.Java.syntax
 
 /**
  * Created by qwert on 05.04.15.
