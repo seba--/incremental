@@ -1,7 +1,7 @@
 package constraints.equality.config
 
 import constraints.equality.Type.Companion.TSubst
-import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSystemFactory}
+import constraints.equality.{Type, Constraint, ConstraintSystem, ConstraintSystemFactory}
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
@@ -9,11 +9,11 @@ import scala.collection.generic.CanBuildFrom
 object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
   def freshConstraintSystem = SolveEndCS(Seq())
   def solved(s: TSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
-  def notyet(c: EqConstraint) = SolveEndCS(Seq(c))
-  def never(c: EqConstraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
+  def notyet(c: Constraint) = SolveEndCS(Seq(c))
+  def never(c: Constraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
 }
 
-case class SolveEndCS(notyet: Seq[EqConstraint]) extends ConstraintSystem[SolveEndCS] {
+case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEndCS] {
   import SolveEnd.state
 
   def substitution = Map()
@@ -28,14 +28,14 @@ case class SolveEndCS(notyet: Seq[EqConstraint]) extends ConstraintSystem[SolveE
     res
   }
 
-  def addNewConstraint(c: EqConstraint) = {
+  def addNewConstraint(c: Constraint) = {
     state.value.stats.constraintCount += 1
     val (res, time) = Util.timed(SolveEndCS(notyet :+ c))
     state.value.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cs: Iterable[EqConstraint]) = {
+  def addNewConstraints(cs: Iterable[Constraint]) = {
     state.value.stats.constraintCount += cs.size
     val (res, time) = Util.timed(SolveEndCS(notyet ++ cs))
     state.value.stats.constraintSolveTime += time
@@ -52,5 +52,8 @@ case class SolveEndCS(notyet: Seq[EqConstraint]) extends ConstraintSystem[SolveE
 
   def propagate = this
 
-  override def tryFinalize = SolveContinuouslyCS(Map(), notyet, Seq()).tryFinalize
+  override def tryFinalize =
+    SolveContinuously.state.withValue(state.value) {
+      SolveContinuouslyCS(Map(), notyet, Seq()).tryFinalize
+    }
 }

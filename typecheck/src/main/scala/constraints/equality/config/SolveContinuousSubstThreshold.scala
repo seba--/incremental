@@ -1,7 +1,7 @@
 package constraints.equality.config
 
 import constraints.equality.Type.Companion.TSubst
-import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSystemFactory}
+import constraints.equality.{Type, Constraint, ConstraintSystem, ConstraintSystemFactory}
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
@@ -11,11 +11,11 @@ object SolveContinuousSubstThreshold extends ConstraintSystemFactory[SolveContin
 
   val freshConstraintSystem = SolveContinuousSubstThresholdCS(Map(), Seq(), Seq())
   def solved(s: TSubst) = SolveContinuousSubstThresholdCS(s, Seq(), Seq())
-  def notyet(c: EqConstraint) = SolveContinuousSubstThresholdCS(Map(), Seq(c), Seq())
-  def never(c: EqConstraint) = SolveContinuousSubstThresholdCS(Map(), Seq(), Seq(c))
+  def notyet(c: Constraint) = SolveContinuousSubstThresholdCS(Map(), Seq(c), Seq())
+  def never(c: Constraint) = SolveContinuousSubstThresholdCS(Map(), Seq(), Seq(c))
 }
 
-case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[EqConstraint], never: Seq[EqConstraint]) extends ConstraintSystem[SolveContinuousSubstThresholdCS] {
+case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstThresholdCS] {
   import SolveContinuousSubstThreshold.state
   import SolveContinuousSubstThreshold.threshold
 
@@ -54,14 +54,14 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[EqC
     res
   }
 
-  def addNewConstraint(c: EqConstraint) = {
+  def addNewConstraint(c: Constraint) = {
     state.value.stats.constraintCount += 1
     val (res, time) = Util.timed(this mergeApply c.solve(this, SolveContinuousSubstThreshold))
     state.value.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cs: Iterable[EqConstraint]): SolveContinuousSubstThresholdCS = {
+  def addNewConstraints(cs: Iterable[Constraint]): SolveContinuousSubstThresholdCS = {
     state.value.stats.constraintCount += cs.size
     val (res, time) = Util.timed {
       cs.foldLeft(this)((sol, c) => sol mergeApply c.solve(sol, SolveContinuousSubstThreshold))
@@ -91,5 +91,8 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[EqC
     else
       this
 
-  override def tryFinalize = SolveContinuouslyCS(substitution, notyet, never).tryFinalize
+  override def tryFinalize =
+    SolveContinuously.state.withValue(state.value) {
+      SolveContinuouslyCS(substitution, notyet, never).tryFinalize
+    }
 }

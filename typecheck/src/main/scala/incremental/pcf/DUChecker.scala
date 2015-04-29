@@ -1,7 +1,7 @@
 package incremental.pcf
 
 import constraints.equality.Type.Companion.TSubst
-import constraints.equality.{ConstraintSystemFactory, EqConstraint, Type, ConstraintSystem}
+import constraints.equality._
 import incremental.Node.Node
 import incremental.{Node_, Util}
 
@@ -13,7 +13,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type TError = Type.Companion.TError
   type Result = (Type, CS)
-  type StepResult = (Type, Seq[EqConstraint], Seq[CS])
+  type StepResult = (Type, Seq[Constraint], Seq[CS])
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]

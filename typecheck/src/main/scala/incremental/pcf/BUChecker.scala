@@ -4,16 +4,13 @@ import constraints.equality._
 import incremental.{Node_, Util}
 import incremental.Node.Node
 
-import scala.collection.generic.CanBuildFrom
-import scala.collection.mutable
-
 abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
 
   type TError = Type.Companion.TError
   type Reqs = Map[Symbol, Type]
 
-  type StepResult = (Type, Reqs, Seq[EqConstraint])
+  type StepResult = (Type, Reqs, Seq[Constraint])
   type Result = (Type, Reqs, CS)
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
@@ -126,17 +123,19 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
 
 
-  private val init: (Seq[EqConstraint], Reqs) = (Seq(), Map())
+  private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
 
-  def mergeReqMaps(reqs: Reqs*) = {
+  def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
+
+  def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) = {
     val (res, time) = Util.timed{
-      reqs.foldLeft[(Seq[EqConstraint], Reqs)](init)(_mergeReqMaps)
+      reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
     localState.stats.mergeReqsTime += time
     res
   }
 
-  private def _mergeReqMaps(was: (Seq[EqConstraint], Reqs), newReqs: Reqs) = {
+  private def _mergeReqMaps(was: (Seq[Constraint], Reqs), newReqs: Reqs) = {
     val wasReqs = was._2
     var mcons = was._1
     var mreqs = wasReqs

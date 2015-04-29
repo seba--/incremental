@@ -1,7 +1,7 @@
 package constraints.equality.config
 
 import constraints.equality.Type.Companion.TSubst
-import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSystemFactory}
+import constraints.equality._
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
@@ -9,11 +9,11 @@ import scala.collection.generic.CanBuildFrom
 object SolveContinuously extends ConstraintSystemFactory[SolveContinuouslyCS] {
   val freshConstraintSystem = SolveContinuouslyCS(Map(), Seq(), Seq())
   def solved(s: TSubst) = SolveContinuouslyCS(s, Seq(), Seq())
-  def notyet(c: EqConstraint) = SolveContinuouslyCS(Map(), Seq(c), Seq())
-  def never(c: EqConstraint) = SolveContinuouslyCS(Map(), Seq(), Seq(c))
+  def notyet(c: Constraint) = SolveContinuouslyCS(Map(), Seq(c), Seq())
+  def never(c: Constraint) = SolveContinuouslyCS(Map(), Seq(), Seq(c))
 }
 
-case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[EqConstraint], never: Seq[EqConstraint]) extends ConstraintSystem[SolveContinuouslyCS] {
+case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuouslyCS] {
   import SolveContinuously.state
 
   def mergeSubsystem(other: SolveContinuouslyCS): SolveContinuouslyCS = {
@@ -30,7 +30,7 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[EqConstraint], 
   def mergeApply(other: SolveContinuouslyCS): SolveContinuouslyCS = {
     val (res, time) = Util.timed {
       var msolution = substitution mapValues (_.subst(other.substitution))
-      val mnotyet = notyet ++ other.notyet
+      var mnotyet = notyet ++ other.notyet
       var mnever = never ++ other.never
 
       for ((x, t2) <- other.substitution) {
@@ -39,6 +39,7 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[EqConstraint], 
           case Some(t1) =>
             val usol = t1.unify(t2, msolution)(SolveContinuously)
             msolution = msolution.mapValues(_.subst(usol.substitution)) ++ usol.substitution
+            mnotyet = mnotyet ++ usol.notyet
             mnever = mnever ++ usol.never
         }
       }
@@ -49,14 +50,14 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[EqConstraint], 
     res
   }
 
-  def addNewConstraint(c: EqConstraint) = {
+  def addNewConstraint(c: Constraint) = {
     state.value.stats.constraintCount += 1
     val (res, time) = Util.timed(this mergeApply c.solve(this, SolveContinuously))
     state.value.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cs: Iterable[EqConstraint]): SolveContinuouslyCS = {
+  def addNewConstraints(cs: Iterable[Constraint]): SolveContinuouslyCS = {
     state.value.stats.constraintCount += cs.size
     val (res, time) = Util.timed {
       cs.foldLeft(this)((sol, c) => sol mergeApply c.solve(sol, SolveContinuously))
@@ -75,22 +76,29 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[EqConstraint], 
   def propagate = this
 
   override def tryFinalize = trySolve(true)
-  private def trySolve(finalize: Boolean) = {
-    var rest = notyet
-    var newSolution = substitution
-    var newNotyet = Seq[EqConstraint]()
-    var newNever = never
-    while (!rest.isEmpty) {
-      val next = rest.head
-      rest = rest.tail
-      val wasNotyet = newNotyet ++ rest
-      val current = SolveContinuouslyCS(newSolution, wasNotyet, newNever)
+
+  private def trySolve(finalize: Boolean): SolveContinuouslyCS = {
+    var current = this
+//    var rest = notyet
+//    var newSolution = substitution
+//    var newNotyet = Seq[Constraint]()
+//    var newNever = never
+    while (!current.notyet.isEmpty) {
+      val next = current.notyet.head
+      val rest = current.notyet.tail
+
+      current = SolveContinuouslyCS(current.substitution, rest, current.never)
+
       val sol = if (finalize) next.finalize(current, SolveContinuously) else next.solve(current, SolveContinuously)
 
-      newSolution = newSolution.mapValues(_.subst(sol.substitution)) ++ sol.substitution
-      newNever = newNever ++ sol.never
-      newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
+      if (sol.notyet.exists(c => rest.contains(c)))
+        return SolveContinuouslyCS(current.substitution, next +: rest, current.never)
+
+      current = current mergeApply sol
+//      newSolution = mergedSol.substitution
+//      newNever = newNever ++ sol.never
+//      newNotyet = newNotyet ++ (sol.notyet diff wasNotyet)
     }
-    SolveContinuouslyCS(newSolution, newNotyet, newNever)
+    current
   }
 }

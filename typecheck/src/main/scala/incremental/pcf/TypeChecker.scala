@@ -2,14 +2,13 @@ package incremental.pcf
 
 import constraints.equality._
 import incremental.MyBuilder
-import incremental.Node.Node
 
 import scala.collection.generic.CanBuildFrom
 
 /**
  * Created by seba on 13/11/14.
  */
-abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Type, UVar, EqConstraint, CS] {
+abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Type, UVar, Constraint, CS] {
   type CSFactory <: ConstraintSystemFactory[CS]
   implicit val csFactory: CSFactory
 

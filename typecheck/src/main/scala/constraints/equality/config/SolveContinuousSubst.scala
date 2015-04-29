@@ -1,7 +1,7 @@
 package constraints.equality.config
 
 import constraints.equality.Type.Companion.TSubst
-import constraints.equality.{Type, EqConstraint, ConstraintSystem, ConstraintSystemFactory}
+import constraints.equality._
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
@@ -9,11 +9,11 @@ import scala.collection.generic.CanBuildFrom
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
   val freshConstraintSystem = SolveContinuousSubstCS(Map(), Seq(), Seq())
   def solved(s: TSubst) = SolveContinuousSubstCS(s, Seq(), Seq())
-  def notyet(c: EqConstraint) = SolveContinuousSubstCS(Map(), Seq(c), Seq())
-  def never(c: EqConstraint) = SolveContinuousSubstCS(Map(), Seq(), Seq(c))
+  def notyet(c: Constraint) = SolveContinuousSubstCS(Map(), Seq(c), Seq())
+  def never(c: Constraint) = SolveContinuousSubstCS(Map(), Seq(), Seq(c))
 }
 
-case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[EqConstraint], never: Seq[EqConstraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
+case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
   import SolveContinuousSubst.state
 
   def mergeSubsystem(other: SolveContinuousSubstCS): SolveContinuousSubstCS = {
@@ -48,14 +48,14 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[EqConstraint
     res
   }
 
-  def addNewConstraint(c: EqConstraint) = {
+  def addNewConstraint(c: Constraint) = {
     state.value.stats.constraintCount += 1
     val (res, time) = Util.timed(this mergeApply c.solve(this, SolveContinuousSubst))
     state.value.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cs: Iterable[EqConstraint]): SolveContinuousSubstCS = {
+  def addNewConstraints(cs: Iterable[Constraint]): SolveContinuousSubstCS = {
     state.value.stats.constraintCount += cs.size
     val (res, time) = Util.timed {
       cs.foldLeft(this)((sol, c) => sol mergeApply c.solve(sol, SolveContinuousSubst))
@@ -72,7 +72,10 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[EqConstraint
   = it.map(u => (u, f(u).subst(substitution)))
 
 
-  def propagate = SolveContinuousSubstCS(Map(), notyet, never)
+  def propagate = SolveContinuousSubstCS(Map(), notyet.map(_.subst(substitution)), never)
 
-  override def tryFinalize = SolveContinuouslyCS(substitution, notyet, never).tryFinalize
+  override def tryFinalize =
+    SolveContinuously.state.withValue(state.value) {
+      SolveContinuouslyCS(substitution, notyet, never).tryFinalize
+    }
 }
