@@ -1,6 +1,6 @@
 package incremental.systemf
 
-import incremental.Exp._
+import incremental.Node._
 import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import incremental.systemf._
@@ -21,13 +21,13 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
   }
 
-  def typecheckTest(desc: String, e: =>Exp)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
     }
 
-  def typecheckTestError(desc: String, e: =>Exp) =
+  def typecheckTestError(desc: String, e: =>Node) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
@@ -63,7 +63,7 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
 
   typecheckTestError("\\x.y", Abs('x, Var('y)))
 
-  typecheckTestError("\\x: a . x", TAbs('x, TVar('a), Var('x)))
+  typecheckTestError("\\x: a . x", Abs('x, TVar('a), Var('x)))
 
   typecheckTest("\\a. \\x : a. x", TAbs('a, Abs('x, TVar('a), Var('x))))(TUniv('a, TFun(TVar('a), TVar('a))))
   typecheckTestError("\\a. \\x : a. x + x", TAbs('a, Abs('x, TVar('a), Add(Var('x), Var('x)))))

@@ -1,8 +1,8 @@
 package incremental.pcf_graph
 
 import incremental.ConstraintOps._
-import incremental.Exp.Exp
-import incremental.Exp._
+import incremental.Node.Node
+import incremental.Node._
 import incremental.Type.Companion._
 import incremental._
 
@@ -23,7 +23,7 @@ class DownUpSolveEndChecker extends TypeChecker[Type] {
 
   type Result = (Type, Seq[Constraint])
 
-  def typecheck(e: Exp): Either[Type, TError] = {
+  def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
     val (res, ctime) = Util.timed(
       try {
@@ -41,7 +41,7 @@ class DownUpSolveEndChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
+  def typecheck(e: Node_[Result], ctx: TSubst): Result = e.kind match {
     case Num => (TNum, Seq())
     case k if k == Add || k == Mul =>
       val (t1, sol1) = typecheck(e.kids(0), ctx)

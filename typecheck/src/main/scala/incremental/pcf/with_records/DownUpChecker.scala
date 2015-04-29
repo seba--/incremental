@@ -1,7 +1,7 @@
 package incremental.pcf.with_records
 
 import incremental.Type.Companion
-import incremental.{Type, TypeCheckerFactory, Exp_, pcf}
+import incremental.{Type, TypeCheckerFactory, Node_, pcf}
 import incremental.ConstraintOps._
 
 /**
@@ -12,7 +12,7 @@ trait DownUpChecker extends pcf.DownUpChecker {
   override val constraint = new ConstraintOps
   import constraint._
 
-  override def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
+  override def typecheck(e: Node_[Result], ctx: TSubst): Result = e.kind match {
     case Record =>
       val keys = e.lits.asInstanceOf[Seq[Symbol]]
 

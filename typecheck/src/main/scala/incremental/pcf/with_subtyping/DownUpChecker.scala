@@ -1,10 +1,10 @@
 package incremental.pcf.with_subtyping
 
-import incremental.Exp.Exp
+import incremental.Node.Node
 import TypeOps._
 import Type.Companion._
 import incremental.pcf._
-import incremental.{TypeCheckerFactory, Exp_, TypeChecker, Util}
+import incremental.{TypeCheckerFactory, Node_, TypeChecker, Util}
 
 /**
  * Created by oliver on 27.11.14.
@@ -27,7 +27,7 @@ class DownUpChecker extends TypeChecker[Type] {
 
   type Result = (Type, CSet)
 
-  def typecheck(e: Exp): Either[Type, TError] = {
+  def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
     val (res, ctime) = Util.timed(
       try {
@@ -46,7 +46,7 @@ class DownUpChecker extends TypeChecker[Type] {
     res
   }
 
-  def typecheck(e: Exp_[Result], ctx: TSubst): Result = e.kind match {
+  def typecheck(e: Node_[Result], ctx: TSubst): Result = e.kind match {
     case Num =>
       (TNum, emptyCSet)
     case k if k == Add || k == Mul =>
