@@ -1,4 +1,4 @@
-package constraints.equality
+package constraints.subtype
 
 import Type.Companion._
 
@@ -15,4 +15,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def isSolvable: Boolean = never.isEmpty
 
   def tryFinalize: ConstraintSystem[_]
+
+  def addUpperBound(v: Symbol, t: Type): CS
+  def addLowerBound(v: Symbol, t: Type): CS
 }
