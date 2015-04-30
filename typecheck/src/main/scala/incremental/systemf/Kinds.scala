@@ -1,6 +1,6 @@
 package incremental.systemf
 
-import constraints._
+import constraints.equality.Type
 import incremental.Node._
 import incremental.{SyntaxChecking, NodeKind}
 
@@ -18,9 +18,9 @@ case object Num  extends Exp(simple(Seq(classOf[Integer])))
 case object Add  extends Exp(simple(cExp, cExp))
 case object Mul  extends Exp(simple(cExp, cExp))
 case object Var  extends Exp(simple(Seq(classOf[Symbol])))
-case object Abs extends Exp(simple(Seq(classOf[Symbol]), cExp) orElse simple(Seq(classOf[Symbol], classOf[Typ[_]]), cExp) orElse (simple(Seq(classOf[Seq[Symbol]]), cExp)))
+case object Abs  extends Exp(simple(Seq(classOf[Symbol]), cExp) orElse simple(Seq(classOf[Symbol], classOf[Type]), cExp) orElse (simple(Seq(classOf[Seq[Symbol]]), cExp)))
 case object TAbs extends Exp(simple(Seq(classOf[Symbol]), cExp))
 case object App  extends Exp(simple(cExp, cExp))
-case object TApp extends Exp(simple(Seq(classOf[Typ[_]]), cExp))
+case object TApp extends Exp(simple(Seq(classOf[Type]), cExp))
 case object If0  extends Exp(simple(cExp, cExp, cExp))
 case object Fix  extends Exp(simple(cExp))

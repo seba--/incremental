@@ -1,4 +1,5 @@
 package incremental.systemf
+
 import incremental.ConstraintOps._
 import incremental.Node.Node
 import incremental.Node._
