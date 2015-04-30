@@ -1,4 +1,4 @@
-package constraints.subtype.impl
+package constraints.subtype.bounds
 
 import constraints.subtype.Type
 import constraints.subtype.Type.Companion.TSubst

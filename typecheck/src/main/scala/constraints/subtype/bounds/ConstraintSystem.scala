@@ -1,4 +1,4 @@
-package constraints.subtype.impl
+package constraints.subtype.bounds
 
 import constraints.subtype
 import constraints.subtype.{Constraint, Type, UVar}
@@ -11,8 +11,6 @@ import scala.collection.generic.CanBuildFrom
 case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, UBound)], never: Seq[Constraint]) extends constraints.subtype.ConstraintSystem[ConstraintSystem] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
-
-// bounds  = Map().withDefaultValue((LBound(Set(), None), UBound(Set(), None)))
 
   import ConstraintSystemFactory.state
   import ConstraintSystemFactory.gen
@@ -81,15 +79,19 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
   }
 
   def tryFinalize: ConstraintSystem = {
-    //set upper bounds of negative vars to Top if still undetermined and solve
-    val finalbounds = bounds.map {
-      case (tv, (lower, upper)) if gen.isNegative(tv) && !upper.isGround =>
-        val (newUpper, _) = upper.add(subtype.Top)
-        (tv, (lower, newUpper))
-      case x => x
-    }
+    val (res, time) = Util.timed {
+      //set upper bounds of negative vars to Top if still undetermined and solve
+      val finalbounds = bounds.map {
+        case (tv, (lower, upper)) if gen.isNegative(tv) && !upper.isGround =>
+          val (newUpper, _) = upper.add(subtype.Top)
+          (tv, (lower, newUpper))
+        case x => x
+      }
 
-    ConstraintSystem(substitution, finalbounds, never).saturateSolution
+      ConstraintSystem(substitution, finalbounds, never).saturateSolution
+    }
+    state.value.stats.finalizeTime += time
+    res
   }
 
 
@@ -98,7 +100,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
 
   private[ConstraintSystem] def saturateSolution: ConstraintSystem = {
     var sol = solveOnce
-    var current = ConstraintSystemFactory.solved(sol)
+    var current = csf.solved(sol)
     while (sol.nonEmpty) {
       var never = Seq[Constraint]()
       for ((tv, (lb, ub)) <- bounds) {
@@ -118,6 +120,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
           current = current mergeSubsystem t.subtype(tpe, sol)
       }
       sol = current.solveOnce
+      current = ConstraintSystem(sol, current.bounds, current.never)
     }
     current
   }
