@@ -15,9 +15,9 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
 // bounds  = Map().withDefaultValue((LBound(Set(), None), UBound(Set(), None)))
 
   import ConstraintSystemFactory.state
-  private implicit val csf = ConstraintSystemFactory
+  import ConstraintSystemFactory.gen
 
-  def gen = state.value.gen.asInstanceOf[subtype.Gen]
+  private implicit val csf = ConstraintSystemFactory
 
   def notyet = {
     var cons = Seq[Constraint]()

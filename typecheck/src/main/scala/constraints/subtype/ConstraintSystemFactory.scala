@@ -11,6 +11,8 @@ abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends const
   def solved(s: TSubst): CS
   def notyet(c: Constraint): CS
   def never(c: Constraint): CS
+
+  def gen: Gen = state.value.gen.asInstanceOf[Gen]
 }
 
 

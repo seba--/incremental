@@ -23,7 +23,7 @@ abstract class TypeChecker[T <: Type, V <: T, Constraint, CS <: ConstraintSystem
   def mergeSolutionTime: Double = localState.stats.mergeSolutionTime
   def finalizeTime: Double = localState.stats.finalizeTime
 
-  def freshUVar() = localState.gen.freshUVar()
+  def freshUVar(): V = localState.gen.freshUVar()
 
 
   def typecheck(e: Node): Either[T, TError] = {
