@@ -49,6 +49,7 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
       val merged = (newL, newU)
       mbounds = mbounds + (tv -> merged)
     }
+
     SolveContinuouslyCS(msubst, mbounds, mnever)
   }
 
@@ -104,31 +105,45 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
   }
 
 
+  private def substitutedBounds(s: TSubst) = {
+    var newnever = Seq[Constraint]()
+    val newbounds: Map[Symbol, (LBound,UBound)] = for ((tv, (lb, ub)) <- bounds) yield {
+      val (newLb, errorl) = lb.subst(s)
+      val (newUb, erroru) = ub.subst(s)
+      if(errorl.nonEmpty)
+        newnever  = newnever  :+ subtype.Join(UVar(tv).subst(s), errorl)
+      if(erroru.nonEmpty)
+        newnever  = newnever  :+ subtype.Meet(UVar(tv).subst(s), erroru)
+      (tv -> (newLb, newUb))
+    }
+    (newbounds, newnever)
+  }
+
+  private def withSubstitutedBounds = {
+    val (newbounds, newnever) = substitutedBounds(substitution)
+    SolveContinuouslyCS(substitution, newbounds, never ++ newnever)
+  }
 
   def trySolve = saturateSolution
 
   private def saturateSolution = {
-    var current = this
+    var current = this.withSubstitutedBounds
     var sol = solveOnce
     while (sol.nonEmpty) {
-      var newnever = Seq[Constraint]()
+      val subst = substitution ++ sol
+      val (newbounds, newnever) = current.substitutedBounds(sol)
+
       var temp = csf.freshConstraintSystem
-      for ((tv, (lb, ub)) <- current.bounds) {
-        val ((newLb, errorl), (newUb, erroru)) = (lb.subst(sol), ub.subst(sol))
 
-        if(errorl.nonEmpty)
-          newnever  = newnever  :+ subtype.Join(UVar(tv).subst(sol), errorl)
-        if(erroru.nonEmpty)
-          newnever  = newnever  :+ subtype.Meet(UVar(tv).subst(sol), erroru)
-
-        val t = sol.getOrElse(tv, UVar(tv))
-
-        for(tpe <- newLb.ground.toSet ++ newLb.nonground)
-          temp = temp mergeApply tpe.subtype(t, sol)
-        for(tpe <- newUb.ground.toSet ++ newUb.nonground)
-          temp = temp mergeApply t.subtype(tpe, sol)
+      for ((tv, (lb, ub)) <- newbounds) {
+        val t = subst.getOrElse(tv, UVar(tv))
+        for(tpe <- lb.ground.toSet ++ lb.nonground)
+          temp = temp mergeApply tpe.subtype(t, subst)
+        for(tpe <- ub.ground.toSet ++ ub.nonground)
+          temp = temp mergeApply t.subtype(tpe, subst)
       }
-      current = SolveContinuouslyCS(current.substitution ++ sol, temp.bounds, current.never ++ newnever ++ temp.never)
+
+      current = SolveContinuouslyCS(subst, temp.bounds, current.never ++ newnever ++ temp.never)
       sol = current.solveOnce
     }
     current
