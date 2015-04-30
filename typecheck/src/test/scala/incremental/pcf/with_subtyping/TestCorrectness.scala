@@ -1,7 +1,7 @@
 package incremental.pcf.with_subtyping
 
 import constraints.subtype._
-import constraints.subtype.impl.{SolveEnd, SolveContinuously, SolveEndCanonicalBounds}
+import constraints.subtype.impl.{SolveContinuousSubst, SolveEnd, SolveContinuously, SolveEndCanonicalBounds}
 import incremental.Node._
 import incremental.Util
 import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
@@ -111,7 +111,7 @@ class TestDUSolveContinuouslyCorrectness extends TestCorrectness("DUSolveContinu
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveEndCanonicalBoundsCorrectness extends TestCorrectness("BUSolveEndCanonicalBounds", new BUCheckerFactory(SolveEndCanonicalBounds))
 class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
+class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 
-//class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 //class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
