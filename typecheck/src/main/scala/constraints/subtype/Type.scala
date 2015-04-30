@@ -52,40 +52,42 @@ case class UVar(x: Symbol) extends Type {
     [CS <: ConstraintSystem[CS]]
     (other: Type, s: Type.Companion.TSubst)
     (implicit csf: ConstraintSystemFactory[CS]): CS
-  = {
-    val gen = csf.state.value.gen.asInstanceOf[Gen]
-    other match {
-      case UVar(`x`) => csf.emptySolution
-      case UVar(y) =>
-        if (gen.isNegative(x))
-          csf.emptySolution.addUpperBound(x, other)
-        else {
-          val cs = csf.emptySolution.addUpperBound(x, other)
-          cs.addLowerBound(y, this)
-        }
-      case _ =>
-        if (other.occurs(x))
-          csf.never(Subtype(this, other))
-        else
-          csf.emptySolution.addUpperBound(x, other)
+  = if (this == other)  csf.emptySolution
+    else s.get(x) match {
+      case Some(t) => t.subtype(other, s)
+      case None => other match {
+        case UVar(y) =>
+          if (csf.gen.isNegative(x))
+            csf.emptySolution.addUpperBound(x, other)
+          else {
+            val cs = csf.emptySolution.addUpperBound(x, other)
+            cs.addLowerBound(y, this)
+          }
+        case _ =>
+          if (other.occurs(x))
+            csf.never(Subtype(this, other))
+          else
+            csf.emptySolution.addUpperBound(x, other)
+      }
     }
-  }
+
 
   def supertype
     [CS <: ConstraintSystem[CS]]
     (other: Type, s: Type.Companion.TSubst)
     (implicit csf: ConstraintSystemFactory[CS]): CS
-  = {
-    other match {
-      case UVar(`x`) => csf.emptySolution
-      case UVar(y) => other.subtype(this)
-      case _ =>
-        if (other.occurs(x))
-          csf.never(Subtype(other, this))
-        else
-          csf.emptySolution.addLowerBound(x, other)
+  = if (this == other)  csf.emptySolution
+    else s.get(x) match {
+      case Some(t) => other.subtype(t, s)
+      case None => other match {
+        case UVar(y) => other.subtype(this, s)
+        case _ =>
+          if (other.occurs(x))
+            csf.never(Subtype(other, this))
+          else
+            csf.emptySolution.addLowerBound(x, other)
+      }
     }
-  }
 }
 
 case object Top extends Type {
