@@ -18,6 +18,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Util.log(f"Constraint count\t${checker.constraintCount}")
     Util.log(f"Cons. solve time\t${checker.constraintSolveTime}%.3fms")
     Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
+    Util.log(f"Finalize time\t\t${checker.finalizeTime}%.3fms")
   }
 
   def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
