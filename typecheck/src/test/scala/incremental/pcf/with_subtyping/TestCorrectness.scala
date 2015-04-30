@@ -1,7 +1,7 @@
 package incremental.pcf.with_subtyping
 
 import constraints.subtype._
-import constraints.subtype.impl.{SolveContinuousSubst, SolveEnd, SolveContinuously, SolveEndCanonicalBounds}
+import constraints.subtype.impl._
 import incremental.Node._
 import incremental.Util
 import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
@@ -107,11 +107,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestDUSolveEndCanonicalBoundsCorrectness extends TestCorrectness("DUSolveEndCanonicalBounds", new DUCheckerFactory(SolveEndCanonicalBounds))
 class TestDUSolveContinuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
-//class TestDUSolveContniuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
+
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveEndCanonicalBoundsCorrectness extends TestCorrectness("BUSolveEndCanonicalBounds", new BUCheckerFactory(SolveEndCanonicalBounds))
 class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
 class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
-
-//class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
+class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)

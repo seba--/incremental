@@ -7,7 +7,7 @@ import incremental.Util
 import scala.collection.generic.CanBuildFrom
 
 object SolveContinuousSubstThreshold extends ConstraintSystemFactory[SolveContinuousSubstThresholdCS] {
-  var threshold = 2
+  var threshold = 10
 
   val freshConstraintSystem = SolveContinuousSubstThresholdCS(Map(), Seq(), Seq())
   def solved(s: TSubst) = SolveContinuousSubstThresholdCS(s, Seq(), Seq())
