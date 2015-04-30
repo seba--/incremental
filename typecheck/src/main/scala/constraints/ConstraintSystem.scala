@@ -7,7 +7,6 @@ import scala.collection.generic.CanBuildFrom
 
 trait ConstraintSystem[CS, Constraint, T <: Type] {
   def isSolved: Boolean
-//  def solution: Solution
   def mergeSubsystem(that: CS): CS
   def addNewConstraint (that: Constraint): CS
   def addNewConstraints(cs: Iterable[Constraint]): CS

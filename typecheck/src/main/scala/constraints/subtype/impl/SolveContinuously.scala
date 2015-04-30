@@ -34,9 +34,27 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
   }
 
   def mergeSubsystem(that: SolveContinuouslyCS) = {
+    val msubst = substitution ++ that.substitution
+    var mbounds = bounds
+    var mnever = never ++ that.never
+
+    for((tv, (l1, u1)) <- that.bounds) {
+      val (l2, u2) = mbounds(tv)
+      val (newL, errorl) = l2 merge l1
+      val (newU, erroru) = u2 merge u1
+      if(errorl.nonEmpty)
+        mnever = mnever :+ subtype.Join(UVar(tv), errorl)
+      if(erroru.nonEmpty)
+        mnever = mnever :+ subtype.Meet(UVar(tv), erroru)
+      val merged = (newL, newU)
+      mbounds = mbounds + (tv -> merged)
+    }
+    SolveContinuouslyCS(msubst, mbounds, mnever)
+  }
+
+  def mergeApply(that: SolveContinuouslyCS) = {
     var current = SolveContinuouslyCS(substitution ++ that.substitution, bounds, never ++ that.never)
 
-    // TODO simpler merge possible
     for((tv, (thatL, thatU)) <- that.bounds) {
       if (bounds.isDefinedAt(tv)) {
         for (t <- thatL.nonground ++ thatL.ground.toSet)
@@ -51,25 +69,11 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
     current
   }
 
-  /* //add and solve immediately
-   def <--(c: Constraint): ConstraintSystem = {
-     val res = copy
-     c match {
-       case Equal(t1, t2) =>
-         res.normalizeSub(t1, t2)
-         res.normalizeSub(t2, t1)
-         res.saturateSolution()
-       case Subtype(lower, upper) =>
-         res.normalizeSub(lower, upper)
-         res.saturateSolution()
-       case _ =>
-     }
-     res
-   }*/
-
   def addNewConstraint(c: Constraint) = {
     state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed((this mergeSubsystem c.solve(this)).trySolve)
+    val (res, time) = Util.timed {
+      (this mergeApply c.solve(this)).trySolve
+    }
     state.value.stats.constraintSolveTime += time
     res
   }
@@ -77,7 +81,7 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
   def addNewConstraints(cons: Iterable[Constraint]) = {
     state.value.stats.constraintCount += cons.size
     val (res, time) = Util.timed {
-      cons.foldLeft(this)((cs, c) => cs mergeSubsystem c.solve(cs)).trySolve
+      cons.foldLeft(this)((cs, c) => (cs mergeApply c.solve(cs))).trySolve
     }
     state.value.stats.constraintSolveTime += time
     res
@@ -120,9 +124,9 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
         val t = sol.getOrElse(tv, UVar(tv))
 
         for(tpe <- newLb.ground.toSet ++ newLb.nonground)
-          temp = temp mergeSubsystem tpe.subtype(t, sol)
+          temp = temp mergeApply tpe.subtype(t, sol)
         for(tpe <- newUb.ground.toSet ++ newUb.nonground)
-          temp = temp mergeSubsystem t.subtype(tpe, sol)
+          temp = temp mergeApply t.subtype(tpe, sol)
       }
       current = SolveContinuouslyCS(current.substitution ++ sol, temp.bounds, current.never ++ newnever ++ temp.never)
       sol = current.solveOnce
@@ -189,13 +193,4 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
 
   def propagate = this
 
-
-  //  private[ConstraintSystem] def mergeSubsts(sigma: TSubst, tau: TSubst): TSubst = {
-  //    for ((v, t1) <- sigma if tau.isDefinedAt(v) && t1 != tau(v))
-  //      gameOver(Equal(t1, tau(v)))
-  //    tau ++ sigma
-  //  }
-  //
-  //  private[ConstraintSystem] def mergeSubsts(ss: Set[TSubst]): TSubst =
-  //    ss.fold(Map[Symbol, Type]()) { case (s, s1) => mergeSubsts(s, s1) }
 }
