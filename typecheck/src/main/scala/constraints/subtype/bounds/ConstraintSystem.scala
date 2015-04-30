@@ -8,14 +8,14 @@ import incremental.Util
 import scala.collection.GenTraversableOnce
 import scala.collection.generic.CanBuildFrom
 
-case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, UBound)], never: Seq[Constraint]) extends constraints.subtype.ConstraintSystem[ConstraintSystem] {
+abstract class ConstraintSystem[CS <: ConstraintSystem[CS]](val substitution: TSubst, val bounds: Map[Symbol, (LBound, UBound)], val never: Seq[Constraint]) extends constraints.subtype.ConstraintSystem[CS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
-  import ConstraintSystemFactory.state
-  import ConstraintSystemFactory.gen
-
-  private implicit val csf = ConstraintSystemFactory
+  implicit val csf: ConstraintSystemFactory[CS]
+  import csf.state
+  import csf.gen
+  import csf.system
 
   def notyet = {
     var cons = Seq[Constraint]()
@@ -27,8 +27,8 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
     cons
   }
 
-  def mergeSubsystem(that: ConstraintSystem): ConstraintSystem = {
-    var current = ConstraintSystem(substitution ++ that.substitution, bounds, never ++ that.never)
+  def mergeSubsystem(that: CS) = {
+    var current = system(substitution ++ that.substitution, bounds, never ++ that.never)
 
     for((tv, (thatL, thatU)) <- that.bounds) {
       if (bounds.isDefinedAt(tv)) {
@@ -38,7 +38,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
           current = current.addUpperBound(tv, t)
       }
       else
-        current = ConstraintSystem(current.substitution, current.bounds + (tv -> (thatL, thatU)), current.never)
+        current = system(current.substitution, current.bounds + (tv -> (thatL, thatU)), current.never)
     }
 
     current
@@ -70,13 +70,13 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
   def addNewConstraints(cons: Iterable[Constraint]) = {
     state.value.stats.constraintCount += cons.size
     val (res, time) = Util.timed {
-      cons.foldLeft(this)((cs, c) => cs mergeSubsystem c.solve(cs))
+      cons.foldLeft(this.asCS)((cs, c) => cs mergeSubsystem c.solve(cs))
     }
     state.value.stats.constraintSolveTime += time
     res
   }
 
-  def tryFinalize: ConstraintSystem = {
+  def tryFinalize = {
     val (res, time) = Util.timed {
       //set upper bounds of negative vars to Top if still undetermined and solve
       val finalbounds = bounds.map {
@@ -86,7 +86,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
         case x => x
       }
 
-      ConstraintSystem(substitution, finalbounds, never).saturateSolution
+      system(substitution, finalbounds, never).saturateSolution
     }
     state.value.stats.finalizeTime += time
     res
@@ -96,8 +96,8 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
 
   def trySolve = saturateSolution
 
-  private[ConstraintSystem] def saturateSolution: ConstraintSystem = {
-    var current = this
+  private[ConstraintSystem] def saturateSolution = {
+    var current = this.asCS
     var sol = solveOnce
     while (sol.nonEmpty) {
       var newnever = Seq[Constraint]()
@@ -117,7 +117,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
         for(tpe <- newUb.ground.toSet ++ newUb.nonground)
           temp = temp mergeSubsystem t.subtype(tpe, sol)
       }
-      current = ConstraintSystem(current.substitution ++ sol, temp.bounds, current.never ++ newnever ++ temp.never)
+      current = system(current.substitution ++ sol, temp.bounds, current.never ++ newnever ++ temp.never)
       sol = current.solveOnce
     }
     current
@@ -142,7 +142,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
     sol
   }
 
-  def addLowerBound(v: Symbol, t: Type): ConstraintSystem = {
+  def addLowerBound(v: Symbol, t: Type) = {
     val (lower, upper) = bounds(v)
     val (newLower, error) = lower.add(t)
     val changed = if (newLower.isGround) newLower.ground.get else t
@@ -153,12 +153,12 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
       else
         never :+ subtype.Join(UVar(v), error)
     val newbounds = bounds + (v -> (newLower, upper))
-    val cs = ConstraintSystem(substitution, newbounds, newnever)
+    val cs = system(substitution, newbounds, newnever)
 
     cs mergeSubsystem (subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs))
   }
 
-  def addUpperBound(v: Symbol, t: Type): ConstraintSystem = {
+  def addUpperBound(v: Symbol, t: Type) = {
     val (lower, upper) = bounds(v)
     val (newUpper, error) = upper.add(t)
     val changed = if (newUpper.isGround) newUpper.ground.get else t
@@ -169,7 +169,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
       else
         never :+ subtype.Meet(UVar(v), error)
     val newbounds = bounds + (v -> (lower, newUpper))
-    val cs = ConstraintSystem(substitution, newbounds, newnever)
+    val cs = system(substitution, newbounds, newnever)
 
     cs mergeSubsystem (subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs))
   }
@@ -180,7 +180,9 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
   def applyPartialSolutionIt[U, C <: Iterable[U]](it: C, f: U=>Type)(implicit bf: CanBuildFrom[Iterable[U], (U, Type), C])
   = it
 
-  def propagate = this
+  def propagate = this.asCS
+
+  private def asCS = system(substitution, bounds, never)
 
 //  private[ConstraintSystem] def mergeSubsts(sigma: TSubst, tau: TSubst): TSubst = {
 //    for ((v, t1) <- sigma if tau.isDefinedAt(v) && t1 != tau(v))

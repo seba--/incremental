@@ -1,6 +1,7 @@
 package incremental.pcf.with_subtyping
 
 import constraints.subtype._
+import constraints.subtype.bounds.SolveEnd
 import incremental.Node._
 import incremental.Util
 import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
@@ -31,8 +32,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
 
-      val sol = bounds.ConstraintSystemFactory.state.withValue(checker.csFactory.state.value) {
-        Equal(expected, actual.left.get).solve(bounds.ConstraintSystemFactory.freshConstraintSystem)(bounds.ConstraintSystemFactory).tryFinalize
+      val sol = SolveEnd.state.withValue(checker.csFactory.state.value) {
+        Equal(expected, actual.left.get).solve(SolveEnd.freshConstraintSystem)(SolveEnd).tryFinalize
       }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
@@ -103,9 +104,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
 }
 
-class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(bounds.ConstraintSystemFactory))
+class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 //class TestDUSolveContniuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
-class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(bounds.ConstraintSystemFactory))
+class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 //class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
 //class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 //class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
