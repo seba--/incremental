@@ -99,28 +99,28 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
   def trySolve = saturateSolution
 
   private[ConstraintSystem] def saturateSolution: ConstraintSystem = {
+    var current = this
     var sol = solveOnce
-    var current = csf.solved(sol)
     while (sol.nonEmpty) {
-      var never = Seq[Constraint]()
-      for ((tv, (lb, ub)) <- bounds) {
+      var newnever = Seq[Constraint]()
+      var temp = csf.freshConstraintSystem
+      for ((tv, (lb, ub)) <- current.bounds) {
         val ((newLb, errorl), (newUb, erroru)) = (lb.subst(sol), ub.subst(sol))
 
         if(errorl.nonEmpty)
-          never = never :+ subtype.Join(UVar(tv).subst(sol), errorl)
+          newnever  = newnever  :+ subtype.Join(UVar(tv).subst(sol), errorl)
         if(erroru.nonEmpty)
-          never = never :+ subtype.Meet(UVar(tv).subst(sol), erroru)
+          newnever  = newnever  :+ subtype.Meet(UVar(tv).subst(sol), erroru)
 
         val t = sol.getOrElse(tv, UVar(tv))
 
-        current = ConstraintSystem(current.substitution, current.bounds, current.never ++ never)
         for(tpe <- newLb.ground.toSet ++ newLb.nonground)
-          current = current mergeSubsystem tpe.subtype(t, sol)
+          temp = temp mergeSubsystem tpe.subtype(t, sol)
         for(tpe <- newUb.ground.toSet ++ newUb.nonground)
-          current = current mergeSubsystem t.subtype(tpe, sol)
+          temp = temp mergeSubsystem t.subtype(tpe, sol)
       }
+      current = ConstraintSystem(current.substitution ++ sol, temp.bounds, current.never ++ newnever ++ temp.never)
       sol = current.solveOnce
-      current = ConstraintSystem(sol, current.bounds, current.never)
     }
     current
   }
