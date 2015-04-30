@@ -3,7 +3,7 @@ package incremental.pcf
 import benchmark.ExpGenerator
 import constraints.equality
 import constraints.equality.ConstraintSystem
-import constraints.equality.config.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveContinuously, SolveEnd}
+import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveContinuously, SolveEnd}
 import incremental.Node.Node
 import incremental.Node._
 import incremental._

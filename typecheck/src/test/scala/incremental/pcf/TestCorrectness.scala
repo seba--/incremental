@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import constraints.equality.config._
+import constraints.equality.impl._
 import constraints.equality._
 import incremental.Node._
 import incremental.Util

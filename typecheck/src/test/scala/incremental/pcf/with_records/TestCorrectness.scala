@@ -1,6 +1,6 @@
 package incremental.pcf.with_records
 
-import constraints.equality.config.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveEnd, SolveContinuously}
+import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveEnd, SolveContinuously}
 import constraints.equality.{Type, ConstraintSystem}
 import incremental.Node._
 import incremental.Util

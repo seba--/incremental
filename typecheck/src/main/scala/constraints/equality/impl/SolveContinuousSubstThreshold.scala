@@ -1,4 +1,4 @@
-package constraints.equality.config
+package constraints.equality.impl
 
 import constraints.equality.Type.Companion.TSubst
 import constraints.equality.{Type, Constraint, ConstraintSystem, ConstraintSystemFactory}
