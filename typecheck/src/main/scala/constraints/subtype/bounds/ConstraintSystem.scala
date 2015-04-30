@@ -32,14 +32,29 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
     var mbounds = bounds
     var mnever = never ++ that.never
 
-    for((tv, (l1, u1)) <- that.bounds) {
-      val (l2, u2) = mbounds(tv)
-      val (newL, errorl) = l2 merge l1
-      val (newU, erroru) = u2 merge u1
-      if(errorl.nonEmpty)
-        mnever = mnever :+ subtype.Join(UVar(tv), errorl)
-      if(erroru.nonEmpty)
-        mnever = mnever :+ subtype.Meet(UVar(tv), erroru)
+    for((tv, (thatL, thatU)) <- that.bounds) {
+      val (thisL, thisU) = mbounds(tv)
+
+      var newL: LBound = thisL
+      var errorL = Set[Type]()
+      for (t <- thatL.nonground ++ thatL.ground.toSet) {
+        val (l,err) = newL add t
+        newL = l
+        errorL = errorL ++ err
+      }
+      if(errorL.nonEmpty)
+        mnever = mnever :+ subtype.Join(UVar(tv), errorL)
+
+      var newU: UBound = thisU
+      var errorU = Set[Type]()
+      for (t <- thatU.nonground ++ thatU.ground.toSet) {
+        val (u,err) = newU add t
+        newU = u
+        errorU = errorU ++ err
+      }
+      if(errorU.nonEmpty)
+        mnever = mnever :+ subtype.Meet(UVar(tv), errorU)
+
       val merged = (newL, newU)
       mbounds = mbounds + (tv -> merged)
     }
