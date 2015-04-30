@@ -1,45 +1,38 @@
 package incremental.pcf.with_references
 
-import incremental.ConstraintOps._
-import incremental.Type._
-import incremental._
+import constraints.equality.{ConstraintSystemFactory, EqConstraint, ConstraintSystem}
+import constraints.equality.Type.Companion.TSubst
+import incremental.pcf.TypeCheckerFactory
+import incremental.{Node_, pcf}
 
 /**
  * Created by seba on 15/11/14.
  */
-trait DownUpChecker extends pcf.DownUpChecker {
-  import constraint._
+trait DUChecker[CS <: ConstraintSystem[CS]] extends pcf.DUChecker[CS] {
 
-  override def typecheck(e: Node_[StepResult], ctx: TSubst): StepResult = e.kind match {
+  override def typecheckStep(e: Node_[Result], ctx: TSubst): StepResult = e.kind match {
     case Ref =>
-      val (t, subsol) = typecheck(e.kids(0), ctx)
-      (TRef(t), subsol)
+      val (t, cs) = typecheckRec(e.kids(0), ctx)
+      (TRef(t), scala.Seq(), scala.Seq(cs))
     case Deref =>
-      val (t1, subsol) = typecheck(e.kids(0), ctx)
+      val (t1, cs) = typecheckRec(e.kids(0), ctx)
       val X = freshUVar()
-      val sol = solve(EqConstraint(TRef(X), t1), subsol)
-      (X.subst(sol.substitution), sol)
+      (X, scala.Seq(EqConstraint(TRef(X), t1)), scala.Seq(cs))
     case Assign =>
-      val (t1, sol1) = typecheck(e.kids(0), ctx)
-      val (t2, sol2) = typecheck(e.kids(1), ctx)
-      val subsol = sol1 ++ sol2
-
-      val refcons = EqConstraint(t1, TRef(t2))
-      val sol = solve(refcons, subsol)
-      (TUnit, sol)
+      val (t1, cs1) = typecheckRec(e.kids(0), ctx)
+      val (t2, cs2) = typecheckRec(e.kids(1), ctx)
+      (TUnit, scala.Seq(EqConstraint(t1, TRef(t2))), scala.Seq(cs1, cs2))
     case Seq =>
-      val (t1, sol1) = typecheck(e.kids(0), ctx)
-      val (t2, sol2) = typecheck(e.kids(1), ctx)
-      val subsol = sol1 ++ sol2
-
-      val t1cons = EqConstraint(TUnit, t1)
-      val sol = solve(t1cons, subsol)
-      (t2.subst(sol.substitution), sol)
-    case _ => super.typecheck(e, ctx)
+      val (t1, cs1) = typecheckRec(e.kids(0), ctx)
+      val (t2, cs2) = typecheckRec(e.kids(1), ctx)
+      (t2, scala.Seq(EqConstraint(TUnit, t1)), scala.Seq(cs1, cs2))
+    case _ => super.typecheckStep(e, ctx)
   }
 }
 
-object DownUpCheckerFactory extends TypeCheckerFactory[Type] {
-  object PCFRefDownUpChecker extends DownUpChecker
-  def makeChecker = PCFRefDownUpChecker
+case class DUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new DUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
 }

@@ -22,9 +22,6 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Util.log(f"Finalize time\t\t${checker.finalizeTime}%.3fms")
   }
 
-  import scala.language.implicitConversions
-  implicit def eqType(t: Type): PartialFunction[Type,Boolean] = {case t2 => t == t2}
-
   def typecheckTest(desc: String, e: =>Node)(expected: Type) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
@@ -53,6 +50,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
 class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestDUSolveContniuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
+
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
 class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
