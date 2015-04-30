@@ -9,6 +9,7 @@ import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
  * Created by oliver on 20.11.14.
  */
 abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
+
   import csFactory._
 
   type TError = Type.Companion.TError
@@ -21,11 +22,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val root = e.withType[Result]
 
     val (res, ctime) = Util.timed {
-      root.visitUninitialized {e =>
+      root.visitUninitialized { e =>
         val (t, reqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
         val cs = subcs addNewConstraints cons
-        val reqs2 = cs.applyPartialSolutionIt[(Symbol,Type),Map[Symbol,Type]](reqs, p => p._2)
+        val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type]](reqs, p => p._2)
         e.typ = (cs applyPartialSolution t, reqs2, cs.propagate)
         true
       }
@@ -97,7 +98,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
 
   def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) = {
-    val (res, time) = Util.timed{
+    val (res, time) = Util.timed {
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
     localState.stats.mergeReqsTime += time
@@ -112,8 +113,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       wasReqs.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-          // TODO
-          mcons = Equal(r1, r2) +: mcons
+          val Xmeet = gen.freshUVar(false)
+          mcons = Meet(Xmeet, Set(r1, r2)) +: mcons
+          mreqs += x -> Xmeet
       }
     (mcons, mreqs)
   }
