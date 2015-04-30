@@ -1,4 +1,4 @@
-package constraints.subtype.bounds
+package constraints.subtype.impl
 
 import constraints.subtype
 import constraints.subtype.{ConstraintSystem, Type, UVar, Constraint}

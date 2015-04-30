@@ -1,7 +1,7 @@
 package incremental.pcf.with_subtyping
 
 import constraints.subtype._
-import constraints.subtype.bounds.{SolveEnd, SolveContinuously, SolveEndCanonicalBounds}
+import constraints.subtype.impl.{SolveEnd, SolveContinuously, SolveEndCanonicalBounds}
 import incremental.Node._
 import incremental.Util
 import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
