@@ -73,7 +73,7 @@ case class TFun(t1: Type, t2: Type) extends Type {
   def ||(that: Type) = that match {
     case TFun(u1, u2) => (t1 && u1, t2 || u2) match {
       case (Some(arg), Some(res)) => Some(TFun(arg, res))
-      case _ => None
+      case _ => Some(Top)
     }
     case _ => Some(Top)
   }

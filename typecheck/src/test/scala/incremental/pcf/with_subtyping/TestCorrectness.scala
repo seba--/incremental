@@ -52,54 +52,54 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     ((TInteger -->: Top) -->: TInteger) -->: (Top -->: TInteger) -->: TInteger
   )
 
-//  typecheckTest("lambda f: TInteger -> TInteger. lambda g: TInteger -> (TInteger -> TInteger). if0 0 f g",
-//    Abs(Seq('f, TInteger -->: TInteger), Seq(Abs(Seq('g, TInteger -->: (TInteger -->: TInteger)), Seq(If0(Num(0), Var('f), Var('g)))))))(
-//    (TInteger -->: TInteger) -->: (TInteger -->: (TInteger -->: TInteger)) -->: (TInteger -->: Top)
-//  )
-//
-//  typecheckTestError("lambda f: Top. f (If0 0 (lambda x: TInteger. x) (lambda x: TInteger. f))",
-//    Abs(Seq('f, Top), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, TInteger), Seq(Var('x))), Abs(Seq('x, TInteger), Seq(Var('f)))))))
-//  )
-//
-//  typecheckTestError("lambda f: Top. f 0",
-//    Abs(Seq('f, Top), Seq(App(Var('f), Num(0))))
-//  )
-//
-//  typecheckTest("lambda f: TInteger -> TInteger. lambda g: (TInteger -> TInteger) -> (TInteger -> TInteger). if0 0 f g",
-//    Abs(Seq('f, TInteger -->: TInteger), Seq(Abs(Seq('g, (TInteger -->: TInteger) -->: (TInteger -->: TInteger)), Seq(If0(Num(0), Var('f), Var('g)))))))(
-//    (TInteger -->: TInteger) -->: ((TInteger -->: TInteger) -->: (TInteger -->: TInteger)) -->: Top
-//  )
-//
-//  typecheckTestError("lambda f: (TInteger -> Top) -> TInteger. lambda g: TInteger. f g",
-//    Abs(Seq('f, (TInteger -->: Top) -->: TInteger), Seq(Abs(Seq('g, TInteger),  Seq(App(Var('f), Var('g))))))
-//  )
-//
-//  typecheckTestError("lambda x: T. x x",
-//    Abs(Seq('x, UVar('T)), Seq(App(Var('x), Var('x))))
-//  )
-//
-////  typecheckTest("(lamba f. (f (lambda x. x)) + (f (lambda y. y)))",
-////    Abs('f, Add(App(Var('f), Abs('x, Var('x))), App(Var('f), Abs('y, Var('y)))))
-////  ) { case TFun(TFun(TFun(TVar(x), TVar(y)), TInteger), TInteger) if x==y => true }
-//
-//  typecheckTestError("lambda f: TInteger -> TInteger. f x",
-//    Abs(Seq('f, TInteger -->: TInteger), Seq(App(Var('f), Var('x))))
-//  )
-//
-//  typecheckTest("lambda f: (TInteger -> Top) -> TInteger. f (if0 0 (lambda x: Top. 1) (lambda x: Top. x))",
-//    Abs(Seq('f, (TInteger -->: Top) -->: TInteger), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, Top), Seq(Num(1))), Abs(Seq('x, Top), Seq(Var('x))))))))(
-//    ((TInteger -->: Top) -->: TInteger) -->: TInteger
-//  )
-//
-//  typecheckTest("fix (lambda x: Top. 1)",
-//    Fix(Abs(Seq('x, Top), Seq(Num(1)))))(
-//    Top
-//  )
-//
-//  typecheckTest("lambda x: TFloat. lambda sqrt: TFloat -> TFloat. lambda add: TNumeric -> TNumeric -> TNumeric. add x (sqrt x)",
-//    Abs(Seq('x, TFloat), Seq(Abs(Seq('sqrt, TFloat -->: TFloat), Seq(Abs(Seq('add, TNumeric -->: TNumeric -->: TNumeric), Seq(App(App(Var('add), Var('x)), App(Var('sqrt), Var('x))))))))))(
-//    TFloat -->: (TFloat -->: TFloat) -->: (TNumeric -->: TNumeric -->: TNumeric) -->: TNumeric
-//  )
+  typecheckTest("lambda f: TInteger -> TInteger. lambda g: TInteger -> (TInteger -> TInteger). if0 0 f g",
+    Abs(Seq('f, TInteger -->: TInteger), Seq(Abs(Seq('g, TInteger -->: (TInteger -->: TInteger)), Seq(If0(Num(0), Var('f), Var('g)))))))(
+    (TInteger -->: TInteger) -->: (TInteger -->: (TInteger -->: TInteger)) -->: (TInteger -->: Top)
+  )
+
+  typecheckTestError("lambda f: Top. f (If0 0 (lambda x: TInteger. x) (lambda x: TInteger. f))",
+    Abs(Seq('f, Top), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, TInteger), Seq(Var('x))), Abs(Seq('x, TInteger), Seq(Var('f)))))))
+  )
+
+  typecheckTestError("lambda f: Top. f 0",
+    Abs(Seq('f, Top), Seq(App(Var('f), Num(0))))
+  )
+
+  typecheckTest("lambda f: TInteger -> TInteger. lambda g: (TInteger -> TInteger) -> (TInteger -> TInteger). if0 0 f g",
+    Abs(Seq('f, TInteger -->: TInteger), Seq(Abs(Seq('g, (TInteger -->: TInteger) -->: (TInteger -->: TInteger)), Seq(If0(Num(0), Var('f), Var('g)))))))(
+    (TInteger -->: TInteger) -->: ((TInteger -->: TInteger) -->: (TInteger -->: TInteger)) -->: Top
+  )
+
+  typecheckTestError("lambda f: (TInteger -> Top) -> TInteger. lambda g: TInteger. f g",
+    Abs(Seq('f, (TInteger -->: Top) -->: TInteger), Seq(Abs(Seq('g, TInteger),  Seq(App(Var('f), Var('g))))))
+  )
+
+  typecheckTestError("lambda x: T. x x",
+    Abs(Seq('x, UVar('T)), Seq(App(Var('x), Var('x))))
+  )
+
+//  typecheckTest("(lamba f. (f (lambda x. x)) + (f (lambda y. y)))",
+//    Abs('f, Add(App(Var('f), Abs('x, Var('x))), App(Var('f), Abs('y, Var('y)))))
+//  ) { case TFun(TFun(TFun(TVar(x), TVar(y)), TInteger), TInteger) if x==y => true }
+
+  typecheckTestError("lambda f: TInteger -> TInteger. f x",
+    Abs(Seq('f, TInteger -->: TInteger), Seq(App(Var('f), Var('x))))
+  )
+
+  typecheckTest("lambda f: (TInteger -> Top) -> TInteger. f (if0 0 (lambda x: Top. 1) (lambda x: Top. x))",
+    Abs(Seq('f, (TInteger -->: Top) -->: TInteger), Seq(App(Var('f), If0(Num(0), Abs(Seq('x, Top), Seq(Num(1))), Abs(Seq('x, Top), Seq(Var('x))))))))(
+    ((TInteger -->: Top) -->: TInteger) -->: TInteger
+  )
+
+  typecheckTest("fix (lambda x: Top. 1)",
+    Fix(Abs(Seq('x, Top), Seq(Num(1)))))(
+    Top
+  )
+
+  typecheckTest("lambda x: TFloat. lambda sqrt: TFloat -> TFloat. lambda add: TNumeric -> TNumeric -> TNumeric. add x (sqrt x)",
+    Abs(Seq('x, TFloat), Seq(Abs(Seq('sqrt, TFloat -->: TFloat), Seq(Abs(Seq('add, TNumeric -->: TNumeric -->: TNumeric), Seq(App(App(Var('add), Var('x)), App(Var('sqrt), Var('x))))))))))(
+    TFloat -->: (TFloat -->: TFloat) -->: (TNumeric -->: TNumeric -->: TNumeric) -->: TNumeric
+  )
 
 }
 

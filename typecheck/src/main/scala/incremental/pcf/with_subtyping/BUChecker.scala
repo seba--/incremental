@@ -83,7 +83,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (t3, reqs3, _) = e.kids(2).typ
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2, reqs3)
       val Xjoin = freshUVar()
-      (Xjoin, mreqs, mcons :+ Equal(TNumeric, t1) :+ Join(Xjoin, Set(t2, t3)))
+      (Xjoin, mreqs, mcons :+ Subtype(t1, TNumeric) :+ Join(Xjoin, Set(t2, t3)))
 
     case Fix =>
       val (t, reqs, _) = e.kids(0).typ

@@ -145,7 +145,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
   def addLowerBound(v: Symbol, t: Type): ConstraintSystem = {
     val (lower, upper) = bounds(v)
     val (newLower, error) = lower.add(t)
-    val changed = if (t.isGround) newLower.ground.get else t
+    val changed = if (newLower.isGround) newLower.ground.get else t
 
     val newnever =
       if (error.isEmpty)
@@ -155,14 +155,13 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
     val newbounds = bounds + (v -> (newLower, upper))
     val cs = ConstraintSystem(substitution, newbounds, newnever)
 
-    cs mergeSubsystem (subtype.Meet(changed, lower.nonground ++ lower.ground.toSet).solve(cs))
-//    (upper.nonground ++ upper.ground.toSet).foldLeft(cs)((cs, t2) => cs mergeSubsystem (changed.subtype(t2, substitution)))
+    cs mergeSubsystem (subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs))
   }
 
   def addUpperBound(v: Symbol, t: Type): ConstraintSystem = {
     val (lower, upper) = bounds(v)
     val (newUpper, error) = upper.add(t)
-    val changed = if (t.isGround) newUpper.ground.get else t
+    val changed = if (newUpper.isGround) newUpper.ground.get else t
 
     val newnever =
       if (error.isEmpty)
@@ -173,7 +172,6 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
     val cs = ConstraintSystem(substitution, newbounds, newnever)
 
     cs mergeSubsystem (subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs))
-//    (lower.nonground ++ lower.ground.toSet).foldLeft(cs)((cs, t2) => cs.normalizeSub(t2, changed))
   }
 
 
