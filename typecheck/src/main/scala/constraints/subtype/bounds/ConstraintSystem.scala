@@ -28,37 +28,20 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
   }
 
   def mergeSubsystem(that: ConstraintSystem): ConstraintSystem = {
-    val msubst = substitution ++ that.substitution
-    var mbounds = bounds
-    var mnever = never ++ that.never
+    var current = ConstraintSystem(substitution ++ that.substitution, bounds, never ++ that.never)
 
     for((tv, (thatL, thatU)) <- that.bounds) {
-      val (thisL, thisU) = mbounds(tv)
-
-      var newL: LBound = thisL
-      var errorL = Set[Type]()
-      for (t <- thatL.nonground ++ thatL.ground.toSet) {
-        val (l,err) = newL add t
-        newL = l
-        errorL = errorL ++ err
+      if (bounds.isDefinedAt(tv)) {
+        for (t <- thatL.nonground ++ thatL.ground.toSet)
+          current = current.addLowerBound(tv, t)
+        for (t <- thatU.nonground ++ thatU.ground.toSet)
+          current = current.addUpperBound(tv, t)
       }
-      if(errorL.nonEmpty)
-        mnever = mnever :+ subtype.Join(UVar(tv), errorL)
-
-      var newU: UBound = thisU
-      var errorU = Set[Type]()
-      for (t <- thatU.nonground ++ thatU.ground.toSet) {
-        val (u,err) = newU add t
-        newU = u
-        errorU = errorU ++ err
-      }
-      if(errorU.nonEmpty)
-        mnever = mnever :+ subtype.Meet(UVar(tv), errorU)
-
-      val merged = (newL, newU)
-      mbounds = mbounds + (tv -> merged)
+      else
+        current = ConstraintSystem(current.substitution, current.bounds + (tv -> (thatL, thatU)), current.never)
     }
-    ConstraintSystem(msubst, mbounds, mnever)
+
+    current
   }
 
   /* //add and solve immediately
@@ -173,7 +156,7 @@ case class ConstraintSystem(substitution: TSubst, bounds: Map[Symbol, (LBound, U
     val cs = ConstraintSystem(substitution, newbounds, newnever)
 
     cs mergeSubsystem (subtype.Meet(changed, lower.nonground ++ lower.ground.toSet).solve(cs))
-    (upper.nonground ++ upper.ground.toSet).foldLeft(cs)((cs, t2) => cs mergeSubsystem (changed.subtype(t2, substitution)))
+//    (upper.nonground ++ upper.ground.toSet).foldLeft(cs)((cs, t2) => cs mergeSubsystem (changed.subtype(t2, substitution)))
   }
 
   def addUpperBound(v: Symbol, t: Type): ConstraintSystem = {
