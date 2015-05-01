@@ -1,13 +1,13 @@
 package incremental.systemf
 
-import constraints.equality.{EqConstraint, Constraint, Type, ConstraintSystem}
+import constraints.equality._
 import incremental.Node._
 import incremental.{Node_, Util}
 
 /**
  * Created by seba on 13/11/14.
  */
-class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
+abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   import csFactory._
 
@@ -176,6 +176,9 @@ class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 }
 
-object BottomUpCheckerFactory extends TypeCheckerFactory[Type] {
-  def makeChecker = new BottomUpChecker
+case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new BUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
 }
