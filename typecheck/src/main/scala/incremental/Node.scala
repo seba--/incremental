@@ -127,6 +127,7 @@ object SyntaxChecking {
 
   class SyntaxCheckOps(f: NodeKind => SyntaxChecker) {
     def orElse(g: NodeKind => SyntaxChecker) = (k: NodeKind) => new AlternativeSyntax(k, f, g)
+    def andAlso(g: NodeKind => SyntaxChecker) = (k: NodeKind) => new ConjunctiveSyntax(k, f, g)
   }
 
   class IgnoreSyntax(k: NodeKind) extends SyntaxChecker(k) {
@@ -165,4 +166,26 @@ object SyntaxChecking {
     }
   }
 
+  case class ConjunctiveSyntax(k: NodeKind, f: NodeKind => SyntaxChecker, g: NodeKind => SyntaxChecker) extends SyntaxChecker(k) {
+    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+      try {
+        f(k).check(lits, kids)
+      } catch {
+        case e1: SyntaxError => {
+          try {
+            g(k).check(lits, kids)
+          } catch {
+            case e2: SyntaxError => error(s"Conjunctive syntax failed \n\t${e1.msg}\nand\n\t${e2.msg})")
+          }
+          error(s"Conjunctive syntax failed \n\t${e1.msg}")
+        }
+      }
+
+      try {
+        g(k).check(lits, kids)
+      } catch {
+        case e: SyntaxError => error(s"Conjunctive syntax failed \n\t${e.msg}")
+      }
+    }
+  }
 }
