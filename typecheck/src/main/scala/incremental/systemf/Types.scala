@@ -72,8 +72,8 @@ case class UUniv(alpha: Symbol, t : Type) extends Type {
     case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
   }
   def unify[CS <: ConstraintSystem[CS]](other: Type, s :TSubst)(implicit csf: ConstraintSystemFactory[CS]) = other match {
-    case UUniv(alpha2, t2) => csf.solved(Map(alpha -> UVar(alpha2))) mergeSubsystem t.unify(t2, s + (alpha -> UVar(alpha2)))
-    case TUniv(alpha2, t2) => csf.solved(Map(alpha -> TVar(alpha2))) mergeSubsystem t.unify(t2, s + (alpha -> TVar(alpha2)))
+    case UUniv(alpha2, t2) => csf.solved(Map(alpha -> UVar(alpha2))) addNewConstraint EqConstraint(t, t2)
+    case TUniv(alpha2, t2) => csf.solved(Map(alpha -> TVar(alpha2))) addNewConstraint EqConstraint(t, t2)
     case UVar(_) => other.unify(this, s)
     case _ => csf.never(EqConstraint(this, other))
   }

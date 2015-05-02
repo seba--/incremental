@@ -37,7 +37,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val t = t_.subst(cs.substitution)
 
       if (!reqs.isEmpty)
-        Right(s"Unresolved context requirements $reqs, type $t, unres ${cs.unsolved}")
+        Right(s"Unresolved variable requirements $reqs, type $t, unres ${cs.unsolved}")
+      else if (!treqs.isEmpty)
+        Right(s"Unresolved type-variable requirements $treqs, type $t, unres ${cs.unsolved}")
       else if (!cs.isSolved)
         Right(s"Unresolved constraints ${cs.unsolved}, type $t")
       else
@@ -137,7 +139,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (TUniv(alpha, t), reqs, treqs - alpha, Seq())
 
     case TApp =>
-      val (t1, reqs1, treqs, subsol) = e.kids(0).typ
+      val (t1, reqs1, treqs, _) = e.kids(0).typ
       val t = e.lits(0).asInstanceOf[Type]
 
       val Xalpha = freshUVar().x
