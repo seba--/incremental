@@ -72,6 +72,7 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[Constraint], ne
 
   private def trySolve(finalize: Boolean): SolveContinuouslyCS = {
     var current = this
+    var stepsWithoutChange = 0
     while (!current.notyet.isEmpty) {
       val next = current.notyet.head
       val rest = current.notyet.tail
@@ -81,6 +82,14 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[Constraint], ne
           next.finalize(current)
         else
           next.solve(current)
+
+      if (current.notyet.size == rest.size + 1) {
+        stepsWithoutChange += 1
+        if (stepsWithoutChange > rest.size + 1)
+          return current
+      }
+      else
+        stepsWithoutChange = 0
     }
     current
   }
