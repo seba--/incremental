@@ -8,13 +8,26 @@ import scala.collection.generic.CanBuildFrom
 
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
   val freshConstraintSystem = SolveContinuousSubstCS(Map(), Seq(), Seq())
-  def solved(s: TSubst) = SolveContinuousSubstCS(s, Seq(), Seq())
-  def notyet(c: Constraint) = SolveContinuousSubstCS(Map(), Seq(c), Seq())
-  def never(c: Constraint) = SolveContinuousSubstCS(Map(), Seq(), Seq(c))
 }
 
 case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
-  import SolveContinuousSubst.state
+  def state = SolveContinuousSubst.state.value
+
+  def solved(s: TSubst) = {
+    var current = SolveContinuousSubstCS(substitution mapValues (_.subst(s)), notyet, never)
+    for ((x, t2) <- s) {
+      current.substitution.get(x) match {
+        case None => current = SolveContinuousSubstCS(current.substitution + (x -> t2.subst(current.substitution)), current.notyet, current.never)
+        case Some(t1) => current = t1.unify(t2, current)
+      }
+    }
+    current
+  }
+
+
+  def notyet(c: Constraint) = SolveContinuousSubstCS(substitution, notyet :+ c, never)
+  def never(c: Constraint) = SolveContinuousSubstCS(substitution, notyet, never :+ c)
+  def without(xs: Set[Symbol]) = SolveContinuousSubstCS(substitution -- xs, notyet, never)
 
   def mergeSubsystem(other: SolveContinuousSubstCS): SolveContinuousSubstCS = {
     val (res, time) = Util.timed {
@@ -22,45 +35,23 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint],
       val mnever = never ++ other.never
       SolveContinuousSubstCS(Map(), mnotyet, mnever)
     }
-    state.value.stats.mergeSolutionTime += time
-    res
-  }
-
-  def mergeApply(other: SolveContinuousSubstCS): SolveContinuousSubstCS = {
-    val (res, time) = Util.timed {
-      var msolution = substitution mapValues (_.subst(other.substitution))
-      val mnotyet = notyet ++ other.notyet
-      var mnever = never ++ other.never
-
-      for ((x, t2) <- other.substitution) {
-        msolution.get(x) match {
-          case None => msolution += x -> t2.subst(msolution)
-          case Some(t1) =>
-            val usol = t1.unify(t2, msolution)(SolveContinuousSubst)
-            msolution = msolution.mapValues(_.subst(usol.substitution)) ++ usol.substitution
-            mnever = mnever ++ usol.never
-        }
-      }
-
-      SolveContinuousSubstCS(msolution, mnotyet, mnever)
-    }
-    state.value.stats.mergeSolutionTime += time
+    state.stats.mergeSolutionTime += time
     res
   }
 
   def addNewConstraint(c: Constraint) = {
-    state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed(this mergeApply c.solve(this, SolveContinuousSubst))
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintCount += 1
+    val (res, time) = Util.timed(c.solve(this))
+    state.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cs: Iterable[Constraint]): SolveContinuousSubstCS = {
-    state.value.stats.constraintCount += cs.size
+  def addNewConstraints(cons: Iterable[Constraint]) = {
+    state.stats.constraintCount += cons.size
     val (res, time) = Util.timed {
-      cs.foldLeft(this)((sol, c) => sol mergeApply c.solve(sol, SolveContinuousSubst))
+      cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintSolveTime += time
     res
   }
 
@@ -75,7 +66,7 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint],
   def propagate = SolveContinuousSubstCS(Map(), notyet.map(_.subst(substitution)), never.map(_.subst(substitution)))
 
   override def tryFinalize =
-    SolveContinuously.state.withValue(state.value) {
+    SolveContinuously.state.withValue(state) {
       SolveContinuouslyCS(substitution, notyet, never).tryFinalize
     }
 }

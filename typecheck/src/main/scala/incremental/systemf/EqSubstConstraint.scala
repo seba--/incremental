@@ -3,9 +3,9 @@ package incremental.systemf
 import constraints.equality.Type.Companion.TSubst
 import constraints.equality._
 
+// body[alpha := substitute] = result
 case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean, substitute: Type, result: Type) extends Constraint {
-  private def withResult[CS <: ConstraintSystem[CS]](t: Type, s: ConstraintSystem[CS], csf: ConstraintSystemFactory[CS]) : CS
-  = t.unify(result, s.substitution)(csf)
+  private def withResult[CS <: ConstraintSystem[CS]](t: Type, cs: CS) : CS = t.unify(result, cs)
 
   private def substAlpha(s: TSubst) =
     if (!alphaIsInternal) (alpha, false)
@@ -16,37 +16,37 @@ case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean
       case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
     }
 
-  def solve[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS], csf: ConstraintSystemFactory[CS]): CS = {
-    val tbody = body.subst(s.substitution)
-    val (beta, betaIsInternal) = substAlpha(s.substitution)
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = {
+    val tbody = body.subst(cs.substitution)
+    val (beta, betaIsInternal) = substAlpha(cs.substitution)
 
     tbody match {
-      case TVar(`beta`) | UVar(`beta`) => withResult(substitute, s, csf)
-      case TVar(_) if !betaIsInternal => withResult(tbody, s, csf) // because alpha is user-defined and different
+      case TVar(`beta`) | UVar(`beta`) => withResult(substitute, cs)
+      case TVar(_) if !betaIsInternal => withResult(tbody, cs) // because alpha is user-defined and different
 
-      case TNum => withResult(TNum, s, csf)
+      case TNum => withResult(TNum, cs)
       case TFun(t1, t2) =>
-        val X = csf.state.value.gen.freshUVar()
-        val Y = csf.state.value.gen.freshUVar()
-        (EqSubstConstraint(t1, beta, betaIsInternal, substitute, X).solve(s, csf) mergeSubsystem
-          EqSubstConstraint(t2, beta, betaIsInternal, substitute, Y).solve(s, csf) mergeSubsystem
-          withResult(TFun(X, Y), s, csf))
-      case TUniv(`beta`, _) => withResult(tbody, s, csf)
+        val X = cs.state.gen.freshUVar()
+        val Y = cs.state.gen.freshUVar()
+        val cons1 = EqSubstConstraint(t1, beta, betaIsInternal, substitute, X)
+        val cons2 = EqSubstConstraint(t2, beta, betaIsInternal, substitute, Y)
+        withResult(TFun(X, Y), cons1.solve(cons2.solve(cs)))
+      case TUniv(`beta`, _) => withResult(tbody, cs)
       case TUniv(gamma, t) if !betaIsInternal =>
-        val X = csf.state.value.gen.freshUVar()
-        (EqSubstConstraint(t, beta, betaIsInternal, substitute, X).solve(s, csf) mergeSubsystem
-          withResult(TUniv(gamma, X), s, csf))
+        val X = cs.state.gen.freshUVar()
+        val tcons = EqSubstConstraint(t, beta, betaIsInternal, substitute, X)
+        withResult(TUniv(gamma, X), tcons.solve(cs))
 
       // either:
       // - tbody == TVarInternal   <== Example: x. (x [Num]) + (x [Num -> Num])
       // - tbody == TVar && betaIsInternal ==> cannot happen, type argument always has to become concrete
       // - tbody == TUnivInternal ==> cannot happen, universal types have explicit argument in TAbs('alpha, t)
       // - tbody == TUni && betaIsInternal ==> cannot happen, type argument always has to become concrete
-      case _ => csf.notyet(EqSubstConstraint(tbody, beta, betaIsInternal, substitute, result))
+      case _ => cs.notyet(EqSubstConstraint(tbody, beta, betaIsInternal, substitute, result))
     }
   }
 
-  def finalize[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS], csf: ConstraintSystemFactory[CS]) = solve(s, csf)
+  def finalize[CS <: ConstraintSystem[CS]](cs: CS) = solve(cs)
 
   def subst(s: TSubst) = {
     val (newalpha, newalphaIsInternal) = substAlpha(s)

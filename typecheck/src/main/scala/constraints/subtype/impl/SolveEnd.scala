@@ -18,37 +18,38 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
-  implicit val csf = SolveEnd
-  import csf.state
+  def state = SolveEnd.state.value
 
   val substitution: TSubst = Map()
   val never = Seq[Constraint]()
+
+  def never(c: Constraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
 
   def mergeSubsystem(that: SolveEndCS) = {
     val (res, time) = Util.timed {
       val mnotyet = notyet ++ that.notyet
       SolveEndCS(mnotyet)
     }
-    state.value.stats.mergeSolutionTime += time
+    state.stats.mergeSolutionTime += time
     res
   }
 
-  def addNewConstraint(c: Constraint) = {
-    state.value.stats.constraintCount += 1
+  override def addNewConstraint(c: Constraint) = {
+    state.stats.constraintCount += 1
     val (res, time) = Util.timed(SolveEndCS(notyet :+ c))
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cons: Iterable[Constraint]) = {
-    state.value.stats.constraintCount += cons.size
+  override def addNewConstraints(cons: Iterable[Constraint]) = {
+    state.stats.constraintCount += cons.size
     val (res, time) = Util.timed(SolveEndCS(notyet ++ cons))
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintSolveTime += time
     res
   }
 
   def tryFinalize =
-    SolveContinuously.state.withValue(state.value) {
+    SolveContinuously.state.withValue(state) {
       (SolveContinuously.freshConstraintSystem addNewConstraints notyet).tryFinalize
     }
 

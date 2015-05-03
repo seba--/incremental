@@ -18,8 +18,7 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[Symbol, (LBound, UBound)], neve
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
-  implicit val csf = SolveEndCanonicalBounds
-  import csf.state
+  def state = SolveEndCanonicalBounds.state.value
 
   val substitution: TSubst = Map()
 
@@ -32,6 +31,8 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[Symbol, (LBound, UBound)], neve
     }
     cons
   }
+
+  def never(c: Constraint) = SolveEndCanonicalBoundsCS(bounds, never :+ c)
 
   def mergeSubsystem(that: SolveEndCanonicalBoundsCS) = {
     var current = SolveEndCanonicalBoundsCS(bounds, never ++ that.never)
@@ -50,40 +51,22 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[Symbol, (LBound, UBound)], neve
     current
   }
 
-  /* //add and solve immediately
-   def <--(c: Constraint): ConstraintSystem = {
-     val res = copy
-     c match {
-       case Equal(t1, t2) =>
-         res.normalizeSub(t1, t2)
-         res.normalizeSub(t2, t1)
-         res.saturateSolution()
-       case Subtype(lower, upper) =>
-         res.normalizeSub(lower, upper)
-         res.saturateSolution()
-       case _ =>
-     }
-     res
-   }*/
-
   def addNewConstraint(c: Constraint) = {
-    state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed(this mergeSubsystem c.solve(this))
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintCount += 1
+    val (res, time) = Util.timed(c.solve(this))
+    state.stats.constraintSolveTime += time
     res
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state.value.stats.constraintCount += cons.size
-    val (res, time) = Util.timed {
-      cons.foldLeft(this)((cs, c) => cs mergeSubsystem c.solve(cs))
-    }
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintCount += cons.size
+    val (res, time) = Util.timed(cons.foldLeft(this)((cs, c) => c.solve(cs)))
+    state.stats.constraintSolveTime += time
     res
   }
 
   def tryFinalize =
-    SolveContinuously.state.withValue(state.value) {
+    SolveContinuously.state.withValue(state) {
       SolveContinuouslyCS(Map(), bounds, never).tryFinalize
     }
 

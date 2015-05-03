@@ -8,13 +8,25 @@ import scala.collection.generic.CanBuildFrom
 
 object SolveContinuously extends ConstraintSystemFactory[SolveContinuouslyCS] {
   val freshConstraintSystem = SolveContinuouslyCS(Map(), Seq(), Seq())
-  def solved(s: TSubst) = SolveContinuouslyCS(s, Seq(), Seq())
-  def notyet(c: Constraint) = SolveContinuouslyCS(Map(), Seq(c), Seq())
-  def never(c: Constraint) = SolveContinuouslyCS(Map(), Seq(), Seq(c))
 }
 
 case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuouslyCS] {
-  import SolveContinuously.state
+  def state = SolveContinuously.state.value
+
+  def solved(s: TSubst) = {
+    var current = SolveContinuouslyCS(substitution mapValues (_.subst(s)), notyet, never)
+    for ((x, t2) <- s) {
+      current.substitution.get(x) match {
+        case None => current = SolveContinuouslyCS(current.substitution + (x -> t2.subst(current.substitution)), current.notyet, current.never)
+        case Some(t1) => current = t1.unify(t2, current)
+      }
+    }
+    current
+  }
+
+  def notyet(c: Constraint) = SolveContinuouslyCS(substitution, notyet :+ c, never)
+  def never(c: Constraint) = SolveContinuouslyCS(substitution, notyet, never :+ c)
+  def without(xs: Set[Symbol]) = SolveContinuouslyCS(substitution -- xs, notyet, never)
 
   def mergeSubsystem(other: SolveContinuouslyCS): SolveContinuouslyCS = {
     val (res, time) = Util.timed {
@@ -23,46 +35,23 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[Constraint], ne
       val mnever = never ++ other.never
       SolveContinuouslyCS(msubstitution, mnotyet, mnever)
     }
-    state.value.stats.mergeSolutionTime += time
-    res
-  }
-
-  def mergeApply(other: SolveContinuouslyCS): SolveContinuouslyCS = {
-    val (res, time) = Util.timed {
-      var msolution = substitution mapValues (_.subst(other.substitution))
-      var mnotyet = notyet ++ other.notyet
-      var mnever = never ++ other.never
-
-      for ((x, t2) <- other.substitution) {
-        msolution.get(x) match {
-          case None => msolution += x -> t2.subst(msolution)
-          case Some(t1) =>
-            val usol = t1.unify(t2, msolution)(SolveContinuously)
-            msolution = msolution.mapValues(_.subst(usol.substitution)) ++ usol.substitution
-            mnotyet = mnotyet ++ usol.notyet
-            mnever = mnever ++ usol.never
-        }
-      }
-
-      SolveContinuouslyCS(msolution, mnotyet, mnever)
-    }
-    state.value.stats.mergeSolutionTime += time
+    state.stats.mergeSolutionTime += time
     res
   }
 
   def addNewConstraint(c: Constraint) = {
-    state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed(this mergeApply c.solve(this, SolveContinuously))
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintCount += 1
+    val (res, time) = Util.timed(c.solve(this))
+    state.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cs: Iterable[Constraint]): SolveContinuouslyCS = {
-    state.value.stats.constraintCount += cs.size
+  def addNewConstraints(cons: Iterable[Constraint]) = {
+    state.stats.constraintCount += cons.size
     val (res, time) = Util.timed {
-      cs.foldLeft(this)((sol, c) => sol mergeApply c.solve(sol, SolveContinuously))
+      cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintSolveTime += time
     res
   }
 
@@ -77,7 +66,7 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[Constraint], ne
 
   override def tryFinalize = {
     val (res, time) = Util.timed (trySolve(true))
-    state.value.stats.finalizeTime += time
+    state.stats.finalizeTime += time
     res
   }
 
@@ -87,14 +76,11 @@ case class SolveContinuouslyCS(substitution: TSubst, notyet: Seq[Constraint], ne
       val next = current.notyet.head
       val rest = current.notyet.tail
       current = SolveContinuouslyCS(current.substitution, rest, current.never)
-
-      val sol =
+      current =
         if (finalize)
-          next.finalize(current, SolveContinuously)
+          next.finalize(current)
         else
-          next.solve(current, SolveContinuously)
-
-      current = current mergeApply sol
+          next.solve(current)
     }
     current
   }

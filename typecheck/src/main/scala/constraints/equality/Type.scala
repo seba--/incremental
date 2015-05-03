@@ -9,8 +9,7 @@ trait Type extends constraints.Type {
   def subst(s: Type.Companion.TSubst): Type
   def freeTVars: Set[Symbol]
   def normalize: Type
-  def unify[CS <: ConstraintSystem[CS]](other: Type, s: Type.Companion.TSubst)(implicit csf: ConstraintSystemFactory[CS]): CS
-  def unify[CS <: ConstraintSystem[CS]](other: Type)(implicit csf: ConstraintSystemFactory[CS]): CS = unify(other, Map())
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
 }
 object Type {
   implicit object Companion extends TypeCompanion {
@@ -25,17 +24,17 @@ case class UVar(x: Symbol) extends Type {
   def occurs(x2: Symbol) = x == x2
   def normalize = this
   def subst(s: TSubst) = s.getOrElse(x, this)
-  def unify[CS <: ConstraintSystem[CS]](other: Type, s: TSubst)(implicit csf: ConstraintSystemFactory[CS]) =
-    if (other == this) csf.emptySolution
-    else s.get(x) match {
-      case Some(t) => t.unify(other, s)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
+    if (other == this) cs
+    else cs.substitution.get(x) match {
+      case Some(t) => t.unify(other, cs)
       case None =>
-        val t = other.subst(s)
+        val t = other.subst(cs.substitution)
         if (this == t)
-          csf.emptySolution
+          cs
         else if (t.occurs(x))
-          csf.never(EqConstraint(this, t))
+          cs.never(EqConstraint(this, t))
         else
-          csf.solved(Map(x -> t))
+          cs.solved(Map(x -> t))
     }
 }

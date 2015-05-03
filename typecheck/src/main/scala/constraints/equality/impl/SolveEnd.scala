@@ -8,37 +8,40 @@ import scala.collection.generic.CanBuildFrom
 
 object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
   def freshConstraintSystem = SolveEndCS(Seq())
-  def solved(s: TSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
-  def notyet(c: Constraint) = SolveEndCS(Seq(c))
-  def never(c: Constraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
 }
 
 case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEndCS] {
-  import SolveEnd.state
+  def state = SolveEnd.state.value
 
   def substitution = Map()
   def never = Seq()
+
+  def solved(s: TSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
+  def notyet(c: Constraint) = SolveEndCS(notyet :+ c)
+  def never(c: Constraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
+  def without(xs: Set[Symbol]) = this
+
 
   def mergeSubsystem(other: SolveEndCS): SolveEndCS = {
     val (res, time) = Util.timed {
       val mnotyet = notyet ++ other.notyet
       SolveEndCS(mnotyet)
     }
-    state.value.stats.mergeSolutionTime += time
+    state.stats.mergeSolutionTime += time
     res
   }
 
   def addNewConstraint(c: Constraint) = {
-    state.value.stats.constraintCount += 1
+    state.stats.constraintCount += 1
     val (res, time) = Util.timed(SolveEndCS(notyet :+ c))
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintSolveTime += time
     res
   }
 
   def addNewConstraints(cs: Iterable[Constraint]) = {
-    state.value.stats.constraintCount += cs.size
+    state.stats.constraintCount += cs.size
     val (res, time) = Util.timed(SolveEndCS(notyet ++ cs))
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintSolveTime += time
     res
   }
 
@@ -53,7 +56,7 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
   def propagate = this
 
   override def tryFinalize =
-    SolveContinuously.state.withValue(state.value) {
+    SolveContinuously.state.withValue(state) {
       SolveContinuouslyCS(Map(), notyet, Seq()).tryFinalize
     }
 }

@@ -3,7 +3,7 @@ package constraints.subtype
 import constraints.{State, Statistics}
 import Type.Companion.TSubst
 
-abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystemFactory[Type, UVar, Constraint, CS] {
+abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystemFactory[Type, UVar, Gen, Constraint, CS] {
   def freshState = new State(new Gen, new Statistics)
 
   def freshConstraintSystem: CS
@@ -11,8 +11,6 @@ abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends const
   def solved(s: TSubst): CS
   def notyet(c: Constraint): CS
   def never(c: Constraint): CS
-
-  def gen: Gen = state.value.gen.asInstanceOf[Gen]
 }
 
 

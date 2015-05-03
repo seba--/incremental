@@ -12,15 +12,7 @@ trait Type extends constraints.Type {
   def &&(that: Type): Option[Type]
   def <(that: Type): Boolean
 
-  def subtype[CS <: ConstraintSystem[CS]]
-    (other: Type, s: Type.Companion.TSubst)
-    (implicit csf: ConstraintSystemFactory[CS])
-    : CS
-
-  def subtype[CS <: ConstraintSystem[CS]]
-    (other: Type)
-    (implicit csf: ConstraintSystemFactory[CS]): CS
-  = subtype(other, Map())
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
 }
 
 object Type {
@@ -48,44 +40,37 @@ case class UVar(x: Symbol) extends Type {
 
   def <(that: Type) = that == Top
 
-  def subtype
-    [CS <: ConstraintSystem[CS]]
-    (other: Type, s: Type.Companion.TSubst)
-    (implicit csf: ConstraintSystemFactory[CS]): CS
-  = if (this == other)  csf.emptySolution
-    else s.get(x) match {
-      case Some(t) => t.subtype(other, s)
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
+  = if (this == other)  cs
+    else cs.substitution.get(x) match {
+      case Some(t) => t.subtype(other, cs)
       case None => other match {
         case UVar(y) =>
-          if (csf.gen.isNegative(x))
-            csf.emptySolution.addUpperBound(x, other)
-          else {
-            val cs = csf.emptySolution.addUpperBound(x, other)
-            cs.addLowerBound(y, this)
-          }
+          if (cs.state.gen.isNegative(x))
+            cs.addUpperBound(x, other)
+          else
+            cs.addUpperBound(x, other).addLowerBound(y, this)
         case _ =>
           if (other.occurs(x))
-            csf.never(Subtype(this, other))
+            cs.never(Subtype(this, other))
           else
-            csf.emptySolution.addUpperBound(x, other)
+            cs.addUpperBound(x, other)
       }
     }
 
 
   def supertype
-    [CS <: ConstraintSystem[CS]]
-    (other: Type, s: Type.Companion.TSubst)
-    (implicit csf: ConstraintSystemFactory[CS]): CS
-  = if (this == other)  csf.emptySolution
-    else s.get(x) match {
-      case Some(t) => other.subtype(t, s)
+    [CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
+  = if (this == other)  cs
+    else cs.substitution.get(x) match {
+      case Some(t) => other.subtype(t, cs)
       case None => other match {
-        case UVar(y) => other.subtype(this, s)
+        case UVar(y) => other.subtype(this, cs)
         case _ =>
           if (other.occurs(x))
-            csf.never(Subtype(other, this))
+            cs.never(Subtype(other, this))
           else
-            csf.emptySolution.addLowerBound(x, other)
+            cs.addLowerBound(x, other)
       }
     }
 }
@@ -100,47 +85,12 @@ case object Top extends Type {
   def <(that: Type) = that == Top
 
   def subtype
-    [CS <: ConstraintSystem[CS]]
-    (other: Type, s: Type.Companion.TSubst)
-    (implicit csf: ConstraintSystemFactory[CS]): CS
+    [CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
   = other match {
-    case Top => csf.emptySolution
-    case v@UVar(x) => v.supertype(this, s)
-    case _ => csf.never(Subtype(this, other))
+    case Top => cs
+    case v@UVar(x) => v.supertype(this, cs)
+    case _ => cs.never(Subtype(this, other))
   }
 
-
-//  private[ConstraintSystem] def normalizeSub(s: Type, t: Type): ConstraintSystem = (s,t) match {
-//    case (t1, t2) if t1 == t2 =>
-//    case (_, Top) =>
-
-//    case (UVar(a), UVar(b)) =>
-//      if (isNegative(a))
-//        addUpperBound(a, t)
-//      else {
-//        addUpperBound(a, t)
-//        addLowerBound(b, s)
-//      }
-//
-//    case (UVar(a), t2) =>
-//      if (t2.occurs(a))
-//        gameOver(Subtype(s, t))
-//      else
-//        addUpperBound(a, t2)
-
-//    case (t1, UVar(a)) =>
-//      if (t1.occurs(a))
-//        gameOver(Subtype(s, t))
-//      else
-//        addLowerBound(a, t1)
-
-//    case (TNum, TNumeric) =>
-//    case (TFloat, TNumeric) =>
-//    case (s1 -->: t1, s2 -->: t2) =>
-//      normalizeSub(s2, s1)
-//      normalizeSub(t1, t2)
-//    case _ =>
-//      gameOver(Subtype(s, t))
-//  }
 }
 

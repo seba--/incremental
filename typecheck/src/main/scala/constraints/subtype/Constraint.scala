@@ -1,34 +1,21 @@
 package constraints.subtype
 
-import constraints.subtype.Type.Companion.TSubst
-
 trait Constraint {
-  def solve[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS])(implicit csf: ConstraintSystemFactory[CS]): CS
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS
 }
 
 case class Subtype(lower: Type, upper: Type) extends Constraint {
-  def solve[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS])(implicit csf: ConstraintSystemFactory[CS]): CS =
-    lower.subtype(upper, s.substitution)
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = lower.subtype(upper, cs)
 }
 
 case class Equal(expected: Type, actual: Type) extends Constraint {
-  def solve[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS])(implicit csf: ConstraintSystemFactory[CS]) = {
-    val cs1 = expected.subtype(actual, s.substitution)
-    val cs2 = actual.subtype(expected, s.substitution)
-    cs1 mergeSubsystem cs2
-  }
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = expected.subtype(actual, actual.subtype(expected, cs))
 }
 
 case class Join(target: Type, ts: Set[Type]) extends Constraint {
-  def solve[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS])(implicit csf: ConstraintSystemFactory[CS]) = {
-    val subst = s.substitution
-    ts.foldLeft(csf.freshConstraintSystem)((cs, t) => cs mergeSubsystem t.subtype(target, subst))
-  }
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = ts.foldLeft(cs)((cs, t) => t.subtype(target, cs))
 }
 
 case class Meet(target: Type, ts: Set[Type]) extends Constraint {
-  def solve[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS])(implicit csf: ConstraintSystemFactory[CS]) = {
-    val subst = s.substitution
-    ts.foldLeft(csf.freshConstraintSystem)((cs, t) => cs mergeSubsystem target.subtype(t, subst))
-  }
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = ts.foldLeft(cs)((cs, t) => target.subtype(t, cs))
 }

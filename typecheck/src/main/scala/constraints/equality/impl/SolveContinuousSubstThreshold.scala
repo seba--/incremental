@@ -10,14 +10,27 @@ object SolveContinuousSubstThreshold extends ConstraintSystemFactory[SolveContin
   var threshold = 10
 
   val freshConstraintSystem = SolveContinuousSubstThresholdCS(Map(), Seq(), Seq())
-  def solved(s: TSubst) = SolveContinuousSubstThresholdCS(s, Seq(), Seq())
-  def notyet(c: Constraint) = SolveContinuousSubstThresholdCS(Map(), Seq(c), Seq())
-  def never(c: Constraint) = SolveContinuousSubstThresholdCS(Map(), Seq(), Seq(c))
 }
 
 case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstThresholdCS] {
-  import SolveContinuousSubstThreshold.state
   import SolveContinuousSubstThreshold.threshold
+
+  def state = SolveContinuousSubstThreshold.state.value
+
+  def solved(s: TSubst) = {
+    var current = SolveContinuousSubstThresholdCS(substitution mapValues (_.subst(s)), notyet, never)
+    for ((x, t2) <- s) {
+      current.substitution.get(x) match {
+        case None => current = SolveContinuousSubstThresholdCS(current.substitution + (x -> t2.subst(current.substitution)), current.notyet, current.never)
+        case Some(t1) => current = t1.unify(t2, current)
+      }
+    }
+    current
+  }
+
+  def notyet(c: Constraint) = SolveContinuousSubstThresholdCS(substitution, notyet :+ c, never)
+  def never(c: Constraint) = SolveContinuousSubstThresholdCS(substitution, notyet, never :+ c)
+  def without(xs: Set[Symbol]) = SolveContinuousSubstThresholdCS(substitution -- xs, notyet, never)
 
   lazy val trigger = substitution.size >= threshold
 
@@ -28,45 +41,23 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[Con
       val mnever = never ++ other.never
       SolveContinuousSubstThresholdCS(msubstitution, mnotyet, mnever)
     }
-    state.value.stats.mergeSolutionTime += time
-    res
-  }
-
-  def mergeApply(other: SolveContinuousSubstThresholdCS): SolveContinuousSubstThresholdCS = {
-    val (res, time) = Util.timed {
-      var msolution = substitution mapValues (_.subst(other.substitution))
-      val mnotyet = notyet ++ other.notyet
-      var mnever = never ++ other.never
-
-      for ((x, t2) <- other.substitution) {
-        msolution.get(x) match {
-          case None => msolution += x -> t2.subst(msolution)
-          case Some(t1) =>
-            val usol = t1.unify(t2, msolution)(SolveContinuousSubstThreshold)
-            msolution = msolution.mapValues(_.subst(usol.substitution)) ++ usol.substitution
-            mnever = mnever ++ usol.never
-        }
-      }
-
-      SolveContinuousSubstThresholdCS(msolution, mnotyet, mnever)
-    }
-    state.value.stats.mergeSolutionTime += time
+    state.stats.mergeSolutionTime += time
     res
   }
 
   def addNewConstraint(c: Constraint) = {
-    state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed(this mergeApply c.solve(this, SolveContinuousSubstThreshold))
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintCount += 1
+    val (res, time) = Util.timed(c.solve(this))
+    state.stats.constraintSolveTime += time
     res
   }
 
-  def addNewConstraints(cs: Iterable[Constraint]): SolveContinuousSubstThresholdCS = {
-    state.value.stats.constraintCount += cs.size
+  def addNewConstraints(cons: Iterable[Constraint]) = {
+    state.stats.constraintCount += cons.size
     val (res, time) = Util.timed {
-      cs.foldLeft(this)((sol, c) => sol mergeApply c.solve(sol, SolveContinuousSubstThreshold))
+      cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintSolveTime += time
     res
   }
 
@@ -92,7 +83,7 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[Con
       this
 
   override def tryFinalize =
-    SolveContinuously.state.withValue(state.value) {
+    SolveContinuously.state.withValue(state) {
       SolveContinuouslyCS(substitution, notyet, never).tryFinalize
     }
 }

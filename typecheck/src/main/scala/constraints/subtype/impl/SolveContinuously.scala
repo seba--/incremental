@@ -19,10 +19,8 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
-  implicit val csf = SolveContinuously
-  import csf.state
-  import csf.gen
-
+  def state = SolveContinuously.state.value
+  
   def notyet = {
     var cons = Seq[Constraint]()
     for ((x, (l, u)) <- bounds) {
@@ -32,6 +30,8 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
     }
     cons
   }
+
+  def never(c: Constraint) = SolveContinuouslyCS(substitution, bounds, never :+ c)
 
   def mergeSubsystem(that: SolveContinuouslyCS) = {
     val msubst = substitution ++ that.substitution
@@ -53,38 +53,17 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
     SolveContinuouslyCS(msubst, mbounds, mnever)
   }
 
-  def mergeApply(that: SolveContinuouslyCS) = {
-    var current = SolveContinuouslyCS(substitution ++ that.substitution, bounds, never ++ that.never)
-
-    for((tv, (thatL, thatU)) <- that.bounds) {
-      if (bounds.isDefinedAt(tv)) {
-        for (t <- thatL.nonground ++ thatL.ground.toSet)
-          current = current.addLowerBound(tv, t)
-        for (t <- thatU.nonground ++ thatU.ground.toSet)
-          current = current.addUpperBound(tv, t)
-      }
-      else
-        current = SolveContinuouslyCS(current.substitution, current.bounds + (tv -> (thatL, thatU)), current.never)
-    }
-
-    current
-  }
-
   def addNewConstraint(c: Constraint) = {
-    state.value.stats.constraintCount += 1
-    val (res, time) = Util.timed {
-      (this mergeApply c.solve(this)).trySolve
-    }
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintCount += 1
+    val (res, time) = Util.timed(c.solve(this).trySolve)
+    state.stats.constraintSolveTime += time
     res
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state.value.stats.constraintCount += cons.size
-    val (res, time) = Util.timed {
-      cons.foldLeft(this)((cs, c) => (cs mergeApply c.solve(cs))).trySolve
-    }
-    state.value.stats.constraintSolveTime += time
+    state.stats.constraintCount += cons.size
+    val (res, time) = Util.timed(cons.foldLeft(this)((cs, c) => c.solve(cs)).trySolve)
+    state.stats.constraintSolveTime += time
     res
   }
 
@@ -100,7 +79,7 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
 
       SolveContinuouslyCS(substitution, finalbounds, never).saturateSolution
     }
-    state.value.stats.finalizeTime += time
+    state.stats.finalizeTime += time
     res
   }
 
@@ -133,17 +112,17 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
       val subst = substitution ++ sol
       val (newbounds, newnever) = current.substitutedBounds(sol)
 
-      var temp = csf.freshConstraintSystem
+      var temp = SolveContinuouslyCS(subst, SolveContinuously.defaultBounds, Seq())
 
       for ((tv, (lb, ub)) <- newbounds) {
         val t = subst.getOrElse(tv, UVar(tv))
         for(tpe <- lb.ground.toSet ++ lb.nonground)
-          temp = temp mergeApply tpe.subtype(t, subst)
+          temp = tpe.subtype(t, temp)
         for(tpe <- ub.ground.toSet ++ ub.nonground)
-          temp = temp mergeApply t.subtype(tpe, subst)
+          temp = t.subtype(tpe, temp)
       }
 
-      current = SolveContinuouslyCS(subst, temp.bounds, current.never ++ newnever ++ temp.never)
+      current = SolveContinuouslyCS(temp.substitution, temp.bounds, current.never ++ newnever ++ temp.never)
       sol = current.solveOnce
     }
     current

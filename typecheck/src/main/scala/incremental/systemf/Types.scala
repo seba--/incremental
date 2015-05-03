@@ -12,10 +12,10 @@ case object TNum extends Type {
   def occurs(x: Symbol) = false
   def normalize = this
   def subst(s: TSubst) = this
-  def unify[CS <: ConstraintSystem[CS]](other: Type, s: Map[Symbol, Type])(implicit csf: ConstraintSystemFactory[CS]) = other match {
-    case TNum => csf.emptySolution
-    case UVar(x) => other.unify(this, s)
-    case _ => csf.never(EqConstraint(this, other))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TNum => cs
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
 }
 
@@ -24,13 +24,10 @@ case class TFun(t1: Type, t2: Type) extends Type {
   def occurs(x: Symbol) = t1.occurs(x) || t2.occurs(x)
   def normalize = TFun(t1.normalize, t2.normalize)
   def subst(s: Map[Symbol, Type]) = TFun(t1.subst(s), t2.subst(s))
-  def unify[CS <: ConstraintSystem[CS]](other: Type, s: TSubst)(implicit csf: ConstraintSystemFactory[CS]) = other match {
-    case TFun(t1_, t2_) =>
-      val cs1 = t1.unify(t1_, s)
-      val cs2 = t2.unify(t2_, cs1.substitution ++ s)
-      cs1 mergeSubsystem cs2
-    case UVar(x) => other.unify(this, s)
-    case _ => csf.never(EqConstraint(this, other))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TFun(t1_, t2_) => t2.unify(t2_, t1.unify(t1_, cs))
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
   override def toString= s"($t1 --> $t2)"
 }
@@ -41,10 +38,10 @@ case class TVar(alpha : Symbol) extends Type {
   def normalize = this
   def occurs(x2: Symbol) = alpha == x2
   def subst(s: TSubst) = this
-  def unify[CS <: ConstraintSystem[CS]](other: Type, s :TSubst)(implicit csf: ConstraintSystemFactory[CS]) = other match {
-      case TVar(`alpha`) => csf.emptySolution
-    case UVar(x) => other.unify(this, s)
-    case _ => csf.never(EqConstraint(this, other))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
+    case TVar(`alpha`) => cs
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
 }
 
@@ -53,11 +50,11 @@ case class TUniv(alpha : Symbol, t : Type) extends Type {
   def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
   def normalize = TUniv(alpha, t.normalize)
   def subst(s: Map[Symbol, Type]) = TUniv(alpha, t.subst(s - alpha))
-  def unify[CS <: ConstraintSystem[CS]](other: Type, s :TSubst)(implicit csf: ConstraintSystemFactory[CS]) = other match {
-    case UUniv(alpha2, t2) => csf.solved(Map(alpha2 -> TVar(alpha))) mergeSubsystem t.unify(t2, s + (alpha2 -> TVar(alpha)))
-    case TUniv(alpha2, t2) => t.unify(t2, s + (alpha2 -> TVar(alpha)))
-    case UVar(_) => other.unify(this, s)
-    case _ => csf.never(EqConstraint(this, other))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
+    case UUniv(alpha2, t2) => t.unify(t2, cs.solved(Map(alpha2 -> TVar(alpha))))
+    case TUniv(alpha2, t2) => t.unify(t2, cs.solved(Map(alpha2 -> TVar(alpha)))) without Set(alpha2)
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
 }
 
@@ -71,10 +68,10 @@ case class UUniv(alpha: Symbol, t : Type) extends Type {
     case None => UUniv(alpha, t.subst(s))
     case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
   }
-  def unify[CS <: ConstraintSystem[CS]](other: Type, s :TSubst)(implicit csf: ConstraintSystemFactory[CS]) = other match {
-    case UUniv(alpha2, t2) => csf.solved(Map(alpha -> UVar(alpha2))) addNewConstraint EqConstraint(t, t2)
-    case TUniv(alpha2, t2) => csf.solved(Map(alpha -> TVar(alpha2))) addNewConstraint EqConstraint(t, t2)
-    case UVar(_) => other.unify(this, s)
-    case _ => csf.never(EqConstraint(this, other))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
+    case UUniv(alpha2, t2) => t.unify(t2, cs.solved(Map(alpha -> UVar(alpha2))))
+    case TUniv(alpha2, t2) => t.unify(t2, cs.solved(Map(alpha -> TVar(alpha2))))
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
 }

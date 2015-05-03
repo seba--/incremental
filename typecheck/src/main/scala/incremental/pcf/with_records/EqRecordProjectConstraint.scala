@@ -7,43 +7,43 @@ import constraints.equality._
  * Created by seba on 13/11/14.
  */
 case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) extends Constraint {
-  def solve[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS], csf: ConstraintSystemFactory[CS]): CS = {
-    val trec = record.subst(s.substitution)
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = {
+    val trec = record.subst(cs.substitution)
     trec match {
       case TRecord(fields) =>
         fields.get(label) match {
-          case None => csf.never(EqRecordProjectConstraint(trec, label, field))
-          case Some(t) => EqConstraint(t, field).solve(s, csf)
+          case None => cs.never(EqRecordProjectConstraint(trec, label, field))
+          case Some(t) => EqConstraint(t, field).solve(cs)
         }
-      case UVar(_) => csf.notyet(EqRecordProjectConstraint(trec, label, field))
-      case _ => csf.never(EqRecordProjectConstraint(trec, label, field))
+      case UVar(_) => cs.notyet(EqRecordProjectConstraint(trec, label, field))
+      case _ => cs.never(EqRecordProjectConstraint(trec, label, field))
     }
   }
 
-  def finalize[CS <: ConstraintSystem[CS]](s: ConstraintSystem[CS], csf: ConstraintSystemFactory[CS]): CS = {
-    val trec = record.subst(s.substitution)
+  def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = {
+    val trec = record.subst(cs.substitution)
     trec match {
       case TRecord(fields) =>
         fields.get(label) match {
-          case None => csf.never(EqRecordProjectConstraint(trec, label, field))
-          case Some(t) => EqConstraint(t, field).solve(s, csf)
+          case None => cs.never(EqRecordProjectConstraint(trec, label, field))
+          case Some(t) => EqConstraint(t, field).solve(cs)
         }
       case v@UVar(x) =>
         var cons = Seq[Constraint]()
-        var fields = Map(label -> field.subst(s.substitution))
-        for (EqRecordProjectConstraint(t, l, field) <- s.notyet) t match {
-          case UVar(y) if x == y || v == s.substitution.getOrElse(y, t) =>
+        var fields = Map(label -> field.subst(cs.substitution))
+        for (EqRecordProjectConstraint(t, l, field) <- cs.notyet) t match {
+          case UVar(y) if x == y || v == cs.substitution.getOrElse(y, t) =>
             if (!fields.isDefinedAt(l))
-              fields += l -> field.subst(s.substitution)
+              fields += l -> field.subst(cs.substitution)
             else
               cons = EqConstraint(fields(l), field) +: cons
 
           case _ =>
-              return csf.notyet(EqRecordProjectConstraint(trec, label, fields(label)))
+              return cs.notyet(EqRecordProjectConstraint(trec, label, fields(label)))
 
         }
-        csf.solved(Map(x -> TRecord(fields))) addNewConstraints cons
-      case _ => csf.never(EqRecordProjectConstraint(trec, label, field))
+        cs.solved(Map(x -> TRecord(fields))) addNewConstraints cons
+      case _ => cs.never(EqRecordProjectConstraint(trec, label, field))
     }
   }
 
