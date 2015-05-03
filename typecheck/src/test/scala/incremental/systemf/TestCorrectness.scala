@@ -46,7 +46,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("\\x. err+x", Abs('x, Add(Var('err), Var('x))))
   typecheckTest("\\x. \\y. x y", Abs('x, Abs('y , App(Var('x), Var('y)))))(TFun(TFun(UVar('x$1), UVar('x$2)), TFun(UVar('x$1), UVar('x$2))))
   typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
-  //typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
+  typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
 
   // test polymorphism
 
@@ -63,11 +63,6 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("\\x. (x [Num]) + 1", Abs('x, Add(TApp(TNum, Var('x)), Num(1))))
   typecheckTestError("\\x:X. x", Abs('x, TVar('X), Var('x)))
   typecheckTestError("(\\X.\\x:X. x)[Y]", TApp(TVar('Y), TAbs('X, Abs('x, TVar('X), Var('x)))))
-
-  //  typecheckTest("\\a. \\b. \\f:a->b .  \\c. \\g. : b->c \\x:a.g f x", TAbs('a,TAbs('b, Abs(Seq('f,TFun(TUsVar('a),TUsVar('a))),Seq(Abs(Seq('x, TUsVar('b)), Seq(App(Var('f),Var('x)))))))))(TUniv('a,TUniv('b,TFun(TFun(TUsVar('a), TUsVar('x$0)),TFun(TUsVar('b), TUsVar('x$0))))))
-  //typecheckTest("\\a-> TNum. \\x : a. x", TAbs('a, TApp(TNum,Abs('x, TVar('a), Var('x)))))(TUniv('a, TFun(TFun(TVar('a), TNum),TFun(TNum,TNum))))
-  //typecheckTest("\\x: \\a.a->a. x \\a.a->a x" ,(Abs('x, TAbs('a, TFun(TVar('a),TVar('a))), App(Var('x), App(TAbs('a, TFun(TVar('a),TVar('a))),Var('x))))))(TFun((TUniv('a, TFun(TVar('a), TVar('a)))),(TUniv('a, TFun(TVar('a), TVar('a))))))
-
 }
 
 class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
