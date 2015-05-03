@@ -153,7 +153,7 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[Sym
     val newbounds = bounds + (v -> (newLower, upper))
     val cs = SolveContinuousSubstThresholdCS(substitution, newbounds, newnever)
 
-    cs mergeSubsystem (subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs))
+    subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs)
   }
 
   def addUpperBound(v: Symbol, t: Type) = {
@@ -169,7 +169,7 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[Sym
     val newbounds = bounds + (v -> (lower, newUpper))
     val cs = SolveContinuousSubstThresholdCS(substitution, newbounds, newnever)
 
-    cs mergeSubsystem (subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs))
+    subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs)
   }
 
 
