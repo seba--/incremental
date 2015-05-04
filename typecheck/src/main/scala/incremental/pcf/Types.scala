@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import constraints.equality.{ConstraintSystem, ConstraintSystemFactory, EqConstraint, Type, UVar}
+import constraints.equality.{ConstraintSystem, ConstraintSystemFactory, EqConstraint, Type}
 import constraints.equality.Type.Companion._
 
 /**
@@ -9,6 +9,26 @@ import constraints.equality.Type.Companion._
 //trait CheckResult {
 //  (Type, Map[Symbol, Type], Unsolvable)
 //}
+
+case class UVar(x: Symbol) extends Type {
+  def freeTVars = Set()
+  def occurs(x2: Symbol) = x == x2
+  def normalize = this
+  def subst(s: TSubst) = s.getOrElse(x, this)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
+    if (other == this) cs
+    else cs.substitution.get(x) match {
+      case Some(t) => t.unify(other, cs)
+      case None =>
+        val t = other.subst(cs.substitution)
+        if (this == t)
+          cs
+        else if (t.occurs(x))
+          cs.never(EqConstraint(this, t))
+        else
+          cs.solved(Map(x -> t))
+    }
+}
 
 case object TNum extends Type {
   def freeTVars = Set()

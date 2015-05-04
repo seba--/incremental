@@ -113,12 +113,14 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case TAbs if (e.lits(0).isInstanceOf[Symbol]) =>
       val alpha = e.lits(0).asInstanceOf[Symbol]
+      val k = if (e.lits.size == 2) e.lits(1).asInstanceOf[Kind] else freshKUVar()
       val (t, cs) = typecheckRec(e.kids(0), ctx, tctx + alpha)
-      (TUniv(alpha, t), Seq(), Seq(cs))
+      (TUniv(alpha, Some(k), t), Seq(), Seq(cs))
 
     case TApp =>
       val (t1, cs) = typecheckRec(e.kids(0), ctx, tctx)
       val t = e.lits(0).asInstanceOf[Type]
+      val k = ???
 
       for (x <- t.freeTVars)
         if (!tctx.contains(x))
@@ -128,7 +130,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val Xbody = freshUVar()
       val Xres = freshUVar()
 
-      val ucons = EqConstraint(UUniv(Xalpha, Xbody), t1)
+      val ucons = EqConstraint(UUniv(Xalpha, Some(k), Xbody), t1)
       val vcons = EqSubstConstraint(Xbody, Xalpha, true, t, Xres) // Xbody[Xalpha:=t] == Xres
 
       (Xres, Seq(ucons, vcons), Seq(cs))

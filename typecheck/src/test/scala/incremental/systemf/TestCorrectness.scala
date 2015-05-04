@@ -1,7 +1,7 @@
 package incremental.systemf
 
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveEnd, SolveContinuously}
-import constraints.equality.{Type, UVar, ConstraintSystem}
+import constraints.equality.{Type, ConstraintSystem}
 import incremental.Node._
 import incremental.Util
 import org.scalatest.{BeforeAndAfterEach, FunSuite}

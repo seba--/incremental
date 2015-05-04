@@ -2,6 +2,7 @@ package incremental.pcf.with_records
 
 import constraints.equality._
 import constraints.equality.Type.Companion.TSubst
+import incremental.pcf.UVar
 
 /**
  * Created by seba on 15/11/14.

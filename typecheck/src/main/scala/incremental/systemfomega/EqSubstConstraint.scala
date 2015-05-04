@@ -31,11 +31,11 @@ case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean
         val cons1 = EqSubstConstraint(t1, beta, betaIsInternal, substitute, X)
         val cons2 = EqSubstConstraint(t2, beta, betaIsInternal, substitute, Y)
         withResult(TFun(X, Y), cons1.solve(cons2.solve(cs)))
-      case TUniv(`beta`, _) => withResult(tbody, cs)
-      case TUniv(gamma, t) if !betaIsInternal =>
+      case TUniv(`beta`, k, _) => withResult(tbody, cs)
+      case TUniv(gamma, k, t) if !betaIsInternal =>
         val X = UVar(cs.gen.freshSymbol("x$"))
         val tcons = EqSubstConstraint(t, beta, betaIsInternal, substitute, X)
-        withResult(TUniv(gamma, X), tcons.solve(cs))
+        withResult(TUniv(gamma, k, X), tcons.solve(cs))
 
       // either:
       // - tbody == TVarInternal   <== Example: x. (x [Num]) + (x [Num -> Num])

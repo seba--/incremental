@@ -18,6 +18,7 @@ abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeC
   }
 
   def freshUVar() = UVar(freshSymbol("x$"))
+  def freshKUVar() = KUvar(freshSymbol("K$"))
 }
 
 trait TypeCheckerFactory[CS <: ConstraintSystem[CS]] {

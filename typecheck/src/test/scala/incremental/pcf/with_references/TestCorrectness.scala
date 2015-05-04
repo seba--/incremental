@@ -1,7 +1,7 @@
 package incremental.pcf.with_references
 
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveEnd, SolveContinuously}
-import constraints.equality.{UVar, Type, ConstraintSystem}
+import constraints.equality.{Type, ConstraintSystem}
 import incremental.Node._
 import incremental.pcf._
 import incremental.Util

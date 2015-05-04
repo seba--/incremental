@@ -2,7 +2,7 @@ package incremental.pcf
 
 import constraints.equality
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveContinuously, SolveEnd}
-import constraints.equality.{ConstraintSystem, UVar}
+import constraints.equality.ConstraintSystem
 import incremental.Node._
 import incremental.Util
 import org.scalatest.{BeforeAndAfterEach, FunSuite}

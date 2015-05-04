@@ -4,11 +4,36 @@ import constraints.normequality._
 import constraints.normequality.Type._
 import constraints.normequality.Type.Companion.TSubst
 import incremental.Node._
-import incremental.NodeKind
+import incremental.{Node_, NodeKind}
 
 /**
  * Created by seba on 13/11/14.
  */
+
+case class UVar(x: Symbol) extends Type {
+  def freeTVars = Set()
+  def occurs(x2: Symbol) = x == x2
+  def normalize = this
+  def subst(s: TSubst) = s.getOrElse(x, this)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
+    if (other == this) cs
+    else cs.substitution.get(x) match {
+      case Some(t) => t.unify(other, cs)
+      case None =>
+        val t = other.subst(cs.substitution)
+        if (this == t)
+          cs
+        else if (t.occurs(x))
+          cs.never(EqConstraint(this, t))
+        else
+          cs.solved(Map(x -> t))
+    }
+}
+object UVar {
+  case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]))) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = UVar(lits(0).asInstanceOf[Symbol])
+  }
+}
 
 case object TNum extends Type {
   def freeTVars = Set()
@@ -21,7 +46,9 @@ case object TNum extends Type {
     case _ => cs.never(EqConstraint(this, other))
   }
 
-  case object Kind extends Type.Kind(simple())
+  case object Kind extends Type.Kind(simple()) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = TNum
+  }
 }
 
 case class TFun(t1: Type, t2: Type) extends Type {
@@ -37,7 +64,9 @@ case class TFun(t1: Type, t2: Type) extends Type {
   override def toString= s"($t1 --> $t2)"
 }
 object TFun {
-  case object Kind extends Type.Kind(simple(cType, cType))
+  case object Kind extends Type.Kind(simple(cType, cType)) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = TFun(getType(kids(0)), getType(kids(1)))
+  }
 }
 
 case class TVar(alpha : Symbol) extends Type {
@@ -52,43 +81,57 @@ case class TVar(alpha : Symbol) extends Type {
   }
 }
 object TVar {
-  case object Kind extends Type.Kind(simple(Seq(classOf[Symbol])))
+  case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]))) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = TVar(lits(0).asInstanceOf[Symbol])
+  }
 }
 
-case class TUniv(alpha : Symbol, t : Type) extends Type {
+case class TUniv(alpha : Symbol, k: Option[Kind], t : Type) extends Type {
   def freeTVars = t.freeTVars - alpha
   def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
-  def normalize = TUniv(alpha, t.normalize)
-  def subst(s: Map[Symbol, Type]) = TUniv(alpha, t.subst(s - alpha))
+  def normalize = TUniv(alpha, k, t.normalize)
+  def subst(s: Map[Symbol, Type]) = TUniv(alpha, k, t.subst(s - alpha))
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
-    case UUniv(alpha2, t2) => t.unify(t2, cs.solved(Map(alpha2 -> TVar(alpha))))
-    case TUniv(alpha2, t2) => t.unify(t2, cs.solved(Map(alpha2 -> TVar(alpha)))) without Set(alpha2)
+    case UUniv(alpha2, k2, t2) => t.unify(t2, cs.solved(Map(alpha2 -> TVar(alpha))))
+    case TUniv(alpha2, k2, t2) => t.unify(t2, cs.solved(Map(alpha2 -> TVar(alpha)))) without Set(alpha2)
     case UVar(_) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
 object TUniv {
-  case object Kind extends Type.Kind(simple(Seq(classOf[Symbol], cType)))
+  case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]), cType) orElse simple(Seq(classOf[Symbol], classOf[Kind]), cType)) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) =
+      if (lits.size == 1)
+        TUniv(lits(0).asInstanceOf[Symbol], None, getType(kids(0)))
+      else
+        TUniv(lits(0).asInstanceOf[Symbol], Some(lits(1).asInstanceOf[Kind]), getType(kids(0)))
+  }
 }
 
 
-case class UUniv(alpha: Symbol, t : Type) extends Type {
+case class UUniv(alpha: Symbol, k: Option[Kind], t : Type) extends Type {
   def freeTVars = t.freeTVars
-  def normalize = UUniv(alpha, t.normalize)
+  def normalize = UUniv(alpha, k, t.normalize)
   def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
   def subst(s : Map[Symbol, Type]) = s.get(alpha) match {
-    case Some(TVar(beta)) => TUniv(beta, t.subst(s))
-    case Some(UVar(beta)) => UUniv(beta, t.subst(s))
-    case None => UUniv(alpha, t.subst(s))
+    case Some(TVar(beta)) => TUniv(beta, k, t.subst(s))
+    case Some(UVar(beta)) => UUniv(beta, k, t.subst(s))
+    case None => UUniv(alpha, k, t.subst(s))
     case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
   }
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
-    case UUniv(alpha2, t2) => t.unify(t2, cs.solved(Map(alpha -> UVar(alpha2))))
-    case TUniv(alpha2, t2) => t.unify(t2, cs.solved(Map(alpha -> TVar(alpha2))))
+    case UUniv(alpha2, k2, t2) => t.unify(t2, cs.solved(Map(alpha -> UVar(alpha2))))
+    case TUniv(alpha2, k2, t2) => t.unify(t2, cs.solved(Map(alpha -> TVar(alpha2))))
     case UVar(_) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
 object UUniv {
-  case object Kind extends Type.Kind(simple(Seq(classOf[Symbol], cType)))
+  case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]), cType) orElse simple(Seq(classOf[Symbol], classOf[Kind]), cType)) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) =
+      if (lits.size == 1)
+        UUniv(lits(0).asInstanceOf[Symbol], None, getType(kids(0)))
+      else
+        UUniv(lits(0).asInstanceOf[Symbol], Some(lits(1).asInstanceOf[Kind]), getType(kids(0)))
+  }
 }
