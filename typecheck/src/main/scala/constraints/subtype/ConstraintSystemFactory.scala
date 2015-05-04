@@ -3,7 +3,7 @@ package constraints.subtype
 import constraints.{State, Statistics}
 import Type.Companion.TSubst
 
-abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystemFactory[Type, UVar, Gen, Constraint, CS] {
+abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystemFactory[Type, Gen, Constraint, CS] {
   def freshState = new State(new Gen, new Statistics)
 
   def freshConstraintSystem: CS

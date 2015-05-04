@@ -1,5 +1,5 @@
 package constraints
 
-trait GenBase[V <: Type] {
-  def freshUVar(): V
+trait GenBase {
+  def freshSymbol(prefix: String): Symbol
 }

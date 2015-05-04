@@ -2,12 +2,11 @@ package constraints.normequality
 
 import constraints.GenBase
 
-class Gen extends GenBase[UVar] {
-  type V = UVar
-  private var _nextId = 0
-  def freshUVar(): UVar = {
-    val v = UVar(Symbol("x$" + _nextId))
-    _nextId += 1
-    v
+class Gen extends GenBase {
+  private var _ids = Map[String, Int]().withDefaultValue(0)
+  def freshSymbol(prefix: String): Symbol = {
+    val next = _ids(prefix)
+    _ids = _ids + (prefix -> (next + 1))
+    Symbol(prefix + next)
   }
 }

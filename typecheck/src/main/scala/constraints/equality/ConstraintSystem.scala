@@ -4,7 +4,7 @@ import Type.Companion._
 import incremental.Util
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
-  extends constraints.ConstraintSystem[CS, Constraint, Type, UVar, Gen] {
+  extends constraints.ConstraintSystem[CS, Constraint, Type, Gen] {
 
   def substitution: TSubst
   def notyet: Seq[Constraint]
