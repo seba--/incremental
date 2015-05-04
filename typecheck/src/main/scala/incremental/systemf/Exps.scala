@@ -2,13 +2,13 @@ package incremental.systemf
 
 import constraints.equality.Type
 import incremental.Node._
-import incremental.{SyntaxChecking, NodeKindClass}
+import incremental.{SyntaxChecking, NodeKind}
 
 /**
  * Created by seba on 13/11/14.
  */
 
-abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKindClass(syntaxcheck)
+abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 object Exp {
   val cExp = classOf[Exp]
 }

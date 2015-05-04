@@ -2,9 +2,7 @@ package incremental
 
 import Node._
 
-trait NodeKind extends Serializable
-
-abstract class NodeKindClass(val syntaxcheck: SyntaxChecking.SyntaxCheck = Node.ignore) extends NodeKind {
+abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck = Node.ignore) extends Serializable {
   def unapplySeq(e: Node_[_]): Option[Seq[Node_[_]]] =
     if (e.kind == this)
       Some(e.kids.seq)
@@ -12,7 +10,7 @@ abstract class NodeKindClass(val syntaxcheck: SyntaxChecking.SyntaxCheck = Node.
       None
 }
 
-class Node_[T](val kind: NodeKindClass, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
+class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
   kind.syntaxcheck(kind).check(lits, kidsArg)
 
   private var _typ: T = _
@@ -101,8 +99,8 @@ object Node {
   type Node = Node_[Any]
 
   import scala.language.implicitConversions
-  implicit def kindExpression(k: NodeKindClass) = new KindExpression(k)
-  class KindExpression(k: NodeKindClass) {
+  implicit def kindExpression(k: NodeKind) = new KindExpression(k)
+  class KindExpression(k: NodeKind) {
     def apply(): Node = new Node_[Any](k, Seq(), Seq())
     def apply(l: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l), Seq(sub:_*))
     def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
@@ -111,8 +109,8 @@ object Node {
   }
   
   val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)
-  def simple[K <: NodeKindClass](kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
-  def simple[K <: NodeKindClass](litTypes: Seq[Class[_]], kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
+  def simple[K <: NodeKind](kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
+  def simple[K <: NodeKind](litTypes: Seq[Class[_]], kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
   implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 

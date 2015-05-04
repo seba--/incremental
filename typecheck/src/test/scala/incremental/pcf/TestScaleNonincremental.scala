@@ -35,11 +35,11 @@ class TestScaleNonInc[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assertResult(Left(expected))(actual)
     }
 
-  def scaleTests(heights: Set[Int], kind: NodeKindClass, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
+  def scaleTests(heights: Set[Int], kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
     for (h <- heights)
       scaleTest(h, kind, leaveMaker, sharing, leaveDesc, wrap)(expected)
 
-  def scaleTest(height: Int, kind: NodeKindClass, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
+  def scaleTest(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
     typecheckTest(
       s"${if(sharing) "shared" else "non-shared"} $kind-tree(h=$height)${if(leaveDesc.isEmpty)"" else " with leaves " + leaveDesc}",
       wrap(height, makeBinTree(height, kind, leaveMaker, sharing)))(expected(height))
