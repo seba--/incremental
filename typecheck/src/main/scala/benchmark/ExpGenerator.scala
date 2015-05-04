@@ -1,7 +1,7 @@
 package benchmark
 
 import incremental.Node._
-import incremental.NodeKind
+import incremental.{NodeKindClass, NodeKind}
 import incremental.pcf.TFun
 import constraints.Type
 import constraints.equality
@@ -31,7 +31,7 @@ object ExpGenerator {
     maker
   }
 
-  def makeBinTree(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false): Node = {
+  def makeBinTree(height: Int, kind: NodeKindClass, leaveMaker: LeaveMaker, sharing: Boolean = false): Node = {
     val leaveCount = Math.pow(2, height-1).toInt
     val ts = Array.ofDim[Node](leaveCount)
     leaveMaker.reset()

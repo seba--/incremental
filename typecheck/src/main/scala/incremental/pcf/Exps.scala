@@ -1,15 +1,14 @@
 package incremental.pcf
 
 import incremental.Node._
-import incremental.NodeKind
-import incremental.SyntaxChecking
+import incremental.{NodeKindClass, SyntaxChecking}
 import constraints._
 
 /**
  * Created by seba on 13/11/14.
  */
 
-abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKindClass(syntaxcheck)
 object Exp {
   val cExp = classOf[Exp]
 }
