@@ -1,21 +1,21 @@
 package constraints
 
-import incremental.MyBuilder
-
-import scala.collection.SeqLike
+import CSubst.CSubst
 import scala.collection.generic.CanBuildFrom
 
-trait ConstraintSystem[CS, Constraint, T <: Type, G <: GenBase] {
+trait ConstraintSystem[G <: GenBase, C, CS] {
   def state: State[G]
   def gen: G = state.gen
 
+  def substitution: CSubst[C]
   def isSolved: Boolean
   def mergeSubsystem(that: CS): CS
-  def addNewConstraint (that: Constraint): CS
-  def addNewConstraints(cons: Iterable[Constraint]): CS
-  def applyPartialSolution(t: T): T
-  def applyPartialSolutionIt[U, C <: Iterable[U]](it: C, f: U=>T)
-                                                 (implicit bf: CanBuildFrom[Iterable[U], (U, T), C]): C
+  def addNewConstraint (that: C): CS
+  def addNewConstraints(cons: Iterable[C]): CS
+  def applyPartialSolution[CT <: CTerm[G, C, CT]](t: CT): CT
+  def applyPartialSolutionIt[U, Col <: Iterable[U], CT <: CTerm[G, C, CT]]
+    (it: Col, f: U=>CT)
+    (implicit bf: CanBuildFrom[Iterable[U], (U, CT), Col]): Col
   def propagate: CS
-  def tryFinalize: ConstraintSystem[_,Constraint, T, G]
+  def tryFinalize: ConstraintSystem[G, C, _]
 }

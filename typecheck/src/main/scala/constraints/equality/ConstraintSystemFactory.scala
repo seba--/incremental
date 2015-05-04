@@ -1,10 +1,8 @@
 package constraints.equality
 
-import constraints.State
-import constraints.Statistics
-import constraints.equality.Type.Companion.TSubst
+import constraints.{State, Statistics}
 
-abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystemFactory[Type, Gen, Constraint, CS] {
+abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystemFactory[Gen, Constraint, CS] {
   def freshState = new State(new Gen, new Statistics)
 
   def freshConstraintSystem: CS

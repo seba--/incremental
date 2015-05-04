@@ -6,16 +6,16 @@ import incremental.Node.Node
 /**
  * Created by seba on 13/11/14.
  */
-abstract class TypeChecker[T <: Type, G <: GenBase, Constraint, CS <: ConstraintSystem[CS, Constraint, T, G]] extends Serializable {
+abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] extends Serializable {
+  type T
   type TError
-//  type Constraint
-//  type CS <: ConstraintSystem[CS, Constraint,T]
-  type CSFactory <: ConstraintSystemFactory[T, G, Constraint, CS]
+
+  type CSFactory <: ConstraintSystemFactory[G, C, CS]
   implicit val csFactory: CSFactory
 
   lazy val localState = csFactory.freshState
   def gen: G = localState.gen
-  def freshSymbol(prefix: String): CVar = localState.gen.freshSymbol(prefix)
+  def freshSymbol[T](prefix: String): CVar[T] = localState.gen.freshSymbol(prefix)
 
   def preparationTime: Double = localState.stats.preparationTime
   def typecheckTime: Double = localState.stats.typecheckTime
@@ -36,6 +36,6 @@ abstract class TypeChecker[T <: Type, G <: GenBase, Constraint, CS <: Constraint
   protected def typecheckImpl(e: Node): Either[T, TError]
 }
 
-trait TypeCheckerFactory[T <: Type, G <: GenBase, Constraint, CS <: ConstraintSystem[CS, Constraint, T, G]] {
-  def makeChecker: TypeChecker[T, G, Constraint, CS]
+trait TypeCheckerFactory[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] {
+  def makeChecker: TypeChecker[G, C, CS]
 }

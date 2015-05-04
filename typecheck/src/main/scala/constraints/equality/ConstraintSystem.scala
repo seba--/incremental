@@ -1,20 +1,18 @@
 package constraints.equality
 
-import Type.Companion._
+import constraints.equality.CSubst.CSubst
 import constraints.CVar
-import incremental.Util
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
-  extends constraints.ConstraintSystem[CS, Constraint, Type, Gen] {
+  extends constraints.ConstraintSystem[Gen, Constraint, CS] {
 
-  def substitution: TSubst
   def notyet: Seq[Constraint]
   def never: Seq[Constraint]
 
-  def solved(s: TSubst): CS
+  def solved(s: CSubst): CS
   def notyet(c: Constraint): CS
   def never(c: Constraint): CS
-  def without(xs: Set[CVar]): CS
+  def without(xs: Set[CVar[_]]): CS
 
   def unsolved = notyet ++ never
   def isSolved = notyet.isEmpty && never.isEmpty

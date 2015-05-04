@@ -8,7 +8,8 @@ import scala.collection.generic.CanBuildFrom
 /**
  * Created by seba on 13/11/14.
  */
-abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Type, Gen, Constraint, CS] {
+abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Gen, Constraint, CS] {
+  type T = Type
   type CSFactory <: ConstraintSystemFactory[CS]
   implicit val csFactory: CSFactory
 

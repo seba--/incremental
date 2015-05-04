@@ -1,8 +1,8 @@
 package constraints.equality.impl
 
 import constraints.CVar
-import constraints.equality.Type.Companion.TSubst
-import constraints.equality.{Type, Constraint, ConstraintSystem, ConstraintSystemFactory}
+import constraints.equality._
+import constraints.equality.CSubst.Subst
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
@@ -13,17 +13,17 @@ object SolveContinuousSubstThreshold extends ConstraintSystemFactory[SolveContin
   val freshConstraintSystem = SolveContinuousSubstThresholdCS(Map(), Seq(), Seq())
 }
 
-case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstThresholdCS] {
+case class SolveContinuousSubstThresholdCS(substitution: Subst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstThresholdCS] {
   import SolveContinuousSubstThreshold.threshold
 
   def state = SolveContinuousSubstThreshold.state.value
 
-  def solved(s: TSubst) = {
+  def solved(s: Subst) = {
     var current = SolveContinuousSubstThresholdCS(substitution mapValues (_.subst(s)), notyet, never)
     for ((x, t2) <- s) {
       current.substitution.get(x) match {
         case None => current = SolveContinuousSubstThresholdCS(current.substitution + (x -> t2.subst(current.substitution)), current.notyet, current.never)
-        case Some(t1) => current = t1.unify(t2, current)
+        case Some(t1) => current = t1.compatibleWith(t2).solve(current)
       }
     }
     current
@@ -62,15 +62,15 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[Con
     res
   }
 
-  def applyPartialSolution(t: Type) =
+  def applyPartialSolution(t: CTerm) =
     if (trigger)
       t.subst(substitution)
     else
       t
 
   def applyPartialSolutionIt[U, C <: Iterable[U]]
-    (it: C, f: U=>Type)
-    (implicit bf: CanBuildFrom[Iterable[U], (U, Type), C]): C
+    (it: C, f: U=>CTerm)
+    (implicit bf: CanBuildFrom[Iterable[U], (U, CTerm), C]): C
   = if (trigger)
       it.map(u => (u, f(u).subst(substitution)))
     else

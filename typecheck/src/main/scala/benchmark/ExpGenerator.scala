@@ -1,8 +1,8 @@
 package benchmark
 
+import constraints.equality.Type
 import incremental.Node._
 import incremental.NodeKind
-import constraints.Type
 
 /**
  * Created by seba on 05/11/14.

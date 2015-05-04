@@ -1,5 +1,5 @@
 package constraints
 
 trait GenBase {
-  def freshSymbol(prefix: String): CVar
+  def freshSymbol[T](prefix: String): CVar[T]
 }

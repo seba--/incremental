@@ -1,18 +1,14 @@
 package constraints.equality
 
-import constraints.{CVar, TypeCompanion}
-
+import constraints.equality.CSubst.CSubst
+import constraints.{CTermBase, CVar}
 
 //Type that support unification
-trait Type extends constraints.Type {
-  def occurs(x: CVar): Boolean
-  def subst(s: Type.Companion.TSubst): Type
+trait Type extends CTerm[Type] {
+  def occurs(x: CVar[_]): Boolean
+  def subst(s: CSubst): Type
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
+
+  def compatibleWith(t2: Type) = EqConstraint(this, t2)
+  def compatibleWith(t2: CTermBase[Constraint]) = EqConstraint(this, t2.asInstanceOf[Type])
 }
-object Type {
-  implicit object Companion extends TypeCompanion {
-    type TError = String
-    type TSubst = Map[CVar, Type]
-  }
-}
-import constraints.equality.Type.Companion._
