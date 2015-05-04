@@ -1,5 +1,6 @@
 package constraints.normequality.impl
 
+import constraints.CVar
 import constraints.normequality.Type.Companion.TSubst
 import constraints.normequality._
 import incremental.Util
@@ -27,7 +28,7 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint],
 
   def notyet(c: Constraint) = SolveContinuousSubstCS(substitution, notyet :+ c, never)
   def never(c: Constraint) = SolveContinuousSubstCS(substitution, notyet, never :+ c)
-  def without(xs: Set[Symbol]) = SolveContinuousSubstCS(substitution -- xs, notyet, never)
+  def without(xs: Set[CVar]) = SolveContinuousSubstCS(substitution -- xs, notyet, never)
 
   def mergeSubsystem(other: SolveContinuousSubstCS): SolveContinuousSubstCS = {
     val (res, time) = Util.timed {

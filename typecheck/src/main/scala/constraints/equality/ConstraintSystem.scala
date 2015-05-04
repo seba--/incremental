@@ -1,6 +1,7 @@
 package constraints.equality
 
 import Type.Companion._
+import constraints.CVar
 import incremental.Util
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
@@ -13,7 +14,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def solved(s: TSubst): CS
   def notyet(c: Constraint): CS
   def never(c: Constraint): CS
-  def without(xs: Set[Symbol]): CS
+  def without(xs: Set[CVar]): CS
 
   def unsolved = notyet ++ never
   def isSolved = notyet.isEmpty && never.isEmpty

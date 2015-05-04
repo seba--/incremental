@@ -83,12 +83,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       reqs.get(x) match {
         case None =>
-          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshUVar()
+          val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[PolType] else freshUVar()
           (TFun(X, t), reqs, treqs ++ X.freeTVars, Seq())
         case Some(treq) =>
           val otherReqs = reqs - x
           if (e.lits.size == 2) {
-            val X = e.lits(1).asInstanceOf[Type]
+            val X = e.lits(1).asInstanceOf[PolType]
             (TFun(treq, t), otherReqs, treqs ++ X.freeTVars, Seq(EqConstraint(X, treq)))
           }
           else
@@ -140,14 +140,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case TApp =>
       val (t1, reqs1, treqs, _) = e.kids(0).typ
-      val t = e.lits(0).asInstanceOf[Type]
+      val t = e.lits(0).asInstanceOf[PolType]
 
       val Xalpha = freshUVar().x
       val Xbody = freshUVar()
       val Xres = freshUVar()
 
       val ucons = EqConstraint(UUniv(Xalpha, Xbody), t1)
-      val vcons = EqSubstConstraint(Xbody, Xalpha, true, t, Xres) // Xbody[Xalpha:=t] == Xres
+      val vcons = EqSubstConstraint(Xbody, Xalpha.x, true, t, Xres) // Xbody[Xalpha:=t] == Xres
 
       (Xres, reqs1, treqs ++ t.freeTVars, Seq(ucons, vcons))
   }

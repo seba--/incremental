@@ -1,6 +1,6 @@
 package constraints.subtype.impl
 
-import constraints.subtype
+import constraints.{CVar, subtype}
 import constraints.subtype.{ConstraintSystem, Type, UVar, Constraint}
 import constraints.subtype.Type.Companion._
 import incremental.Util
@@ -53,9 +53,9 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
       (SolveContinuously.freshConstraintSystem addNewConstraints notyet).tryFinalize
     }
 
-  def addLowerBound(v: Symbol, t: Type) = SolveEndCS(notyet :+ subtype.Subtype(t, UVar(v)))
+  def addLowerBound(v: CVar, t: Type) = SolveEndCS(notyet :+ subtype.Subtype(t, UVar(v)))
 
-  def addUpperBound(v: Symbol, t: Type) = SolveEndCS(notyet :+ subtype.Subtype(UVar(v), t))
+  def addUpperBound(v: CVar, t: Type) = SolveEndCS(notyet :+ subtype.Subtype(UVar(v), t))
 
   def applyPartialSolution(t: Type) = t
 

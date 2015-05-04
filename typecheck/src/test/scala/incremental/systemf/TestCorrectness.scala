@@ -1,5 +1,6 @@
 package incremental.systemf
 
+import constraints.CVar
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveEnd, SolveContinuously}
 import constraints.equality.{Type, ConstraintSystem}
 import incremental.Node._
@@ -41,10 +42,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("17", Num(17))(TNum)
   typecheckTest("17+(10+2)", Add(Num(17), Add(Num(10), Num(2))))(TNum)
   typecheckTest("17+(10+5)", Add(Num(17), Add(Num(10), Num(5))))(TNum)
-  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(UVar('x$0), TNum))
+  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(UVar(CVar('x$0)), TNum))
   typecheckTest("\\x. x+x", Abs('x, Add(Var('x), Var('x))))(TFun(TNum, TNum))
   typecheckTestError("\\x. err+x", Abs('x, Add(Var('err), Var('x))))
-  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y , App(Var('x), Var('y)))))(TFun(TFun(UVar('x$1), UVar('x$2)), TFun(UVar('x$1), UVar('x$2))))
+  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y , App(Var('x), Var('y)))))(TFun(TFun(UVar(CVar('x$1)), UVar(CVar('x$2))), TFun(UVar(CVar('x$1)), UVar(CVar('x$2)))))
   typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
   typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
 

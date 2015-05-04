@@ -1,12 +1,12 @@
 package constraints.equality
 
-import constraints.GenBase
+import constraints.{CVar, GenBase}
 
 class Gen extends GenBase {
   private var _ids = Map[String, Int]().withDefaultValue(0)
-  def freshSymbol(prefix: String): Symbol = {
+  def freshSymbol(prefix: String): CVar = {
     val next = _ids(prefix)
     _ids = _ids + (prefix -> (next + 1))
-    Symbol(prefix + next)
+    CVar(Symbol(prefix + next))
   }
 }

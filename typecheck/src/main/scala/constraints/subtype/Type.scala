@@ -1,10 +1,10 @@
 package constraints.subtype
 
-import constraints.TypeCompanion
+import constraints.{CVar, TypeCompanion}
 
 //Type class for types with groundness test
 trait Type extends constraints.Type {
-  def occurs(x: Symbol): Boolean
+  def occurs(x: CVar): Boolean
   def subst(s: Type.Companion.TSubst): Type
   val isGround: Boolean
 
@@ -18,14 +18,14 @@ trait Type extends constraints.Type {
 object Type {
   implicit object Companion extends TypeCompanion {
     type TError = String
-    type TSubst = Map[Symbol, Type]
+    type TSubst = Map[CVar, Type]
   }
 }
 import Type.Companion._
 
-case class UVar(x: Symbol) extends Type {
+case class UVar(x: CVar) extends Type {
   val isGround = false
-  def occurs(x2: Symbol) = x == x2
+  def occurs(x2: CVar) = x == x2
   def subst(s: TSubst): Type = s.getOrElse(x, this)
 
   def ||(that:Type) = that match {
@@ -77,7 +77,7 @@ case class UVar(x: Symbol) extends Type {
 
 case object Top extends Type {
   val isGround = true
-  def occurs(x: Symbol) = false
+  def occurs(x: CVar) = false
   def subst(s: TSubst) = this
 
   def ||(that: Type) = Some(this)

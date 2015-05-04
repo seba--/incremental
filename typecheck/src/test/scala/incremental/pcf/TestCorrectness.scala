@@ -1,5 +1,6 @@
 package incremental.pcf
 
+import constraints.CVar
 import constraints.equality.impl._
 import constraints.equality._
 import incremental.Node._
@@ -41,10 +42,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("17", Num(17))(TNum)
   typecheckTest("17+(10+2)", Add(Num(17), Add(Num(10), Num(2))))(TNum)
   typecheckTest("17+(10+5)", Add(Num(17), Add(Num(10), Num(5))))(TNum)
-  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(UVar('x$0), TNum))
+  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(UVar(CVar('x$0)), TNum))
   typecheckTest("\\x. x+x", Abs('x, Add(Var('x), Var('x))))(TFun(TNum, TNum))
   typecheckTestError("\\x. err+x", Abs('x, Add(Var('err), Var('x))))
-  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(UVar('x$1), UVar('x$2)), TFun(UVar('x$1), UVar('x$2))))
+  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(UVar(CVar('x$1)), UVar(CVar('x$2))), TFun(UVar(CVar('x$1)), UVar(CVar('x$2)))))
   typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
   typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
   typecheckTestError("\\x. x + (x 5)", Abs('x, Add(Var('x), App(Var('x), Num(5)))))
@@ -83,10 +84,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
           App(Var('f), Add(Var('n), Num(-2)))))))))
   typecheckTest("fibonacci", fib)(TFun(TNum, TNum))
   typecheckTest("factorial + fibonacci", Abs('x, Add(App(fac, Var('x)), App(fib, Var('x)))))(TFun(TNum, TNum))
-  typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(UVar('x$0), UVar('x$0)))
-  typecheckTestError("\\x. x x",
-    Abs(Seq('x, UVar('T)), Seq(App(Var('x), Var('x))))
-  )
+  typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(UVar(CVar('x$0)), UVar(CVar('x$0))))
+  typecheckTestError("\\x. x x", Abs('x, App(Var('x), Var('x))))
 }
 
 class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))

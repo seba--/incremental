@@ -1,5 +1,6 @@
 package incremental.pcf
 
+import constraints.CVar
 import constraints.equality.{ConstraintSystem, ConstraintSystemFactory, EqConstraint, Type}
 import constraints.equality.Type.Companion._
 
@@ -10,10 +11,8 @@ import constraints.equality.Type.Companion._
 //  (Type, Map[Symbol, Type], Unsolvable)
 //}
 
-case class UVar(x: Symbol) extends Type {
-  def freeTVars = Set()
-  def occurs(x2: Symbol) = x == x2
-  def normalize = this
+case class UVar(x: CVar) extends Type {
+  def occurs(x2: CVar) = x == x2
   def subst(s: TSubst) = s.getOrElse(x, this)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
     if (other == this) cs
@@ -31,9 +30,7 @@ case class UVar(x: Symbol) extends Type {
 }
 
 case object TNum extends Type {
-  def freeTVars = Set()
-  def occurs(x: Symbol) = false
-  def normalize = this
+  def occurs(x: CVar) = false
   def subst(s: TSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case TNum => cs
@@ -43,9 +40,7 @@ case object TNum extends Type {
 }
 
 case class TFun(t1: Type, t2: Type) extends Type {
-  def freeTVars = t1.freeTVars ++ t2.freeTVars
-  def occurs(x: Symbol) = t1.occurs(x) || t2.occurs(x)
-  def normalize = TFun(t1.normalize, t2.normalize)
+  def occurs(x: CVar) = t1.occurs(x) || t2.occurs(x)
   def subst(s: TSubst) = {
     var args = List(t1.subst(s))
     var res = t2

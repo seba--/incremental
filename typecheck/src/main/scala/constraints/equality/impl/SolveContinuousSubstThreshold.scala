@@ -1,5 +1,6 @@
 package constraints.equality.impl
 
+import constraints.CVar
 import constraints.equality.Type.Companion.TSubst
 import constraints.equality.{Type, Constraint, ConstraintSystem, ConstraintSystemFactory}
 import incremental.Util
@@ -30,7 +31,7 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, notyet: Seq[Con
 
   def notyet(c: Constraint) = SolveContinuousSubstThresholdCS(substitution, notyet :+ c, never)
   def never(c: Constraint) = SolveContinuousSubstThresholdCS(substitution, notyet, never :+ c)
-  def without(xs: Set[Symbol]) = SolveContinuousSubstThresholdCS(substitution -- xs, notyet, never)
+  def without(xs: Set[CVar]) = SolveContinuousSubstThresholdCS(substitution -- xs, notyet, never)
 
   lazy val trigger = substitution.size >= threshold
 

@@ -1,13 +1,14 @@
 package incremental.systemfomega
 
+import constraints.CVar
 import constraints.normequality.Type.Companion._
 import constraints.normequality.{ConstraintSystem, Constraint}
 
 trait Kind {
-  def occurs(x: Symbol): Boolean
+//  def occurs(x: Symbol): Boolean
 }
 
-case class KUvar(x: Symbol) extends Kind
+case class KUvar(x: CVar) extends Kind
 case object KStar extends Kind
 case class KArrow(k1: Kind, k2: Kind) extends Kind
 

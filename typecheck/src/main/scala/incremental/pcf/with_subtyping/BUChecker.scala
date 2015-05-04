@@ -56,18 +56,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (TNumeric, mreqs, mcons :+ Subtype(t1, TNumeric) :+ Subtype(t2, TNumeric))
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val X = freshUVar()
+      val X = gen.freshUVar(true)
       (X, Map(x -> X), Seq())
     case App =>
       val (t1, reqs1, _) = e.kids(0).typ
       val (t2, reqs2, _) = e.kids(1).typ
       val X = gen.freshUVar(false)
-      val Y = freshUVar()
+      val Y = gen.freshUVar(true)
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
       (Y, mreqs, mcons :+ Equal(t1, TFun(X, Y)) :+ Subtype(t2, X))
     case Abs if e.lits(0).isInstanceOf[Symbol] =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val annotatedT = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshUVar()
+      val annotatedT = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else gen.freshUVar(true)
       val (t, reqs, _) = e.kids(0).typ
 
       reqs.get(x) match {
@@ -82,13 +82,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (t2, reqs2, _) = e.kids(1).typ
       val (t3, reqs3, _) = e.kids(2).typ
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2, reqs3)
-      val Xjoin = freshUVar()
+      val Xjoin = gen.freshUVar(true)
       (Xjoin, mreqs, mcons :+ Subtype(t1, TNumeric) :+ Join(Xjoin, Set(t2, t3)))
 
     case Fix =>
       val (t, reqs, _) = e.kids(0).typ
       val X = gen.freshUVar(false)
-      val Y = freshUVar()
+      val Y = gen.freshUVar(true)
       (X, reqs, Seq(Equal(t, TFun(X, Y)), Subtype(Y, X)))
   }
 

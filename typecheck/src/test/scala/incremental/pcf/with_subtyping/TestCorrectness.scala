@@ -76,7 +76,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   )
 
   typecheckTestError("lambda x: T. x x",
-    Abs(Seq('x, UVar('T)), Seq(App(Var('x), Var('x))))
+    Abs('x, App(Var('x), Var('x)))
   )
 
 //  typecheckTest("(lamba f. (f (lambda x. x)) + (f (lambda y. y)))",

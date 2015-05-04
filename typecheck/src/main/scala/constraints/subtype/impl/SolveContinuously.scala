@@ -1,6 +1,6 @@
 package constraints.subtype.impl
 
-import constraints.subtype
+import constraints.{CVar, subtype}
 import constraints.subtype.{ConstraintSystem, Type, UVar, Constraint}
 import constraints.subtype.Type.Companion._
 import incremental.Util
@@ -12,10 +12,10 @@ object SolveContinuously extends ConstraintSystemFactory[SolveContinuouslyCS] {
   def solved(s: TSubst) = new SolveContinuouslyCS(s, defaultBounds, Seq())
   def notyet(c: Constraint) = freshConstraintSystem addNewConstraint (c)
   def never(c: Constraint) = new SolveContinuouslyCS(Map(), defaultBounds, Seq(c))
-  def system(substitution: TSubst, bounds: Map[Symbol, (LBound, UBound)], never: Seq[Constraint]) = new SolveContinuouslyCS(substitution, bounds, never)
+  def system(substitution: TSubst, bounds: Map[CVar, (LBound, UBound)], never: Seq[Constraint]) = new SolveContinuouslyCS(substitution, bounds, never)
 }
 
-case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuouslyCS] {
+case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[CVar, (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuouslyCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
@@ -86,7 +86,7 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
 
   private def substitutedBounds(s: TSubst) = {
     var newnever = Seq[Constraint]()
-    val newbounds: Map[Symbol, (LBound,UBound)] = for ((tv, (lb, ub)) <- bounds) yield {
+    val newbounds: Map[CVar, (LBound,UBound)] = for ((tv, (lb, ub)) <- bounds) yield {
       val (newLb, errorl) = lb.subst(s)
       val (newUb, erroru) = ub.subst(s)
       if(errorl.nonEmpty)
@@ -147,7 +147,7 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
     sol
   }
 
-  def addLowerBound(v: Symbol, t: Type) = {
+  def addLowerBound(v: CVar, t: Type) = {
     val (lower, upper) = bounds(v)
     val (newLower, error) = lower.add(t)
     val changed = if (newLower.isGround) newLower.ground.get else t
@@ -163,7 +163,7 @@ case class SolveContinuouslyCS(substitution: TSubst, bounds: Map[Symbol, (LBound
     subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs)
   }
 
-  def addUpperBound(v: Symbol, t: Type) = {
+  def addUpperBound(v: CVar, t: Type) = {
     val (lower, upper) = bounds(v)
     val (newUpper, error) = upper.add(t)
     val changed = if (newUpper.isGround) newUpper.ground.get else t

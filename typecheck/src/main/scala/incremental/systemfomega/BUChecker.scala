@@ -181,7 +181,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val Xres = freshUVar()
 
       val ucons = EqConstraint(UUniv(Xalpha, Some(k), Xbody), t1)
-      val vcons = EqSubstConstraint(Xbody, Xalpha, true, t, Xres) // Xbody[Xalpha:=t] == Xres
+      val vcons = EqSubstConstraint(Xbody, Xalpha.x, true, t, Xres) // Xbody[Xalpha:=t] == Xres
 
       ExpStepResult(Xres, reqs1, mtreqs, mtcons :+ ucons :+ vcons)
   }

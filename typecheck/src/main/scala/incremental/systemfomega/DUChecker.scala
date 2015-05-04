@@ -13,6 +13,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   import csFactory._
 
+  type TCtx = Map[Symbol, Type]
   type TError = Type.Companion.TError
   type Result = (Type, CS)
   type StepResult = (Type, Seq[Constraint], Seq[CS])
@@ -36,14 +37,14 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     res
   }
 
-  def typecheckRec(e: Node_[Result], ctx: TSubst, tctx: Set[Symbol]): Result = {
+  def typecheckRec(e: Node_[Result], ctx: TCtx, tctx: Set[Symbol]): Result = {
     val (t, cons, css) = typecheckStep(e, ctx, tctx)
     val subcs = css.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res)
     val cs = subcs addNewConstraints cons
     (cs applyPartialSolution t, cs.propagate)
   }
 
-  def typecheckStep(e: Node_[Result], ctx: TSubst, tctx: Set[Symbol]): StepResult = e.kind match {
+  def typecheckStep(e: Node_[Result], ctx: TCtx, tctx: Set[Symbol]): StepResult = e.kind match {
     case Num => (TNum, Seq(), Seq())
     case k if k == Add || k == Mul =>
       val (t1, cs1) = typecheckRec(e.kids(0), ctx, tctx)
@@ -69,10 +70,8 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val x = e.lits(0).asInstanceOf[Symbol]
       val X =
         if (e.lits.size == 2) {
+          // TODO
           val t = e.lits(1).asInstanceOf[Type]
-          for (x <- t.freeTVars)
-            if (!tctx.contains(x))
-              throw UnboundTVariable(x, tctx)
           t
         }
         else
@@ -119,25 +118,22 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case TApp =>
       val (t1, cs) = typecheckRec(e.kids(0), ctx, tctx)
-      val t = e.lits(0).asInstanceOf[Type]
+      val t = e.lits(0).asInstanceOf[Type] // wrong
+      // TODO typecheckRecType(e.kids(1))
       val k = ???
-
-      for (x <- t.freeTVars)
-        if (!tctx.contains(x))
-          throw UnboundTVariable(x, tctx)
 
       val Xalpha = freshUVar().x
       val Xbody = freshUVar()
       val Xres = freshUVar()
 
       val ucons = EqConstraint(UUniv(Xalpha, Some(k), Xbody), t1)
-      val vcons = EqSubstConstraint(Xbody, Xalpha, true, t, Xres) // Xbody[Xalpha:=t] == Xres
+      val vcons = EqSubstConstraint(Xbody, Xalpha.x, true, t, Xres) // Xbody[Xalpha:=t] == Xres
 
       (Xres, Seq(ucons, vcons), Seq(cs))
   }
 }
 
-case class UnboundVariable(x: Symbol, ctx: TSubst) extends RuntimeException
+case class UnboundVariable(x: Symbol, ctx: Map[Symbol, Type]) extends RuntimeException
 case class UnboundTVariable(x: Symbol, ctx: Set[Symbol]) extends RuntimeException
 
 case class DUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {

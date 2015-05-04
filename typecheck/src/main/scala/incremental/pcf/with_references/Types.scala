@@ -1,5 +1,6 @@
 package incremental.pcf.with_references
 
+import constraints.CVar
 import constraints.equality._
 import constraints.equality.Type.Companion.TSubst
 import incremental.pcf.UVar
@@ -8,9 +9,7 @@ import incremental.pcf.UVar
  * Created by seba on 15/11/14.
  */
 case class TRef(t: Type) extends Type {
-  def freeTVars = t.freeTVars
-  def occurs(x: Symbol) = t.occurs(x)
-  def normalize = TRef(t.normalize)
+  def occurs(x: CVar) = t.occurs(x)
   def subst(s: TSubst) = TRef(t.subst(s))
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case TRef(t2) => t.unify(t2, cs)
@@ -20,9 +19,7 @@ case class TRef(t: Type) extends Type {
 }
 
 case object TUnit extends Type {
-  def freeTVars = Set()
-  def occurs(x: Symbol) = false
-  def normalize = this
+  def occurs(x: CVar) = false
   def subst(s: TSubst) = TUnit
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case TUnit => cs

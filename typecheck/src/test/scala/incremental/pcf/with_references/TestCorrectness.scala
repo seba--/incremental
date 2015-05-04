@@ -1,5 +1,6 @@
 package incremental.pcf.with_references
 
+import constraints.CVar
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveEnd, SolveContinuously}
 import constraints.equality.{Type, ConstraintSystem}
 import incremental.Node._
@@ -44,9 +45,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("17+Deref(Ref(10+2))", Add(Num(17), Deref(Ref(Add(Num(10), Num(2))))))(TNum)
   typecheckTest("\\x. Deref(x)+Deref(x)", Abs('x, Add(Deref(Var('x)), Deref(Var('x)))))(TFun(TRef(TNum), TNum))
   typecheckTestError("\\x. x+Deref(x)", Abs('x, Add(Var('x), Deref(Var('x)))))
-  val V = UVar('VAR_V)
+  val V = UVar(CVar('VAR_V))
   typecheckTest("\\x. \\y. x=y", Abs('x, Abs('y, Assign(Var('x), Var('y)))))(TFun(TRef(V), TFun(V, TUnit)))
-  val W = UVar('VAR_W)
+  val W = UVar(CVar('VAR_W))
   typecheckTest("\\x. \\y. x=y; y", Abs('x, Abs('y, Seq(Assign(Var('x), Var('y)), Var('y)))))(TFun(TRef(W), TFun(W, W)))
 }
 

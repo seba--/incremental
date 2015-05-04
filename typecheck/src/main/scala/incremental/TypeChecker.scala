@@ -15,7 +15,7 @@ abstract class TypeChecker[T <: Type, G <: GenBase, Constraint, CS <: Constraint
 
   lazy val localState = csFactory.freshState
   def gen: G = localState.gen
-  def freshSymbol(prefix: String): Symbol = localState.gen.freshSymbol(prefix)
+  def freshSymbol(prefix: String): CVar = localState.gen.freshSymbol(prefix)
 
   def preparationTime: Double = localState.stats.preparationTime
   def typecheckTime: Double = localState.stats.typecheckTime

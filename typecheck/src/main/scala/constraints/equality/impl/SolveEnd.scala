@@ -1,5 +1,6 @@
 package constraints.equality.impl
 
+import constraints.CVar
 import constraints.equality.Type.Companion.TSubst
 import constraints.equality.{Type, Constraint, ConstraintSystem, ConstraintSystemFactory}
 import incremental.Util
@@ -19,7 +20,7 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
   def solved(s: TSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
   def notyet(c: Constraint) = SolveEndCS(notyet :+ c)
   def never(c: Constraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
-  def without(xs: Set[Symbol]) = this
+  def without(xs: Set[CVar]) = this
 
 
   def mergeSubsystem(other: SolveEndCS): SolveEndCS = {

@@ -1,6 +1,6 @@
 package constraints.subtype.impl
 
-import constraints.subtype
+import constraints.{CVar, subtype}
 import constraints.subtype.{ConstraintSystem, Type, UVar, Constraint}
 import constraints.subtype.Type.Companion._
 import incremental.Util
@@ -14,7 +14,7 @@ object SolveEndCanonicalBounds extends ConstraintSystemFactory[SolveEndCanonical
   def never(c: Constraint) = SolveEndCanonicalBoundsCS(defaultBounds, Seq(c))
 }
 
-case class SolveEndCanonicalBoundsCS(bounds: Map[Symbol, (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveEndCanonicalBoundsCS] {
+case class SolveEndCanonicalBoundsCS(bounds: Map[CVar, (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveEndCanonicalBoundsCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
@@ -70,7 +70,7 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[Symbol, (LBound, UBound)], neve
       SolveContinuouslyCS(Map(), bounds, never).tryFinalize
     }
 
-  def addLowerBound(v: Symbol, t: Type) = {
+  def addLowerBound(v: CVar, t: Type) = {
     val (lower, upper) = bounds(v)
     val (newLower, error) = lower.add(t)
     val changed = if (newLower.isGround) newLower.ground.get else t
@@ -86,7 +86,7 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[Symbol, (LBound, UBound)], neve
     subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs)
   }
 
-  def addUpperBound(v: Symbol, t: Type) = {
+  def addUpperBound(v: CVar, t: Type) = {
     val (lower, upper) = bounds(v)
     val (newUpper, error) = upper.add(t)
     val changed = if (newUpper.isGround) newUpper.ground.get else t

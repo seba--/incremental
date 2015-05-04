@@ -30,7 +30,7 @@ class TestScaleNonInc[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   }
 
   def typecheckTest(desc: String, e: => Node)(expected: equality.Type): Unit =
-    test(s"$classdesc: Type check $desc") {
+    test(s"$classdesc: Type check $desc", SlowTest) {
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
     }

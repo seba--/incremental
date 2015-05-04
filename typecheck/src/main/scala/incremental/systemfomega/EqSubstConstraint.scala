@@ -1,5 +1,6 @@
 package incremental.systemfomega
 
+import constraints.CVar
 import constraints.normequality.Type.Companion.TSubst
 import constraints.normequality._
 
@@ -9,9 +10,9 @@ case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean
 
   private def substAlpha(s: TSubst) =
     if (!alphaIsInternal) (alpha, false)
-    else s.get(alpha) match {
+    else s.get(CVar(alpha)) match {
       case Some(TVar(beta)) => (beta, false)
-      case Some(UVar(beta)) => (beta, true)
+      case Some(UVar(CVar(beta))) => (beta, true)
       case None => (alpha, alphaIsInternal)
       case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
     }
@@ -21,7 +22,7 @@ case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean
     val (beta, betaIsInternal) = substAlpha(cs.substitution)
 
     tbody match {
-      case TVar(`beta`) | UVar(`beta`) => withResult(substitute, cs)
+      case TVar(`beta`) | UVar(CVar(`beta`)) => withResult(substitute, cs)
       case TVar(_) if !betaIsInternal => withResult(tbody, cs) // because alpha is user-defined and different
 
       case TNum => withResult(TNum, cs)
