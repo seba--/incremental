@@ -3,7 +3,9 @@ package incremental.systemfomega
 import constraints.normequality.Type.Companion._
 import constraints.normequality.{ConstraintSystem, Constraint}
 
-trait Kind
+trait Kind {
+  def occurs(x: Symbol): Boolean
+}
 
 case class KUvar(x: Symbol) extends Kind
 case object KStar extends Kind

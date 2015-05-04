@@ -135,3 +135,25 @@ object UUniv {
         UUniv(lits(0).asInstanceOf[Symbol], Some(lits(1).asInstanceOf[Kind]), getType(kids(0)))
   }
 }
+
+case class TTAbs(X: Symbol, k: Option[Kind], t: Type) extends Type {
+
+}
+object TTAbs {
+  case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]), cType) orElse simple(Seq(classOf[Symbol], classOf[Kind]), cType)) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) =
+      if (lits.size == 1)
+        TTAbs(lits(0).asInstanceOf[Symbol], None, getType(kids(0)))
+      else
+        TTAbs(lits(0).asInstanceOf[Symbol], Some(lits(1).asInstanceOf[Kind]), getType(kids(0)))
+  }
+}
+
+case class TTApp(t1: Type, t2: Type) extends Type {
+
+}
+object TTApp {
+  case object Kind extends Type.Kind(simple(cType, cType)) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = TTApp(getType(kids(0)), getType(kids(1)))
+  }
+}
