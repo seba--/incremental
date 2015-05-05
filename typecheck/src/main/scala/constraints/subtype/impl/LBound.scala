@@ -1,7 +1,7 @@
 package constraints.subtype.impl
 
 import constraints.subtype.Type
-import constraints.subtype.Type.Companion.TSubst
+import constraints.subtype.CSubst.CSubst
 
 case class LBound(nonground: Set[Type], ground: Option[Type]) {
   val isEmpty = nonground.isEmpty && !ground.isDefined
@@ -27,7 +27,7 @@ case class LBound(nonground: Set[Type], ground: Option[Type]) {
     }
     else (LBound(nonground + t, ground), Set())
 
-  def subst(sigma: TSubst): (LBound, Set[Type]) = {
+  def subst(sigma: CSubst): (LBound, Set[Type]) = {
     val (g, ng) = nonground.map(_.subst(sigma)).partition(_.isGround)
     if (g.isEmpty)
       (LBound(ng, ground), Set())

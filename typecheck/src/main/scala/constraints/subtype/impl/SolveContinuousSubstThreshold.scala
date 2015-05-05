@@ -1,8 +1,8 @@
 package constraints.subtype.impl
 
 import constraints.{CVar, subtype}
-import constraints.subtype.{ConstraintSystem, Type, UVar, Constraint}
-import constraints.subtype.Type.Companion._
+import constraints.subtype._
+import constraints.subtype.CSubst.CSubst
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
@@ -11,13 +11,13 @@ object SolveContinuousSubstThreshold extends ConstraintSystemFactory[SolveContin
   var threshold = 10
 
   def freshConstraintSystem = new SolveContinuousSubstThresholdCS(Map(), defaultBounds, Seq())
-  def solved(s: TSubst) = new SolveContinuousSubstThresholdCS(s, defaultBounds, Seq())
+  def solved(s: CSubst) = new SolveContinuousSubstThresholdCS(s, defaultBounds, Seq())
   def notyet(c: Constraint) = freshConstraintSystem addNewConstraint (c)
   def never(c: Constraint) = new SolveContinuousSubstThresholdCS(Map(), defaultBounds, Seq(c))
-  def system(substitution: TSubst, bounds: Map[CVar, (LBound, UBound)], never: Seq[Constraint]) = new SolveContinuousSubstThresholdCS(substitution, bounds, never)
+  def system(substitution: CSubst, bounds: Map[CVar[Type], (LBound, UBound)], never: Seq[Constraint]) = new SolveContinuousSubstThresholdCS(substitution, bounds, never)
 }
 
-case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[CVar, (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstThresholdCS] {
+case class SolveContinuousSubstThresholdCS(substitution: CSubst, bounds: Map[CVar[Type], (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstThresholdCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
@@ -77,9 +77,9 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[CVa
     }
 
 
-  private def substitutedBounds(s: TSubst) = {
+  private def substitutedBounds(s: CSubst) = {
     var newnever = Seq[Constraint]()
-    val newbounds: Map[CVar, (LBound,UBound)] = for ((tv, (lb, ub)) <- bounds) yield {
+    val newbounds: Map[CVar[Type], (LBound,UBound)] = for ((tv, (lb, ub)) <- bounds) yield {
       val (newLb, errorl) = lb.subst(s)
       val (newUb, erroru) = ub.subst(s)
       if(errorl.nonEmpty)
@@ -108,7 +108,7 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[CVa
       var temp = SolveContinuousSubstThresholdCS(subst, SolveContinuousSubstThreshold.defaultBounds, Seq())
 
       for ((tv, (lb, ub)) <- newbounds) {
-        val t = subst.getOrElse(tv, UVar(tv))
+        val t = subst.hgetOrElse(tv, UVar(tv))
         for(tpe <- lb.ground.toSet ++ lb.nonground)
           temp = tpe.subtype(t, temp)
         for(tpe <- ub.ground.toSet ++ ub.nonground)
@@ -121,8 +121,8 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[CVa
     current
   }
 
-  private def solveOnce: TSubst = {
-    var sol: TSubst = Map()
+  private def solveOnce: CSubst = {
+    var sol = CSubst.empty
     for ((tv, (lower, upper)) <- bounds) {
       if (gen.isBipolar(tv)) {
         if (lower.isGround && upper.isGround)
@@ -140,7 +140,7 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[CVa
     sol
   }
 
-  def addLowerBound(v: CVar, t: Type) = {
+  def addLowerBound(v: CVar[Type], t: Type) = {
     val (lower, upper) = bounds(v)
     val (newLower, error) = lower.add(t)
     val changed = if (newLower.isGround) newLower.ground.get else t
@@ -156,7 +156,7 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[CVa
     subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs)
   }
 
-  def addUpperBound(v: CVar, t: Type) = {
+  def addUpperBound(v: CVar[Type], t: Type) = {
     val (lower, upper) = bounds(v)
     val (newUpper, error) = upper.add(t)
     val changed = if (newUpper.isGround) newUpper.ground.get else t
@@ -173,13 +173,15 @@ case class SolveContinuousSubstThresholdCS(substitution: TSubst, bounds: Map[CVa
   }
 
 
-  def applyPartialSolution(t: Type) =
+  def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) =
     if (trigger)
       t.subst(substitution)
     else
       t
 
-  def applyPartialSolutionIt[U, C <: Iterable[U]](it: C, f: U=>Type)(implicit bf: CanBuildFrom[Iterable[U], (U, Type), C])
+  def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]
+    (it: C, f: U=>CT)
+    (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
   = if (trigger)
       it.map(u => (u, f(u).subst(substitution)))
     else

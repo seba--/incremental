@@ -1,26 +1,26 @@
 package constraints.subtype.impl
 
 import constraints.{CVar, subtype}
-import constraints.subtype.{ConstraintSystem, Type, UVar, Constraint}
-import constraints.subtype.Type.Companion._
+import constraints.subtype._
+import constraints.subtype.CSubst.CSubst
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
 
 object SolveEndCanonicalBounds extends ConstraintSystemFactory[SolveEndCanonicalBoundsCS] {
   def freshConstraintSystem = SolveEndCanonicalBoundsCS(defaultBounds, Seq())
-  def solved(s: TSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
+  def solved(s: CSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
   def notyet(c: Constraint) = freshConstraintSystem addNewConstraint (c)
   def never(c: Constraint) = SolveEndCanonicalBoundsCS(defaultBounds, Seq(c))
 }
 
-case class SolveEndCanonicalBoundsCS(bounds: Map[CVar, (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveEndCanonicalBoundsCS] {
+case class SolveEndCanonicalBoundsCS(bounds: Map[CVar[Type], (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveEndCanonicalBoundsCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
   def state = SolveEndCanonicalBounds.state.value
 
-  val substitution: TSubst = Map()
+  def substitution = Map()
 
   def notyet = {
     var cons = Seq[Constraint]()
@@ -70,7 +70,7 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar, (LBound, UBound)], never:
       SolveContinuouslyCS(Map(), bounds, never).tryFinalize
     }
 
-  def addLowerBound(v: CVar, t: Type) = {
+  def addLowerBound(v: CVar[Type], t: Type) = {
     val (lower, upper) = bounds(v)
     val (newLower, error) = lower.add(t)
     val changed = if (newLower.isGround) newLower.ground.get else t
@@ -86,7 +86,7 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar, (LBound, UBound)], never:
     subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs)
   }
 
-  def addUpperBound(v: CVar, t: Type) = {
+  def addUpperBound(v: CVar[Type], t: Type) = {
     val (lower, upper) = bounds(v)
     val (newUpper, error) = upper.add(t)
     val changed = if (newUpper.isGround) newUpper.ground.get else t
@@ -103,9 +103,11 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar, (LBound, UBound)], never:
   }
 
 
-  def applyPartialSolution(t: Type) = t
+  def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t
 
-  def applyPartialSolutionIt[U, C <: Iterable[U]](it: C, f: U=>Type)(implicit bf: CanBuildFrom[Iterable[U], (U, Type), C])
+  def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]
+    (it: C, f: U=>CT)
+    (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
   = it
 
   def propagate = this

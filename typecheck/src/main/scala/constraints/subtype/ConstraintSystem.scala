@@ -1,17 +1,17 @@
 package constraints.subtype
 
-import Type.Companion._
 import constraints.CVar
+import constraints.subtype.CSubst.CSubst
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
-  extends constraints.ConstraintSystem[CS, Constraint, Type, Gen] {
+  extends constraints.ConstraintSystem[Gen, Constraint, CS] {
 
-  def substitution: TSubst
+  def substitution: CSubst
   def notyet: Seq[Constraint]
   def never: Seq[Constraint]
 
-  def addUpperBound(v: CVar, t: Type): CS
-  def addLowerBound(v: CVar, t: Type): CS
+  def addUpperBound(v: CVar[Type], t: Type): CS
+  def addLowerBound(v: CVar[Type], t: Type): CS
   def never(c: Constraint): CS
 
   def unsolved = notyet ++ never
