@@ -83,8 +83,14 @@ case class TUniv(alpha : Symbol, k: Option[Kind], t : Type) extends Type {
   def occurs(x2: CVar[_]) = alpha == x2 || t.occurs(x2)
   def subst(s: CSubst) = TUniv(alpha, k, t.subst(s))
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
-    case UUniv(alpha2, k2, t2) => t.unify(t2, cs.solved(CSubst(alpha2 -> TVar(alpha))))
-    case TUniv(alpha2, k2, t2) => t.unify(t2, cs.solved(CSubst(CVar[Type](alpha2) -> TVar(alpha)))) without Set(CVar(alpha2))
+    case TUniv(alpha2, k2, t2) =>
+      val cs1 = (k, k2) match {
+        case (Some(k1_),Some(k2_)) => k1_.unify(k2_, cs)
+        case _ => cs
+      }
+      val cs2 = cs1.solved(CSubst(CVar[Type](alpha2) -> TVar(alpha)))
+      t.unify(t2, cs2) without Set(CVar(alpha2))
+    case UUniv(_, _, _) => other.unify(this, cs)
     case UVar(_) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
@@ -100,17 +106,23 @@ object TUniv {
 }
 
 
-case class UUniv(alpha: CVar[Type], k: Option[Kind], t : Type) extends Type {
+case class UUniv(alpha: CVar[Type], k: Kind, t : Type) extends Type {
   def occurs(x2: CVar[_]) = alpha == x2 || t.occurs(x2)
   def subst(s : CSubst) = s.hget(alpha) match {
-    case Some(TVar(beta)) => TUniv(beta, k, t.subst(s))
+    case Some(TVar(beta)) => TUniv(beta, Some(k), t.subst(s))
     case Some(UVar(beta)) => UUniv(beta, k, t.subst(s))
     case None => UUniv(alpha, k, t.subst(s))
     case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
   }
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
-    case UUniv(alpha2, k2, t2) => t.unify(t2, cs.solved(CSubst(alpha -> UVar(alpha2))))
-    case TUniv(alpha2, k2, t2) => t.unify(t2, cs.solved(CSubst(alpha -> TVar(alpha2))))
+    case UUniv(alpha2, k2, t2) =>
+      val cs1 = k.unify(k2, cs)
+      val cs2 = cs1.solved(CSubst(alpha -> UVar(alpha2)))
+      t.unify(t2, cs2)
+    case TUniv(alpha2, k2, t2) =>
+      val cs1 = k2.map(k2 => k.unify(k2, cs)).getOrElse(cs)
+      val cs2 = cs1.solved(CSubst(alpha -> TVar(alpha2)))
+      t.unify(t2, cs2)
     case UVar(_) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
@@ -118,10 +130,7 @@ case class UUniv(alpha: CVar[Type], k: Option[Kind], t : Type) extends Type {
 object UUniv {
   case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]), cType) orElse simple(Seq(classOf[Symbol], classOf[Kind]), cType)) {
     def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) =
-      if (lits.size == 1)
-        UUniv(lits(0).asInstanceOf[CVar[Type]], None, getType(kids(0)))
-      else
-        UUniv(lits(0).asInstanceOf[CVar[Type]], Some(lits(1).asInstanceOf[Kind]), getType(kids(0)))
+      UUniv(lits(0).asInstanceOf[CVar[Type]], lits(1).asInstanceOf[Kind], getType(kids(0)))
   }
 }
 

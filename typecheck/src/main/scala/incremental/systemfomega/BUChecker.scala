@@ -106,11 +106,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val T = Type.from(e.kids(0))
         val ExpResult(t, reqs, treqs2, _) = e.kids(1).typ
 
+        val kcons = EqKindConstraint(k, KStar)
         val (mtcons, mtreqs) = mergeTReqMaps(treqs1, treqs2)
 
         reqs.get(x) match {
-          case None => ExpStepResult(TFun(T, t), reqs, mtreqs, mtcons)
-          case Some(treq) => ExpStepResult(TFun(T, t), reqs - x, mtreqs, mtcons :+ EqConstraint(T, treq))
+          case None => ExpStepResult(TFun(T, t), reqs, mtreqs, mtcons :+ kcons)
+          case Some(treq) => ExpStepResult(TFun(T, t), reqs - x, mtreqs, mtcons :+ kcons :+ EqConstraint(T, treq))
         }
       }
       else {
@@ -167,7 +168,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val alpha = e.lits(0).asInstanceOf[Symbol]
       val k = if (e.lits.size == 2) e.lits(1).asInstanceOf[Kind] else freshKUVar()
       val ExpResult(t, reqs, treqs, _) = e.kids(0).typ
-      ExpStepResult(TUniv(alpha, Some(k), t), reqs, treqs - alpha, Seq())
+
+      treqs.get(alpha) match {
+        case None => ExpStepResult(TUniv(alpha, Some(k), t), reqs, treqs, Seq())
+        case Some(k2) => ExpStepResult(TUniv(alpha, Some(k), t), reqs, treqs - alpha, Seq(EqKindConstraint(k, k2)))
+      }
 
     case TApp =>
       val ExpResult(t1, reqs1, treqs1, _) = e.kids(0).typ
@@ -180,7 +185,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val Xbody = freshUVar()
       val Xres = freshUVar()
 
-      val ucons = EqConstraint(UUniv(Xalpha, Some(k), Xbody), t1)
+      val ucons = EqConstraint(UUniv(Xalpha, k, Xbody), t1)
       val vcons = EqSubstConstraint(Xbody, Xalpha.x, true, t, Xres) // Xbody[Xalpha:=t] == Xres
 
       ExpStepResult(Xres, reqs1, mtreqs, mtcons :+ ucons :+ vcons)
