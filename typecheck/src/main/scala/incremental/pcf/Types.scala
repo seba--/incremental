@@ -11,10 +11,10 @@ import constraints.equality.{ConstraintSystem, ConstraintSystemFactory, EqConstr
 
 case class UVar(x: CVar[Type]) extends Type {
   def occurs(x2: CVar[_]) = x == x2
-  def subst(s: CSubst) = s.getOrElse(x, this)
+  def subst(s: CSubst):Type = s.hgetOrElse(x, this)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
     if (other == this) cs
-    else cs.substitution.get(x) match {
+    else cs.substitution.hget(x) match {
       case Some(t) => t.unify(other, cs)
       case None =>
         val t = other.subst(cs.substitution)

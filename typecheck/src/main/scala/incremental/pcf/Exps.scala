@@ -2,7 +2,7 @@ package incremental.pcf
 
 import incremental.Node._
 import incremental.{NodeKind, SyntaxChecking}
-import constraints._
+import constraints.equality._
 
 /**
  * Created by seba on 13/11/14.

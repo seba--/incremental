@@ -56,9 +56,9 @@ case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint],
     res
   }
 
-  def applyPartialSolution[CT <: CTerm[CT]](t: CT) = t.subst(substitution).asInstanceOf[CT]
+  def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t.subst(substitution)
 
-  def applyPartialSolutionIt[U, C <: Iterable[U], CT <: CTerm[CT]]
+  def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]
     (it: C, f: U=>CT)
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C]): C
   = it.map(u => (u, f(u).subst(substitution)))

@@ -1,9 +1,10 @@
 package constraints
 
 import util.HMap
+import util.HMap._
 
 object CSubst {
-  type CSubst[C] = HMap[CTermBase[C], CVar]
+  type CSubst[C] = NHMap[CTermBase[C], CVar]
   def empty[C]: CSubst[C] = HMap.empty
   def apply[C, V <: CTermBase[C]](kv: (CVar[V], V)) = empty[C] + kv
 }

@@ -1,7 +1,8 @@
 package constraints.equality.impl
 
 import constraints.CVar
-import constraints.equality.{Type, Constraint, ConstraintSystem, ConstraintSystemFactory}
+import constraints.equality.CSubst.CSubst
+import constraints.equality._
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
@@ -13,13 +14,13 @@ object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
 case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEndCS] {
   def state = SolveEnd.state.value
 
-  def substitution = Map()
+  def substitution = CSubst.empty
   def never = Seq()
 
-  def solved(s: CVar.Subst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
+  def solved(s: CSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
   def notyet(c: Constraint) = SolveEndCS(notyet :+ c)
   def never(c: Constraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
-  def without(xs: Set[CVar]) = this
+  def without(xs: Set[CVar[_]]) = this
 
 
   def mergeSubsystem(other: SolveEndCS): SolveEndCS = {
@@ -45,11 +46,11 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
     res
   }
 
-  def applyPartialSolution(t: Type) = t
+  def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t
 
-  def applyPartialSolutionIt[U, C <: Iterable[U]]
-    (it: C, f: U=>Type)
-    (implicit bf: CanBuildFrom[Iterable[U], (U, Type), C]): C
+  def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]
+    (it: C, f: U=>CT)
+    (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C]): C
   = it
 
 
@@ -57,6 +58,6 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
 
   override def tryFinalize =
     SolveContinuously.state.withValue(state) {
-      SolveContinuouslyCS(Map(), notyet, Seq()).tryFinalize
+      SolveContinuouslyCS(CSubst.empty, notyet, Seq()).tryFinalize
     }
 }

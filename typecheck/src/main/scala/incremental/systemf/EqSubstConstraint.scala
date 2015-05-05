@@ -1,16 +1,16 @@
 package incremental.systemf
 
 import constraints.CVar
-import constraints.equality.Type.Companion.TSubst
+import constraints.equality.CSubst.CSubst
 import constraints.equality._
 
 // body[alpha := substitute] = result
 case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean, substitute: Type, result: Type) extends Constraint {
   private def withResult[CS <: ConstraintSystem[CS]](t: Type, cs: CS) : CS = t.unify(result, cs)
 
-  private def substAlpha(s: TSubst) =
+  private def substAlpha(s: CSubst) =
     if (!alphaIsInternal) (alpha, false)
-    else s.get(CVar(alpha)) match {
+    else s.hget(CVar[Type](alpha)) match {
       case Some(TVar(beta)) => (beta, false)
       case Some(UVar(CVar(beta))) => (beta, true)
       case None => (alpha, alphaIsInternal)
@@ -49,7 +49,7 @@ case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean
 
   def finalize[CS <: ConstraintSystem[CS]](cs: CS) = solve(cs)
 
-  def subst(s: TSubst) = {
+  def subst(s: CSubst) = {
     val (newalpha, newalphaIsInternal) = substAlpha(s)
     EqSubstConstraint(body.subst(s), newalpha, newalphaIsInternal, substitute.subst(s), result.subst(s))
   }

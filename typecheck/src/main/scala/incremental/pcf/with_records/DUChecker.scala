@@ -1,7 +1,6 @@
 package incremental.pcf.with_records
 
 import constraints.equality.{ConstraintSystemFactory, Type, ConstraintSystem}
-import constraints.equality.Type.Companion.TSubst
 import incremental.pcf.TypeCheckerFactory
 import incremental.{Node_, pcf}
 

@@ -5,7 +5,6 @@ import constraints.equality.CSubst.CSubst
 trait Constraint extends constraints.Constraint[Gen, Constraint] {
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS
   def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS
-  def subst(s: CSubst): Constraint
 }
 
 case class EqConstraint(expected: Type, actual: Type) extends Constraint {

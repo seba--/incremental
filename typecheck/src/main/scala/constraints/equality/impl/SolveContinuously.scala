@@ -10,7 +10,6 @@ import scala.collection.generic.CanBuildFrom
 object SolveContinuously extends ConstraintSystemFactory[SolveContinuouslyCS] {
   val freshConstraintSystem = SolveContinuouslyCS(CSubst.empty, Seq(), Seq())
 }
-import SolveContinuously._
 
 case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuouslyCS] {
   def state = SolveContinuously.state.value
@@ -57,9 +56,9 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
     res
   }
 
-  def applyPartialSolution[CT <: CTerm[CT]](t: CT) = t
+  def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t
 
-  def applyPartialSolutionIt[U, C <: Iterable[U], CT <: CTerm[CT]]
+  def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]
     (it: C, f: U=>CT)
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C]): C
   = it

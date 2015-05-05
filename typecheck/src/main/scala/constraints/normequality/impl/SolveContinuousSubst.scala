@@ -1,25 +1,25 @@
 package constraints.normequality.impl
 
 import constraints.CVar
-import constraints.normequality.Type.Companion.TSubst
 import constraints.normequality._
+import constraints.normequality.CSubst.CSubst
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
 
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
-  val freshConstraintSystem = SolveContinuousSubstCS(Map(), Seq(), Seq())
+  val freshConstraintSystem = SolveContinuousSubstCS(CSubst.empty, Seq(), Seq())
 }
 
-case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
+case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
   def state = SolveContinuousSubst.state.value
 
-  def solved(s: TSubst) = {
-    var current = SolveContinuousSubstCS(substitution mapValues (_.subst(s)), notyet, never)
+  def solved(s: CSubst) = {
+    var current = SolveContinuousSubstCS(substitution mapValues (x => x.subst(s)), notyet, never)
     for ((x, t2) <- s) {
       current.substitution.get(x) match {
         case None => current = SolveContinuousSubstCS(current.substitution + (x -> t2.subst(current.substitution)), current.notyet, current.never)
-        case Some(t1) => current = t1.unify(t2, current)
+        case Some(t1) => current = t1.compatibleWith(t2).solve(current)
       }
     }
     current
@@ -28,13 +28,13 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint],
 
   def notyet(c: Constraint) = SolveContinuousSubstCS(substitution, notyet :+ c, never)
   def never(c: Constraint) = SolveContinuousSubstCS(substitution, notyet, never :+ c)
-  def without(xs: Set[CVar]) = SolveContinuousSubstCS(substitution -- xs, notyet, never)
+  def without(xs: Set[CVar[_]]) = SolveContinuousSubstCS(substitution -- xs, notyet, never)
 
   def mergeSubsystem(other: SolveContinuousSubstCS): SolveContinuousSubstCS = {
     val (res, time) = Util.timed {
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
-      SolveContinuousSubstCS(Map(), mnotyet, mnever)
+      SolveContinuousSubstCS(CSubst.empty, mnotyet, mnever)
     }
     state.stats.mergeSolutionTime += time
     res
@@ -56,15 +56,15 @@ case class SolveContinuousSubstCS(substitution: TSubst, notyet: Seq[Constraint],
     res
   }
 
-  def applyPartialSolution(t: Type) = t.subst(substitution)
+  def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t.subst(substitution)
 
-  def applyPartialSolutionIt[U, C <: Iterable[U]]
-    (it: C, f: U=>Type)
-    (implicit bf: CanBuildFrom[Iterable[U], (U, Type), C]): C
+  def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]
+  (it: C, f: U=>CT)
+  (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C]): C
   = it.map(u => (u, f(u).subst(substitution)))
 
 
-  def propagate = SolveContinuousSubstCS(Map(), notyet.map(_.subst(substitution)), never.map(_.subst(substitution)))
+  def propagate = SolveContinuousSubstCS(CSubst.empty, notyet.map(_.subst(substitution)), never.map(_.subst(substitution)))
 
   override def tryFinalize =
     SolveContinuously.state.withValue(state) {

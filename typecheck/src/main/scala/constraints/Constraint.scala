@@ -1,5 +1,7 @@
 package constraints
 
+import constraints.CSubst.CSubst
+
 trait Constraint[G <: GenBase, C] {
-  def solve[CS <: ConstraintSystem[G, C, CS]](cs: CS): CS
+  def subst(s: CSubst[C]): C
 }

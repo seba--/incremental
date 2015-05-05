@@ -6,6 +6,7 @@ import constraints.CVar
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   extends constraints.ConstraintSystem[Gen, Constraint, CS] {
 
+  def substitution: CSubst
   def notyet: Seq[Constraint]
   def never: Seq[Constraint]
 

@@ -1,20 +1,19 @@
 package constraints.normequality
 
-import Type.Companion._
 import constraints.CVar
-import incremental.Util
+import constraints.normequality.CSubst.CSubst
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
-  extends constraints.ConstraintSystem[CS, Constraint, Type, Gen] {
+  extends constraints.ConstraintSystem[Gen, Constraint, CS] {
 
-  def substitution: TSubst
+  def substitution: CSubst
   def notyet: Seq[Constraint]
   def never: Seq[Constraint]
 
-  def solved(s: TSubst): CS
+  def solved(s: CSubst): CS
   def notyet(c: Constraint): CS
   def never(c: Constraint): CS
-  def without(xs: Set[CVar]): CS
+  def without(xs: Set[CVar[_]]): CS
 
   def unsolved = notyet ++ never
   def isSolved = notyet.isEmpty && never.isEmpty

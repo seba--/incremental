@@ -1,6 +1,6 @@
 package incremental.pcf.with_records
 
-import constraints.equality.Type.Companion.TSubst
+import constraints.equality.CSubst.CSubst
 import constraints.equality._
 import incremental.pcf.UVar
 
@@ -33,7 +33,7 @@ case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) e
         var cons = Seq[Constraint]()
         var fields = Map(label -> field.subst(cs.substitution))
         for (EqRecordProjectConstraint(t, l, field) <- cs.notyet) t match {
-          case UVar(y) if x == y || v == cs.substitution.getOrElse(y, t) =>
+          case UVar(y) if x == y || v == cs.substitution.hgetOrElse(y, t) =>
             if (!fields.isDefinedAt(l))
               fields += l -> field.subst(cs.substitution)
             else
@@ -43,10 +43,10 @@ case class EqRecordProjectConstraint(record: Type, label: Symbol, field: Type) e
               return cs.notyet(EqRecordProjectConstraint(trec, label, fields(label)))
 
         }
-        cs.solved(Map(x -> TRecord(fields))) addNewConstraints cons
+        cs.solved(CSubst(x -> TRecord(fields))) addNewConstraints cons
       case _ => cs.never(EqRecordProjectConstraint(trec, label, field))
     }
   }
 
-  def subst(s: TSubst) = EqRecordProjectConstraint(record.subst(s), label, field.subst(s))
+  def subst(s: CSubst) = EqRecordProjectConstraint(record.subst(s), label, field.subst(s))
 }
