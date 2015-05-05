@@ -1,7 +1,7 @@
 package incremental.pcf.with_subtyping
 
 import constraints.CVar
-import constraints.subtype.Type.Companion.TSubst
+import constraints.subtype.CSubst.CSubst
 import constraints.subtype._
 
 
@@ -19,8 +19,8 @@ class TBase(val directSupertypes: Set[Type]) extends Type {
     )
 
   val isGround = true
-  def occurs(x: CVar) = false
-  def subst(s: TSubst) = this
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
 
   def ||(that: Type) =
     if (this == that)
@@ -66,8 +66,8 @@ case object TFloat extends TBase(Set(TNumeric))
 
 case class TFun(t1: Type, t2: Type) extends Type {
   val isGround = t1.isGround && t2.isGround
-  def occurs(x: CVar) = t1.occurs(x) || t2.occurs(x)
-  def subst(s: TSubst) = TFun(t1.subst(s), t2.subst(s))
+  def occurs(x: CVar[_]) = t1.occurs(x) || t2.occurs(x)
+  def subst(s: CSubst) = TFun(t1.subst(s), t2.subst(s))
 
   def ||(that: Type) = that match {
     case TFun(u1, u2) => (t1 && u1, t2 || u2) match {

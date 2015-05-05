@@ -1,6 +1,5 @@
 package incremental.pcf.with_subtyping
 
-import constraints.subtype.Type.Companion.TSubst
 import constraints.subtype._
 import incremental.{Node_, Util}
 import incremental.Node._
@@ -14,7 +13,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
 
   type TCtx = Map[Symbol, Type]
-  type TError = Type.Companion.TError
+  type TError = String
   type Result = (Type, CS)
   type StepResult = (Type, Seq[Constraint], Seq[CS])
 

@@ -12,7 +12,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   import csFactory._
 
-  type TError = Type.Companion.TError
+  type TError = String
   type Reqs = Map[Symbol, Type]
 
   type Result = (Type, Reqs, CS)
@@ -26,7 +26,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (t, reqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
         val cs = subcs addNewConstraints cons
-        val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type]](reqs, p => p._2)
+        val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
         e.typ = (cs applyPartialSolution t, reqs2, cs.propagate)
         true
       }
