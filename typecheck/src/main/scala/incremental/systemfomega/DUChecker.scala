@@ -82,7 +82,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (k, tcs) = typecheckTypeRec(e.kids(0), tctx)
         val X = Type.from(e.kids(0))
         val (t, cs) = typecheckExpRec(e.kids(1), ctx + (x -> X), tctx)
-        (TFun(X, t), Seq(), Seq(tcs, cs))
+        (TFun(X, t), Seq(EqKindConstraint(k, KStar)), Seq(tcs, cs))
       }
       else {
         val X = freshUVar()
@@ -121,7 +121,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val fixCons = EqConstraint(t, TFun(X, X))
       (X, Seq(fixCons), Seq(cs))
 
-    case TAbs if (e.lits(0).isInstanceOf[Symbol]) =>
+    case TAbs =>
       val alpha = e.lits(0).asInstanceOf[Symbol]
       val k = if (e.lits.size == 2) e.lits(1).asInstanceOf[Kind] else freshKUVar()
       val (t, cs) = typecheckExpRec(e.kids(0), ctx, tctx + (alpha -> k))

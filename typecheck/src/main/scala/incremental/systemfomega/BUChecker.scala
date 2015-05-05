@@ -36,14 +36,16 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ.cs)
           val cs = subcs addNewConstraints cons
           val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-          e.typ = ExpResult(cs applyPartialSolution t, reqs2, treqs, cs.propagate)
+          val treqs2 = cs.applyPartialSolutionIt[(Symbol, Kind), Map[Symbol, Kind], Kind](treqs, p => p._2)
+          e.typ = ExpResult(cs applyPartialSolution t, reqs2, treqs2, cs.propagate)
           true
         }
         else if (e.kind.isInstanceOf[Type.Kind]) {
           val TypeStepResult(k, treqs, cons) = typecheckTypeStep(e)
           val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ.cs)
           val cs = subcs addNewConstraints cons
-          e.typ = TypeResult(k, treqs, cs.propagate)
+          val treqs2 = cs.applyPartialSolutionIt[(Symbol, Kind), Map[Symbol, Kind], Kind](treqs, p => p._2)
+          e.typ = TypeResult(k, treqs2, cs.propagate)
           true
         }
         else

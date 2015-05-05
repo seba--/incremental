@@ -64,6 +64,11 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("\\x. (x [Num]) + 1", Abs('x, Add(TApp(Var('x), TNum.Kind()), Num(1))))
   typecheckTestError("\\x:X. x", Abs('x, TVar.Kind('X), Var('x)))
   typecheckTestError("(\\X.\\x:X. x)[Y]", TApp(TAbs('X, Abs('x, TVar.Kind('X), Var('x))), TVar.Kind('Y)))
+
+  // test simple kinding
+  typecheckTest("\\a::*. \\x:a. x", TAbs('a, KStar, Abs('x, TVar.Kind('a), Var('x))))(TUniv('a, Some(KStar), TFun(TVar('a), TVar('a))))
+  typecheckTestError("\\a::*=>*. \\x:a. x", TAbs('a, KArrow(KStar, KStar), Abs('x, TVar.Kind('a), Var('x))))
+  typecheckTestError("\\a::*=>*. \\x:a->a. x", TAbs('a, KArrow(KStar, KStar), Abs('x, TFun.Kind(TVar.Kind('a), TVar.Kind('a)), Var('x))))
 }
 
 class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
