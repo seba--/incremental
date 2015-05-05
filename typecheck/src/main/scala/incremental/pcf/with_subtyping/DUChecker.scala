@@ -3,7 +3,7 @@ package incremental.pcf.with_subtyping
 import constraints.subtype._
 import incremental.{Node_, Util}
 import incremental.Node._
-import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
+import incremental.pcf.{Num, Add, Mul, App, Fix, If0, Var}
 
 /**
  * Created by oliver on 27.11.14.

@@ -4,7 +4,7 @@ import constraints.subtype._
 import constraints.subtype.impl._
 import incremental.Node._
 import incremental.Util
-import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
+import incremental.pcf.{Num, Add, Mul, App, Fix, If0, Var}
 import incremental.pcf.with_subtyping._
 
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
