@@ -63,7 +63,7 @@ case class TFun(t1: Type, t2: Type) extends PolType {
 case class TVar(alpha : Symbol) extends PolType {
   def freeTVars = Set(alpha)
   def occurs(x2: CVar[_]) = alpha == x2
-  def subst(s: CSubst) = this
+  def subst(s: CSubst) = s.hgetOrElse(CVar[Type](alpha), this)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) =
     if (this == other) cs
     else cs.substitution.hget(CVar[Type](alpha)) match {

@@ -25,7 +25,7 @@ case class EqSubstConstraint(body: Type, alpha: Symbol, alphaIsInternal: Boolean
       case TVar(`beta`) | UVar(CVar(`beta`)) => withResult(substitute, cs)
       case TVar(_) if !betaIsInternal => withResult(tbody, cs) // because alpha is user-defined and different
 
-      case TNum => withResult(TNum, cs)
+      case TNum() => withResult(TNum(), cs)
       case TFun(t1, t2) =>
         val X = UVar(cs.gen.freshSymbol("x$"))
         val Y = UVar(cs.gen.freshSymbol("x$"))

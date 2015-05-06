@@ -39,15 +39,15 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 
-  typecheckTest("17", Num(17))(TNum)
-  typecheckTest("17+(10+2)", Add(Num(17), Add(Num(10), Num(2))))(TNum)
-  typecheckTest("17+(10+5)", Add(Num(17), Add(Num(10), Num(5))))(TNum)
-  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(UVar(CVar('x$0)), TNum))
-  typecheckTest("\\x. x+x", Abs('x, Add(Var('x), Var('x))))(TFun(TNum, TNum))
+  typecheckTest("17", Num(17))(TNum())
+  typecheckTest("17+(10+2)", Add(Num(17), Add(Num(10), Num(2))))(TNum())
+  typecheckTest("17+(10+5)", Add(Num(17), Add(Num(10), Num(5))))(TNum())
+  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(UVar(CVar('x$0)), TNum()))
+  typecheckTest("\\x. x+x", Abs('x, Add(Var('x), Var('x))))(TFun(TNum(), TNum()))
   typecheckTestError("\\x. err+x", Abs('x, Add(Var('err), Var('x))))
   typecheckTest("\\x. \\y. x y", Abs('x, Abs('y , App(Var('x), Var('y)))))(TFun(TFun(UVar(CVar('x$1)), UVar(CVar('x$2))), TFun(UVar(CVar('x$1)), UVar(CVar('x$2)))))
-  typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
-  typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
+  typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum(), TFun(TNum(), TNum())))
+  typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum())
 
   // test polymorphism
 
@@ -58,15 +58,15 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("\\a. \\f : a -> a. \\x:a. f x", TAbs('a, Abs('f,TFun.Kind(TVar.Kind('a),TVar.Kind('a)),Abs('x, TVar.Kind('a), App(Var('f),Var('x))))))(TUniv('a, Some(KStar), TFun(TFun(TVar('a), TVar('a)),TFun(TVar('a), TVar('a)))))
   typecheckTestError("\\a. \\b. \\f:a->a . \\x:b. f x", TAbs('a,TAbs('b, Abs('f, TFun.Kind(TVar.Kind('a), TVar.Kind('a)),Abs('x, TVar.Kind('b), App(Var('f),Var('x)))))))
   typecheckTestError("\\a. \\b. \\f:a . \\x:b. f x", TAbs('a,TAbs('b, Abs('f, TVar.Kind('a), Abs('x, TVar.Kind('b), App(Var('f),Var('x)))))))
-  typecheckTest("(\\a. \\x : a. x) [Num]", TApp(TAbs('A, Abs('x, TVar.Kind('A), Var('x))), TNum.Kind()))(TFun(TNum,TNum))
+  typecheckTest("(\\a. \\x : a. x) [Num]", TApp(TAbs('A, Abs('x, TVar.Kind('A), Var('x))), TNum.Kind()))(TFun(TNum(),TNum()))
   typecheckTest("\\b. (\\a. \\x : a. x) [b]", TAbs('B, TApp(TAbs('A, Abs('x, TVar.Kind('A), Var('x))), TVar.Kind('B))))(TUniv('B, Some(KStar), TFun(TVar('B),TVar('B))))
   typecheckTestError("\\x. x [Num]", Abs('x, TApp(Var('x), TNum.Kind())))
   typecheckTestError("\\x. (x [Num]) + 1", Abs('x, Add(TApp(Var('x), TNum.Kind()), Num(1))))
   typecheckTestError("\\x:X. x", Abs('x, TVar.Kind('X), Var('x)))
   typecheckTestError("(\\X.\\x:X. x)[Y]", TApp(TAbs('X, Abs('x, TVar.Kind('X), Var('x))), TVar.Kind('Y)))
-  typecheckTest("\\f:(forall a. a)->TNum. \\x:(forall b. b) f x",
+  typecheckTest("\\f:(forall a. a)->TNum(). \\x:(forall b. b) f x",
     Abs('f, TFun.Kind(TUniv.Kind('a, KStar, TVar.Kind('a)), TNum.Kind()), Abs('x, TUniv.Kind('b, KStar, TVar.Kind('b)), App(Var('f), Var('x)))))(
-    TFun(TFun(TUniv('a, Some(KStar), TVar('a)), TNum), TFun(TUniv('b, Some(KStar), TVar('b)), TNum))
+    TFun(TFun(TUniv('a, Some(KStar), TVar('a)), TNum()), TFun(TUniv('b, Some(KStar), TVar('b)), TNum()))
   )
 
   // test simple kinding
@@ -75,12 +75,14 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("\\a::*=>*. \\x:a->a. x", TAbs('a, KArrow(KStar, KStar), Abs('x, TFun.Kind(TVar.Kind('a), TVar.Kind('a)), Var('x))))
 
   // test type operators
-//  def tId = TTAbs.Kind('X, KStar, TVar.Kind('X))
-//  typecheckTest("\\A::*=>* \\x:(A TNum). x",
-//    TAbs('a, KArrow(KStar, KStar), Abs('x, TTApp.Kind(TVar.Kind('a), TNum.Kind()), Var('x))))(
-//    TUniv('a, Some(KArrow(KStar, KStar)), TFun(TTApp(TVar('a), TNum), TTApp(TVar('a), TNum))))
-//
-//  typecheckTest("\\x:(tId TNum). x", Abs('x, TTApp.Kind(tId, TNum.Kind()), Var('x)))(TFun(TNum, TNum))
+  def tId = TTAbs.Kind('X, KStar, TVar.Kind('X))
+
+  typecheckTest("\\A::*=>* \\x:(A TNum()). x",
+    TAbs('a, KArrow(KStar, KStar), Abs('x, TTApp.Kind(TVar.Kind('a), TNum.Kind()), Var('x))))(
+    TUniv('a, Some(KArrow(KStar, KStar)), TFun(TTApp(TVar('a), TNum()), TTApp(TVar('a), TNum())))
+  )
+
+  typecheckTest("\\x:(tId TNum()). x", Abs('x, TTApp.Kind(tId, TNum.Kind()), Var('x)))(TFun(TNum(), TNum()))
 }
 
 class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))

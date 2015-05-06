@@ -70,7 +70,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def typecheckExpStep(e: Node_[Result]): ExpStepResult = e.kind match {
-    case Num => ExpStepResult(TNum, Map(), Map(), Seq())
+    case Num => ExpStepResult(TNum(), Map(), Map(), Seq())
 
     case op if op == Add || op == Mul =>
       val ExpResult(t1, reqs1, treqs1, _) = e.kids(0).typ
@@ -78,10 +78,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
       val (mtcons, mtreqs) = mergeTReqMaps(treqs1, treqs2)
-      val lcons = EqConstraint(TNum, t1)
-      val rcons = EqConstraint(TNum, t2)
+      val lcons = EqConstraint(TNum(), t1)
+      val rcons = EqConstraint(TNum(), t2)
 
-      ExpStepResult(TNum, mreqs, mtreqs, mcons ++ mtcons :+ lcons :+ rcons)
+      ExpStepResult(TNum(), mreqs, mtreqs, mcons ++ mtcons :+ lcons :+ rcons)
 
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -156,7 +156,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2, reqs3)
       val (mtcons, mtreqs) = mergeTReqMaps(treqs1, treqs2, treqs3)
 
-      val cond = EqConstraint(TNum, t1)
+      val cond = EqConstraint(TNum(), t1)
       val body = EqConstraint(t2, t3)
 
       ExpStepResult(t2, mreqs, mtreqs, mcons ++ mtcons :+ cond :+ body)

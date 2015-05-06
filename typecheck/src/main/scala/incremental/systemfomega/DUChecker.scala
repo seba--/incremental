@@ -54,13 +54,13 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def typecheckExpStep(e: Node, ctx: Ctx, tctx: TCtx): StepResult[Type] = e.kind match {
-    case Num => (TNum, Seq(), Seq())
+    case Num => (TNum(), Seq(), Seq())
     case k if k == Add || k == Mul =>
       val (t1, cs1) = typecheckExpRec(e.kids(0), ctx, tctx)
       val (t2, cs2) = typecheckExpRec(e.kids(1), ctx, tctx)
-      val lcons = EqConstraint(TNum, t1)
-      val rcons = EqConstraint(TNum, t2)
-      (TNum, Seq(lcons, rcons), Seq(cs1, cs2))
+      val lcons = EqConstraint(TNum(), t1)
+      val rcons = EqConstraint(TNum(), t2)
+      (TNum(), Seq(lcons, rcons), Seq(cs1, cs2))
 
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -109,7 +109,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (t2, cs2) = typecheckExpRec(e.kids(1), ctx, tctx)
       val (t3, cs3) = typecheckExpRec(e.kids(2), ctx, tctx)
 
-      val cond = EqConstraint(TNum, t1)
+      val cond = EqConstraint(TNum(), t1)
       val body = EqConstraint(t2, t3)
 
       (t2, Seq(cond, body), Seq(cs1, cs2, cs3))
