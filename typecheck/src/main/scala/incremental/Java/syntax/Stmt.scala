@@ -1,26 +1,35 @@
 package incremental.Java.syntax
 
+import incremental.Node._
+import incremental.{NodeKind, SyntaxChecking}
+
 /**
  * Created by qwert on 05.04.15.
  */
-trait Stm {
 
+
+abstract class Stm(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+object Stm {
+  val cStm = classOf[Stm]
 }
+import Stm._
+import Expr._
 
-case class Empty() extends Stm
-case class ExprStm(e: Expr) extends Stm
+case object Empty extends Stm(simple())
+case object ExprStm extends Stm(simple(cExpr))
 
-case class If(cond: Expr, body: Stm) extends Stm
-case class IfElse(cond: Expr, thenStm: Stm, elseStm: Stm) extends Stm
+case object If extends Stm(simple(Seq(cExpr, cStm)))
+case object IfElse extends Stm(simple(Seq(cExpr, cStm, cStm)))
 
-case class Block(body: Seq[Stm]) extends Stm
+abstract class BlockStm(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Stm(syntaxcheck)
+case object Block extends BlockStm(_ => BlockSyntax)
 
-case class LocalVarDec() extends Stm // TODO local var dec/var dec
+case object LocalVarDec() extends Stm // TODO local var dec/var dec
 
-case class While(cond: Expr, body: Stm) extends Stm
-case class DoWhile(body: Stm, cond: Expr) extends Stm
+case object While extends Stm(simple(Seq(cExpr, cStm)))
+case object DoWhile extends Stm(simple(Seq(cStm, cExpr)))
 
-case class For(init: Expr, cond: Expr, update: Seq[Expr], body: Stm) extends Stm // TODO: init is var dec
+case object For(init: Expr, cond: Expr, update: Seq[Expr], body: Stm) extends Stm // TODO: init is var dec
 
-case class Continue() extends Stm // TODO: label?
-case class Break() extends Stm
+case object Continue extends Stm(simple()) // TODO: label with orElse
+case object Break extends Stm(simple())

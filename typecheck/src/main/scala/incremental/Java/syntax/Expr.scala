@@ -76,25 +76,22 @@ case object CastRef extends Expr(simple(Seq(classOf[RefType], cExpr)))
 case object InstanceOf extends Expr(simple(Seq(cExpr, classOf[RefType]))) // TODO: reihenfolge?
 
 // Assignment Operators
-trait LHS{} //TODO: extends ExprName with ArrayAccess with FieldAccess{}
-case class Assign(lhs: LHS, rhs: Expr) extends Expr
-case class AssignMul(lhs: LHS, rhs: Expr) extends Expr
-case class AssignDiv(lhs: LHS, rhs: Expr) extends Expr
-case class AssignRemain(lhs: LHS, rhs: Expr) extends Expr
-case class AssignPlus(lhs: LHS, rhs: Expr) extends Expr
-case class AssignMinus(lhs: LHS, rhs: Expr) extends Expr
-case class AssignLeftShift(lhs: LHS, rhs: Expr) extends Expr
-case class AssignRightShift(lhs: LHS, rhs: Expr) extends Expr
-case class AssignURightShift(lhs: LHS, rhs: Expr) extends Expr
-case class AssignAnd(lhs: LHS, rhs: Expr) extends Expr
-case class AssignExcOr(lhs: LHS, rhs: Expr) extends Expr
-case class AssignOr(lhs: LHS, rhs: Expr) extends Expr
+case object Assign extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignMul extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignDiv extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignRemain extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignPlus extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignMinus extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignLeftShift extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignRightShift extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignURightShift extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignAnd extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignExcOr extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
+case object AssignOr extends Expr(simple(Seq(classOf[ExprName], cExpr)) orElse simple(Seq(classOf[FieldAccess], cExpr)) orElse simple(Seq(classOf[ArrayAccess], cExpr)))
 
 // Array Access
-case object ArrayAccess extends Expr(simple(cExpr, cExpr))
-
-// Array Initialization
-case object ArrayInit extends Expr(_ => ArrayInitSyntax) // TODO: test
+abstract class ArrayAccess(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
+case object ArrayAccess extends ArrayAccess(simple(cExpr, cExpr)) // TODO: name conflict?
 
 // Array Creation
 //abstract class ArrayCreationExpr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
@@ -115,10 +112,10 @@ abstract class FieldAccess(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr
 case object Field extends FieldAccess(simple(Seq(cExpr, classOf[String])))
 // ExprName "." Id -> FieldAccess {reject}
 case object SuperField extends FieldAccess(simple(Seq(classOf[String])))
-case object QSuperField extends FieldAccess(simple(Seq(classOf[TypeName], classOf[String])))>
+case object QSuperField extends FieldAccess(simple(Seq(classOf[TypeName], classOf[String])))
 
 // Method Invocation
-case object Invoke extends Expr(simple(Seq(classOf[MethodSpec], cExpr))) // TODO: methodInvoke syntax checker (like arrays)
+case object Invoke extends Expr(_ => MethodInvokationSyntax) // TODO: methodInvoke syntax checker (like arrays)
 //case object Invoke(methodSpec: MethodSpec, args: Seq[Expr]) extends Expr
 
 abstract class MethodSpec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
