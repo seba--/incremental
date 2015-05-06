@@ -14,12 +14,10 @@ class ConstraintOps extends Serializable {
   def mergeSolutionTime = incremental.ConstraintOps.mergeSolutionTime
 
   private var _nextId = 0
-  def freshUVar(): UVar = {
-    synchronized {
+  def freshUVar(): UVar = synchronized {
       val v = UVar(Symbol("x$" + _nextId))
       _nextId += 1
       v
-    }
   }
 
   var mergeReqsTime = 0.0

@@ -9,7 +9,7 @@ import incremental.Node.Node
 import incremental.Type.Companion._
 import incremental.Node._
 import incremental._
-import incremental.concurrent.{RootNodeActor, Done, NodeActor}
+import incremental.concurrent._
 
 /**
  * Created by seba on 13/11/14.
@@ -149,15 +149,16 @@ class BottomUpEagerSubstChecker extends TypeChecker[Type] {
 class BottomUpEagerSubstCheckerConcurrent(implicit system: ActorSystem)  extends BottomUpEagerSubstChecker {
   override def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
+    val inbox = Inbox.create(system)
+    val trigger = system.actorOf(Props[Trigger])
+    val actor = system.actorOf(Props(new RootNodeActor[Result](inbox.getRef(), root, 0, {e =>
+      e.typ = typecheckStep(e)
+      true
+    }, trigger)))
 
     val (res, ctime) = Util.timed {
-      val inbox = Inbox.create(system)
-      val actor = system.actorOf(Props(new RootNodeActor[Result](inbox.getRef(), root, 0, {e =>
-        e.typ = typecheckStep(e)
-        true
-      })))
-
-      val Done(0, res) = inbox.receive(20 seconds)
+      trigger ! Start
+      val Done(0, res) = inbox.receive(1 minute)
       val (t_, reqs, sol_) = res.asInstanceOf[Result]
       val sol = sol_.tryFinalize
       val t = t_.subst(sol.substitution)
@@ -179,32 +180,65 @@ object BottomUpEagerSubstConcurrentCheckerFactory extends TypeCheckerFactory[Typ
 }
 
 class FuturisticBottomUpEagerSubstChecker extends BottomUpEagerSubstChecker {
-  def bottomUpFuture(e: Node): Future[Result] = {
+  val clusterHeight = 3
+  def bottomUpFuture(e: Node): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
-    def recurse(e: Node): Future[Result] = {
-      val join =
-        if (e.kids.seq.length == 0)
-          fut
-        else Future.sequence(e.kids.seq.map { k => recurse(k) })
-      join.map { _ =>
-        val ee = e.withType[Result]
-        val t = typecheckStep(ee)
-        ee.typ = t
-        t
+    def recurse(e: Node): (Future[Any], Int) = {
+      if (e.height <= clusterHeight) {
+        val f = fut map { _ =>
+          e.visitUninitialized { e =>
+            val ee = e.withType[Result]
+            ee.typ = typecheckStep(ee)
+            true
+          }
+        }
+        (f, 1)
+      }
+      else {
+        val (fs, hops) = (e.kids.seq.map { k => recurse(k) }).unzip
+        val max = hops.foldLeft(0) { case (i,j) => i.max(j) }
+        val join = Future.sequence(fs)
+
+        val future =
+          if ((max % clusterHeight) == 0)
+            join.map { _ =>
+              e.visitUninitialized { e =>
+                val ee = e.withType[Result]
+                ee.typ = typecheckStep(ee)
+                true
+              }
+            }
+          else
+            join
+
+        (future, max + 1)
       }
     }
 
-    val res = recurse(e)
-    trigger success ()
-    res
+    val (res, hops) = recurse(e)
+
+    if ((e.height % clusterHeight) != 0) {
+      val res2 = res map { _ =>
+        e.visitUninitialized { e =>
+          val ee = e.withType[Result]
+          ee.typ = typecheckStep(ee)
+          true
+        }
+      }
+      (res2, trigger)
+    }
+    else (res, trigger)
   }
 
   override def typecheck(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
+    val (fut, trigger) = bottomUpFuture(e)
 
     val (res, ctime) = Util.timed {
-      val (t_, reqs, sol_) = Await.result(bottomUpFuture(e), 1 minute)
+      trigger success ()
+      Await.result(fut, 1 minute)
+      val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
       val t = t_.subst(sol.substitution)
 

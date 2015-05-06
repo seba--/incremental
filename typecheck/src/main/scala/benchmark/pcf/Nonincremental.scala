@@ -19,7 +19,8 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
    // measureT("BottomUpIncrementalSolve", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
     measureT("BottomUpEagerSubst", (e:Node) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
 
-    measureT("FuturisticBottomUpEagerSubstConcurrent", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+   // measureT("BottomUpEagerSubstConcurrent", (e:Node) => BottomUpEagerSubstConcurrentCheckerFactory.makeChecker.typecheck(e))(trees)
 
    // measureT(s"BottomUpSometimesEagerSubst-10", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
 
