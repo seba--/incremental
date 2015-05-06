@@ -1,6 +1,6 @@
 package constraints.equality.impl
 
-import constraints.CVar
+import constraints.{Statistics, CVar}
 import constraints.equality.CSubst.CSubst
 import constraints.equality._
 import incremental.Util
@@ -23,27 +23,24 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
   def without(xs: Set[CVar[_]]) = this
 
 
-  def mergeSubsystem(other: SolveEndCS): SolveEndCS = {
-    val (res, time) = Util.timed {
+  def mergeSubsystem(other: SolveEndCS): SolveEndCS =
+    Util.timed(state -> Statistics.mergeSolutionTime) {
       val mnotyet = notyet ++ other.notyet
       SolveEndCS(mnotyet)
     }
-    state.stats.mergeSolutionTime += time
-    res
-  }
 
   def addNewConstraint(c: Constraint) = {
-    state.stats.constraintCount += 1
-    val (res, time) = Util.timed(SolveEndCS(notyet :+ c))
-    state.stats.constraintSolveTime += time
-    res
+    state += Statistics.constraintCount -> 1
+    Util.timed(state -> Statistics.constraintSolveTime) {
+      SolveEndCS(notyet :+ c)
+    }
   }
 
   def addNewConstraints(cs: Iterable[Constraint]) = {
-    state.stats.constraintCount += cs.size
-    val (res, time) = Util.timed(SolveEndCS(notyet ++ cs))
-    state.stats.constraintSolveTime += time
-    res
+    state += Statistics.constraintCount -> cs.size
+    Util.timed(state -> Statistics.constraintSolveTime) {
+      SolveEndCS(notyet ++ cs)
+    }
   }
 
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t

@@ -1,5 +1,7 @@
 package incremental
 
+import constraints.State
+
 import scala.collection.mutable
 
 /**
@@ -22,6 +24,15 @@ object Util {
     val end = System.nanoTime()
     val time = (end-start)/1000000.0
     (a, time)
+  }
+
+  def timed[A](statsKey: (State[_], String))(f: => A): A = {
+    val start = System.nanoTime()
+    val a = f
+    val end = System.nanoTime()
+    val time = (end-start)/1000000.0
+    statsKey._1 += statsKey._2 -> time
+    a
   }
 
   def log(s: String): Unit = {

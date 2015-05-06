@@ -1,5 +1,6 @@
 package incremental.systemfomega
 
+import constraints.Statistics
 import constraints.normequality._
 import incremental.Node._
 import incremental.{Node_, Util}
@@ -29,7 +30,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    val (res, ctime) = Util.timed {
+    Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized {e =>
         if (e.kind.isInstanceOf[Exp]) {
           val ExpStepResult(t, reqs, treqs, cons) = typecheckExpStep(e)
@@ -65,8 +66,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       else
         Left(t)
     }
-    localState.stats.typecheckTime += ctime
-    res
   }
 
   def typecheckExpStep(e: Node_[Result]): ExpStepResult = e.kind match {
@@ -237,21 +236,15 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
   def mergeTReqMaps(req: TReqs, reqs: TReqs*): (Seq[Constraint], TReqs) = mergeTReqMaps(req +: reqs)
 
-  def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) = {
-    val (res, time) = Util.timed{
+  def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
+    Util.timed(localState -> Statistics.mergeReqsTime) {
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps(EqConstraint))
     }
-    localState.stats.mergeReqsTime += time
-    res
-  }
 
-  def mergeTReqMaps(reqs: Seq[TReqs]): (Seq[Constraint], TReqs) = {
-    val (res, time) = Util.timed{
+  def mergeTReqMaps(reqs: Seq[TReqs]): (Seq[Constraint], TReqs) =
+    Util.timed(localState -> Statistics.mergeReqsTime) {
       reqs.foldLeft[(Seq[Constraint], TReqs)](tinit)(_mergeReqMaps(EqKindConstraint))
     }
-    localState.stats.mergeReqsTime += time
-    res
-  }
 
   private def _mergeReqMaps[K, V](eqC: (V,V) => Constraint)(was: (Seq[Constraint], Map[K,V]), newReqs: Map[K,V]) = {
     val wasReqs = was._2

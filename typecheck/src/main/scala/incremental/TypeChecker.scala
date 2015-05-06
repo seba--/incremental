@@ -17,18 +17,8 @@ abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] ex
   def gen: G = localState.gen
   def freshSymbol[T](prefix: String): CVar[T] = localState.gen.freshSymbol(prefix)
 
-  def preparationTime: Double = localState.stats.preparationTime
-  def typecheckTime: Double = localState.stats.typecheckTime
-  def constraintCount: Double = localState.stats.constraintCount
-  def mergeReqsTime: Double = localState.stats.mergeReqsTime
-  def constraintSolveTime: Double = localState.stats.constraintSolveTime
-  def mergeSolutionTime: Double = localState.stats.mergeSolutionTime
-  def finalizeTime: Double = localState.stats.finalizeTime
-
-
-
   def typecheck(e: Node): Either[T, TError] = {
-    localState.stats.reset
+    localState.stats.clear()
     csFactory.state.value = localState
     typecheckImpl(e)
   }

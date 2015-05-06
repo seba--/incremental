@@ -1,6 +1,6 @@
 package constraints.equality.impl
 
-import constraints.CVar
+import constraints.{Statistics, CVar}
 import constraints.equality._
 import constraints.equality.CSubst.CSubst
 import incremental.Util
@@ -29,31 +29,26 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
   def never(c: Constraint) = SolveContinuouslyCS(substitution, notyet, never :+ c)
   def without(xs: Set[CVar[_]]) = SolveContinuouslyCS(substitution -- xs, notyet, never)
 
-  def mergeSubsystem(other: SolveContinuouslyCS): SolveContinuouslyCS = {
-    val (res, time) = Util.timed {
+  def mergeSubsystem(other: SolveContinuouslyCS): SolveContinuouslyCS =
+    Util.timed(state -> Statistics.mergeSolutionTime) {
       val msubstitution = substitution ++ other.substitution
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
       SolveContinuouslyCS(msubstitution, mnotyet, mnever)
     }
-    state.stats.mergeSolutionTime += time
-    res
-  }
 
   def addNewConstraint(c: Constraint) = {
-    state.stats.constraintCount += 1
-    val (res, time) = Util.timed(c.solve(this))
-    state.stats.constraintSolveTime += time
-    res
+    state += Statistics.constraintCount -> 1
+    Util.timed(state -> Statistics.constraintSolveTime){
+      c.solve(this)
+    }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state.stats.constraintCount += cons.size
-    val (res, time) = Util.timed {
+    state += Statistics.constraintCount -> cons.size
+    Util.timed(state -> Statistics.constraintSolveTime) {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
-    state.stats.constraintSolveTime += time
-    res
   }
 
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t
@@ -65,11 +60,10 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
 
   def propagate = this
 
-  override def tryFinalize = {
-    val (res, time) = Util.timed (trySolve(true))
-    state.stats.finalizeTime += time
-    res
-  }
+  override def tryFinalize =
+    Util.timed(state -> Statistics.finalizeTime) {
+      trySolve(true)
+    }
 
   private def trySolve(finalize: Boolean): SolveContinuouslyCS = {
     var current = this

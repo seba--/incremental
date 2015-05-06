@@ -1,6 +1,6 @@
 package constraints.normequality.impl
 
-import constraints.CVar
+import constraints.{Statistics, CVar}
 import constraints.normequality._
 import constraints.normequality.CSubst.CSubst
 import incremental.Util
@@ -35,31 +35,26 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, notyet: Seq[Con
 
   lazy val trigger = substitution.size >= threshold
 
-  def mergeSubsystem(other: SolveContinuousSubstThresholdCS): SolveContinuousSubstThresholdCS = {
-    val (res, time) = Util.timed {
+  def mergeSubsystem(other: SolveContinuousSubstThresholdCS): SolveContinuousSubstThresholdCS =
+    Util.timed(state -> Statistics.mergeSolutionTime) {
       val msubstitution = substitution ++ other.substitution
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
       SolveContinuousSubstThresholdCS(msubstitution, mnotyet, mnever)
     }
-    state.stats.mergeSolutionTime += time
-    res
-  }
 
   def addNewConstraint(c: Constraint) = {
-    state.stats.constraintCount += 1
-    val (res, time) = Util.timed(c.solve(this))
-    state.stats.constraintSolveTime += time
-    res
+    state += Statistics.constraintCount -> 1
+    Util.timed(state -> Statistics.constraintSolveTime) {
+      c.solve(this)
+    }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state.stats.constraintCount += cons.size
-    val (res, time) = Util.timed {
+    state += Statistics.constraintCount -> cons.size
+    Util.timed(state -> Statistics.constraintSolveTime) {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
-    state.stats.constraintSolveTime += time
-    res
   }
 
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) =

@@ -1,5 +1,6 @@
 package incremental.systemf
 
+import constraints.Statistics
 import constraints.equality._
 import incremental.{Util, Node_}
 import incremental.Node._
@@ -19,7 +20,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
-    val (res, ctime) = Util.timed(
+    Util.timed(localState -> Statistics.typecheckTime) {
       try {
         val (t, sol_) = typecheckRec(root, Map(), Set())
         val sol = sol_.tryFinalize
@@ -31,9 +32,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
         case ex: UnboundTVariable => Right(s"Unbound type variable ${ex.x} in context ${ex.ctx}")
       }
-    )
-    localState.stats.typecheckTime += ctime
-    res
+    }
   }
 
   def typecheckRec(e: Node_[Result], ctx: TCtx, tctx: Set[Symbol]): Result = {

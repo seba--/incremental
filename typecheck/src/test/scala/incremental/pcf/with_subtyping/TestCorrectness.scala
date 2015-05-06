@@ -14,14 +14,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
 class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
   val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
-  override def afterEach: Unit = {
-    Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
-    Util.log(f"Type-check time\t\t${checker.typecheckTime}%.3fms")
-    Util.log(f"Constraint count\t${checker.constraintCount}")
-    Util.log(f"Cons. solve time\t${checker.constraintSolveTime}%.3fms")
-    Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
-    Util.log(f"Finalize time\t\t${checker.finalizeTime}%.3fms")
-  }
+  override def afterEach: Unit = checker.localState.printStatistics()
 
   import scala.language.implicitConversions
   implicit def eqType(t: Type): PartialFunction[Type,Boolean] = {case t2 => t == t2}

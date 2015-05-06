@@ -1,6 +1,6 @@
 package constraints.subtype.impl
 
-import constraints.{CVar, subtype}
+import constraints.{Statistics, CVar, subtype}
 import constraints.subtype._
 import constraints.subtype.CSubst.CSubst
 import incremental.Util
@@ -58,17 +58,17 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, bounds: Map[CVa
   }
 
   def addNewConstraint(c: Constraint) = {
-    state.stats.constraintCount += 1
-    val (res, time) = Util.timed(c.solve(this).trySolve)
-    state.stats.constraintSolveTime += time
-    res
+    state += Statistics.constraintCount -> 1
+    Util.timed(state -> Statistics.constraintSolveTime) {
+      c.solve(this).trySolve
+    }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state.stats.constraintCount += cons.size
-    val (res, time) = Util.timed(cons.foldLeft(this)((cs, c) => c.solve(cs)).trySolve)
-    state.stats.constraintSolveTime += time
-    res
+    state += Statistics.constraintCount -> cons.size
+    Util.timed(state -> Statistics.constraintSolveTime) {
+      cons.foldLeft(this)((cs, c) => c.solve(cs)).trySolve
+    }
   }
 
   def tryFinalize =

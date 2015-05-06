@@ -1,6 +1,6 @@
 package constraints.subtype.impl
 
-import constraints.{CVar, subtype}
+import constraints.{Statistics, CVar, subtype}
 import constraints.subtype._
 import constraints.subtype.CSubst.CSubst
 import incremental.Util
@@ -25,27 +25,25 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
 
   def never(c: Constraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
 
-  def mergeSubsystem(that: SolveEndCS) = {
-    val (res, time) = Util.timed {
+  def mergeSubsystem(that: SolveEndCS) =
+    Util.timed(state -> Statistics.mergeSolutionTime) {
       val mnotyet = notyet ++ that.notyet
       SolveEndCS(mnotyet)
     }
-    state.stats.mergeSolutionTime += time
-    res
-  }
+
 
   override def addNewConstraint(c: Constraint) = {
-    state.stats.constraintCount += 1
-    val (res, time) = Util.timed(SolveEndCS(notyet :+ c))
-    state.stats.constraintSolveTime += time
-    res
+    state += Statistics.constraintCount -> 1
+    Util.timed(state -> Statistics.constraintSolveTime) {
+      SolveEndCS(notyet :+ c)
+    }
   }
 
   override def addNewConstraints(cons: Iterable[Constraint]) = {
-    state.stats.constraintCount += cons.size
-    val (res, time) = Util.timed(SolveEndCS(notyet ++ cons))
-    state.stats.constraintSolveTime += time
-    res
+    state += Statistics.constraintCount -> cons.size
+    Util.timed(state -> Statistics.constraintSolveTime) {
+      SolveEndCS(notyet ++ cons)
+    }
   }
 
   def tryFinalize =

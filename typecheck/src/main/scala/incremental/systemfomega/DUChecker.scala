@@ -1,5 +1,6 @@
 package incremental.systemfomega
 
+import constraints.Statistics
 import constraints.normequality._
 import incremental.{Util, Node_}
 import incremental.Node._
@@ -21,8 +22,8 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type Result[T] = (T, CS)
 
-  def typecheckImpl(e: Node): Either[Type, TError] = {
-    val (res, ctime) = Util.timed(
+  def typecheckImpl(e: Node): Either[Type, TError] =
+    Util.timed(localState -> Statistics.typecheckTime) {
       try {
         val (t, sol_) = typecheckExpRec(e, Map(), Map())
         val sol = sol_.tryFinalize
@@ -34,10 +35,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
         case ex: UnboundTVariable => Right(s"Unbound type variable ${ex.x} in context ${ex.ctx}")
       }
-    )
-    localState.stats.typecheckTime += ctime
-    res
-  }
+    }
 
   def typecheckExpRec(e: Node, ctx: Ctx, tctx: TCtx): Result[Type] = {
     val (t, cons, css) = typecheckExpStep(e, ctx, tctx)

@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import constraints.{CVar, equality}
+import constraints.{Statistics, CVar, equality}
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveContinuously, SolveEnd}
 import constraints.equality.ConstraintSystem
 import incremental.Node._
@@ -13,14 +13,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
 class TestIncremental[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
   var checker: TypeChecker[CS] = checkerFactory.makeChecker
 
-  override def afterEach: Unit = {
-    Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
-    Util.log(f"Type-check time\t\t${checker.typecheckTime}%.3fms")
-    Util.log(f"Constraint count\t${checker.constraintCount}")
-    Util.log(f"Cons. solve time\t${checker.constraintSolveTime}%.3fms")
-    Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
-    Util.log(f"Finalize time\t\t${checker.finalizeTime}%.3fms")
-  }
+  override def afterEach: Unit = checker.localState.printStatistics()
 
   def incTypecheckTest(desc: String, e: =>Node)(expected: equality.Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
   def incTypecheckTest(desc: String, e: =>Node, mod: =>Unit)(expected: equality.Type)(consCount: Int): Unit =
@@ -28,7 +21,7 @@ class TestIncremental[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val Unit = mod
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
-      assertResult(consCount, "solved constraint(s)")(checker.constraintCount)
+      assertResult(consCount, "solved constraint(s)")(checker.localState.stats(Statistics.constraintCount))
     }
 
   def typecheckTestError(e: =>Node) =
