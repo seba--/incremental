@@ -64,11 +64,15 @@ case class TVar(alpha : Symbol) extends PolType {
   def freeTVars = Set(alpha)
   def occurs(x2: CVar[_]) = alpha == x2
   def subst(s: CSubst) = this
-  def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
-    case TVar(`alpha`) => cs
-    case UVar(x) => other.unify(this, cs)
-    case _ => cs.never(EqConstraint(this, other))
-  }
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) =
+    if (this == other) cs
+    else cs.substitution.hget(CVar[Type](alpha)) match {
+      case None => other match {
+        case UVar(x) => other.unify(this, cs)
+        case _ => cs.never(EqConstraint(this, other))
+      }
+      case Some(t) => t.unify(other, cs)
+    }
 }
 
 case class TUniv(alpha : Symbol, t : Type) extends PolType {
@@ -77,7 +81,7 @@ case class TUniv(alpha : Symbol, t : Type) extends PolType {
   def subst(s: CSubst) = TUniv(alpha, t.subst(s))
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
     case UUniv(alpha2, t2) => t.unify(t2, cs.solved(CSubst(alpha2 -> TVar(alpha))))
-    case TUniv(alpha2, t2) => t.unify(t2, cs.solved(CSubst(CVar[Type](alpha2) -> TVar(alpha)))) without Set(CVar(alpha2))
+    case TUniv(alpha2, t2) => t.unify(t2, cs.solved(CSubst(CVar[Type](alpha) -> TVar(alpha2)))) without Set(CVar(alpha))
     case UVar(_) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
