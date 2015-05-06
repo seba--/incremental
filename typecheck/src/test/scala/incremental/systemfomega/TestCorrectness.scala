@@ -76,6 +76,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   // test type operators
   def tId = TTAbs.Kind('X, KStar, TVar.Kind('X))
+  def tNumOp = TTAbs.Kind('F, KArrow(KStar, KStar), TTApp.Kind(TVar.Kind('F), TNum.Kind()))
 
   typecheckTest("\\A::*=>* \\x:(A TNum()). x",
     TAbs('a, KArrow(KStar, KStar), Abs('x, TTApp.Kind(TVar.Kind('a), TNum.Kind()), Var('x))))(
@@ -83,6 +84,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   )
 
   typecheckTest("\\x:(tId TNum()). x", Abs('x, TTApp.Kind(tId, TNum.Kind()), Var('x)))(TFun(TNum(), TNum()))
+  typecheckTest("\\x:(tId TNum()). x [2]", Abs('x, TTApp.Kind(tId, TNum.Kind()), Var('x)))(TFun(TNum(), TTApp(Type.from(tId), TNum())))
+
+  typecheckTest("\\x:(tNumOp tId). x", Abs('x, TTApp.Kind(tNumOp, tId), Var('x)))(TFun(TNum(), TNum()))
+  typecheckTest("\\x:(tNumOp tId). \\y:(tNumOp tId). x + y", Abs('x, TTApp.Kind(tNumOp, tId), Abs('y, TTApp.Kind(tNumOp, tId), Add(Var('x), Var('y)))))(TFun(TNum(), TFun(TNum(), TNum())))
 }
 
 class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
