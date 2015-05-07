@@ -10,6 +10,9 @@ import incremental.Node._
 
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
 
+  val opts = org.scalameter.api.Context(
+    exec.jvmflags -> "-server -Xmx8G -Xms64M"
+  )
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
@@ -49,7 +52,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
 
   /* ADD */
 
-  performance of "Tree{Add,[1..n]}" in {
+  performance of "Tree{Add,[1..n]}" config (opts) in {
     val trees: Gen[Node] = for {
       height <- heights
     } yield makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
@@ -57,7 +60,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
-  performance of "Abs{x,Tree{Add,[x..x]}}" in {
+  performance of "Abs{x,Tree{Add,[x..x]}}" config (opts) in {
     val trees: Gen[Node] = for {
       height <- heights
     } yield Abs('x, makeBinTree(height, Add, constantLeaveMaker(Var('x))))
@@ -65,7 +68,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
-  performance of "Abs{x,Tree{Add,[x1..xn]}}" in {
+  performance of "Abs{x,Tree{Add,[x1..xn]}}" config (opts) in {
     val trees: Gen[Node] = for {
       height <- heights
     } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
@@ -78,7 +81,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
 
   /* APP */
 
-  performance of "Tree{App,[1..n]}" in {
+  performance of "Tree{App,[1..n]}" config (opts) in {
     val trees: Gen[Node] = for {
       height <- heights
     } yield makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
@@ -86,7 +89,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
-  performance of "Abs{x,Tree{App,[x..x]}}" in {
+  performance of "Abs{x,Tree{App,[x..x]}}" config (opts) in {
     val trees: Gen[Node] = for {
       height <- heights
     } yield Abs('x, makeBinTree(height, App, constantLeaveMaker(Var('x))))
@@ -94,7 +97,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
     measureCheckers(trees)
   }
 
-  performance of "Abs{x,Tree{App,[x1..xn]}}" in {
+  performance of "Abs{x,Tree{App,[x1..xn]}}" config (opts) in {
     val trees: Gen[Node] = for {
       height <- heights
     } yield Abs(usedVars(height), makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
