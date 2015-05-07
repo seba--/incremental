@@ -18,11 +18,18 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
     seq.foldLeft(0){ case (i, n) => i.max(n._height) } + incr
   }
 
+  protected def sumSize(seq: Seq[Node_[T]]): Int = {
+    seq.foldLeft(1){ case (s, n) => s + n.size }
+  }
+
   private var _height: Int = maxHeight(kidsArg)
+  private var _size = sumSize(kidsArg)
   private var _typ: T = _
   private var _valid = false
 
   def height = _height
+
+  def size = _size
   def valid = _valid // needed for propagation pruning
   def typ = _typ
   def typ_=(t: T): Unit = {
@@ -48,6 +55,7 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
         ee._typ = kids(i)._typ
       _kids(i) = ee
       _height = maxHeight(_kids)
+      _size = sumSize(_kids)
     }
     def seq: Seq[Node_[T]] = _kids
   }

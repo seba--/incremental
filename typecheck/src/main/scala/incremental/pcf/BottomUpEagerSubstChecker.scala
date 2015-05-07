@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import akka.actor.{Props, Inbox, ActorSystem}
+import akka.actor.{PoisonPill, Props, Inbox, ActorSystem}
 import scala.concurrent.{ExecutionContext, Await, Promise, Future}
 import scala.concurrent.duration._
 import ExecutionContext.Implicits.global
@@ -171,6 +171,7 @@ class BottomUpEagerSubstCheckerConcurrent(implicit system: ActorSystem)  extends
         Left(t)
     }
     typecheckTime += ctime
+    actor ! PoisonPill
     res
   }
 }
@@ -180,12 +181,12 @@ object BottomUpEagerSubstConcurrentCheckerFactory extends TypeCheckerFactory[Typ
 }
 
 class FuturisticBottomUpEagerSubstChecker extends BottomUpEagerSubstChecker {
-  val clusterHeight = 3
+  val clusterHeight = 4
   def bottomUpFuture(e: Node): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
-    def recurse(e: Node): (Future[Any], Int) = {
-      if (e.height <= clusterHeight) {
+    def recurse(e: Node): (Seq[Future[Any]], Int) = {
+      if (e.height == clusterHeight) {
         val f = fut map { _ =>
           e.visitUninitialized { e =>
             val ee = e.withType[Result]
@@ -193,30 +194,31 @@ class FuturisticBottomUpEagerSubstChecker extends BottomUpEagerSubstChecker {
             true
           }
         }
-        (f, 1)
+        (List(f), 1)
       }
       else {
         val (fs, hops) = (e.kids.seq.map { k => recurse(k) }).unzip
         val max = hops.foldLeft(0) { case (i,j) => i.max(j) }
-        val join = Future.sequence(fs)
 
-        val future =
-          if ((max % clusterHeight) == 0)
-            join.map { _ =>
+
+        if ((max % clusterHeight) == 0) {
+          val join = Future.fold(fs.flatten)(()) { case x => () }
+          val future = join.map { _ =>
               e.visitUninitialized { e =>
                 val ee = e.withType[Result]
                 ee.typ = typecheckStep(ee)
                 true
               }
             }
-          else
-            join
-
-        (future, max + 1)
+          (List(future), max + 1)
+        }
+        else
+          (fs.flatten, max + 1)
       }
     }
 
-    val (res, hops) = recurse(e)
+    val (fs, hops) = recurse(e)
+    val res = Future.sequence(fs)
 
     if ((e.height % clusterHeight) != 0) {
       val res2 = res map { _ =>
