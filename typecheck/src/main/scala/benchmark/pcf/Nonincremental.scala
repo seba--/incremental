@@ -11,7 +11,7 @@ import incremental.Node._
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
 
   val opts = org.scalameter.api.Context(
-    exec.jvmflags -> "-server -Xmx8192m -Xms8192m"
+    exec.jvmflags -> "-server -Xmx8192m -Xms8192m -XX:CompileThreshold=100"
   )
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
