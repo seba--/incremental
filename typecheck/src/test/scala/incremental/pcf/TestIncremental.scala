@@ -1,33 +1,27 @@
 package incremental.pcf
 
+import constraints.{Statistics, CVar, equality}
+import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveContinuously, SolveEnd}
+import constraints.equality.ConstraintSystem
 import incremental.Node._
-import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
+import incremental.Util
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
  * Created by seba on 14/11/14.
  */
-class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker[Type] = _
+class TestIncremental[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  var checker: TypeChecker[CS] = checkerFactory.makeChecker
 
-  override def beforeEach: Unit = {
-    checker = checkerFactory.makeChecker
-  }
-  override def afterEach: Unit = {
-    Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
-    Util.log(f"Type-check time\t\t${checker.typecheckTime}%.3fms")
-    Util.log(f"Constraint count\t${checker.constraintCount}")
-    Util.log(f"Cons. solve time\t${checker.constraintSolveTime}%.3fms")
-    Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
-  }
+  override def afterEach: Unit = checker.localState.printStatistics()
 
-  def incTypecheckTest(desc: String, e: =>Node)(expected: Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
-  def incTypecheckTest(desc: String, e: =>Node, mod: =>Unit)(expected: Type)(consCount: Int): Unit =
+  def incTypecheckTest(desc: String, e: =>Node)(expected: equality.Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
+  def incTypecheckTest(desc: String, e: =>Node, mod: =>Unit)(expected: equality.Type)(consCount: Int): Unit =
     test (s"$classdesc: Type check $desc") {
       val Unit = mod
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
-      assertResult(consCount, "solved constraint(s)")(checker.constraintCount)
+      assertResult(consCount, "solved constraint(s)")(checker.localState.stats(Statistics.constraintCount))
     }
 
   def typecheckTestError(e: =>Node) =
@@ -52,7 +46,7 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   incTypecheckTest("add4 again", add4)(TNum)(0)
 
   lazy val fun1 = Abs('x, add4)
-  incTypecheckTest("\\x. add4", fun1)(TFun(UVar('x$0), TNum))(0)
+  incTypecheckTest("\\x. add4", fun1)(TFun(UVar(CVar('x$0)), TNum))(0)
   incTypecheckTest("\\x. x + x", fun1, fun1.kids(0) = Add(Var('x), Var('x)))(TFun(TNum, TNum))(3)
   lazy val app1 = Add(App(fun1, Num(3)), Add(Num(1), Num(2)))
   incTypecheckTest("(\\x. x+x) 3 + (1 + 2)", app1)(TNum)(5)
@@ -63,5 +57,7 @@ class TestIncremental(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   incTypecheckTest("factorial base 1", fac, fac match {case Fix(Abs(Abs(e@If0(_,_,_)))) => e.kids(1) = Num(1)})(TFun(TNum, TNum))(4)
 }
 
-class TestBottomUpIncremental extends TestIncremental("BottomUp", BottomUpEagerSubstCheckerFactory)
-//class TestBottomUpEarlyTermIncremental extends TestIncremental("BottomUpEarlyTerm", BottomUpEarlyTermCheckerFactory)
+class TestBUSolveEndIncremental extends TestIncremental("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+class TestBUSolveContinuouslyIncremental extends TestIncremental("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
+class TestBUSolveContinuousSubstIncremental extends TestIncremental("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuousSubstThresholdIncremental extends TestIncremental("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
