@@ -21,8 +21,8 @@ case object ExprStm extends Stm(simple(cExpr))
 case object If extends Stm(simple(Seq(cExpr, cStm)))
 case object IfElse extends Stm(simple(Seq(cExpr, cStm, cStm)))
 
-abstract class BlockStm(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Stm(syntaxcheck)
-case object Block extends BlockStm(_ => BlockSyntax)
+abstract class Block(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Stm(syntaxcheck)
+case object Block extends Block(_ => BlockSyntax)
 
 case object LocalVarDec() extends Stm // TODO local var dec/var dec
 

@@ -53,6 +53,23 @@ object FieldDecSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
   }
 }
 
+object ArrayVarDecIdSyntax extends SyntaxChecking.SyntaxChecker(ArrayVarDecId) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(lits.size != 1)
+      error(s"Just one literal allowed, but found ${lits.size}")
+
+    if(!classOf[String].isInstance(lits(0)))
+      error(s"The first literal must be an identifier, but was ${lits(0).getClass}")
+
+    if(kids.size == 0)
+      error(s"Kids must not be empty")
+
+    if(kids.exists(!_.kind.isInstanceOf[Dimension]))
+      error(s"All kids must be of kind Dim, but found ${kids.filter(!_.kind.isInstanceOf[Dimension])}")
+  }
+}
+
+/*
 object ArrayVarDecSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(lits.size != 1)
@@ -87,7 +104,7 @@ object ArrayVarDecInitSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
     if(!classOf[Expr].isInstance(kids(kids.size-1)) || !classOf[ArrayInit].isInstance(kids(kids.size-1)))
       error(s"The last kid must be of kind Expr or ArrayInit, but was ${kids(kids.size-1).getClass}")
   }
-}
+}*/
 
 object MethodInvokationSyntax extends SyntaxChecking.SyntaxChecker(Invoke) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
@@ -104,6 +121,49 @@ object MethodInvokationSyntax extends SyntaxChecking.SyntaxChecker(Invoke) {
       for(i <- 1 until kids.size)
         if(!classOf[Expr].isInstance(kids(i).kind))
           error(s"All argument kinds must be of kind Expr, but found ${kids(i).kind.getClass}")
+  }
+}
+
+object MethodDecHeadSyntax extends SyntaxChecking.SyntaxChecker(MethodDeclarationHead) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    /* TODO: (Anno | MethodMod)*
+     *
+     */
+    if(kids.exists(!_.kind.isInstanceOf[FormalParam]))
+      error(s"All kids must be of kind FormalParam, but found ${kids.filter(!_.kind.isInstanceOf[FormalParam])}")
+  }
+}
+
+object DeprMethodDecHeadSyntax extends SyntaxChecking.SyntaxChecker(DeprMethodDeclarationHead) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    // TODO: (Anno | MethodMod)*
+  }
+}
+
+object ConstrDecHeadSyntax extends SyntaxChecking.SyntaxChecker(ConstrDecHead) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    // TODO: ( Anno | ConstrMod )* TypeParams? Id "(" {FormalParam ","}* ")" Throws?
+  }
+}
+
+object ConstrBodySyntax extends SyntaxChecking.SyntaxChecker(ConstrBody) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    // TODO: "{" ConstrInv? BlockStm* "}"
+  }
+}
+
+case class ConstrInvSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    // TODO: reject QSuperConstrInv (maybe split)
+
+    // TODO: TypeArgs? "this" "(" {Expr ","}* ")" ";"
+    // TODO: same for "super"
+  }
+}
+
+object QConstrInvSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    // TODO: Expr "." TypeArgs? "super" "(" {Expr ","}* ")" ";"
   }
 }
 
