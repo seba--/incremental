@@ -101,6 +101,27 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       false
   }
 
+  def visitInvalid(f: Node_[T] => Boolean): Boolean = {
+    val invalidKids = _kids.filter(!_.valid)
+    val hasSubchange = invalidKids.foldLeft(false){ (changed, k) => k.visitInvalid(f) || changed }
+
+    if (!valid || hasSubchange)
+      f(this)
+    else
+      false
+  }
+
+  def visitUpto(depth: Int)(f: Node_[T] => Boolean): Boolean = {
+    if (depth > 0) {
+      val hasSubchange = _kids.foldLeft(false){ (changed, k) => k.visitUpto(depth - 1)(f) || changed }
+      if (!valid || hasSubchange)
+        f(this)
+      else false
+    }
+    else
+      false
+  }
+
   override def toString = {
     val subs = lits.map(_.toString) ++ _kids.map(_.toString)
     val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail
