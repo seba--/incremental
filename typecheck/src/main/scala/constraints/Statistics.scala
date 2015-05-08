@@ -11,4 +11,6 @@ object Statistics {
   val finalizeTime = "finalizeTime"
   val typecheckTime = "typecheckTime"
   val mergeReqsTime = "mergeReqsTime"
+
+  val keys = Seq(mergeSolutionTime, constraintCount, constraintSolveTime, finalizeTime, typecheckTime, mergeReqsTime)
 }

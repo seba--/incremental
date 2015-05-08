@@ -90,4 +90,4 @@ class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveCont
 class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
 
-class TestFuturisticBUSolveContinuousSubstCorrectness extends TestCorrectness("FuturisticBUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestFuturisticBUSolveContinuousSubstCorrectness extends TestCorrectness("FuturisticBUSolveContinuousSubst", new FuturisticBUCheckerFactory(SolveContinuousSubst))

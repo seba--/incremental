@@ -1,5 +1,6 @@
 package benchmark.pcf
 
+import constraints.equality.impl.SolveContinuousSubst
 import incremental.{TypeChecker, TypeCheckerFactory}
 import org.scalameter.DSL
 import org.scalameter.api._
@@ -11,7 +12,7 @@ import incremental.Node._
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
 
   val opts = org.scalameter.api.Context(
-    exec.jvmflags -> "-server -Xmx8192m -Xms8192m -XX:CompileThreshold=100"
+    exec.jvmflags -> "-server -Xmx2048m -Xms2048m -XX:CompileThreshold=100"
   )
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
@@ -22,6 +23,8 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
    // measureT("BottomUpIncrementalSolve", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
    // measureT("BottomUpEagerSubst", (e:Node) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
 
+    measureT("BUSolveContinuousSubst", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+    measureT("FuturisticBUSolveContinuousSubst", (e:Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     //measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
    // measureT("BottomUpEagerSubstConcurrent", (e:Node) => BottomUpEagerSubstConcurrentCheckerFactory.makeChecker.typecheck(e))(trees)
 

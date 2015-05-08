@@ -12,12 +12,12 @@ import incremental._
  * Created by seba on 13/11/14.
  */
 abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS] {
-  val clusterHeight = 4
+  val clusterSize = 3
   def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
     def recurse(e: Node_[Result]): (Seq[Future[Any]], Int) = {
-      if (e.size == clusterHeight) {
+      if (e.size == clusterSize) {
         val f = fut map { _ =>
           e.visitInvalid { e =>
             typecheckRec(e)
@@ -31,7 +31,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
         val nodecount = nodecounts.sum
         val remaining = e.size - nodecount
 
-        if (remaining >= clusterHeight) { //TODO == ?
+        if (remaining >= clusterSize) { //TODO == ?
           val join = Future.fold(fs.flatten)(()) { (x,y) => () }
           val future = join.map { _ =>
               e.visitInvalid { e =>
@@ -52,6 +52,53 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
     if (e.size != nodecount)  {
       val res2 = res map { _ =>
         e.visitInvalid { e =>
+          typecheckRec(e)
+          true
+        }
+      }
+      (res2, trigger)
+    }
+    else (res, trigger)
+  }
+
+  val clusterHeight = 4
+  def bottomUpFutureOld(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
+    val trigger: Promise[Unit] = Promise()
+    val fut = trigger.future
+    def recurse(e: Node_[Result]): (Future[Any], Int) = {
+      if (e.height == clusterHeight) {
+        val f = fut map { _ =>
+          e.visitUninitialized { e =>
+            typecheckRec(e)
+            true
+          }
+        }
+        (f, 1)
+      }
+      else {
+        val (fs, hops) = (e.kids.seq.map { k => recurse(k) }).unzip
+        val max = hops.foldLeft(0) { case (i,j) => i.max(j) }
+        val join = Future.fold(fs)(()) { case x => () }
+
+        if ((max % clusterHeight) == 0) {
+          val future = join.map { _ =>
+            e.visitUninitialized { e =>
+              typecheckRec(e)
+              true
+            }
+          }
+          (future, max + 1)
+        }
+        else
+          (join, max + 1)
+      }
+    }
+
+    val (res, hops) = recurse(e)
+
+    if ((e.height % clusterHeight) != 0) {
+      val res2 = res map { _ =>
+        e.visitUninitialized { e =>
           typecheckRec(e)
           true
         }
