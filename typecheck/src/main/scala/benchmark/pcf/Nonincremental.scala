@@ -12,7 +12,7 @@ import incremental.Node._
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
 
   val opts = org.scalameter.api.Context(
-    exec.jvmflags -> "-server -Xmx2048m -Xms2048m -XX:CompileThreshold=100"
+    exec.jvmflags -> "-server -Xmx4096m -Xms2048m -XX:CompileThreshold=100"
   )
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
@@ -25,6 +25,7 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
 
     measureT("BUSolveContinuousSubst", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     measureT("FuturisticBUSolveContinuousSubst", (e:Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+    measureT("FuturisticHeightBUSolveContinuousSubst", (e:Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     //measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
    // measureT("BottomUpEagerSubstConcurrent", (e:Node) => BottomUpEagerSubstConcurrentCheckerFactory.makeChecker.typecheck(e))(trees)
 

@@ -18,7 +18,7 @@ abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeC
     def apply(from: Iterable[(K,V)]) = from.foldLeft(new MyBuilder[K,V])((b, p) => b += ((p) -> p._2))
   }
 
-  def freshUVar() = UVar(freshSymbol("x$" + Thread.currentThread().getId() + "$"))
+  def freshUVar() = UVar(freshSymbol("x$"))
 }
 
 trait TypeCheckerFactory[CS <: ConstraintSystem[CS]] {

@@ -102,9 +102,10 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   }
 
   def visitInvalid(f: Node_[T] => Boolean): Boolean = {
-    val invalidKids = _kids.filter(!_.valid)
-    val hasSubchange = invalidKids.foldLeft(false){ (changed, k) => k.visitInvalid(f) || changed }
-
+    var hasSubchange = false
+    for(k <- _kids if !k.valid) {
+      hasSubchange = k.visitInvalid(f)  || hasSubchange
+    }
     if (!valid || hasSubchange)
       f(this)
     else
