@@ -8,6 +8,8 @@ import benchmark.ExpGenerator._
 import incremental.pcf._
 import incremental.Node._
 
+import scala.io.StdIn
+
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
 
 
@@ -112,10 +114,19 @@ object Nonincremental {
 
     val scalameterArgs = Array("-CresultDir", "./benchmark/nonincremental")
 
-    if (kind == "report" || kind == "offlinereport")
-      new NonincrementalOfflineReport(maxHeight).main(scalameterArgs)
-    else if (kind == "micro" || kind == "microbenchmark")
-      new NonincrementalMicroBenchmark(maxHeight).main(scalameterArgs)
+    kind match {
+      case "report" | "offlinereport" =>
+        new NonincrementalOfflineReport(maxHeight).main(scalameterArgs)
+      case "micro" | "microbenchmark" =>
+        new NonincrementalMicroBenchmark(maxHeight).main(scalameterArgs)
+      case "quick" =>
+        println("prepare your profiler, then hit enter")
+        StdIn.readLine()
+        new NonincrementalQuickBenchmark(maxHeight).main(scalameterArgs)
+      case _ =>
+        throw new IllegalArgumentException(s"parameter $kind not understood")
+    }
+
   }
 }
 
@@ -133,3 +144,7 @@ class NonincrementalOfflineReport(maxHeight: Int)
     HtmlReporter(!online)
   )
 }
+
+class NonincrementalQuickBenchmark(maxHeight: Int)
+  extends NonincrementalPerformanceTest(maxHeight)
+  with PerformanceTest.Quickbenchmark
