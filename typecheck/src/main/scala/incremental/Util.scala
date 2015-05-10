@@ -1,6 +1,7 @@
 package incremental
 
 import constraints.State
+import constraints.Statistics.Statistics
 
 import scala.collection.mutable
 
@@ -26,7 +27,7 @@ object Util {
     (a, time)
   }
 
-  def timed[A](statsKey: (State[_], String))(f: => A): A = {
+  def timed[A](statsKey: (State[_], Statistics))(f: => A): A = {
     val start = System.nanoTime()
     val a = f
     val end = System.nanoTime()
