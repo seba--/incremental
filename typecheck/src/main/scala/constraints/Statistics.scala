@@ -6,10 +6,10 @@ package constraints
 
 object Statistics extends Enumeration {
   type Statistics = Value
-  val mergeSolutionTime = Value
   val constraintCount = Value
   val constraintSolveTime = Value
+  val mergeSolutionTime = Value
+  val mergeReqsTime = Value
   val finalizeTime = Value
   val typecheckTime = Value
-  val mergeReqsTime = Value
 }
