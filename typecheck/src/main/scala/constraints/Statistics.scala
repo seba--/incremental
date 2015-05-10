@@ -4,13 +4,12 @@ package constraints
  * Created by seba on 13/11/14.
  */
 
-object Statistics {
-  val mergeSolutionTime = "mergeSolutionTime"
-  val constraintCount = "constraintCount"
-  val constraintSolveTime = "constraintSolveTime"
-  val finalizeTime = "finalizeTime"
-  val typecheckTime = "typecheckTime"
-  val mergeReqsTime = "mergeReqsTime"
-
-  val keys = Seq(mergeSolutionTime, constraintCount, constraintSolveTime, finalizeTime, typecheckTime, mergeReqsTime)
+object Statistics extends Enumeration {
+  type Statistics = Value
+  val constraintCount = Value
+  val constraintSolveTime = Value
+  val mergeSolutionTime = Value
+  val mergeReqsTime = Value
+  val finalizeTime = Value
+  val typecheckTime = Value
 }

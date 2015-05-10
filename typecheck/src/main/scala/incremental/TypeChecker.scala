@@ -17,8 +17,8 @@ abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] ex
   def gen: G = localState.gen
   def freshSymbol[T](prefix: String): CVar[T] = localState.gen.freshSymbol(prefix)
 
-  final def typecheck(e: Node): Either[T, TError] = {
-    localState.stats.clear()
+  def typecheck(e: Node): Either[T, TError] = {
+    localState.resetStats()
     csFactory.state.value = localState
     typecheckImpl(e)
   }
