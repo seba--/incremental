@@ -1,0 +1,146 @@
+package benchmark.pcf
+
+import constraints.equality.impl.SolveContinuousSubst
+import incremental.{TypeChecker, TypeCheckerFactory}
+import org.scalameter.DSL
+import org.scalameter.api._
+import benchmark.ExpGenerator._
+
+import incremental.pcf._
+import incremental.Node._
+
+import scala.io.StdIn
+
+class LightweightPerformanceTest(maxHeight: Int) {
+
+
+
+  val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
+
+  def measureCheckers(trees: Gen[Node]): Unit = {
+   // measureT("DownUp", (e:Node) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
+   // measureT("BottomUpSolveEnd", (e:Node) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
+   // measureT("BottomUpIncrementalSolve", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+   // measureT("BottomUpEagerSubst", (e:Node) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+
+    measureT("BUSolveContinuousSubst", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+    measureT("FuturisticBUSolveContinuousSubst", (e:Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+    measureT("FuturisticHeightBUSolveContinuousSubst", (e:Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+    //measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+   // measureT("BottomUpEagerSubstConcurrent", (e:Node) => BottomUpEagerSubstConcurrentCheckerFactory.makeChecker.typecheck(e))(trees)
+
+   // measureT(s"BottomUpSometimesEagerSubst-10", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
+//    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
+//    val tupled = Gen.tupled(trees,thresholds)
+//    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
+  }
+
+  def measureT(name: String, check: Node => _)(trees: Gen[Node]): Unit = {
+    var iterations = 0
+    var time = 0.0
+
+    trees.warmupset.foreach{ tree =>
+        tree.invalidate
+        val start = System.nanoTime()
+        check(tree)
+        val end = System.nanoTime()
+        time += (end-start)
+        iterations += 1
+    }
+
+    val avg = if (iterations == 0) time else time/(1000000.0*iterations)
+
+    println(s"$name: ${avg}ms")
+  }
+
+  private def performance(name: String)(thunk: => Any): Unit = {
+    println("---------------------------------- " + name)
+    val x = thunk
+    println("===================================")
+    println()
+    println()
+  }
+
+//  def measureTwith[T](name: String, check: ((Exp,T)) => _)(trees: Gen[(Exp,T)]): Unit = {
+//    measure method (name) in {
+//      using(trees).
+//        setUp { _._1.invalidate }.
+//        in { check }
+//    }
+//  }
+
+
+
+  /* ADD */
+
+  performance("Tree{Add,[1..n]}") {
+    val trees: Gen[Node] = for {
+      height <- heights
+    } yield makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
+
+    measureCheckers(trees)
+  }
+
+  performance("Abs{x,Tree{Add,[x..x]}}") {
+    val trees: Gen[Node] = for {
+      height <- heights
+    } yield Abs('x, makeBinTree(height, Add, constantLeaveMaker(Var('x))))
+
+    measureCheckers(trees)
+  }
+
+  performance("Abs{x,Tree{Add,[x1..xn]}}") {
+    val trees: Gen[Node] = for {
+      height <- heights
+    } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
+
+    measureCheckers(trees)
+  }
+
+
+
+
+  /* APP */
+
+  performance("Tree{App,[1..n]}") {
+    val trees: Gen[Node] = for {
+      height <- heights
+    } yield makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
+
+    measureCheckers(trees)
+  }
+
+  performance("Abs{x,Tree{App,[x..x]}}") {
+    val trees: Gen[Node] = for {
+      height <- heights
+    } yield Abs('x, makeBinTree(height, App, constantLeaveMaker(Var('x))))
+
+    measureCheckers(trees)
+  }
+
+  performance("Abs{x,Tree{App,[x1..xn]}}") {
+    val trees: Gen[Node] = for {
+      height <- heights
+    } yield Abs(usedVars(height), makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
+
+    measureCheckers(trees)
+  }
+}
+
+
+
+
+object NonincrementalLightweight {
+  def main(args: Array[String]): Unit = {
+    if (args.size != 1)
+      throw new IllegalArgumentException("Expected arguments: maxHeight")
+
+    val maxHeight = args(0).toInt
+
+
+    println("prepare profiler, then hit enter")
+    StdIn.readLine()
+    new LightweightPerformanceTest(maxHeight)
+  }
+}
+
