@@ -26,7 +26,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
             true
           }
         }
-        (List(f), e.size)
+        (Seq(f), e.size)
       }
       else {
         val (fs, nodecounts) = (e.kids.seq.map { k => recurse(k) }).unzip
@@ -41,7 +41,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
                 true
               }
             }
-          (List(future), e.size)
+          (Seq(future), e.size)
         }
         else
           (fs.flatten, nodecount)
@@ -147,6 +147,63 @@ abstract class FuturisticHeightBUChecker[CS <: ConstraintSystem[CS]] extends Fut
 
 case class FuturisticHeightBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
   def makeChecker = new FuturisticHeightBUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
+}
+
+abstract class FuturisticHeightListBUChecker[CS <: ConstraintSystem[CS]] extends FuturisticHeightBUChecker[CS] {
+
+  override def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
+    val trigger: Promise[Unit] = Promise()
+    val fut = trigger.future
+    def recurse(e: Node_[Result]): (Seq[Future[Any]], Int) = {
+      if (e.height == clusterParam) {
+        val f = fut map { _ =>
+          e.visitInvalid { e =>
+            typecheckRec(e)
+            true
+          }
+        }
+        (Seq(f), 1)
+      }
+      else {
+        val (fs, hops) = (e.kids.seq.map { k => recurse(k) }).unzip
+        val max = hops.foldLeft(0) { case (i,j) => i.max(j) }
+
+        if ((max % clusterParam) == 0) {
+          val join = Future.fold(fs.flatten)(()) { case x => () }
+          val future = join.map { _ =>
+            e.visitInvalid { e =>
+              typecheckRec(e)
+              true
+            }
+          }
+          (Seq(future), max + 1)
+        }
+        else
+          (fs.flatten, max + 1)
+      }
+    }
+
+    val (fs, hops) = recurse(e)
+    val res = Future.sequence(fs)
+
+    if ((e.height % clusterParam) != 0) {
+      val res2 = res map { _ =>
+        e.visitInvalid { e =>
+          typecheckRec(e)
+          true
+        }
+      }
+      (res2, trigger)
+    }
+    else (res, trigger)
+  }
+}
+
+case class FuturisticHeightListBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new FuturisticHeightListBUChecker[CS] {
     type CSFactory = factory.type
     implicit val csFactory: CSFactory = factory
   }
