@@ -5,6 +5,7 @@ package util
 /**
  * Created by oliver on 07.05.15.
  */
+@deprecated("this indirection should be removed", "2015-05-11") 
 class NotSoDynamicVariable[T](init :T) {
 
   private var _value: T = init
