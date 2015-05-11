@@ -5,7 +5,7 @@ import constraints.equality._
 import incremental.{Node_, Util}
 import incremental.Node.Node
 
-abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
+abstract class BUChecker[CS <: ConstraintSystem[CS]](threaded: Boolean = false) extends TypeChecker[CS](threaded) {
   import csFactory._
 
   type TError = String
@@ -17,7 +17,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    Util.timed(localState -> Statistics.typecheckTime) {
+    localState.stats.typecheckTimed {
       root.visitUninitialized {e =>
         typecheckRec(e)
         true
@@ -131,7 +131,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
 
   def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
-    Util.timed(localState -> Statistics.mergeReqsTime) {
+    localState.stats.mergeReqsTimed {
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
 

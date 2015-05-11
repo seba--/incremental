@@ -12,7 +12,8 @@ object SolveContinuously extends ConstraintSystemFactory[SolveContinuouslyCS] {
 }
 
 case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuouslyCS] {
-  def state = SolveContinuously.state.value
+  def state = SolveContinuously.state
+  def stats = SolveContinuously.state.stats
 
   def solved(s: CSubst) = {
     var current = SolveContinuouslyCS(substitution mapValues (x => x.subst(s)), notyet, never)
@@ -30,7 +31,7 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
   def without(xs: Set[CVar[_]]) = SolveContinuouslyCS(substitution -- xs, notyet, never)
 
   def mergeSubsystem(other: SolveContinuouslyCS): SolveContinuouslyCS =
-    Util.timed(state -> Statistics.mergeSolutionTime) {
+    stats.mergeSolutionTimed {
       val msubstitution = substitution ++ other.substitution
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
@@ -38,15 +39,15 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
     }
 
   def addNewConstraint(c: Constraint) = {
-    state += Statistics.constraintCount -> 1
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(1)
+    stats.constraintSolveTimed {
       c.solve(this)
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state += Statistics.constraintCount -> cons.size
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(cons.size)
+    stats.constraintSolveTimed {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
   }
@@ -61,7 +62,7 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
   def propagate = this
 
   override def tryFinalize =
-    Util.timed(state -> Statistics.finalizeTime) {
+    stats.finalizeTimed {
       trySolve(true)
     }
 

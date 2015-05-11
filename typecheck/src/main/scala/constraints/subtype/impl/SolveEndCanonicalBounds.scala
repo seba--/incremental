@@ -18,7 +18,8 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar[Type], (LBound, UBound)], 
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
-  def state = SolveEndCanonicalBounds.state.value
+  def state = SolveEndCanonicalBounds.state
+  def stats = SolveEndCanonicalBounds.state.stats
 
   def substitution = Map()
 
@@ -52,23 +53,23 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar[Type], (LBound, UBound)], 
   }
 
   def addNewConstraint(c: Constraint) = {
-    state += Statistics.constraintCount -> 1
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(1)
+    stats.constraintSolveTimed {
       c.solve(this)
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state += Statistics.constraintCount -> cons.size
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(cons.size)
+    stats.constraintSolveTimed {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
   }
 
-  def tryFinalize =
-    SolveContinuously.state.withValue(state) {
-      SolveContinuouslyCS(Map(), bounds, never).tryFinalize
-    }
+  def tryFinalize = {
+    SolveContinuously.state = state
+    SolveContinuouslyCS(Map(), bounds, never).tryFinalize
+  }
 
   def addLowerBound(v: CVar[Type], t: Type) = {
     val (lower, upper) = bounds(v)

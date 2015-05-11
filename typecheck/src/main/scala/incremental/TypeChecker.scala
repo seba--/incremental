@@ -6,20 +6,20 @@ import incremental.Node.Node
 /**
  * Created by seba on 13/11/14.
  */
-abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] extends Serializable {
+abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]](threaded: Boolean = false) extends Serializable {
   type T
   type TError
 
   type CSFactory <: ConstraintSystemFactory[G, C, CS]
   implicit val csFactory: CSFactory
 
-  lazy val localState = csFactory.freshState
+  lazy val localState = if (threaded) csFactory.freshThreadsafeState else csFactory.freshState
   def gen: G = localState.gen
   def freshSymbol[T](prefix: String): CVar[T] = localState.gen.freshSymbol(prefix)
 
   def typecheck(e: Node): Either[T, TError] = {
-    localState.resetStats()
-    csFactory.state.value = localState
+    localState.stats.resetStats()
+    csFactory.state = localState
     typecheckImpl(e)
   }
 

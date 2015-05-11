@@ -13,16 +13,15 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
 class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
   val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
-  override def afterEach: Unit = checker.localState.printStatistics()
+  override def afterEach: Unit = checker.localState.stats.print()
 
   def typecheckTest(desc: String, e: =>Node)(expected: Type) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
 
-      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
-        expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
-      }
+      SolveContinuously.state = checker.csFactory.state
+      val sol = expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 

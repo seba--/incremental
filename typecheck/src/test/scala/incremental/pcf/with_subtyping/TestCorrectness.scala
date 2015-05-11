@@ -14,7 +14,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
 class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
   val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
-  override def afterEach: Unit = checker.localState.printStatistics()
+  override def afterEach: Unit = checker.localState.stats.print()
 
   import scala.language.implicitConversions
   implicit def eqType(t: Type): PartialFunction[Type,Boolean] = {case t2 => t == t2}
@@ -24,9 +24,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
 
-      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
-        Equal(expected, actual.left.get).solve(SolveContinuously.freshConstraintSystem).tryFinalize
-      }
+      SolveContinuously.state = checker.csFactory.state
+      val sol = Equal(expected, actual.left.get).solve(SolveContinuously.freshConstraintSystem).tryFinalize
+
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
   
