@@ -1,5 +1,7 @@
 package constraints.subtype
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import constraints.{CVar, GenBase}
 
 class Gen extends GenBase {
@@ -12,12 +14,14 @@ class Gen extends GenBase {
   def isProperPositive(a: CVar[_]): Boolean = _pos(a) && !_neg(a)
   def isProperNegative(a: CVar[_]): Boolean = !_pos(a) && _neg(a)
 
-  private var _ids = Map[String, Int]().withDefaultValue(0)
-  def freshSymbol[T](prefix: String): CVar[T] = {
-    val next = _ids(prefix)
-    _ids = _ids + (prefix -> (next + 1))
-    CVar(Symbol(prefix + next))
-  }
+  private val _next = new AtomicInteger()
+
+  @inline
+  def next(): Int = _next.incrementAndGet()
+
+
+  def freshSymbol[T](prefix: String): CVar[T] =
+    CVar(Symbol(prefix + next()))
 
   def freshUVar(positive: Boolean): UVar = {
     val v = UVar(freshSymbol("x$"))

@@ -6,7 +6,7 @@ import constraints.{CVar, GenBase}
 
 
 class Gen extends GenBase {
-  private var _next = new AtomicInteger()
+  private val _next = new AtomicInteger()
 
   @inline
   def next(): Int = _next.incrementAndGet()
