@@ -196,31 +196,46 @@ class BottomUpChecker extends TypeChecker[Type] {
       (t, reqs, creqs, subsol)
 
     case Method =>
-
       val (e0, reqs, creqs, subsol) = e.kids(0).typ
-      val C0 = e.lits(0).asInstanceOf[Type]
-      val m = e.lits(1).asInstanceOf[Symbol]
-      val x = e.lits(2).asInstanceOf[Symbol]
-      val C = e.lits(3).asInstanceOf[Type]
+      val C = e.lits(0).asInstanceOf[CName]
+      val C0 = e.lits(1).asInstanceOf[CName]
+      val m = e.lits(2).asInstanceOf[Symbol]
+    //  val x = e.lits(3).asInstanceOf[Symbol]
+      val mcons = Seq[Constraint]()
+      var seqK = e.kids.seq drop(2)
+      val params = for ( lst <- seqK.sliding(2,2) ) yield {
+        val first = lst.head
+        val second = lst.tail.head
+        val x = first.asInstanceOf[Symbol]
+        val t = second.asInstanceOf[CName]
+       // val (t, subreqs, subcreqs, subsol) = second.typ
+        //(first.asInstanceOf[Symbol], second.typ)
 
-      reqs.get(x) match {
-        case None =>
-          val Ci = if (e.lits == 5) e.lits(4).asInstanceOf[Type] else freshUVar()
-          val method = new Methods(m, List(Ci), C)
-          val cld = new ClassDecl(C, null, List(), List(method))
-          (C0, reqs, creqs ++ Subtype(e0, C0) + (C -> cld), subsol)
-        case Some(treq) =>
-          val otherReqs = reqs - x
-          if (e.lits.size == 5) {
-            val Ci = e.lits(4).asInstanceOf[Type]
-            val sol = solve(EqConstraint(Ci, treq))
+        //params.toSeq.head._2
+        //params.toSeq.head._1
+        reqs.get(x) match {
+          case None =>
+            val Ci = if (e.lits == 5) e.lits(4).asInstanceOf[Type] else freshUVar()
             val method = new Methods(m, List(Ci), C)
             val cld = new ClassDecl(C, null, List(), List(method))
-            (C0, otherReqs.mapValues(_.subst(sol.substitution)), creqs ++ Subtype(e0, C0) + (C -> cld), subsol <++ sol)
-          }
-          else
-            (C0, otherReqs, creqs ++ Subtype(e0, C0), subsol)
+            (C0, reqs, creqs ++ Subtype(e0, C0) + (C -> cld), subsol)
+          case Some(treq) =>
+            val otherReqs = reqs - x
+            if (e.lits.size == 5) {
+              val Ci = e.lits(4).asInstanceOf[Type]
+              val sol = solve(EqConstraint(Ci, treq))
+              val method = new Methods(m, List(Ci), C)
+              val cld = new ClassDecl(C, null, List(), List(method))
+              (C0, otherReqs.mapValues(_.subst(sol.substitution)), creqs ++ Subtype(e0, C0) + (C -> cld), subsol <++ sol)
+            }
+            else
+              (C0, otherReqs, creqs ++ Subtype(e0, C0), subsol)
+        }
       }
+val sol = solve(mcons)
+
+      (C0, reqs, creqs ++ Subtype(e0, C0), subsol <++ sol)
+
 
     case TClass =>
       val (t, reqs, creqs, subsol) = e.kids(0).typ

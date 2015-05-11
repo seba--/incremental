@@ -106,7 +106,7 @@ object Node {
     def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
     def apply(e: Node, sub: Node*): Node = new Node_[Any](k, scala.Seq(), e +: Seq(sub:_*))
     def apply(lits: Seq[Lit], sub: Seq[Node]): Node = new Node_[Any](k, lits, sub)
-    def apply(l1: Lit, l2: Lit, l3: Lit, l4: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2, l3, l4), Seq(sub:_*))
+  //def apply(l1: Lit, l2: Lit, l3: Lit, l4: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2, l3, l4), Seq(sub:_*))
 
   }
   

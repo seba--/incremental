@@ -14,7 +14,8 @@ object Exp {
 import Exp._
 case object Var  extends Exp(simple(Seq(classOf[Symbol])))
 case object Field extends Exp(simple(Seq(classOf[Symbol]), cExp))
-case object Method extends Exp(simple(Seq(classOf[CName], classOf[Symbol], classOf[Symbol], classOf[CName]), cExp))
+//case object Method extends Exp(simple(Seq(classOf[CName], classOf[CName], classOf[Symbol], Seq(classOf[Symbol])), cExp))
+case object Method extends Exp(_ => MethodSyntax)
 case object New extends Exp(_ => NewSyntax)
 case object UCast extends Exp(simple(Seq(classOf[CName]),cExp))
 case object DCast extends Exp(simple(cExp))
@@ -30,6 +31,12 @@ object InvkSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
 
 object NewSyntax extends SyntaxChecking.SyntaxChecker(New) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
+  }
+}
+
+object MethodSyntax extends SyntaxChecking.SyntaxChecker(New) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
+
   }
 }
     //if (kids.size == -1)
