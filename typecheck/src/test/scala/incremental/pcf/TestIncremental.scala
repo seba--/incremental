@@ -13,7 +13,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
 class TestIncremental[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
   var checker: TypeChecker[CS] = checkerFactory.makeChecker
 
-  override def afterEach: Unit = checker.localState.printStatistics()
+  override def afterEach: Unit = checker.localState.stats.print()
 
   def incTypecheckTest(desc: String, e: =>Node)(expected: equality.Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
   def incTypecheckTest(desc: String, e: =>Node, mod: =>Unit)(expected: equality.Type)(consCount: Int): Unit =
@@ -21,7 +21,7 @@ class TestIncremental[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val Unit = mod
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
-      assertResult(consCount, "solved constraint(s)")(checker.localState.stats(Statistics.constraintCount))
+      assertResult(consCount, "solved constraint(s)")(checker.localState.stats.constraintCount)
     }
 
   def typecheckTestError(e: =>Node) =

@@ -22,7 +22,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    Util.timed(localState -> Statistics.typecheckTime) {
+    localState.stats.typecheckTimed {
       root.visitUninitialized { e =>
         val (t, reqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
@@ -97,7 +97,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
 
   def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
-    Util.timed(localState -> Statistics.mergeReqsTime) {
+    localState.stats.mergeReqsTimed {
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
 

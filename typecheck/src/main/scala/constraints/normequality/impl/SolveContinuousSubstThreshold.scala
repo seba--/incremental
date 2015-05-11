@@ -16,7 +16,8 @@ object SolveContinuousSubstThreshold extends ConstraintSystemFactory[SolveContin
 case class SolveContinuousSubstThresholdCS(substitution: CSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstThresholdCS] {
   import SolveContinuousSubstThreshold.threshold
 
-  def state = SolveContinuousSubstThreshold.state.value
+  def state = SolveContinuousSubstThreshold.state
+  def stats = SolveContinuousSubstThreshold.state.stats
 
   def solved(s: CSubst) = {
     var current = SolveContinuousSubstThresholdCS(substitution mapValues (_.subst(s)), notyet, never)
@@ -36,7 +37,7 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, notyet: Seq[Con
   lazy val trigger = substitution.size >= threshold
 
   def mergeSubsystem(other: SolveContinuousSubstThresholdCS): SolveContinuousSubstThresholdCS =
-    Util.timed(state -> Statistics.mergeSolutionTime) {
+    stats.mergeSolutionTimed {
       val msubstitution = substitution ++ other.substitution
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
@@ -44,15 +45,15 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, notyet: Seq[Con
     }
 
   def addNewConstraint(c: Constraint) = {
-    state += Statistics.constraintCount -> 1
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(1)
+    stats.constraintSolveTimed {
       c.solve(this)
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state += Statistics.constraintCount -> cons.size
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(cons.size)
+    stats.constraintSolveTimed {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
   }
@@ -78,8 +79,8 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, notyet: Seq[Con
     else
       this
 
-  override def tryFinalize =
-    SolveContinuously.state.withValue(state) {
-      SolveContinuouslyCS(substitution, notyet, never).tryFinalize
-    }
+  override def tryFinalize = {
+    SolveContinuously.state = state
+    SolveContinuouslyCS(substitution, notyet, never).tryFinalize
+  }
 }

@@ -20,7 +20,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
-    Util.timed(localState -> Statistics.typecheckTime) {
+    localState.stats.typecheckTimed {
       try {
         val (t, sol_) = typecheckRec(root, Map(), Set())
         val sol = sol_.tryFinalize

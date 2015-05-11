@@ -21,7 +21,8 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, bounds: Map[CVa
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
-  def state = SolveContinuousSubstThreshold.state.value
+  def state = SolveContinuousSubstThreshold.state
+  def stats = SolveContinuousSubstThreshold.state.stats
 
   lazy val trigger = substitution.size >= SolveContinuousSubstThreshold.threshold
 
@@ -58,23 +59,23 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, bounds: Map[CVa
   }
 
   def addNewConstraint(c: Constraint) = {
-    state += Statistics.constraintCount -> 1
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(1)
+    stats.constraintSolveTimed {
       c.solve(this).trySolve
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state += Statistics.constraintCount -> cons.size
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(cons.size)
+    stats.constraintSolveTimed {
       cons.foldLeft(this)((cs, c) => c.solve(cs)).trySolve
     }
   }
 
-  def tryFinalize =
-    SolveContinuously.state.withValue(state) {
-      SolveContinuouslyCS(Map(), bounds, never).tryFinalize
-    }
+  def tryFinalize = {
+    SolveContinuously.state = state
+    SolveContinuouslyCS(Map(), bounds, never).tryFinalize
+  }
 
 
   private def substitutedBounds(s: CSubst) = {

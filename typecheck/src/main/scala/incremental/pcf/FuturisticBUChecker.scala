@@ -13,7 +13,8 @@ import incremental._
 /**
  * Created by seba on 13/11/14.
  */
-abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS] {
+abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
+
   val clusterParam = 4
   def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
@@ -70,8 +71,8 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
     val root = e.withType[Result]
     val (fut, trigger) = bottomUpFuture(root)
 
-    Util.timed(localState -> Statistics.typecheckTime) {
-      trigger success ()
+    localState.stats.typecheckTimed {
+      trigger success (Unit)
       Await.result(fut, 1 minute)
 
       val (t_, reqs, sol_) = root.typ

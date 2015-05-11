@@ -12,7 +12,8 @@ object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubst
 }
 
 case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
-  def state = SolveContinuousSubst.state.value
+  def state = SolveContinuousSubst.state
+  def stats = SolveContinuousSubst.state.stats
 
   def solved(s: CSubst) = {
     var current = SolveContinuousSubstCS(substitution mapValues (x => x.subst(s)), notyet, never)
@@ -31,22 +32,22 @@ case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint],
   def without(xs: Set[CVar[_]]) = SolveContinuousSubstCS(substitution -- xs, notyet, never)
 
   def mergeSubsystem(other: SolveContinuousSubstCS): SolveContinuousSubstCS =
-    Util.timed(state -> Statistics.mergeSolutionTime) {
+    stats.mergeSolutionTimed {
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
       SolveContinuousSubstCS(CSubst.empty, mnotyet, mnever)
     }
 
   def addNewConstraint(c: Constraint) = {
-    state += Statistics.constraintCount -> 1
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(1)
+    stats.constraintSolveTimed {
       c.solve(this)
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state += Statistics.constraintCount -> cons.size
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(cons.size)
+    stats.constraintSolveTimed {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
   }
@@ -61,8 +62,8 @@ case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint],
 
   def propagate = SolveContinuousSubstCS(CSubst.empty, notyet.map(_.subst(substitution)), never.map(_.subst(substitution)))
 
-  override def tryFinalize =
-    SolveContinuously.state.withValue(state) {
-      SolveContinuouslyCS(substitution, notyet, never).tryFinalize
-    }
+  override def tryFinalize = {
+    SolveContinuously.state = state
+    SolveContinuouslyCS(substitution, notyet, never).tryFinalize
+  }
 }

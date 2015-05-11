@@ -20,7 +20,7 @@ class TestScaleNonInc[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 //    checker = checkerFactory.makeChecker
 //  }
 
-  override def afterEach: Unit = checker.localState.printStatistics()
+  override def afterEach: Unit = checker.localState.stats.print()
 
   def typecheckTest(desc: String, e: => Node)(expected: equality.Type): Unit =
     test(s"$classdesc: Type check $desc", SlowTest) {

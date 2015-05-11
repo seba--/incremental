@@ -14,7 +14,7 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.1" % "test"
 
 testOptions in Test += Tests.Argument("-oD")
 
-scalacOptions ++= Seq("-feature")
+scalacOptions ++= Seq("-feature","-deprecation")
 
 resolvers += "Sonatype OSS Snapshots" at
   "https://oss.sonatype.org/content/repositories/releases"

@@ -12,7 +12,8 @@ object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
 }
 
 case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEndCS] {
-  def state = SolveEnd.state.value
+  def state = SolveEnd.state
+  def stats = SolveEnd.state.stats
 
   def substitution = CSubst.empty
   def never = Seq()
@@ -24,21 +25,21 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
 
 
   def mergeSubsystem(other: SolveEndCS): SolveEndCS =
-    Util.timed(state -> Statistics.mergeSolutionTime) {
+    stats.mergeSolutionTimed {
       val mnotyet = notyet ++ other.notyet
       SolveEndCS(mnotyet)
     }
 
   def addNewConstraint(c: Constraint) = {
-    state += Statistics.constraintCount -> 1
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(1)
+    stats.constraintSolveTimed {
       SolveEndCS(notyet :+ c)
     }
   }
 
   def addNewConstraints(cs: Iterable[Constraint]) = {
-    state += Statistics.constraintCount -> cs.size
-    Util.timed(state -> Statistics.constraintSolveTime) {
+    stats.addToConstraintCount(cs.size)
+    stats.constraintSolveTimed {
       SolveEndCS(notyet ++ cs)
     }
   }
@@ -53,8 +54,8 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
 
   def propagate = this
 
-  override def tryFinalize =
-    SolveContinuously.state.withValue(state) {
-      SolveContinuouslyCS(CSubst.empty, notyet, Seq()).tryFinalize
-    }
+  override def tryFinalize = {
+    SolveContinuously.state = state
+    SolveContinuouslyCS(CSubst.empty, notyet, Seq()).tryFinalize
+  }
 }
