@@ -1,28 +1,28 @@
 package incremental.pcf
 
+import constraints.CVar
+import constraints.equality.impl._
+import constraints.equality._
 import incremental.Node._
-import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
+import incremental.Util
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
  * Created by seba on 14/11/14.
  */
-class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker[Type] = checkerFactory.makeChecker
+class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
-  override def afterEach: Unit = {
-    Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
-    Util.log(f"Type-check time\t\t${checker.typecheckTime}%.3fms")
-    Util.log(f"Constraint count\t${checker.constraintCount}")
-    Util.log(f"Cons. solve time\t${checker.constraintSolveTime}%.3fms")
-    Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
-  }
+  override def afterEach: Unit = checker.localState.printStatistics()
 
   def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
-      val sol = expected.unify(actual.left.get)
+
+      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
+        expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
+      }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
@@ -35,12 +35,13 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTest("17", Num(17))(TNum)
   typecheckTest("17+(10+2)", Add(Num(17), Add(Num(10), Num(2))))(TNum)
   typecheckTest("17+(10+5)", Add(Num(17), Add(Num(10), Num(5))))(TNum)
-  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(UVar('x$0), TNum))
+  typecheckTest("\\x. 10+5", Abs('x, Add(Num(10), Num(5))))(TFun(UVar(CVar('x$0)), TNum))
   typecheckTest("\\x. x+x", Abs('x, Add(Var('x), Var('x))))(TFun(TNum, TNum))
   typecheckTestError("\\x. err+x", Abs('x, Add(Var('err), Var('x))))
-  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(UVar('x$1), UVar('x$2)), TFun(UVar('x$1), UVar('x$2))))
+  typecheckTest("\\x. \\y. x y", Abs('x, Abs('y, App(Var('x), Var('y)))))(TFun(TFun(UVar(CVar('x$1)), UVar(CVar('x$2))), TFun(UVar(CVar('x$1)), UVar(CVar('x$2)))))
   typecheckTest("\\x. \\y. x + y", Abs('x, Abs('y, Add(Var('x), Var('y)))))(TFun(TNum, TFun(TNum, TNum)))
   typecheckTest("if0(17, 0, 1)", If0(Num(17), Num(0), Num(1)))(TNum)
+  typecheckTestError("\\x. x + (x 5)", Abs('x, Add(Var('x), App(Var('x), Num(5)))))
 
   lazy val mul = Fix(Abs('f, TFun(TNum, TFun(TNum, TNum)),
                    Abs('m, TNum, Abs('n, TNum,
@@ -76,16 +77,15 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
           App(Var('f), Add(Var('n), Num(-2)))))))))
   typecheckTest("fibonacci", fib)(TFun(TNum, TNum))
   typecheckTest("factorial + fibonacci", Abs('x, Add(App(fac, Var('x)), App(fib, Var('x)))))(TFun(TNum, TNum))
-  typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(UVar('x$0), UVar('x$0)))
-  typecheckTestError("\\x. x x",
-    Abs(Seq('x, UVar('T)), Seq(App(Var('x), Var('x))))
-  )
+  typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(UVar(CVar('x$0)), UVar(CVar('x$0))))
+  typecheckTestError("\\x. x x", Abs('x, App(Var('x), Var('x))))
 }
 
-class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
-class TestDownUpSolveEndCorrectness extends TestCorrectness("DownUpSolveEnd", DownUpSolveEndCheckerFactory)
-class TestBottomUpEagerSubstCorrectness extends TestCorrectness("BottomUpEagerSubst", BottomUpEagerSubstCheckerFactory)
-class TestBottomUpSolveEndCorrectness extends TestCorrectness("BottomUpSolveEnd", BottomUpSolveEndCheckerFactory)
-class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)
-class TestBottomUpIncrementalSolveCorrectness extends TestCorrectness("BottomUpIncrementalSolve", BottomUpIncrementalSolveCheckerFactory)
-class TestBottomUpSometimesEagerSubstCorrectness extends TestCorrectness("BottomUpSometimesEagerSubst", BottomUpSometimesEagerSubstCheckerFactory)
+class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
+class TestDUSolveContniuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
+
+class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
+class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
+//class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)

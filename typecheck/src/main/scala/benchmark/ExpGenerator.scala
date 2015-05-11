@@ -1,8 +1,8 @@
 package benchmark
 
+import constraints.equality.Type
 import incremental.Node._
-import incremental.pcf.TFun
-import incremental.{NodeKind, Type}
+import incremental.NodeKind
 
 /**
  * Created by seba on 05/11/14.
@@ -51,14 +51,14 @@ object ExpGenerator {
 
   def usedVars(h: Int) = for (j <- (1 to Math.pow(2, h-1).toInt).toSeq) yield Symbol(s"x$j")
 
-  def makeFunType(height: Int, returnType: Type, argMaker: () => Type): Type = {
+  def makeFunType[T <: Type](height: Int, returnType: T, argMaker: () => T, tfun: (T,T)=>T): T = {
     val length = Math.pow(2,height-1).toInt
-    var argTypes = Seq[Type]()
+    var argTypes = Seq[T]()
     for (i <- 1 to length)
       argTypes = argMaker() +: argTypes
     var t = returnType
     for (i <- 1 to length) {
-      t = TFun(argTypes.head, t)
+      t = tfun(argTypes.head, t)
       argTypes = argTypes.tail
     }
     t

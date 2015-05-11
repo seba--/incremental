@@ -1,26 +1,21 @@
 package incremental.pcf.with_records
 
-import incremental.{EqConstraint, Type}
-import incremental.ConstraintOps._
-import incremental.Type.Companion.TSubst
+import constraints.CVar
+import constraints.equality.CSubst.CSubst
+import constraints.equality._
 import incremental.pcf.UVar
 
 /**
  * Created by seba on 15/11/14.
  */
 case class TRecord(fields: Map[Symbol, Type]) extends Type {
-  def freeTVars = fields.values.foldLeft(Set[Symbol]())(_++_.freeTVars)
-  def occurs(x: Symbol) = fields.exists(_._2.occurs(x))
-  def normalize = TRecord(fields.mapValues(_.normalize))
-  def subst(s: TSubst) = TRecord(fields.mapValues(_.subst(s)))
-  def unify(other: Type, s: TSubst) = other match {
+  def occurs(x: CVar[_]) = fields.exists(_._2.occurs(x))
+  def subst(s: CSubst) = TRecord(fields.mapValues(_.subst(s)))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case TRecord(fields2) if fields.keys == fields2.keys => {
-      var sol = emptySol
-      for (k <- fields.keys)
-        sol = sol ++ fields(k).unify(fields2(k), s)
-      sol
+      fields.keys.foldLeft(cs)((cs,k) => fields(k).unify(fields2(k), cs))
     }
-    case UVar(_) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
 }

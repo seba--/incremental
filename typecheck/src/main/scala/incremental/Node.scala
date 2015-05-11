@@ -2,7 +2,7 @@ package incremental
 
 import Node._
 
-abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck = Node.ignore) extends Serializable {
+abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
   def unapplySeq(e: Node_[_]): Option[Seq[Node_[_]]] =
     if (e.kind == this)
       Some(e.kids.seq)
@@ -111,8 +111,8 @@ object Node {
   }
   
   val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)
-  def simple[K <: NodeKind](kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
-  def simple[K <: NodeKind](litTypes: Seq[Class[_]], kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
+  def simple(kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
+  def simple(litTypes: Seq[Class[_]], kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
   implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 
@@ -135,7 +135,7 @@ object SyntaxChecking {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) = {}
   }
 
-  case class KidTypesLitTypesSyntax[K <: NodeKind](k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[K]]) extends SyntaxChecker(k) {
+  case class KidTypesLitTypesSyntax(k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[_ <: NodeKind]]) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
       if (kids.size != kidTypes.size)
         error(s"Expected ${kidTypes.size} subexpressions but found ${kids.size} subexpressions")
