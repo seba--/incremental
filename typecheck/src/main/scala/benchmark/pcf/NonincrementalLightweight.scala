@@ -36,21 +36,30 @@ class LightweightPerformanceTest(maxHeight: Int) {
   }
 
   def measureT(name: String, check: Node => _)(trees: Gen[Node]): Unit = {
-    var iterations = 0
-    var time = 0.0
 
-    trees.warmupset.foreach{ tree =>
-        tree.invalidate
-        val start = System.nanoTime()
-        check(tree)
-        val end = System.nanoTime()
-        time += (end-start)
-        iterations += 1
+    for (params <- trees.dataset) {
+      var iterations = 0
+      var time = 0.0
+      var oks = 0
+      var errors= 0
+
+      val tree = trees.generate(params)
+
+      tree.invalidate
+      val start = System.nanoTime()
+      val res = check(tree)
+      res match {
+        case Left(_) =>
+          oks += 1
+        case _ => errors += 1
+      }
+      val end = System.nanoTime()
+      time += (end-start)
+      iterations += 1
+
+      val avg = if (iterations == 0) time else time/(1000000.0*iterations)
+      println(s"$name ($params): t: ${avg}ms ok: $oks fail: $errors")
     }
-
-    val avg = if (iterations == 0) time else time/(1000000.0*iterations)
-
-    println(s"$name: ${avg}ms")
   }
 
   private def performance(name: String)(thunk: => Any): Unit = {
