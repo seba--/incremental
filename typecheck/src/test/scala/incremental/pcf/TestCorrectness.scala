@@ -4,7 +4,8 @@ import constraints.CVar
 import constraints.equality.impl._
 import constraints.equality._
 import incremental.Node._
-import incremental.Util
+import incremental.{Node_, Util}
+import incremental.pcf.Exp.Exp
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
@@ -15,9 +16,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: =>Node_[_])(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
-      val actual = checker.typecheck(e)
+      val actual = checker.typecheck(e.withType[Any])
       assert(actual.isLeft, s"Expected $expected but got $actual")
 
       val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
@@ -45,7 +46,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   lazy val mul = Fix(Abs('f, TFun(TNum, TFun(TNum, TNum)),
                    Abs('m, TNum, Abs('n, TNum,
-                     If0(Var('m), Num(0), App(App(Var('f), Add(Var('m), Num(-1))), Var('n)))))))
+                     If0[Any](Var('m), Num(0), App(App(Var('f), Add(Var('m), Num(-1))), Var('n)))))))
   typecheckTest("multiplication", mul)(TFun(TNum, TFun(TNum, TNum)))
 
   lazy val fac = Fix(Abs('f, Abs('n, If0(Add(Var('n), Num(-1)), Num(1), App(App(mul, Var('n)), App(Var('f), Add(Var('n), Num(-2))))))))
@@ -58,8 +59,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   lazy val fac3 = {fac1.kids(0).kids(0).kids(0).kids(2).kids(1).kids(1).kids(1) = Num(-1); fac1}
   typecheckTest("factorial3", fac3)(TFun(TNum, TNum))
   lazy val fac3_2 = {
-    val absn = fac1.kids(0).kids(0)
-    fac1.kids(0).kids(0) = Abs('x, absn.kids(0))
+    val Fix(absf@Abs(_, _, Abs(_, _, absnBody))) = fac1
+    absf.kids(0) = Abs('x, absnBody)
     fac1
   }
   typecheckTestError("factorial3_2", fac3_2)
@@ -70,7 +71,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTest("eta-expanded factorial", Abs('x, App(fac, Var('x))))((TFun(TNum, TNum)))
 
-  lazy val fib = Fix(Abs('f, Abs('n,
+  lazy val fib: Exp = Fix(Abs('f, Abs('n,
     If0(Var('n), Num(1),
       If0(Add(Var('n), Num(-1)), Num(1),
         Add(App(Var('f), Add(Var('n), Num(-1))),

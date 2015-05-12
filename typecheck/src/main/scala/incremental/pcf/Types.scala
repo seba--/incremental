@@ -58,5 +58,5 @@ case class TFun(t1: Type, t2: Type) extends Type {
     case _ => cs.never(EqConstraint(this, other))
   }
   //
-  override def toString= "TFun" //s"($t1 --> $t2)"
+//  override def toString= "TFun" //s"($t1 --> $t2)"
 }

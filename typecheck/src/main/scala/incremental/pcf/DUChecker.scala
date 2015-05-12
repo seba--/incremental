@@ -39,45 +39,44 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     (cs applyPartialSolution t, cs.propagate)
   }
   
-  def typecheckStep(e: Node_[Result], ctx: TCtx): StepResult = e.kind match {
-    case Num => (TNum, Seq(), Seq())
-    case k if k == Add || k == Mul =>
-      val (t1, cs1) = typecheckRec(e.kids(0), ctx)
-      val (t2, cs2) = typecheckRec(e.kids(1), ctx)
+  def typecheckStep(e: Node_[Result], ctx: TCtx): StepResult = e match {
+    case Num(_) => (TNum, Seq(), Seq())
+    case Add(e1, e2) =>
+      val (t1, cs1) = typecheckRec(e1, ctx)
+      val (t2, cs2) = typecheckRec(e2, ctx)
       
       val lcons = EqConstraint(TNum, t1)
       val rcons = EqConstraint(TNum, t2)
       
       (TNum, Seq(lcons, rcons), Seq(cs1, cs2))
-    case Var =>
-      val x = e.lits(0).asInstanceOf[Symbol]
+    case Mul(e1, e2) =>
+      val (t1, cs1) = typecheckRec(e1, ctx)
+      val (t2, cs2) = typecheckRec(e2, ctx)
+
+      val lcons = EqConstraint(TNum, t1)
+      val rcons = EqConstraint(TNum, t2)
+
+      (TNum, Seq(lcons, rcons), Seq(cs1, cs2))
+    case Var(x) =>
       ctx.get(x) match {
         case None => throw UnboundVariable(x, ctx)
         case Some(t) => (t, Seq(), Seq())
       }
-    case App =>
-      val (t1, cs1) = typecheckRec(e.kids(0), ctx)
-      val (t2, cs2) = typecheckRec(e.kids(1), ctx)
+    case App(e1, e2) =>
+      val (t1, cs1) = typecheckRec(e1, ctx)
+      val (t2, cs2) = typecheckRec(e2, ctx)
       
       val X = freshUVar()
       val fcons = EqConstraint(TFun(t2, X), t1)
       
       (X, Seq(fcons), Seq(cs1, cs2))
-    case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
-      val x = e.lits(0).asInstanceOf[Symbol]
-      val X =
-        if (e.lits.size == 2)
-          e.lits(1).asInstanceOf[Type]
-        else
-          freshUVar()
-
-      val (t, subsol) = typecheckRec(e.kids(0), ctx + (x -> X))
+    case Abs(x, tx, e) =>
+      val X = tx.getOrElse(freshUVar())
+      val (t, subsol) = typecheckRec(e, ctx + (x -> X))
       (TFun(X, t), Seq(), Seq(subsol))
-    case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
-      val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
+    case AbsMany(xs, e) =>
       val Xs = xs map (_ => freshUVar())
-
-      val (t, cs) = typecheckRec(e.kids(0), ctx ++ (xs zip Xs))
+      val (t, cs) = typecheckRec(e, ctx ++ (xs zip Xs))
 
       var tfun = t
       for (i <- xs.size-1 to 0 by -1) {
@@ -86,17 +85,17 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
 
       (tfun, Seq(), Seq(cs))
-    case If0 =>
-      val (t1, cs1) = typecheckRec(e.kids(0), ctx)
-      val (t2, cs2) = typecheckRec(e.kids(1), ctx)
-      val (t3, cs3) = typecheckRec(e.kids(2), ctx)
+    case If0(e1, e2, e3) =>
+      val (t1, cs1) = typecheckRec(e1, ctx)
+      val (t2, cs2) = typecheckRec(e2, ctx)
+      val (t3, cs3) = typecheckRec(e3, ctx)
 
       val cond = EqConstraint(TNum, t1)
       val body = EqConstraint(t2, t3)
       
       (t2, Seq(cond, body), Seq(cs1, cs2, cs3))
-    case Fix =>
-      val (t, cs) = typecheckRec(e.kids(0), ctx)
+    case Fix(e) =>
+      val (t, cs) = typecheckRec(e, ctx)
 
       val X = freshUVar()
       val fixCons = EqConstraint(t, TFun(X, X))

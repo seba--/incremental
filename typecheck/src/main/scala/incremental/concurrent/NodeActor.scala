@@ -1,8 +1,7 @@
 package incremental.concurrent
 
 import akka.actor.{ActorRef, ActorSystem, Actor, Props}
-import incremental.Node.Lit
-import incremental.{NodeKind, Node_}
+import incremental.{Node_}
 
 import scala.reflect.ClassTag
 
@@ -18,7 +17,7 @@ case class Done(index: Int, result: Any) extends Message //TODO try to come up w
  */
 class NodeActor[T: ClassTag](protected val node: Node_[T], protected val index: Int, f: Node_[T] => Boolean, trigger: ActorRef) extends Actor {
   protected val sink = context.parent
-  private var _counter = node.kids.seq.length
+  private var _counter = node.kidCount
 
   def receive = {
     case Done(i, res) =>
@@ -37,12 +36,13 @@ class NodeActor[T: ClassTag](protected val node: Node_[T], protected val index: 
   }
 
   override def preStart() = {
-    if (node.kids.seq.isEmpty) {
+    if (!node.hasKids) {
       context.become(leaf)
       trigger ! Register
     }
 
-    for((i, k) <- (0 until node.kids.seq.length) zip node.kids.seq)
+    val seq = node.kidSeq
+    for((i, k) <- (0 until seq.size) zip seq)
       context.actorOf(Props(new NodeActor[T](k, i, f, trigger)))
   }
 

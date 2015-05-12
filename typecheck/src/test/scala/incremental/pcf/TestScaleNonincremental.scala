@@ -7,8 +7,11 @@ import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuous
 import incremental.Node.Node
 import incremental.Node._
 import incremental._
+import incremental.pcf.Exp.Exp
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import ExpGenerator._
+
+import scala.reflect.ClassTag
 
 /**
  * Created by seba on 14/11/14.
@@ -28,20 +31,26 @@ class TestScaleNonInc[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assertResult(Left(expected))(actual)
     }
 
-  def scaleTests(heights: Set[Int], kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
+  def scaleTests[T <: Node]
+    (heights: Set[Int], kind: (T,T)=>T, leaveMaker: LeaveMaker[T], sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,T) => T = (_:Int,e:T) => e)
+    (expected: Int => equality.Type)
+    (implicit tag: ClassTag[T]) =
     for (h <- heights)
       scaleTest(h, kind, leaveMaker, sharing, leaveDesc, wrap)(expected)
 
-  def scaleTest(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
+  def scaleTest[T <: Node]
+    (height: Int, kind: (T,T)=>T, leaveMaker: LeaveMaker[T], sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,T) => T = (_:Int,e:T) => e)
+    (expected: Int => equality.Type)
+    (implicit tag: ClassTag[T]) =
     typecheckTest(
       s"${if(sharing) "shared" else "non-shared"} $kind-tree(h=$height)${if(leaveDesc.isEmpty)"" else " with leaves " + leaveDesc}",
       wrap(height, makeBinTree(height, kind, leaveMaker, sharing)))(expected(height))
 
   val range = Set(5, 10)
-  scaleTests(range, Add, constantLeaveMaker(Num(1)), leaveDesc="1 .. 1")(_=>TNum)
-  scaleTests(range, Add, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)), leaveDesc="1 .. n")(_=>TNum)
-  scaleTests(range, Add, constantLeaveMaker(Var('x)), leaveDesc="x .. x", wrap = (h, e) => Abs('x, e))(_=>TFun(TNum, TNum))
-  scaleTests(range, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i"))), leaveDesc="x1 .. xn", wrap = (h, e) => Abs(usedVars(h), e))(h => makeFunType(h, TNum, ()=>TNum, TFun))
+  scaleTests[Exp](range, Add.apply(_,_), constantLeaveMaker(Num(1)), leaveDesc="1 .. 1")(_=>TNum)
+  scaleTests[Exp](range, Add.apply(_,_), stateLeaveMaker[Int,Exp](1, i => i + 1, i => Num(i)), leaveDesc="1 .. n")(_=>TNum)
+  scaleTests[Exp](range, Add.apply(_,_), constantLeaveMaker(Var('x)), leaveDesc="x .. x", wrap = (h, e) => Abs('x, e))(_=>TFun(TNum, TNum))
+  scaleTests[Exp](range, Add.apply(_,_), stateLeaveMaker[Int,Exp](1, i => i + 1, i => Var(Symbol(s"x$i"))), leaveDesc="x1 .. xn", wrap = (h, e) => AbsMany(usedVars(h), e))(h => makeFunType(h, TNum, ()=>TNum, TFun))
 }
 
 class TestDUSolveEndNonInc extends TestScaleNonInc("DUSolveEnd", new DUCheckerFactory(SolveEnd))

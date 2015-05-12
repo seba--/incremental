@@ -2,24 +2,25 @@ package benchmark
 
 import constraints.equality.Type
 import incremental.Node._
-import incremental.NodeKind
+
+import scala.reflect.ClassTag
 
 /**
  * Created by seba on 05/11/14.
  */
 object ExpGenerator {
-  trait LeaveMaker {
+  trait LeaveMaker[T] {
     def reset()
-    def next(): Node
+    def next(): T
   }
-  def constantLeaveMaker(c: => Node): LeaveMaker = new LeaveMaker {
-    override def next(): Node = c
+  def constantLeaveMaker[T <: Node](c: => T) = new LeaveMaker[T] {
+    override def next(): T = c
     override def reset(): Unit = {}
   }
-  def stateLeaveMaker[T](stateInit: T, stateUpdate: T => T, treeMaker: T => Node): LeaveMaker = {
-    object maker extends LeaveMaker {
+  def stateLeaveMaker[T, U <: Node](stateInit: T, stateUpdate: T => T, treeMaker: T => U): LeaveMaker[U] = {
+    object maker extends LeaveMaker[U] {
       var state: T = stateInit
-      override def next(): Node = {
+      override def next(): U = {
         val t = treeMaker(state)
         state = stateUpdate(state)
         t
@@ -29,9 +30,9 @@ object ExpGenerator {
     maker
   }
 
-  def makeBinTree(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false): Node = {
+  def makeBinTree[T <: Node](height: Int, kind: (T,T) => T, leaveMaker: LeaveMaker[T], sharing: Boolean = false)(implicit tag: ClassTag[T]): T = {
     val leaveCount = Math.pow(2, height-1).toInt
-    val ts = Array.ofDim[Node](leaveCount)
+    val ts = Array.ofDim[T](leaveCount)
     leaveMaker.reset()
 
     for (i <- 0 until leaveCount)

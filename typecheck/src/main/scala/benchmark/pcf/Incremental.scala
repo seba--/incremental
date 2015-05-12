@@ -1,5 +1,6 @@
 package benchmark.pcf
 
+import incremental.pcf.Exp.Exp
 import incremental.{TypeChecker, TypeCheckerFactory}
 import org.scalameter.DSL
 import org.scalameter.api._
@@ -40,7 +41,7 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
         }
 
         var e = maxtree
-        while (Abs.unapplySeq(e).isDefined)
+        while (e.isInstanceOf[Abs[Any]])
           e = e.kids(0)
         for (i <- 1 to maxHeight - h - 1)
           e = e.kids(0)
@@ -63,17 +64,17 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
   /* ADD */
 
   performance of "Tree{Add,[1..n]}" in {
-    val maxtree = makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
+    val maxtree = makeBinTree[Exp](maxHeight, Add.apply(_,_), stateLeaveMaker[Int, Exp](1, i => i + 1, i => Num(i)))
     measureCheckers(maxtree, heights)
   }
 
   performance of "Abs{x,Tree{Add,[x..x]}}" in {
-    val maxtree = Abs('x, makeBinTree(maxHeight, Add, constantLeaveMaker(Var('x))))
+    val maxtree = Abs('x, makeBinTree[Exp](maxHeight, Add.apply(_,_), constantLeaveMaker(Var('x))))
     measureCheckers(maxtree, heights)
   }
 
   performance of "Abs{x,Tree{Add,[x1..xn]}}" in {
-    val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
+    val maxtree = AbsMany(usedVars(maxHeight), makeBinTree[Exp](maxHeight, Add.apply(_,_), stateLeaveMaker[Int,Exp](1, i => i + 1, i => Var(Symbol(s"x$i")))))
     measureCheckers(maxtree, heights)
   }
 
@@ -82,17 +83,17 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
   /* APP */
 
   performance of "Tree{App,[1..n]}" in {
-    val maxtree = makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
+    val maxtree = makeBinTree[Exp](maxHeight, App.apply(_,_), stateLeaveMaker[Int,Exp](1, i => i + 1, i => Num(i)))
     measureCheckers(maxtree, heights)
   }
 
   performance of "Abs{x,Tree{App,[x..x]}}" in {
-    val maxtree = Abs('x, makeBinTree(maxHeight, App, constantLeaveMaker(Var('x))))
+    val maxtree = Abs('x, makeBinTree[Exp](maxHeight, App.apply(_,_), constantLeaveMaker(Var('x))))
     measureCheckers(maxtree, heights)
   }
 
   performance of "Abs{x,Tree{App,[x1..xn]}}" in {
-    val maxtree = Abs(usedVars(maxHeight), makeBinTree(maxHeight, App, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
+    val maxtree = AbsMany(usedVars(maxHeight), makeBinTree[Exp](maxHeight, App.apply(_,_), stateLeaveMaker[Int,Exp](1, i => i + 1, i => Var(Symbol(s"x$i")))))
     measureCheckers(maxtree, heights)
   }
 }

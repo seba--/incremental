@@ -29,7 +29,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
         (Seq(f), e.size)
       }
       else {
-        val (fs, nodecounts) = (e.kids.seq.map { k => recurse(k) }).unzip
+        val (fs, nodecounts) = (e.mapKids { k => recurse(k) }).unzip
         val nodecount = nodecounts.sum
         val remaining = e.size - nodecount
 
@@ -71,7 +71,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
     val (fut, trigger) = bottomUpFuture(root)
 
     Util.timed(localState -> Statistics.typecheckTime) {
-      trigger success ()
+      trigger success (Unit)
       Await.result(fut, 1 minute)
 
       val (t_, reqs, sol_) = root.typ
@@ -112,7 +112,7 @@ abstract class FuturisticHeightBUChecker[CS <: ConstraintSystem[CS]] extends Fut
         (f, 1)
       }
       else {
-        val (fs, hops) = (e.kids.seq.map { k => recurse(k) }).unzip
+        val (fs, hops) = (e.mapKids { k => recurse(k) }).unzip
         val max = hops.foldLeft(0) { case (i,j) => i.max(j) }
         val join = Future.fold(fs)(()) { case x => () }
 
@@ -168,7 +168,7 @@ abstract class FuturisticHeightListBUChecker[CS <: ConstraintSystem[CS]] extends
         (Seq(f), 1)
       }
       else {
-        val (fs, hops) = (e.kids.seq.map { k => recurse(k) }).unzip
+        val (fs, hops) = (e.mapKids { k => recurse(k) }).unzip
         val max = hops.foldLeft(0) { case (i,j) => i.max(j) }
 
         if ((max % clusterParam) == 0) {

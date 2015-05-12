@@ -1,7 +1,7 @@
 package incremental.pcf.with_subtyping
 
 import incremental.Node._
-import incremental.pcf.Exp
+import incremental.pcf.Exp_$
 import constraints.subtype._
 
 /**
@@ -9,4 +9,4 @@ import constraints.subtype._
  */
 
 // uses different type annotation subtype.Type than pcf.Abs
-case object Abs extends Exp(simple(Seq(classOf[Symbol]), Exp.cExp) orElse simple(Seq(classOf[Symbol], classOf[Type]), Exp.cExp) orElse (simple(Seq(classOf[Seq[Symbol]]), Exp.cExp)))
+case object Abs extends Exp_(simple(Seq(classOf[Symbol]), Exp_.cExp) orElse simple(Seq(classOf[Symbol], classOf[Type]), Exp_.cExp) orElse (simple(Seq(classOf[Seq[Symbol]]), Exp_.cExp)))
