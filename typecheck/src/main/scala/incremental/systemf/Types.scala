@@ -1,14 +1,10 @@
 package incremental.systemf
 
-<<<<<<< HEAD
-import incremental.{EqConstraint, Type}
-import incremental.ConstraintOps._
-import incremental.Type.Companion.TSubst
-=======
+
 import constraints.CVar
 import constraints.equality.CSubst.CSubst
 import constraints.equality._
->>>>>>> master
+
 
 /**
  * Created by seba on 13/11/14.

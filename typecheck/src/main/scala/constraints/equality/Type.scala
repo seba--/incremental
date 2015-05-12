@@ -11,4 +11,5 @@ trait Type extends CTerm[Type] {
 
   def compatibleWith(t2: Type) = EqConstraint(this, t2)
   def compatibleWith(t2: CTermBase[Constraint]) = EqConstraint(this, t2.asInstanceOf[Type])
+
 }
