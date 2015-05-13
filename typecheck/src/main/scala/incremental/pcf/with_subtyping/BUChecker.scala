@@ -1,6 +1,6 @@
 package incremental.pcf.with_subtyping
 
-import constraints.Statistics
+import constraints.StatKeys._
 import constraints.subtype._
 import incremental.Node.Node
 import incremental.{Util, Node_}
@@ -22,7 +22,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    localState.stats.typecheckTimed {
+    localState.stats(TypeCheck) {
       root.visitUninitialized { e =>
         val (t, reqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
@@ -97,7 +97,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
 
   def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
-    localState.stats.mergeReqsTimed {
+    localState.stats(MergeReqs) {
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
 

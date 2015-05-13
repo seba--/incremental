@@ -2,7 +2,7 @@ package incremental.pcf
 
 
 import scala.language.postfixOps
-import constraints.Statistics
+import constraints.StatKeys._
 import constraints.equality.{ConstraintSystemFactory, ConstraintSystem}
 import scala.concurrent.{ExecutionContext, Await, Promise, Future}
 import scala.concurrent.duration._
@@ -71,7 +71,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
     val root = e.withType[Result]
     val (fut, trigger) = bottomUpFuture(root)
 
-    localState.stats.typecheckTimed {
+    localState.stats(TypeCheck) {
       trigger success (Unit)
       Await.result(fut, 1 minute)
 

@@ -1,9 +1,13 @@
 package constraints.equality.impl
 
-import constraints.{Statistics, CTermBase, CSubst, CVar}
+//import constraints._
+
+import constraints.CVar
+import constraints.equality.Constraint
+import constraints.equality.ConstraintSystem
+import constraints.equality.ConstraintSystemFactory
 import constraints.equality._
 import constraints.equality.CSubst.CSubst
-import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
 
@@ -12,6 +16,8 @@ object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubst
 }
 
 case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
+  import constraints.StatKeys._
+
   def state = SolveContinuousSubst.state
   def stats = SolveContinuousSubst.state.stats
 
@@ -32,7 +38,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint],
   def without(xs: Set[CVar[_]]) = SolveContinuousSubstCS(substitution -- xs, notyet, never)
 
   def mergeSubsystem(other: SolveContinuousSubstCS): SolveContinuousSubstCS =
-    stats.mergeSolutionTimed {
+    stats(MergeSolution) {
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
       SolveContinuousSubstCS(CSubst.empty, mnotyet, mnever)
@@ -40,14 +46,14 @@ case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint],
 
   def addNewConstraint(c: Constraint) = {
     stats.addToConstraintCount(1)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       c.solve(this)
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
     stats.addToConstraintCount(cons.size)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
   }

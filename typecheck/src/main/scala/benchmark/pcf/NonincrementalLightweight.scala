@@ -142,8 +142,8 @@ class LightweightPerformanceTest(maxHeight: Int) {
 
 object NonincrementalLightweight {
   def main(args: Array[String]): Unit = {
-    if (args.size != 1)
-      throw new IllegalArgumentException("Expected arguments: maxHeight")
+    if (args.size < 1)
+      throw new IllegalArgumentException("Expected arguments: maxHeight [stats]")
 
     val maxHeight = args(0).toInt
 

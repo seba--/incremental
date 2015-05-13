@@ -1,6 +1,7 @@
 package constraints.normequality.impl
 
-import constraints.{Statistics, CVar}
+import constraints.StatKeys._
+import constraints.{StatKeys$, CVar}
 import constraints.normequality._
 import constraints.normequality.CSubst.CSubst
 import incremental.Util
@@ -25,20 +26,20 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
 
 
   def mergeSubsystem(other: SolveEndCS): SolveEndCS =
-    stats.mergeSolutionTimed {
+    stats(MergeSolution) {
       SolveEndCS(notyet ++ other.notyet)
     }
 
   def addNewConstraint(c: Constraint) = {
     stats.addToConstraintCount(1)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       SolveEndCS(notyet :+ c)
     }
   }
 
   def addNewConstraints(cs: Iterable[Constraint]) = {
     stats.addToConstraintCount(cs.size)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       SolveEndCS(notyet ++ cs)
     }
   }

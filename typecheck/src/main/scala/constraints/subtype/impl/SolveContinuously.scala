@@ -1,6 +1,7 @@
 package constraints.subtype.impl
 
-import constraints.{Statistics, CVar, subtype}
+import constraints.StatKeys._
+import constraints.{StatKeys$, CVar, subtype}
 import constraints.subtype._
 import constraints.subtype.CSubst.CSubst
 import incremental.Util
@@ -55,20 +56,20 @@ case class SolveContinuouslyCS(substitution: CSubst, bounds: Map[CVar[Type], (LB
 
   def addNewConstraint(c: Constraint) = {
     stats.addToConstraintCount(1)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       c.solve(this).trySolve
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
     stats.addToConstraintCount(cons.size)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       cons.foldLeft(this)((cs, c) => c.solve(cs)).trySolve
     }
   }
 
   def tryFinalize =
-    stats.finalizeTimed {
+    stats(Finalize) {
       //set upper bounds of negative vars to Top if still undetermined and solve
       val finalbounds = bounds.map {
         case (tv, (lower, upper)) if gen.isNegative(tv) && !upper.isGround =>

@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import constraints.Statistics
+import constraints.StatKeys._
 import constraints.equality._
 import incremental.{Node_, Util}
 import incremental.Node.Node
@@ -17,7 +17,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]](threaded: Boolean = false) 
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    localState.stats.typecheckTimed {
+    localState.stats(TypeCheck) {
       root.visitUninitialized {e =>
         typecheckRec(e)
         true
@@ -131,7 +131,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]](threaded: Boolean = false) 
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
 
   def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
-    localState.stats.mergeReqsTimed {
+    localState.stats(MergeReqs) {
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
 

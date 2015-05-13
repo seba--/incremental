@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import constraints.Statistics
+import constraints.StatKeys._
 import constraints.equality._
 import incremental.Node.Node
 import incremental.{Node_, Util}
@@ -18,7 +18,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
-    localState.stats.typecheckTimed {
+    localState.stats(TypeCheck) {
       try {
         val (t, sol_) = typecheckRec(root, Map())
         val sol = sol_.tryFinalize

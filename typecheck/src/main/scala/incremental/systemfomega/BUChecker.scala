@@ -1,6 +1,6 @@
 package incremental.systemfomega
 
-import constraints.Statistics
+import constraints.StatKeys._
 import constraints.normequality._
 import incremental.Node._
 import incremental.{Node_, Util}
@@ -30,7 +30,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    localState.stats.typecheckTimed {
+    localState.stats(TypeCheck) {
       root.visitUninitialized {e =>
         if (e.kind.isInstanceOf[Exp]) {
           val ExpStepResult(t, reqs, treqs, cons) = typecheckExpStep(e)
@@ -237,12 +237,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def mergeTReqMaps(req: TReqs, reqs: TReqs*): (Seq[Constraint], TReqs) = mergeTReqMaps(req +: reqs)
 
   def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
-    localState.stats.mergeReqsTimed {
+    localState.stats(MergeReqs) {
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps(EqConstraint))
     }
 
   def mergeTReqMaps(reqs: Seq[TReqs]): (Seq[Constraint], TReqs) =
-    localState.stats.mergeReqsTimed {
+    localState.stats(MergeReqs) {
       reqs.foldLeft[(Seq[Constraint], TReqs)](tinit)(_mergeReqMaps(EqKindConstraint))
     }
 

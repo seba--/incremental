@@ -1,6 +1,6 @@
 package incremental.systemfomega
 
-import constraints.Statistics
+import constraints.StatKeys._
 import constraints.normequality._
 import incremental.{Util, Node_}
 import incremental.Node._
@@ -23,7 +23,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type Result[T] = (T, CS)
 
   def typecheckImpl(e: Node): Either[Type, TError] =
-    localState.stats.typecheckTimed {
+    localState.stats(TypeCheck) {
       try {
         val (t, sol_) = typecheckExpRec(e, Map(), Map())
         val sol = sol_.tryFinalize

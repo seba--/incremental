@@ -1,6 +1,7 @@
 package constraints.subtype.impl
 
-import constraints.{Statistics, CVar, subtype}
+import constraints.StatKeys._
+import constraints.{StatKeys$, CVar, subtype}
 import constraints.subtype._
 import constraints.subtype.CSubst.CSubst
 import incremental.Util
@@ -27,7 +28,7 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
   def never(c: Constraint) = throw new UnsupportedOperationException(s"SolveEnd cannot handle unsolvable constraint $c")
 
   def mergeSubsystem(that: SolveEndCS) =
-    stats.mergeSolutionTimed {
+    stats(MergeSolution) {
       val mnotyet = notyet ++ that.notyet
       SolveEndCS(mnotyet)
     }
@@ -35,14 +36,14 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
 
   override def addNewConstraint(c: Constraint) = {
     stats.addToConstraintCount(1)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       SolveEndCS(notyet :+ c)
     }
   }
 
   override def addNewConstraints(cons: Iterable[Constraint]) = {
     stats.addToConstraintCount(cons.size)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       SolveEndCS(notyet ++ cons)
     }
   }

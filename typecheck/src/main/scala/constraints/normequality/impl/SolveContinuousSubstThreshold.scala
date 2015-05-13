@@ -1,6 +1,7 @@
 package constraints.normequality.impl
 
-import constraints.{Statistics, CVar}
+import constraints.StatKeys._
+import constraints.{StatKeys$, CVar}
 import constraints.normequality._
 import constraints.normequality.CSubst.CSubst
 import incremental.Util
@@ -37,7 +38,7 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, notyet: Seq[Con
   lazy val trigger = substitution.size >= threshold
 
   def mergeSubsystem(other: SolveContinuousSubstThresholdCS): SolveContinuousSubstThresholdCS =
-    stats.mergeSolutionTimed {
+    stats(MergeSolution) {
       val msubstitution = substitution ++ other.substitution
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
@@ -46,14 +47,14 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, notyet: Seq[Con
 
   def addNewConstraint(c: Constraint) = {
     stats.addToConstraintCount(1)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       c.solve(this)
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
     stats.addToConstraintCount(cons.size)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
   }

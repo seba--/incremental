@@ -1,6 +1,6 @@
 package incremental.pcf
 
-import constraints.{Statistics, CVar, equality}
+import constraints.{StatKeys$, CVar, equality}
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveContinuously, SolveEnd}
 import constraints.equality.ConstraintSystem
 import incremental.Node._

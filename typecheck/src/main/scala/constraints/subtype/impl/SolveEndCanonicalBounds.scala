@@ -1,6 +1,7 @@
 package constraints.subtype.impl
 
-import constraints.{Statistics, CVar, subtype}
+import constraints.StatKeys._
+import constraints.{StatKeys$, CVar, subtype}
 import constraints.subtype._
 import constraints.subtype.CSubst.CSubst
 import incremental.Util
@@ -54,14 +55,14 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar[Type], (LBound, UBound)], 
 
   def addNewConstraint(c: Constraint) = {
     stats.addToConstraintCount(1)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       c.solve(this)
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
     stats.addToConstraintCount(cons.size)
-    stats.constraintSolveTimed {
+    stats(SolveConstraint) {
       cons.foldLeft(this)((cs, c) => c.solve(cs))
     }
   }
