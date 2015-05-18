@@ -1,5 +1,6 @@
 package benchmark.pcf
 
+import constraints.Statistics
 import constraints.equality.impl.SolveContinuousSubst
 import incremental.{TypeChecker, TypeCheckerFactory}
 import org.scalameter.DSL
@@ -147,6 +148,7 @@ object NonincrementalLightweight {
 
     val maxHeight = args(0).toInt
 
+    Statistics.ENABLED = false
 
     println("prepare profiler, then hit enter")
     StdIn.readLine()

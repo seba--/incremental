@@ -1,5 +1,6 @@
 package benchmark.pcf
 
+import constraints.Statistics
 import constraints.equality.impl.SolveContinuousSubst
 import incremental.{TypeChecker, TypeCheckerFactory}
 import org.scalameter.DSL
@@ -121,6 +122,8 @@ object Nonincremental {
   def main(args: Array[String]): Unit = {
     if (args.size != 2)
       throw new IllegalArgumentException("Expected arguments: (report|micro|quick) maxHeight")
+
+    Statistics.ENABLED = false
 
     val kind = args(0).toLowerCase
     val maxHeight = args(1).toInt
