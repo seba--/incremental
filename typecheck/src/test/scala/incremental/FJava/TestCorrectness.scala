@@ -39,7 +39,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("e0.m()", Invk(Seq('m), Seq(Var('e0))))
   typecheckTestError("e0.m(e) : U", Invk(Seq('m), Seq(Var('e0), Var('e))))
   typecheckTestError("Pair.m(e1, e2)", Invk(Seq('m), Seq(Var('pair),Var('e1), Var('e2))))
- // typecheckTestError("(C) e0 :C", UCast(CName('c),Var('e)))
+  typecheckTestError("(C) e0 :C", UCast(CName('c),Var('e)))
   typecheckTestError("y", Var('x))
   typecheckTestError(" (new Pair(first)).first : U", Field('first,New(CName('Pair),Var('first))))
   typecheckTestError("new Pair(first) : Pair", New(CName('Pair),Var('first)))
@@ -50,9 +50,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("(Pair) first : Pair, second : Pair", New(CName('Pair),Var('first), Var('second)))
   typecheckTestError("new Object()", New(CName('Object)))
   typecheckTestError("new Pair(fst : First, snd : Second)", New(CName('Pair), Seq(Var('First), Var('Second))))
- // typecheckTestError("(C) e0 : C", DCast(CName('c),'e))
- // typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-//  typecheckTestError("Int getX(x: Int) {return Int} in Number", Method(Seq(CName('Number), CName('Int), 'getX, 'x, CName('Int)),Seq(Var('e0))))
+  //typecheckTestError("(C) e0 : C", DCast(CName('c),Var('e)))
+  //typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
+  typecheckTestError("Int getX(x: Int) {return Int} in Number", Method(Seq(CName('Number), CName('Int), 'getX, 'x, Var('int), 'y),Seq(Var('e0))))
 //  //typecheckTestError("Int getXY(x,y) {return Int} in Number", Method(CName('Number), CName('Int), 'getXY, Seq('x, 'y),Var('e0)))
 }
 
