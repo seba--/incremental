@@ -123,6 +123,11 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       false
   }
 
+  def foreach[U](f: Node_[T] => U): U = {
+    _kids.foreach(f)
+    f(this)
+  }
+
   override def toString = {
     val subs = lits.map(_.toString) ++ _kids.map(_.toString)
     val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail

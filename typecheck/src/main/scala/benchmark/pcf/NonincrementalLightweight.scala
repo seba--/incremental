@@ -3,7 +3,7 @@ package benchmark.pcf
 import constraints.Statistics
 import constraints.equality.impl.SolveContinuousSubst
 import incremental.{TypeChecker, TypeCheckerFactory}
-import org.scalameter.DSL
+import org.scalameter.{Parameters, DSL}
 import org.scalameter.api._
 import benchmark.ExpGenerator._
 
@@ -23,11 +23,18 @@ class LightweightPerformanceTest(maxHeight: Int) {
    // measureT("BottomUpSolveEnd", (e:Node) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
    // measureT("BottomUpIncrementalSolve", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
    // measureT("BottomUpEagerSubst", (e:Node) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
-
-    measureT("BUSolveContinuousSubst", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-    measureT("FuturisticBUSolveContinuousSubst", (e:Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-    measureT("FuturisticHeightBUSolveContinuousSubst", (e:Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-    measureT("FuturisticHeightListBUSolveContinuousSubst", (e:Node) => new FuturisticHeightListBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+    println(s"Detected ${Runtime.getRuntime().availableProcessors()} cores")
+    baselineTime = 0l
+    for (params <- trees.dataset) {
+      val tree = trees.generate(params)
+      val optSpeedup = optimalSpeedup(tree)
+      println(s"Optimal speedup: $optSpeedup")
+      measureT("BUSolveContinuousSubst", (e: Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+      measureT("FuturisticBUSolveContinuousSubst", (e: Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+      measureT("FuturisticHeightBUSolveContinuousSubst", (e: Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+      measureT("FuturisticHeightListBUSolveContinuousSubst", (e: Node) => new FuturisticHeightListBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+      println()
+    }
     //measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
    // measureT("BottomUpEagerSubstConcurrent", (e:Node) => BottomUpEagerSubstConcurrentCheckerFactory.makeChecker.typecheck(e))(trees)
 
@@ -37,31 +44,30 @@ class LightweightPerformanceTest(maxHeight: Int) {
 //    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
   }
 
-  def measureT(name: String, check: Node => _)(trees: Gen[Node]): Unit = {
+  val baselineName = "BUSolveContinuousSubst"
+  var baselineTime = 0l
 
-    for (params <- trees.dataset) {
-      var iterations = 0
-      var time = 0.0
-      var oks = 0
-      var errors= 0
+  def measureT(name: String, check: Node => _)(params: Parameters, tree: Node): Unit = {
+    var time = 0l
+    var oks = 0
+    var errors= 0
 
-      val tree = trees.generate(params)
-
-      tree.invalidate
-      val start = System.nanoTime()
-      val res = check(tree)
-      res match {
-        case Left(_) =>
-          oks += 1
-        case _ => errors += 1
-      }
-      val end = System.nanoTime()
-      time += (end-start)
-      iterations += 1
-
-      val avg = if (iterations == 0) time else time/(1000000.0*iterations)
-      println(s"$name ($params): t: ${avg}ms ok: $oks fail: $errors")
+    tree.invalidate
+    val start = System.nanoTime()
+    val res = check(tree)
+    res match {
+      case Left(_) =>
+        oks += 1
+      case _ => errors += 1
     }
+    val end = System.nanoTime()
+    time += (end-start)
+
+    if (name == baselineName)
+      baselineTime = time
+
+    val avg = time/1000000.0
+    println(f"$name (${params("height")}):\nt: $avg%2.2fms ok: $oks fail: $errors speedup: ${baselineTime.toDouble/time}%2.2f")
   }
 
   private def performance(name: String)(thunk: => Any): Unit = {
@@ -70,6 +76,19 @@ class LightweightPerformanceTest(maxHeight: Int) {
     println("===================================")
     println()
     println()
+  }
+
+  def optimalSpeedup(tree: Node): Double = {
+    import scala.math._
+    val numCores = Runtime.getRuntime().availableProcessors()
+    val layers = Array.fill(tree.height + 1)(0)
+    tree.foreach[Unit] { node =>
+      layers(node.height) = layers(node.height) + 1
+    }
+
+    val steps = layers.foldLeft(0d) { case (sum, n) => sum + ceil(n.toDouble/numCores)   }
+
+    tree.size / steps
   }
 
 //  def measureTwith[T](name: String, check: ((Exp,T)) => _)(trees: Gen[(Exp,T)]): Unit = {
