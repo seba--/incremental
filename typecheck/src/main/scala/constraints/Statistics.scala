@@ -41,12 +41,12 @@ class Statistics {
   }
 
 
-  private val q: Array[ConcurrentLinkedQueue[Interval]] = Array.fill(StatKeys.maxId)(new ConcurrentLinkedQueue[Interval]())
-  private var _constraintCount = new AtomicInteger(0)
+  protected val q: Array[ConcurrentLinkedQueue[Interval]] = Array.fill(StatKeys.maxId)(new ConcurrentLinkedQueue[Interval]())
+  protected var _constraintCount = new AtomicInteger(0)
   @inline
-  final def addToConstraintCount(i: Int): Unit = _constraintCount.addAndGet(i)
+  def addToConstraintCount(i: Int): Unit = _constraintCount.addAndGet(i)
 
-  final def apply[T](evt: StatKeys.Value)(thunk: => T): T = {
+  def apply[T](evt: StatKeys.Value)(thunk: => T): T = {
     val start = System.nanoTime()
     val res = thunk
     val end = System.nanoTime()
@@ -95,7 +95,7 @@ class Statistics {
 
 
 
-  final def postProcess(): Array[Double] = {
+  protected def postProcess(): Array[Double] = {
     import scala.collection.JavaConverters._
 
     val res = q map { queue =>
@@ -128,3 +128,18 @@ class Statistics {
   }
 }
 
+
+object Dummy extends Statistics {
+  override protected val q = null
+  override def addToConstraintCount(i: Int) = {}
+  override def apply[T](evt: StatKeys.Value)(thunk: => T): T = thunk
+  override def print() = Util.log("statistics deactivated")
+  override def constraintCount = 0
+  override def resetStats() = {}
+  override protected def postProcess() = Array()
+}
+
+object Statistics  {
+  var ENABLED = true
+  def apply(): Statistics = if (ENABLED) new Statistics else Dummy
+}

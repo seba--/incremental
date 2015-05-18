@@ -15,7 +15,7 @@ import incremental._
  */
 abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
 
-  val clusterParam = 4
+  val clusterParam = 31
   def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
