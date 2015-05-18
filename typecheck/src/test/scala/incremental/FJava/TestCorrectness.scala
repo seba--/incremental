@@ -52,7 +52,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("new Pair(fst : First, snd : Second)", New(CName('Pair), Seq(Var('First), Var('Second))))
   //typecheckTestError("(C) e0 : C", DCast(CName('c),Var('e)))
   //typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-  typecheckTestError("Int getX(x: Int) {return Int} in Number", Method(Seq(CName('Number), CName('Int), 'getX, 'x, Var('int), 'y),Seq(Var('e0))))
+  //typecheckTestError("Int getX(x: Int) {return Int} in Number", Method(Seq(CName('Number), CName('Int), 'getX, 'x, Var('int), 'y),Seq(Var('e0))))
 //  //typecheckTestError("Int getXY(x,y) {return Int} in Number", Method(CName('Number), CName('Int), 'getXY, Seq('x, 'y),Var('e0)))
 }
 
