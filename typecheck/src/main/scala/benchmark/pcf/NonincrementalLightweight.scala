@@ -1,5 +1,7 @@
 package benchmark.pcf
 
+import java.util.concurrent.Executors
+
 import constraints.Statistics
 import constraints.equality.impl.SolveContinuousSubst
 import incremental.{TypeChecker, TypeCheckerFactory}
@@ -13,8 +15,6 @@ import incremental.Node._
 import scala.io.StdIn
 
 class LightweightPerformanceTest(maxHeight: Int) {
-
-
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
@@ -30,9 +30,9 @@ class LightweightPerformanceTest(maxHeight: Int) {
       val optSpeedup = optimalSpeedup(tree)
       println(s"Optimal speedup: $optSpeedup")
       measureT("BUSolveContinuousSubst", (e: Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+      measureT("SingleFutureBUSolveContinuousSubst", (e: Node) => new SingleFutureBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       measureT("FuturisticHeightBUSolveContinuousSubst", (e: Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       measureT("FuturisticLevelBUSolveContinuousSubst", (e: Node) => new FuturisticLevelBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-      measureT("FuturisticHeightListBUSolveContinuousSubst", (e: Node) => new FuturisticHeightListBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       measureT("FuturisticBUSolveContinuousSubst", (e: Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       println()
     }

@@ -1,6 +1,8 @@
 package incremental.pcf
 
 
+import java.util.concurrent.Executors
+
 import scala.language.postfixOps
 import constraints.StatKeys._
 import constraints.equality.{ConstraintSystemFactory, ConstraintSystem}
@@ -9,6 +11,13 @@ import scala.concurrent.duration._
 import ExecutionContext.Implicits.global
 import incremental.Node.Node
 import incremental._
+
+object FuturisticBUChecker {
+  //implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors()))
+ // implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.global
+}
+
+import FuturisticBUChecker._
 
 /**
  * Created by seba on 13/11/14.
@@ -72,7 +81,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
     val (fut, trigger) = bottomUpFuture(root)
 
     localState.stats(TypeCheck) {
-      trigger success (Unit)
+      trigger success ()
       Await.result(fut, 1 minute)
 
       val (t_, reqs, sol_) = root.typ
@@ -96,65 +105,30 @@ case class FuturisticBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: Const
   }
 }
 
-abstract class FuturisticHeightBUChecker[CS <: ConstraintSystem[CS]] extends FuturisticBUChecker[CS] {
-  override val clusterParam = 4
-
+abstract class SingleFutureBUChecker[CS <: ConstraintSystem[CS]] extends FuturisticBUChecker[CS] {
   override def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
-    def recurse(e: Node_[Result]): (Future[Any], Int) = {
-      if (e.height == clusterParam) {
-        val f = fut map { _ =>
-          e.visitInvalid { e =>
-            typecheckRec(e)
-            true
-          }
-        }
-        (f, 1)
-      }
-      else {
-        val (fs, hops) = (e.kids.seq.map { k => recurse(k) }).unzip
-        val max = hops.foldLeft(0) { case (i,j) => i.max(j) }
-        val join = Future.fold(fs)(()) { case x => () }
-
-        if ((max % clusterParam) == 0) {
-          val future = join.map { _ =>
-            e.visitInvalid { e =>
-              typecheckRec(e)
-              true
-            }
-          }
-          (future, max + 1)
-        }
-        else
-          (join, max + 1)
-      }
-    }
-
-    val (res, hops) = recurse(e)
-
-    if ((e.height % clusterParam) != 0) {
-      val res2 = res map { _ =>
-        e.visitInvalid { e =>
+    val res = fut map { _ =>
+      e.visitUninitialized {
+        e =>
           typecheckRec(e)
           true
-        }
       }
-      (res2, trigger)
     }
-    else (res, trigger)
+    (res, trigger)
   }
 }
 
-case class FuturisticHeightBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
-  def makeChecker = new FuturisticHeightBUChecker[CS] {
+case class SingleFutureBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new SingleFutureBUChecker[CS] {
     type CSFactory = factory.type
     implicit val csFactory: CSFactory = factory
   }
 }
 
-abstract class FuturisticHeightListBUChecker[CS <: ConstraintSystem[CS]] extends FuturisticHeightBUChecker[CS] {
-
+abstract class FuturisticHeightBUChecker[CS <: ConstraintSystem[CS]] extends FuturisticBUChecker[CS] {
+  override val clusterParam = 4
   override def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
@@ -203,8 +177,8 @@ abstract class FuturisticHeightListBUChecker[CS <: ConstraintSystem[CS]] extends
   }
 }
 
-case class FuturisticHeightListBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
-  def makeChecker = new FuturisticHeightListBUChecker[CS] {
+case class FuturisticHeightBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new FuturisticHeightBUChecker[CS] {
     type CSFactory = factory.type
     implicit val csFactory: CSFactory = factory
   }
