@@ -209,3 +209,52 @@ case class FuturisticHeightListBUCheckerFactory[CS <: ConstraintSystem[CS]](fact
     implicit val csFactory: CSFactory = factory
   }
 }
+
+abstract class FuturisticLevelBUChecker[CS <: ConstraintSystem[CS]] extends FuturisticBUChecker[CS] {
+  override val clusterParam = 31 //TODO try to measure the best cluster size for a future
+
+  override def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
+    import collection.mutable.ArrayBuffer
+
+    val level = Array.fill(e.height + 1)(ArrayBuffer.empty[Node_[Result]])
+    e.foreach { node =>
+      level(node.height) += node
+    }
+    val numCores = Runtime.getRuntime.availableProcessors()
+    val trigger: Promise[Unit] = Promise()
+    var res = trigger.future
+    var size = e.size
+    var i = 0
+    while (i < level.length && size > clusterParam) {
+      val lvl = level(i)
+      val clusterSize = (lvl.size.toDouble / numCores).ceil.toInt
+      val fs = for (part <- 0 until lvl.size by clusterSize)
+        yield res.map { _ =>
+          for (i <- part until (part + clusterSize).min(lvl.size))
+            typecheckRec(lvl(i))
+        }
+      size -= lvl.size
+      i += 1
+      res = Future.fold(fs)(()) { case x => () }
+    }
+
+    if (size != 0) {
+      val res2 = res map { _ =>
+        e.visitInvalid { e =>
+          typecheckRec(e)
+          true
+        }
+      }
+      (res2, trigger)
+    }
+    else (res, trigger)
+  }
+}
+
+case class FuturisticLevelBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new FuturisticLevelBUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
+}
+

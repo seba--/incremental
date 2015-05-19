@@ -124,7 +124,7 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   }
 
   def foreach[U](f: Node_[T] => U): U = {
-    _kids.foreach(f)
+    _kids.foreach(_.foreach(f))
     f(this)
   }
 
@@ -133,7 +133,7 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
     val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail
     val substring = subssep.foldLeft("")(_+_)
     val typString = "" //if(typ == null) "" else "@{" + typ.asInstanceOf[Tuple3[_,_,_]]._1 "}"
-    s"$kind$typString($substring)"
+    s"$kind${_height}$typString($substring)"
   }
 }
 
