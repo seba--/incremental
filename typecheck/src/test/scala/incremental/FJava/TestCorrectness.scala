@@ -4,22 +4,22 @@ import constraints.CVar
 import constraints.equality.impl._
 import constraints.equality._
 import incremental.Node._
-import incremental.Util
+import incremental.{Node_, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
  * Created by lirakuci on 3/29/15.
  */
-class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
-  val checker: TypeChecker[CS] = checkerFactory.makeChecker
+class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: BUChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: =>Node_[checker.Result])(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
-      val actual = checker.typecheck(e)
+      val actual = checker.typecheck(e.withType[Any])
       assert(actual.isLeft, s"Expected $expected but got $actual")
-
+      e.typ._3
       val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
         expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
       }
