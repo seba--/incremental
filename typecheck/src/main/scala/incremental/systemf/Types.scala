@@ -1,116 +1,105 @@
 package incremental.systemf
 
-import incremental.{TypCompanion, UType, EqConstraint, Type}
-import incremental.ConstraintOps._
-import incremental.Type.Companion._
+import constraints.CVar
+import constraints.equality.CSubst.CSubst
+import constraints.equality._
 
 /**
  * Created by seba on 13/11/14.
  */
-//trait CheckResult {
-//  (Type, Map[Symbol, Type], Unsolvable)
-//}
 
-case object TNum extends Type {
+trait PolType extends constraints.equality.Type {
+  def freeTVars: Set[Symbol]
+  def getFreeTVars(t: Type): Set[Symbol] =
+    if (t.isInstanceOf[PolType])
+      t.asInstanceOf[PolType].freeTVars
+    else
+      Set()
+}
+
+case class UVar(x: CVar[Type]) extends PolType {
   def freeTVars = Set()
-  def occurs(x: Symbol) = false
-  def normalize = this
-  def subst(s: TSubst) = this
-  def unify(other: Type, s: Map[Symbol, Type]) = other match {
-    case TNum => emptySol
-    case UVar(x) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
+  def occurs(x2: CVar[_]) = x == x2
+  def subst(s: CSubst) = s.hgetOrElse(x, this)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
+    if (other == this) cs
+    else cs.substitution.hget(x) match {
+      case Some(t) => t.unify(other, cs)
+      case None =>
+        val t = other.subst(cs.substitution)
+        if (this == t)
+          cs
+        else if (t.occurs(x))
+          cs.never(EqConstraint(this, t))
+        else
+          cs.solved(CSubst(x -> t))
+    }
+}
+
+case object TNum extends PolType {
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TNum => cs
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
 }
 
-case class TFun(t1: Type, t2: Type) extends Type {
-  def freeTVars = t1.freeTVars ++ t2.freeTVars
-  def occurs(x: Symbol) = t1.occurs(x) || t2.occurs(x)
-  def normalize = TFun(t1.normalize, t2.normalize)
-  def subst(s: Map[Symbol, Type]) = TFun(t1.subst(s), t2.subst(s))
-  def unify(other: Type, s: TSubst) = other match {
-    case TFun(t1_, t2_) =>
-      val sol1 = t1.unify(t1_, s)
-      val sol2 = t2.unify(t2_, s)
-      sol1 ++ sol2
-    case UVar(x) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
+case class TFun(t1: Type, t2: Type) extends PolType {
+  def freeTVars = getFreeTVars(t1) ++ getFreeTVars(t2)
+  def occurs(x: CVar[_]) = t1.occurs(x) || t2.occurs(x)
+  def subst(s: CSubst) = TFun(t1.subst(s), t2.subst(s))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TFun(t1_, t2_) => t2.unify(t2_, t1.unify(t1_, cs))
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
   override def toString= s"($t1 --> $t2)"
 }
 
 
-case class TVar(alpha : Symbol) extends Type {
+case class TVar(alpha : Symbol) extends PolType {
   def freeTVars = Set(alpha)
-
-  def normalize = this
-
-  def occurs(x2: Symbol) = alpha == x2
-
-  def subst(s: TSubst) = this//subst(s + (alpha -> TUsVar(alpha)))
-  // def subst(s: Map[Symbol, Type]) =  //s.apply(alpha) //(Map(alpha -> TUsVar(alpha))
-  def unify(other: Type, s :TSubst) = other match {
-      case TVar(`alpha`) => emptySol
-    case UVar(x) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
-  }
-}
-
-case class UVar(x: Symbol) extends Type {
-  def freeTVars = Set()
-  def occurs(x2: Symbol) = x == x2
-  def normalize = this
-  def subst(s: Map[Symbol, Type]) = s.getOrElse(x, this)
-  def unify(other: Type, s: TSubst) =
-    if (other == this) emptySol
-    else s.get(x) match {
-      case Some(t) => t.unify(other, s)
-      case None =>
-        val t = other.subst(s)
-        if (this == t)
-          emptySol
-        else if (t.occurs(x))
-          never(EqConstraint(this, t))
-        else
-          solution(Map(x -> t))
+  def occurs(x2: CVar[_]) = alpha == x2
+  def subst(s: CSubst) = s.hgetOrElse(CVar[Type](alpha), this)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) =
+    if (this == other) cs
+    else cs.substitution.hget(CVar[Type](alpha)) match {
+      case None => other match {
+        case UVar(x) => other.unify(this, cs)
+        case _ => cs.never(EqConstraint(this, other))
+      }
+      case Some(t) => t.unify(other, cs)
     }
 }
 
-case class TUniv(alpha : Symbol, t : Type) extends Type {
-  def freeTVars = t.freeTVars - alpha
-
-  def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
-
-  def normalize = TUniv(alpha, t.normalize)
-
-  def subst(s: Map[Symbol, Type]) = TUniv(alpha, t.subst(s - alpha))
-
-  def unify(other: Type, s: TSubst) = other match {
-    case UUniv(alpha2, t2) => solution(Map(alpha2 -> TVar(alpha))) ++ t.unify(t2, s + (alpha2 -> TVar(alpha)))
-    case TUniv(alpha2, t2) => t.unify(t2, s + (alpha2 -> TVar(alpha)))
-    case UVar(_) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
+case class TUniv(alpha : Symbol, t : Type) extends PolType {
+  def freeTVars = getFreeTVars(t) - alpha
+  def occurs(x2: CVar[_]) = t.occurs(x2)
+  def subst(s: CSubst) = TUniv(alpha, t.subst(s))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
+    case UUniv(alpha2, t2) => t.unify(t2, cs.solved(CSubst(alpha2 -> TVar(alpha))))
+    case TUniv(alpha2, t2) => t.unify(t2, cs.solved(CSubst(CVar[Type](alpha) -> TVar(alpha2)))) without Set(CVar(alpha))
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
 }
 
-case class UUniv(alpha: Symbol, t : Type) extends Type {
-  def freeTVars = t.freeTVars
-
-  def normalize = UUniv(alpha, t.normalize)
-
-  def occurs(x2: Symbol) = alpha == x2 || t.occurs(x2)
-
-  def subst(s : Map[Symbol, Type]) = s.get(alpha) match {
+case class UUniv(alpha: CVar[Type], t : Type) extends PolType {
+  def freeTVars = getFreeTVars(t)
+  def occurs(x2: CVar[_]) = alpha == x2 || t.occurs(x2)
+  def subst(s : CSubst) = s.hget(alpha) match {
     case Some(TVar(beta)) => TUniv(beta, t.subst(s))
     case Some(UVar(beta)) => UUniv(beta, t.subst(s))
     case None => UUniv(alpha, t.subst(s))
     case Some(_) => throw new IllegalArgumentException(s"Cannot replace type bound by non-variable type")
   }
-
-  def unify(other: Type, s: TSubst) = other match {
-    case UUniv(alpha2, t2) => solution(Map(alpha -> UVar(alpha2))) ++ t.unify(t2, s + (alpha -> UVar(alpha2)))
-    case TUniv(alpha2, t2) => solution(Map(alpha -> TVar(alpha2))) ++ t.unify(t2, s + (alpha -> TVar(alpha2)))
-    case UVar(_) => other.unify(this, s)
-    case _ => never(EqConstraint(this, other))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs :CS) = other match {
+    case UUniv(alpha2, t2) => t.unify(t2, cs.solved(CSubst(alpha -> UVar(alpha2))))
+    case TUniv(alpha2, t2) => t.unify(t2, cs.solved(CSubst(alpha -> TVar(alpha2))))
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
   }
 }
