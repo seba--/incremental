@@ -1,35 +1,29 @@
 package incremental.pcf.with_records
 
+import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveEnd, SolveContinuously}
+import constraints.equality.{Type, ConstraintSystem}
 import incremental.Node._
+import incremental.Util
 import incremental.pcf._
-import incremental.{Type, TypeChecker, TypeCheckerFactory, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
  * Created by seba on 14/11/14.
  */
-class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type]) extends FunSuite with BeforeAndAfterEach {
-  var checker: TypeChecker[Type] = _
+class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
-  override def beforeEach: Unit = {
-    checker = checkerFactory.makeChecker
-  }
-  override def afterEach: Unit = {
-    Util.log(f"Preparation time\t${checker.preparationTime}%.3fms")
-    Util.log(f"Type-check time\t\t${checker.typecheckTime}%.3fms")
-    Util.log(f"Constraint count\t${checker.constraintCount}")
-    Util.log(f"Cons. solve time\t${checker.constraintSolveTime}%.3fms")
-    Util.log(f"Merge reqs time\t\t${checker.mergeReqsTime}%.3fms")
-  }
-
-  import scala.language.implicitConversions
-  implicit def eqType(t: Type): PartialFunction[Type,Boolean] = {case t2 => t == t2}
+  override def afterEach: Unit = checker.localState.printStatistics()
 
   def typecheckTest(desc: String, e: =>Node)(expected: Type) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
-      assert(actual.isLeft, s"Expected resulting type but found type error ${actual.right}")
-      assertResult(expected)(actual.left.get)
+      assert(actual.isLeft, s"Expected $expected but got $actual")
+
+      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
+        expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
+      }
+      assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
   def typecheckTestError(desc: String, e: =>Node) =
@@ -47,5 +41,11 @@ class TestCorrectness(classdesc: String, checkerFactory: TypeCheckerFactory[Type
   typecheckTestError("\\x. x.m + (x.m) 0", Abs('x, Add(Project('m, Var('x)), App(Project('m, Var('x)), Num(0)))))
 }
 
-class TestDownUpCorrectness extends TestCorrectness("DownUp", DownUpCheckerFactory)
-class TestBottomUpCorrectness extends TestCorrectness("BottomUp", BottomUpEagerSubstCheckerFactory)
+class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
+class TestDUSolveContniuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
+
+class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
+class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
+//class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)

@@ -2,7 +2,7 @@ package incremental
 
 import Node._
 
-abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck = Node.ignore) extends Serializable {
+abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
   def unapplySeq(e: Node_[_]): Option[Seq[Node_[_]]] =
     if (e.kind == this)
       Some(e.kids.seq)
@@ -13,9 +13,23 @@ abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck = Node.ignor
 class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
   kind.syntaxcheck(kind).check(lits, kidsArg)
 
+  protected def maxHeight(seq: Seq[Node_[T]]): Int = {
+    val incr = if (seq.isEmpty) 0 else 1
+    seq.foldLeft(0){ case (i, n) => i.max(n._height) } + incr
+  }
+
+  protected def sumSize(seq: Seq[Node_[T]]): Int = {
+    seq.foldLeft(1){ case (s, n) => s + n.size }
+  }
+
+  private var _height: Int = maxHeight(kidsArg)
+  private var _size = sumSize(kidsArg)
   private var _typ: T = _
   private var _valid = false
 
+  def height = _height
+
+  def size = _size
   def valid = _valid // needed for propagation pruning
   def typ = _typ
   def typ_=(t: T): Unit = {
@@ -40,6 +54,8 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       else
         ee._typ = kids(i)._typ
       _kids(i) = ee
+      _height = maxHeight(_kids)
+      _size = sumSize(_kids)
     }
     def seq: Seq[Node_[T]] = _kids
   }
@@ -85,6 +101,28 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       false
   }
 
+  def visitInvalid(f: Node_[T] => Boolean): Boolean = {
+    var hasSubchange = false
+    for(k <- _kids if !k.valid) {
+      hasSubchange = k.visitInvalid(f)  || hasSubchange
+    }
+    if (!valid || hasSubchange)
+      f(this)
+    else
+      false
+  }
+
+  def visitUpto(depth: Int)(f: Node_[T] => Boolean): Boolean = {
+    if (depth > 0) {
+      val hasSubchange = _kids.foldLeft(false){ (changed, k) => k.visitUpto(depth - 1)(f) || changed }
+      if (!valid || hasSubchange)
+        f(this)
+      else false
+    }
+    else
+      false
+  }
+
   override def toString = {
     val subs = lits.map(_.toString) ++ _kids.map(_.toString)
     val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail
@@ -109,8 +147,8 @@ object Node {
   }
   
   val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)
-  def simple[K <: NodeKind](kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
-  def simple[K <: NodeKind](litTypes: Seq[Class[_]], kidTypes: Class[K]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
+  def simple(kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
+  def simple(litTypes: Seq[Class[_]], kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
   implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 
@@ -134,7 +172,7 @@ object SyntaxChecking {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) = {}
   }
 
-  case class KidTypesLitTypesSyntax[K <: NodeKind](k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[K]]) extends SyntaxChecker(k) {
+  case class KidTypesLitTypesSyntax(k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[_ <: NodeKind]]) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
       if (kids.size != kidTypes.size)
         error(s"Expected ${kidTypes.size} subexpressions but found ${kids.size} subexpressions")

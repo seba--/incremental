@@ -12,17 +12,17 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
   def measureCheckers(maxtree: Node, heights: Gen[Int]): Unit = {
-    val du = DownUpCheckerFactory.makeChecker
+//    val du = DownUpCheckerFactory.makeChecker
 //    val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
-    val bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
-    val bu3 = BottomUpEagerSubstCheckerFactory.makeChecker
-    val bu4 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10)
+//    val bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
+//    val bu3 = BottomUpEagerSubstCheckerFactory.makeChecker
+//    val bu4 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10)
 
-    measureIncremental("DownUp", (e:Node) => du.typecheck(e))(maxtree, heights)
+//    measureIncremental("DownUp", (e:Node) => du.typecheck(e))(maxtree, heights)
 //    measureIncremental("BottomUpSolveEnd", (e:Exp) => bu1.typecheck(maxtree))(maxtree, heights)
-    measureIncremental("BottomUpIncrementalSolve", (e:Node) => bu2.typecheck(e))(maxtree, heights)
-    measureIncremental("BottomUpEagerSubst", (e:Node) => bu3.typecheck(e))(maxtree, heights)
-    measureIncremental(s"BottomUpSometimesEagerSubst-10", (e:Node) => bu4.typecheck(e))(maxtree, heights)
+//    measureIncremental("BottomUpIncrementalSolve", (e:Node) => bu2.typecheck(e))(maxtree, heights)
+//    measureIncremental("BottomUpEagerSubst", (e:Node) => bu3.typecheck(e))(maxtree, heights)
+//    measureIncremental(s"BottomUpSometimesEagerSubst-10", (e:Node) => bu4.typecheck(e))(maxtree, heights)
 
     //    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
     //    val tupled = Gen.tupled(trees,thresholds)
