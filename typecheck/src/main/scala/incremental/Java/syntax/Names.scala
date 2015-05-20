@@ -18,7 +18,7 @@ trait TypeName extends Name with TypeDecSpec with ArrayBaseType{}
 case class TypeNameT(id: String) extends TypeName
 case class TypeNameExt(ext: PackageOrTypeName, id: String) extends TypeName
 
-trait ExprName extends Name with LHS{}
+trait ExprName extends Name
 case class ExprNameT(id: String) extends ExprName
 case class ExprNameExt(ext: AmbName, id: String) extends ExprName
 

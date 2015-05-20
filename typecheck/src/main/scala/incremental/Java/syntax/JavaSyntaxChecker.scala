@@ -167,7 +167,14 @@ object QConstrInvSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
   }
 }
 
-// TODO: how to integrate this into Expr and Stm syntax or Node, like simple()
+object JavaSyntaxChecker {
+  def exprKids = (k: NodeKind) => new ExprKindsSyntax(k)
+  def stmKids = (k: NodeKind) => new StmKindsSyntax(k)
+  def exprOrStmKids = (k: NodeKind) => new ExprOrStmKindsSyntax(k)
+  def noLits = (k: NodeKind) => new NoLitsSyntax(k)
+  def lits(litTypes: Seq[Class[_]]) = (k: NodeKind) => new LitsSyntax(k, litTypes)
+}
+
 case class ExprKindsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(kids.exists(!_.kind.isInstanceOf[Expr]))
@@ -194,5 +201,16 @@ case class NoLitsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(lits.size != 0)
       error(s"No literals allowed, but found ${lits.size}")
+  }
+}
+
+case class LitsSyntax(k: NodeKind, litTypes: Seq[Class[_]]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(lits.size != litTypes.size)
+      error(s"Expected ${litTypes.size} literals but found ${lits.size} literals")
+
+    for (i <- 0 until lits.size)
+      if (!litTypes(i).isInstance(lits(i)))
+        error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
   }
 }
