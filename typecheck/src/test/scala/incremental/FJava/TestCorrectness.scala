@@ -40,7 +40,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
     }
-  typecheckTestFJ("x", Var('y))(UCName(CVar('y))) the code it dhouls be in the 
+
+  typecheckTestFJ("x", Var('y))(UCName(CVar('y)))
   typecheckTestFJ("x", Var('x))(UCName(CVar('x)))
   typecheckTestFJ("e0.f : C ", Fields('f,Var('e0)))(UCName(CVar('C)))
   typecheckTestFJ("new C(x):C", New(CName('c),Var('x)))(CName('c))
