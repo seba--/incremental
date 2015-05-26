@@ -120,7 +120,7 @@ object MethodInvokationSyntax extends SyntaxChecking.SyntaxChecker(Invoke) {
     if(kids.size >= 2)
       for(i <- 1 until kids.size)
         if(!classOf[Expr].isInstance(kids(i).kind))
-          error(s"All argument kinds must be of kind Expr, but found ${kids(i).kind.getClass}")
+          error(s"All kids in argument position must be of kind Expr, but found ${kids(i).kind.getClass}")
   }
 }
 
