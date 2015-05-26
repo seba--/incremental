@@ -89,22 +89,22 @@ case object CastRef extends Expr(simple(Seq(classOf[RefType]), cExpr))
 case object InstanceOf extends Expr(simple(Seq(classOf[RefType]), cExpr))
 
 // Assignment Operators
-case object Assign extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr)) // TODO: restrict kind / get rid of seq
-case object AssignMul extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr)) // remove array access and field access nodekinds
-case object AssignDiv extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignRemain extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignPlus extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignMinus extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignLeftShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignRightShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignURightShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignAnd extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignExcOr extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
-case object AssignOr extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(Seq(classOf[FieldAccess]), cExpr) orElse simple(Seq(classOf[ArrayAccess]), cExpr))
+case object Assign extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignMul extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignDiv extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignRemain extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignPlus extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignMinus extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignLeftShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignRightShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignURightShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignAnd extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignExcOr extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object AssignOr extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
 
 // Array Access
-abstract class ArrayAccess(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
-case object ArrayAccess extends ArrayAccess(simple(cExpr, cExpr)) // TODO: name conflict?
+//abstract class ArrayAccess(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
+case object ArrayAccess extends Expr(simple(cExpr, cExpr))
 
 // Array Creation
 //abstract class ArrayCreationExpr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
