@@ -41,13 +41,12 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 
-  typecheckTestFJ("x", Var('y))(UCName(CVar('y)))
   typecheckTestFJ("x", Var('x))(UCName(CVar('x)))
   typecheckTestFJ("e0.f : C ", Fields('f,Var('e0)))(UCName(CVar('C)))
-  typecheckTestFJ("new C(x):C", New(CName('c),Var('x)))(CName('c))
+  typecheckTestFJ("new C(x):C", New(Seq(CName('c)),Seq(Var('x))))(CName('c))
   typecheckTestFJ("e0.m() : void", Invk(Seq('m), Seq(Var('e0))))(UCName(CVar('void)))
   typecheckTestFJ("e0.m(e) : Double", Invk(Seq('m), Seq(Var('e0), Var('e))))(UCName(CVar('Double)))
-  typecheckTestError("Pair.m(e1, e2)", Invk(Seq('m), Seq(Var('pair),Var('e1), Var('e2))))
+  typecheckTestFJ("Point.add(p1, p2) : Point", Invk(Seq('add), Seq(Var('Point),Var('p1), Var('p2))))(UCName(CVar('Point)))
   typecheckTestError("(C) e0 :C", UCast(CName('c),Var('e)))
   typecheckTestError("y", Var('x))
   typecheckTestError("new Pair(first) : Pair", New(CName('Pair),Var('first)))
@@ -57,13 +56,36 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("(Pair) first : Pair", New(CName('Pair),Var('first)))
   typecheckTestError("(Pair) first : Pair, second : Pair", New(CName('Pair),Var('first), Var('second)))
   typecheckTestFJ("new Object()", New(CName('Object)))(CName('Object))
-  typecheckTestFJ("new Pair(fst : First, snd : Second)", New(CName('Pair), Seq(Var('First), Var('Second))))(CName('Pair))
-  typecheckTestFJ(" (new Pair(first)).first : Int", Fields('first,New(CName('Pair),Var('first))))(UCName(CVar('Int)))
+  typecheckTestFJ("new Pair(fst : First, snd : Second)", New(Seq(CName('Pair)), Seq(Var('First), Var('Second))))(CName('Pair))
+
+  typecheckTestFJ(" (new Pair(first)).first : Int", Fields('f,New(CName('Pair),Var('f))))(UCName(CVar('Int)))
+
+
+  typecheckTestFJ("'void m() in C", MethodDec(Seq(CName('C),CName('void),'m,Seq(('x,UCName(CVar('x))),('y,UCName(CVar('y))))),Seq(New(CName('Object)))))(CName('C))
+  typecheckTestFJ("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('C),CName('void),'m,Seq(('C$0,UCName(CVar('C$0))))),Seq(Invk(Seq('m), Seq(Var('e0), Var('C$0))))))(CName('C))
+  typecheckTestFJ("'Double ) ) in Pair", MethodDec(Seq(CName('Pair),CName('void),'m,Seq(('f,UCName(CVar('f))))),Seq(Invk(Seq('setfst),Seq(New(CName('Pair),Var('f)), Var('f))))))(CName('Pair))
+  typecheckTestFJ("' in Pair", MethodDec(Seq(CName('Point),CName('Double),'getSum,Seq(('fst,UCName(CVar('fst))))),Seq(Invk(Seq('add),Seq(Var('Point),Var('fst), Var('snd))))))(CName('Double))
+  typecheckTestFJ("Adding two points", MethodDec(Seq(CName('Point),CName('Double),'getSum,Seq(('fst,UCName(CVar('fst))), ('snd, UCName(CVar('snd))))),Seq(Invk(Seq('add),Seq(Var('Point),Var('fst), Var('snd))))))(CName('Point))
+
 
   //typecheckTestError("(C) e0 : C", DCast(CName('c),Var('e)))
   //typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-  //typecheckTestError("Int getX(x: Int) {return Int} in Number", Method(Seq(CName('Number), CName('Int), 'getX, 'x, Var('int), 'y),Seq(Var('e0))))
- //typecheckTestError("Int getXY(x,y) {return Int} in Number", Method(CName('Number), CName('Int), 'getXY, Seq('x, 'y),Var('e0)))
+  typecheckTestFJ("Int getX(x: Int) {return Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(New(CName('Int)))))(CName('Number))
+  typecheckTestFJ("Int getX(x: Int) {Number.getX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(Var('Number),Var('x))))))(CName('Number))
+
+  typecheckTestFJ("Int getX(x: Int) {(new Nr).getX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(New(CName('Nr)),Var('x))))))(CName('Number))
+
+  typecheckTestFJ("Int getX(x: Int) {(new Number).gX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('gX),Seq(New(CName('Number)),Var('x))))))(CName('Number))
+
+  typecheckTestFJ("Int getX(x: Int) {(new Number(x)).getX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(New(CName('Number), Var('x)),Var('x))))))(CName('Number))
+
+  typecheckTestFJ("Int getX(x: Int) {(new Number).getX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(New(CName('Number)),Var('x))))))(CName('Number))
+
+  typecheckTestFJ("Int getX(x: Int) {(new Number(x).x : Int in Number}", MethodDec(Seq(CName('Number), CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))), Seq(Fields('x, New(CName('Number),Var('x))))))(CName('Number))
+
+  typecheckTestFJ("Int getX(x: Int) {(new Number(x,y).x : Int in Number}", MethodDec(Seq(CName('Number), CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))), Seq(Fields('x, New(CName('Number),Var('x),Var('y))))))(CName('Number))
+  // /typecheckTestError("Int getXY(x,y) {return Int} in Number", Method(CName('Number), CName('Int), 'getXY, Seq('x, 'y),Var('e0)))
+
 }
 
 
