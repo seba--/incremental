@@ -136,13 +136,3 @@ case object QNewInstance extends Expr((lits(Seq(classOf[String])) orElse lits(Se
                                        lits(Seq(classOf[String], classOf[TypeArgs])) orElse lits(Seq(classOf[TypeArgs], classOf[String], classOf[TypeArgs])))
                                       andAlso
                                        (exprKids)) //TODO: orElse manyFollowedByOne(cExpr, classOf[ClassBody])))
-
-// Package Declaration
-//case class PackageDec(annotation: Seq[Anno], name: PackageName) // TODO: extends?
-
-// Import Declarations TODO: Move to another file
-trait ImportDec{}
-case class TypeImportDec(t: TypeName) extends ImportDec
-case class TypeImportOnDemandDec(p: PackageName) extends ImportDec
-case class StaticImportDec(t: TypeName, id: String) extends ImportDec
-case class StaticImportOnDemandDec(t: TypeName) extends ImportDec
