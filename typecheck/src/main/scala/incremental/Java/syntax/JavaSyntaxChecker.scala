@@ -274,7 +274,7 @@ case class KidsFollowedByKidSyntax(k: NodeKind, headsType: Class[_ <: NodeKind],
 
 case class KidFollowedByKidsSyntax(k: NodeKind, firstType: Class[_ <: NodeKind], tailType: Class[_ <: NodeKind]) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    if(kids.size < 1)
+    if(kids.isEmpty)
       error(s"At least one kid needed")
 
     if(!firstType.isInstance(kids.head.kind))
