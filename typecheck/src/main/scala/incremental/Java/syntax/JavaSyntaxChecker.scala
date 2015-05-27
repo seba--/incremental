@@ -167,16 +167,22 @@ object QConstrInvSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
 }
 
 object JavaSyntaxChecker {
-  def exprKids = (k: NodeKind) => new ExprKindsSyntax(k)
-  def stmKids = (k: NodeKind) => new StmKindsSyntax(k)
-  def exprOrStmKids = (k: NodeKind) => new ExprOrStmKindsSyntax(k)
   def noLits = (k: NodeKind) => new NoLitsSyntax(k)
   def lits(litTypes: Seq[Class[_]]) = (k: NodeKind) => new LitsSyntax(k, litTypes)
+  def noKids = (k: NodeKind) => new NoKidsSyntax(k)
+  def kids(kidTypes: Seq[Class[_ <: NodeKind]]) = (k: NodeKind) => new KidsSyntax(k, kidTypes)
+  def allKids(kidsType: Class[_ <: NodeKind]) = (k: NodeKind) => new KidsSequenceSyntax(k, kidsType)
   def oneFollowedByMany(first: Class[_ <: NodeKind], tail: Class[_ <: NodeKind]) = (k: NodeKind) => new KidFollowedByKidsSyntax(k, first, tail)
   def manyFollowedByOne(head: Class[_ <: NodeKind], last: Class[_ <: NodeKind]) = (k: NodeKind) => new KidsFollowedByKidSyntax(k, head, last)
+  //def exprKids = (k: NodeKind) => new ExprKindsSyntax(k)
+  //def stmKids = (k: NodeKind) => new StmKindsSyntax(k)
+  //def exprOrStmKids = (k: NodeKind) => new ExprOrStmKindsSyntax(k)
+  def exprKids = allKids(classOf[Expr])
+  def stmKids = allKids(classOf[Stm])
+  def exprOrStmKids = (k: NodeKind) => new ExprOrStmKindsSyntax(k)
 }
 
-case class ExprKindsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
+/*case class ExprKindsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(kids.exists(!_.kind.isInstanceOf[Expr]))
       error(s"All kids must be of kind Expr, but found ${kids.filter(!_.kind.isInstanceOf[Expr])}")
@@ -188,13 +194,39 @@ case class StmKindsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
     if(kids.exists(!_.kind.isInstanceOf[Stm]))
       error(s"All kids must be of kind Stm, but found ${kids.filter(!_.kind.isInstanceOf[Stm])}")
   }
-}
+}*/
 
 case class ExprOrStmKindsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     for(kid <- kids)
       if(!classOf[Expr].isInstance(kid.kind) || !classOf[Stm].isInstance(kid.kind))
         error(s"All kids must be of kind Stm or Expr, but found ${kid.kind.getClass}")
+  }
+}
+
+case class NoKidsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.size != 0)
+      error(s"No kids allowed, but found ${kids.size}")
+  }
+}
+
+case class KidsSyntax(k: NodeKind, kidTypes: Seq[Class[_ <: NodeKind]]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.size != kidTypes.size)
+      error(s"Expected ${kidTypes.size} kids but found ${kids.size} kids")
+
+    for(i <- 0 until kids.size)
+      if(!kidTypes(i).isInstance(kids(i).kind))
+        error(s"Expected kid of kind ${kidTypes(i)} at position $i but found ${kids(i)} of kind ${kids(i).kind.getClass}")
+  }
+}
+
+case class KidsSequenceSyntax(k: NodeKind, kidsType: Class[_ <: NodeKind]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    for(kid <- kids)
+      if(!kidsType.isInstance(kid.kind))
+        error(s"All kids must be of kind ${kidsType}, but found ${kid.kind.getClass}")
   }
 }
 
