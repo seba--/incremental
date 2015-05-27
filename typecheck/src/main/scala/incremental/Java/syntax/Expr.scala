@@ -116,7 +116,7 @@ case object DimExpr extends Dimension(simple(cExpr))
 
 // Field Access
 abstract class FieldAccess(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
-case object Field extends FieldAccess(simple(Seq(cExpr, classOf[String])))
+case object Field extends FieldAccess(simple(Seq(classOf[String]), cExpr))
 case object SuperField extends FieldAccess(simple(Seq(classOf[String])))
 case object QSuperField extends FieldAccess(simple(Seq(classOf[TypeName], classOf[String])))
 

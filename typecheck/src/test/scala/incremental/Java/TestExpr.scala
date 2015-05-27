@@ -67,5 +67,7 @@ class Test {
   // Assignments
   syntaxTest("var = 5", Assign(ExprNameT("var"), Lit(Deci("5"))))
   syntaxTest("var += 5", AssignPlus(ExprNameT("var"), Lit(Deci("5"))))
+  syntaxTest("this.var = 5", Assign(Field("var", This()), Lit(Deci("5"))))
+  syntaxTest("super.var = 5", Assign(SuperField("var"), Lit(Deci("5"))))
 }
 

@@ -166,8 +166,33 @@ object QConstrInvSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
   }
 }
 
+object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+  // TODO: ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Throws? ";"
+  }
+}
+
+object DeprAbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+  // TODO: ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Dim+ Throws? ";"
+  }
+}
+
+object ConstantDecSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+  // TODO: ( Anno | ConstantMod )* Type {VarDec ","}+ ";"
+  }
+}
+
+object InterfaceDecHeadSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    // TODO: ( Anno | InterfaceMod )* "interface" Id TypeParams? ExtendsInterfaces?
+  }
+}
+
 object JavaSyntaxChecker {
   def noLits = (k: NodeKind) => new NoLitsSyntax(k)
+  def nonEmptyLits = (k: NodeKind) => new NonEmptyLitsSyntax(k)
   def lits(litTypes: Seq[Class[_]]) = (k: NodeKind) => new LitsSyntax(k, litTypes)
   def allLits(litsType: Class[_]) = (k: NodeKind) => new LitsSequenceSyntax(k, litsType)
   def noKids = (k: NodeKind) => new NoKidsSyntax(k)
@@ -237,6 +262,13 @@ case class NoLitsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(lits.nonEmpty)
       error(s"No literals allowed, but found ${lits.size}")
+  }
+}
+
+case class NonEmptyLitsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(lits.isEmpty)
+      error(s"Literals must not be empty")
   }
 }
 

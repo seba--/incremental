@@ -14,4 +14,3 @@ case class TypeImportDec(t: TypeName) extends ImportDec
 case class TypeImportOnDemandDec(p: PackageName) extends ImportDec
 case class StaticImportDec(t: TypeName, id: String) extends ImportDec
 case class StaticImportOnDemandDec(t: TypeName) extends ImportDec
-
