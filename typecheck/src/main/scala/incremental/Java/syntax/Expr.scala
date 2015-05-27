@@ -1,6 +1,5 @@
 package incremental.Java.syntax
 
-import incremental.Java.Foo
 import incremental.Node._
 import incremental.{NodeKind, SyntaxChecking}
 import JavaSyntaxChecker._
@@ -103,17 +102,12 @@ case object AssignExcOr extends Expr(simple(Seq(classOf[ExprName]), cExpr) orEls
 case object AssignOr extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
 
 // Array Access
-//abstract class ArrayAccess(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
 case object ArrayAccess extends Expr(simple(cExpr, cExpr))
 
 // Array Creation
-//abstract class ArrayCreationExpr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
-case object NewArray extends Expr(_ => ArrayCreationSyntax) // TODO: test
+case object NewArray extends Expr(_ => ArrayCreationSyntax)
 
-//case class NewArray1(t: ArrayBaseType, dimExprs: Seq[DimExpr], dims: Seq[Dim]) extends ArrayCreationExpr
-//case class NewArray2(t: ArrayBaseType, dims: Seq[Dim], arrayInit: ArrayInit) extends ArrayCreationExpr
-
-trait ArrayBaseType{} // TODO: extends PrimType with TypeName{}
+trait ArrayBaseType{} // extends PrimType with TypeName{}
 case class UnboundWld(t: TypeName) extends ArrayBaseType
 
 abstract class Dimension(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
@@ -136,6 +130,12 @@ case object QSuperMethod extends MethodSpec(simple(Seq(classOf[TypeName], classO
 case object GenericMethod extends MethodSpec(simple(Seq(classOf[AmbName], classOf[TypeArgs], classOf[String])))
 
 // Class Instance Creation
+case object NewInstance extends Expr((lits(Seq(classOf[TypeArgs], classOf[ClassOrInterfaceType])) andAlso exprKids) orElse
+                                     (lits(Seq(classOf[ClassOrInterfaceType])) andAlso exprKids)) // TODO: ClassBody? (orElse)
+case object QNewInstance extends Expr((lits(Seq(classOf[String])) orElse lits(Seq(classOf[TypeArgs], classOf[String])) orElse
+                                       lits(Seq(classOf[String], classOf[TypeArgs])) orElse lits(Seq(classOf[TypeArgs], classOf[String], classOf[TypeArgs])))
+                                      andAlso
+                                       (exprKids)) //TODO: orElse manyFollowedByOne(cExpr, classOf[ClassBody])))
 
 // Package Declaration
 //case class PackageDec(annotation: Seq[Anno], name: PackageName) // TODO: extends?

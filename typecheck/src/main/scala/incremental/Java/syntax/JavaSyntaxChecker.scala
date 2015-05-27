@@ -22,17 +22,16 @@ object ArrayInitSyntax extends SyntaxChecking.SyntaxChecker(ArrayInitialize){
 
 object ArrayCreationSyntax extends SyntaxChecking.SyntaxChecker(NewArray){
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
-    if(lits.exists(_.isInstanceOf[ArrayBaseType]))
-      error(s"All literals must be of kind ArrayBaseType, but found ${lits.filter(!_.isInstanceOf[ArrayBaseType])}")
-
     if(lits.size != 1)
-      error(s"There must only be one array base type, but found ${lits.size}")
+      error(s"Just one literal allowed, but found ${lits.size}")
 
-    if(!lits(0).isInstanceOf[ArrayBaseType])
-        error(s"Only allowed ArrayBaseType as type annotation, but found ${lits(1)}")
+    if(!classOf[ArrayBaseType].isInstance(lits(0)))
+      error(s"The first literal must be an ArrayBaseType, but was ${lits(0).getClass}")
 
-    if(kids.exists(!_.kind.isInstanceOf[Dimension]))
+    if(kids.size >= 1 && kids.exists(!_.kind.isInstanceOf[Dimension]))
       error(s"All kids must be of kind Dimension, but found ${kids.filter(!_.kind.isInstanceOf[Dimension])}")
+    else if(kids.size >= 2 && !kids.last.isInstanceOf[ArrayInit] && kids.dropRight(1).exists(!_.kind.isInstanceOf[Dim.type ]))
+      error(s"The last kid must be of type ArrayInit, but was ${kids.last.getClass}")
   }
 }
 
@@ -173,6 +172,8 @@ object JavaSyntaxChecker {
   def exprOrStmKids = (k: NodeKind) => new ExprOrStmKindsSyntax(k)
   def noLits = (k: NodeKind) => new NoLitsSyntax(k)
   def lits(litTypes: Seq[Class[_]]) = (k: NodeKind) => new LitsSyntax(k, litTypes)
+  def oneFollowedByMany(first: Class[_ <: NodeKind], tail: Class[_ <: NodeKind]) = (k: NodeKind) => new KidFollowedByKidsSyntax(k, first, tail)
+  def manyFollowedByOne(head: Class[_ <: NodeKind], last: Class[_ <: NodeKind]) = (k: NodeKind) => new KidsFollowedByKidSyntax(k, head, last)
 }
 
 case class ExprKindsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
@@ -212,5 +213,31 @@ case class LitsSyntax(k: NodeKind, litTypes: Seq[Class[_]]) extends SyntaxChecki
     for (i <- 0 until lits.size)
       if (!litTypes(i).isInstance(lits(i)))
         error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
+  }
+}
+
+case class KidsFollowedByKidSyntax(k: NodeKind, headsType: Class[_ <: NodeKind], lastType: Class[_ <: NodeKind]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.size < 1)
+      error(s"At least one kid needed")
+
+    if(!lastType.isInstance(kids.last.kind))
+      error(s"The last kid must be of kind ${lastType}, but was ${kids.last.kind}")
+
+    if(kids.dropRight(1).exists(!_.kind.isInstanceOf[headsType.type]))
+      error(s"Alls kids but the last must be of kind ${headsType}, but found ${kids.dropRight(1).filter(!_.kind.isInstanceOf[headsType.type])}")
+  }
+}
+
+case class KidFollowedByKidsSyntax(k: NodeKind, firstType: Class[_ <: NodeKind], tailType: Class[_ <: NodeKind]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.size < 1)
+      error(s"At least one kid needed")
+
+    if(!firstType.isInstance(kids(0).kind))
+      error(s"The first kid must be of kind ${firstType}, but was ${kids(0).kind}")
+
+    if(kids.drop(1).exists(!_.kind.isInstanceOf[tailType.type]))
+      error(s"Alls kids but the last must be of kind ${tailType}, but found ${kids.dropRight(1).filter(!_.kind.isInstanceOf[tailType.type])}")
   }
 }
