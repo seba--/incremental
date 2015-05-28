@@ -41,6 +41,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 
+
   typecheckTestFJ("x", Var('x))(UCName(CVar('x)))
   typecheckTestFJ("e0.f : C ", Fields('f,Var('e0)))(UCName(CVar('C)))
   typecheckTestFJ("new C(x):C", New(Seq(CName('c)),Seq(Var('x))))(CName('c))
@@ -85,6 +86,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestFJ("Int getX(x: Int) {(new Number(x,y).x : Int in Number}", MethodDec(Seq(CName('Number), CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))), Seq(Fields('x, New(CName('Number),Var('x),Var('y))))))(CName('Number))
   // /typecheckTestError("Int getXY(x,y) {return Int} in Number", Method(CName('Number), CName('Int), 'getXY, Seq('x, 'y),Var('e0)))
+
+
+  typecheckTestFJ("e0.x + e0.x : TNum", Add(Fields('f,Num(1)),Fields('f,Num(1))))(TNum)
+  typecheckTestFJ("e0.x + e0.x : C", Add(Fields('f,Num(1)),Fields('f,Num(1))))(CName('C))
 
 }
 

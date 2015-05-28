@@ -9,6 +9,16 @@ import constraints.equality.{ConstraintSystem, EqConstraint, Type}
 /**
  * Created by lirakuci on 3/10/15.
  */
+
+case object TNum extends Type {
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TNum => cs
+    case UCName(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
 case class CName(x: Symbol) extends Type {
   def freeTVars = Set()
   def normalize = this
