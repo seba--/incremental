@@ -24,9 +24,9 @@ import incremental.Node._
 
         type Reqs = Map[Symbol, Type]
 
-        type CReqs = Map[Type, ClassDecl]
+        type CReqs = Map[Symbol, ClassDecl]
 
-        def Subtype(C: Type, D: Type): CReqs = {
+        def Subtype(C: Symbol, D: Type): CReqs = {
           val cld: ClassDecl = (D, Map(), Map())
           Map(C -> cld)
         }
@@ -52,6 +52,8 @@ import incremental.Node._
               val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
               val cs = subcs addNewConstraints cons
               val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
+              e.typ = (cs applyPartialSolution t, reqs2, creqs, cs.propagate)
+              val creqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)//does not work unification in the class declaration inside
               e.typ = (cs applyPartialSolution t, reqs2, creqs, cs.propagate)
               true
             }
@@ -84,13 +86,13 @@ import incremental.Node._
             val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
             val (mcCons, mCreqs) = mergeCReqMaps(creqs1, creqs2)
 
-            (TNum, mreqs, mCreqs, mcons ++ mcCons :+ lcons :+ rcons)
+            (TNum, mreqs, mCreqs, mcons :+ lcons :+ rcons)
 
           case Var =>
             val x = e.lits(0).asInstanceOf[Symbol]
             val X = freshCName()
             val cld: ClassDecl = (null, Map(), Map())
-            (X, Map(x -> X), Map(X -> cld), Seq())
+            (X, Map(x -> X), Map(), Seq())// Map(X -> cld), needed at some examples
 
           case Fields =>
             val f = e.lits(0).asInstanceOf[Symbol] //symbol
@@ -98,7 +100,7 @@ import incremental.Node._
           val U = freshCName()
             val ct: ClassDecl = (null, Map(f -> U), Map())
 
-            val (cons, mcreqs) = mergeCReqMaps(creqs, Map(t -> ct))
+            val (cons, mcreqs) = mergeCReqMaps(creqs, Map(getX(t,reqs) -> ct))
             (U, reqs, mcreqs, cons) //subsol
 
           case Invk =>
@@ -112,11 +114,11 @@ import incremental.Node._
             for (i <- 1 until e.kids.seq.size) {
               val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
               var xi = 'b
-              if (getX(ti, subreqs) == 'a) {
+              if (getX(ti, reqs0) == 'a) { //subreqs
                 xi = freshParam().x
               }
               else {
-                xi = getX(ti, subreqs)
+                xi = getX(ti, reqs0)
               }
 
               reqss = reqss :+ subreqs
@@ -127,7 +129,7 @@ import incremental.Node._
 
             val (mcons, mreqs) = mergeReqMaps(reqss)
             val (cCons, creqs) = mergeCReqMaps(creqss)
-            val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(t0 -> cld))
+            val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(getX(t0,reqs0) -> cld))
 
             (C, mreqs, mcreqs, mcons ++ cCons ++ mcCons)
 
@@ -155,20 +157,20 @@ import incremental.Node._
 
             val (mcons, mreqs) = mergeReqMaps(reqss)
             val (cCons, creqs) = mergeCReqMaps(creqss)
-            val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(c -> cld))
+            val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(c.x -> cld))
             (c, mreqs, mcreqs, mcons ++ cCons ++ mcCons)
 
 
           case DCast =>
             val (t, reqs, creqs, _) = e.kids(0).typ
             val c = e.lits(0).asInstanceOf[CName]
-            (c, reqs, creqs ++ Subtype(c, c), Seq((NotEqConstraint(t, c))))
+            (c, reqs, creqs ++ Subtype(c.x, c), Seq((NotEqConstraint(t, c))))
 
           case UCast =>
             val c = e.lits(0).asInstanceOf[CName]
             val (t, reqs, creqs, _) = e.kids(0).typ
 
-            (c, reqs, creqs ++ Subtype(t, c), Seq())
+            (c, reqs, creqs ++ Subtype(getX(t,reqs), c), Seq())
 
           case SCast =>
             val c = e.lits(0).asInstanceOf[CName]
@@ -180,20 +182,24 @@ import incremental.Node._
             val C = e.lits(0).asInstanceOf[CName]
             val retT = e.lits(1).asInstanceOf[CName]
             val m = e.lits(2).asInstanceOf[Symbol]
-            // var param = Map[Symbol, Type]()
+            var param = Map[Symbol, Type]()
             var restReqs = reqs
             var cons = Seq[Constraint]()
             val params = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]]
-
+            var fld = Map[Symbol,Type]()
+            var superT : Type = null
             var cldM = Map[Symbol, (Type, Map[Symbol, Type])]()
 
-            creqs.get(C) match {
+            creqs.get(C.x) match {
               case None =>
               case Some(cldD) =>
+                superT = cldD._1
+                fld = cldD._2
+                cldM = cldD._3
                 cldD._3.get(m) match {
-                  case None =>
+                  case None => cldM = cldD._3
                   case Some(m1) =>
-                    val param: Map[Symbol, Type] = m1._2
+                    param = m1._2
                     cons = EqConstraint(m1._1, retT) +: cons
                     for (i <- 0 until params.size) {
                       val x = params(i)._1
@@ -206,19 +212,23 @@ import incremental.Node._
 
                       param.get(x) match {
                         case Some(t1) => cons = EqConstraint(xC, t1) +: cons
+                          param = param - x
                       }
 
                     }
                 }
-                cldM = cldD._3
-                cldM = cldM - m
+                if (param.isEmpty) {
+                  cldM = cldM - m
+                }
+                else cldM = cldM
             }
 
-            val cld: ClassDecl = (null, Map(), cldM)
+            val cld: ClassDecl = (superT, fld, cldM)
 
-            val (mcons, mcreqs) = mergeCReqMaps(creqs, Map(C -> cld))
 
-            (C, restReqs, mcreqs, mcons ++ cons)
+          //  val (mcons, mcreqs) = mergeCReqMaps(creqs, Map(C -> cld))
+
+            (C, restReqs, Map(C.x -> cld), cons)
 
           //    case TClass =>
           //      val (t, reqs, creqs, _) = e.kids(0).typ
