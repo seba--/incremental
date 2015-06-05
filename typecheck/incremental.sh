@@ -1,3 +1,3 @@
 #!/bin/sh
 
-./sbt "run-main benchmark.pcf.Nonincremental report $@"
+./sbt "run-main benchmark.pcf.Incremental report $@"
