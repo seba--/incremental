@@ -13,20 +13,18 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
 
   def measureCheckers(maxtree: Exp, heights: Gen[Int]): Unit = {
     val du = DownUpCheckerFactory.makeChecker
-//    val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
+
+// Due to timeouts, we excluded BU1 from this experiment
+// val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
     val bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
     val bu3 = BottomUpEagerSubstCheckerFactory.makeChecker
     val bu4 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10)
 
-    measureIncremental("DownUp", (e:Exp) => du.typecheck(e))(maxtree, heights)
-//    measureIncremental("BottomUpSolveEnd", (e:Exp) => bu1.typecheck(maxtree))(maxtree, heights)
-    measureIncremental("BottomUpIncrementalSolve", (e:Exp) => bu2.typecheck(e))(maxtree, heights)
-    measureIncremental("BottomUpEagerSubst", (e:Exp) => bu3.typecheck(e))(maxtree, heights)
-    measureIncremental(s"BottomUpSometimesEagerSubst-10", (e:Exp) => bu4.typecheck(e))(maxtree, heights)
-
-    //    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
-    //    val tupled = Gen.tupled(trees,thresholds)
-    //    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
+    measureIncremental("DU", (e:Exp) => du.typecheck(e))(maxtree, heights)
+//    measureIncremental("BU1", (e:Exp) => bu1.typecheck(maxtree))(maxtree, heights)
+    measureIncremental("BU2", (e:Exp) => bu2.typecheck(e))(maxtree, heights)
+    measureIncremental("BU3", (e:Exp) => bu3.typecheck(e))(maxtree, heights)
+    measureIncremental("BU4", (e:Exp) => bu4.typecheck(e))(maxtree, heights)
   }
 
   def measureIncremental(name: String, check: Exp => _)(maxtree: Exp, heights: Gen[Int]): Unit = {
@@ -49,15 +47,6 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
       in { _ => check(maxtree) }
     }
   }
-
-  //  def measureTwith[T](name: String, check: ((Exp,T)) => _)(trees: Gen[(Exp,T)]): Unit = {
-  //    measure method (name) in {
-  //      using(trees).
-  //        setUp { _._1.invalidate }.
-  //        in { check }
-  //    }
-  //  }
-
 
 
   /* ADD */

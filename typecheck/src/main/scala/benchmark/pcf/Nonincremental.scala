@@ -14,15 +14,11 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
   def measureCheckers(trees: Gen[Exp]): Unit = {
-    measureT("DownUp", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUpSolveEnd", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUpIncrementalSolve", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT("BottomUpEagerSubst", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
-    measureT(s"BottomUpSometimesEagerSubst-10", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
-
-//    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
-//    val tupled = Gen.tupled(trees,thresholds)
-//    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
+    measureT("DU", (e:Exp) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BU1", (e:Exp) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BU2", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BU3", (e:Exp) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    measureT("BU4", (e:Exp) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
   }
 
   def measureT(name: String, check: Exp => _)(trees: Gen[Exp]): Unit = {
@@ -32,16 +28,6 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
       in { check }
     }
   }
-
-//  def measureTwith[T](name: String, check: ((Exp,T)) => _)(trees: Gen[(Exp,T)]): Unit = {
-//    measure method (name) in {
-//      using(trees).
-//        setUp { _._1.invalidate }.
-//        in { check }
-//    }
-//  }
-
-
 
   /* ADD */
 
