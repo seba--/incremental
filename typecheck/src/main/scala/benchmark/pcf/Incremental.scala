@@ -12,13 +12,12 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
   def measureCheckers(maxtree: Exp, heights: Gen[Int]): Unit = {
-    val du = DownUpCheckerFactory.makeChecker
-
+    def du = DownUpCheckerFactory.makeChecker
 // Due to timeouts, we excluded BU1 from this experiment
 // val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
-    val bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
-    val bu3 = BottomUpEagerSubstCheckerFactory.makeChecker
-    val bu4 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10)
+    def bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
+    def bu3 = BottomUpEagerSubstCheckerFactory.makeChecker
+    def bu4 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10)
 
     measureIncremental("DU", (e:Exp) => du.typecheck(e))(maxtree, heights)
 //    measureIncremental("BU1", (e:Exp) => bu1.typecheck(maxtree))(maxtree, heights)
