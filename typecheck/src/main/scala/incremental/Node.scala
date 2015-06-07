@@ -46,6 +46,7 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
 
   object kids {
+    val count = _kids.length
     def apply(i: Int) = _kids(i)
     def update[U](i: Int, e: Node_[U]): Unit = {
       val ee = e.asInstanceOf[Node_[T]]

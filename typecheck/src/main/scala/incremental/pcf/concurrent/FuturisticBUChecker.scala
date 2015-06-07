@@ -1,23 +1,24 @@
-package incremental.pcf
+package incremental.pcf.concurrent
 
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
 
-import java.util.concurrent.Executors
-
-import scala.language.postfixOps
 import constraints.StatKeys._
-import constraints.equality.{ConstraintSystemFactory, ConstraintSystem}
-import scala.concurrent.{ExecutionContext, Await, Promise, Future}
-import scala.concurrent.duration._
-import ExecutionContext.Implicits.global
+import constraints.equality.{ConstraintSystem, ConstraintSystemFactory}
 import incremental.Node.Node
 import incremental._
+import incremental.pcf._
+import util.Join
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.language.postfixOps
 
 object FuturisticBUChecker {
   //implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors()))
  // implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.global
 }
-
-import FuturisticBUChecker._
 
 /**
  * Created by seba on 13/11/14.
@@ -229,6 +230,93 @@ case class FuturisticLevelBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: 
   def makeChecker = new FuturisticLevelBUChecker[CS] {
     type CSFactory = factory.type
     implicit val csFactory: CSFactory = factory
+  }
+}
+
+
+
+
+abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
+  import Join.Join
+  //TODO make a version with java's misc. thread pool impls
+  val clusterParam = 4
+
+  type Thunk = () => Unit
+
+  val queue = new ConcurrentLinkedQueue[Thunk]()
+
+
+  def work(thunk: => Unit): Unit = work( () => thunk  )
+  def work(thunk: Thunk): Unit = ???
+
+  def prepareSchedule(root: Node_[Result]): Join = {
+    val typeCheckDone: Join = Join(0)
+
+    def recurse(e: Node_[Result], parentJoin: Join): Unit = {
+      if (e.height == clusterParam) {
+        parentJoin.join()
+        work {
+          e.visitInvalid { e =>
+            typecheckRec(e)
+            true
+          }
+          parentJoin.leave()
+        }
+      }
+      else {
+        if (e.height % clusterParam == 0) {
+          val nodeJoin = Join(0)
+          parentJoin.join()
+          nodeJoin andThen work {
+            e.visitInvalid { e =>
+              typecheckRec(e)
+              true
+            }
+            parentJoin.leave()
+          }
+
+          e.kids.seq.foreach { k => recurse(k, nodeJoin) }
+        }
+        else e.kids.seq.foreach { k => recurse(k, parentJoin) }
+      }
+    }
+
+    if (root.height % clusterParam != 0) {
+      val joinRoot = Join(0)
+      typeCheckDone.join()
+      joinRoot andThen work {
+        root.visitInvalid { e =>
+          typecheckRec(e)
+          true
+        }
+        typeCheckDone.leave()
+      }
+      recurse(root, joinRoot)
+    }
+    else recurse(root, typeCheckDone)
+    typeCheckDone
+  }
+
+  def typeCheckImpl(e: Node): Either[T, TError] = {
+    val root = e.withType[Result]
+    val join = prepareSchedule(root)
+    join andThen {
+      this.notify()
+    }
+
+    localState.stats(TypeCheck) {
+      this.wait()
+      val (t_, reqs, sol_) = root.typ
+      val sol = sol_.tryFinalize
+      val t = t_.subst(sol.substitution)
+
+      if (!reqs.isEmpty)
+        Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
+      else if (!sol.isSolved)
+        Right(s"Unresolved constraints ${sol.unsolved}, type $t")
+      else
+        Left(t)
+    }
   }
 }
 
