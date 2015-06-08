@@ -16,7 +16,8 @@ object StatKeys extends Enumeration {
   implicit def valueToInt(v: Value): Int = v.id
 }
 
-class Statistics {
+//TODO try to avoid dynamic dispatch of stats methods
+sealed class Statistics {
   final type Timestamp = Long
   final type Interval = (Timestamp, Timestamp)
 

@@ -247,7 +247,7 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
 
 
   def work(thunk: => Unit): Unit = work( () => thunk  )
-  def work(thunk: Thunk): Unit = ???
+  def work(thunk: Thunk): Unit = queue.add(thunk)
 
   def prepareSchedule(root: Node_[Result]): Join = {
     val typeCheckDone: Join = Join(0)
