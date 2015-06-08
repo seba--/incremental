@@ -16,7 +16,7 @@ the JVM options such that they are in accordance to our evaluation, i.e., `-Xms2
 
 ## Artifact Contents
 
-We list the folders and files which are most relevant for artifact evaluation:
+We list the folders and files which are relevant for artifact evaluation:
 
 * `./incremental.sh`: Invokes the incremental performance test suite (sec. 6 in the paper). 
 * `./nonincremental.sh`: Invokes the nonincremental performance test suite (sec. 6 in the paper)
