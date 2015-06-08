@@ -1,18 +1,20 @@
 package incremental.pcf.concurrent
 
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.{Executors, ConcurrentLinkedQueue}
 import java.util.concurrent.atomic.AtomicInteger
 
 import constraints.StatKeys._
 import constraints.equality.{ConstraintSystem, ConstraintSystemFactory}
 import incremental.Node.Node
-import incremental._
+import incremental.Node_
+
 import incremental.pcf._
 import util.Join
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.io.StdIn
 import scala.language.postfixOps
 
 object FuturisticBUChecker {
@@ -234,26 +236,62 @@ case class FuturisticLevelBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: 
 }
 
 
+object JoinBUChecker {
 
+  final class ThreadPool {
+    private var _live = false
+    private val queue = new ConcurrentLinkedQueue[Runnable]()
+
+    def start(): Unit = {
+      _live = true
+      (1 to Runtime.getRuntime.availableProcessors()) foreach {
+        i =>
+          new Thread {
+            override def run() = {
+              while (_live) {
+                val thunk = queue.poll()
+                if (thunk != null) {
+                  try {
+                    thunk.run()
+                  }
+                  catch {
+                    case e: Exception => println(e)
+                  }
+                }
+              }
+            }
+          }.start()
+      }
+
+    }
+
+    def shutdown(): Unit = {
+      _live = false
+    }
+
+    @inline
+    def submit(thunk: Runnable) = {
+      queue.add(thunk)
+    }
+  }
+
+
+  val pool = new ThreadPool
+}
 
 abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
   import Join.Join
-  //TODO make a version with java's misc. thread pool impls
+
   val clusterParam = 4
 
-  type Thunk = () => Unit
-
-  val queue = new ConcurrentLinkedQueue[Thunk]()
-
-
-  def work(thunk: => Unit): Unit = work( () => thunk  )
-  def work(thunk: Thunk): Unit = queue.add(thunk)
+  final def work(thunk: => Unit): Unit = work(new Runnable {  def run() = thunk })
+  final def work(thunk: Runnable): Unit = JoinBUChecker.pool.submit(thunk)
 
   def prepareSchedule(root: Node_[Result]): Join = {
     val typeCheckDone: Join = Join(0)
 
     def recurse(e: Node_[Result], parentJoin: Join): Unit = {
-      if (e.height == clusterParam) {
+      if (e.height <= clusterParam) {
         parentJoin.join()
         work {
           e.visitInvalid { e =>
@@ -280,7 +318,7 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
         else e.kids.seq.foreach { k => recurse(k, parentJoin) }
       }
     }
-
+    println("height: " + root.height)
     if (root.height % clusterParam != 0) {
       val joinRoot = Join(0)
       typeCheckDone.join()
@@ -297,15 +335,18 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
     typeCheckDone
   }
 
-  def typeCheckImpl(e: Node): Either[T, TError] = {
+  override def typecheckImpl(e: Node): Either[T, TError] = {
     val root = e.withType[Result]
     val join = prepareSchedule(root)
+    val thread = Thread.currentThread()
     join andThen {
-      this.notify()
+      thread.resume()
     }
 
     localState.stats(TypeCheck) {
-      this.wait()
+      JoinBUChecker.pool.start()
+      thread.suspend()
+      JoinBUChecker.pool.shutdown()
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
       val t = t_.subst(sol.substitution)
@@ -320,3 +361,9 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
   }
 }
 
+case class JoinBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new JoinBUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
+}

@@ -4,6 +4,7 @@ import java.util.concurrent.Executors
 
 import constraints.Statistics
 import constraints.equality.impl.SolveContinuousSubst
+import incremental.pcf.concurrent._
 import incremental.{TypeChecker, TypeCheckerFactory}
 import org.scalameter.{Parameters, DSL}
 import org.scalameter.api._
@@ -29,11 +30,12 @@ class LightweightPerformanceTest(maxHeight: Int) {
       val tree = trees.generate(params)
       val optSpeedup = optimalSpeedup(tree)
       println(s"Optimal speedup: $optSpeedup")
-      measureT("BUSolveContinuousSubst", (e: Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-      measureT("SingleFutureBUSolveContinuousSubst", (e: Node) => new SingleFutureBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-      measureT("FuturisticHeightBUSolveContinuousSubst", (e: Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-      measureT("FuturisticLevelBUSolveContinuousSubst", (e: Node) => new FuturisticLevelBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-      measureT("FuturisticBUSolveContinuousSubst", (e: Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+      measureT("BUSolveContinuousSubst", (e: Node) =>  BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+//      measureT("SingleFutureBUSolveContinuousSubst", (e: Node) => SingleFutureBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+//      measureT("FuturisticHeightBUSolveContinuousSubst", (e: Node) => FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+//      measureT("FuturisticLevelBUSolveContinuousSubst", (e: Node) => FuturisticLevelBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+//      measureT("FuturisticBUSolveContinuousSubst", (e: Node) => FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+      measureT("JoinBUSolveContinuousSubst", (e: Node) => JoinBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       println()
     }
     //measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
@@ -54,6 +56,7 @@ class LightweightPerformanceTest(maxHeight: Int) {
     var errors= 0
 
     tree.invalidate
+    println(tree)
     val start = System.nanoTime()
     val res = check(tree)
     res match {

@@ -8,6 +8,7 @@ import org.scalameter.api._
 import benchmark.ExpGenerator._
 
 import incremental.pcf._
+import incremental.pcf.concurrent._
 import incremental.Node._
 
 import scala.io.StdIn

@@ -16,11 +16,6 @@ object Join {
      }
 
      @inline
-     def andThen(k: () => Unit) = {
-       kont = k
-     }
-
-     @inline
      def join() = counter.incrementAndGet()
 
      @inline
