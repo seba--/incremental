@@ -31,7 +31,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
       val req = ev.withType[checker.Result].typ._2
       val creq = ev.withType[checker.Result].typ._3
-      assert(actual.isLeft, s"Reqs = $req and CReqs = $creq ")
+      val sig = ev.withType[checker.Result].typ._4
+      assert(actual.isLeft, s"Reqs = $req, CReqs = $creq, Signature = $sig ")
 
     }
 
@@ -57,7 +58,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("(Pair) first : Pair", New(CName('Pair),Var('first)))
   typecheckTestError("(Pair) first : Pair, second : Pair", New(CName('Pair),Var('first), Var('second)))
   typecheckTestFJ("new Object()", New(CName('Object)))(CName('Object))
-  typecheckTestFJ("new Pair(fst : First, snd : Second)", New(Seq(CName('Pair)), Seq(Var('First), Var('First))))(CName('Pair)) // see again why eq constraint does not work
+  typecheckTestFJ("new Pair(fst : First, snd : Second)", New(Seq(CName('Pair)), Seq(Var('First), Var('Second))))(CName('Pair)) // see again why eq constraint does not work
 
   typecheckTestFJ(" (new Pair(first)).first : Int", Fields('f,New(CName('Pair),Var('f))))(UCName(CVar('Int)))
 
@@ -94,7 +95,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestFJ("New Pair(new A(), 'snd).snd", Fields('snd, New(Seq(CName('Pair)), Seq((New(CName('A))), Var('snd)))))(CName('B))
 
 
-  typecheckTestFJ("e0",Add(Invk(Seq('m), Seq(Var('e0), Var('x))),Invk(Seq('m), Seq(Var('e0), Var('x)))))(TNum)
+  typecheckTestFJ("e0.m(x) + e0.m(x)",Add(Invk(Seq('m), Seq(Var('e0), Var('x))),Invk(Seq('m), Seq(Var('e0), Var('x)))))(TNum)
 typecheckTestFJ("x + x", Add(Var('x),Var('x)))(TNum)
 }
 

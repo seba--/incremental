@@ -1,5 +1,7 @@
 package incremental.FJava
 
+import java.util
+
 import constraints.{equality, CVar, Statistics}
 import constraints.equality._
 import incremental.{Node_, Util}
@@ -20,13 +22,19 @@ import incremental.Node._
 
         type TError = String
 
-        type ClassDecl = (Type, Map[Symbol, Type], Map[Symbol, (Type, Map[Symbol, Type])]) //(Type, Fields, Methods)
+        type Methods = Map[Symbol, (Type, Map[Symbol, Type])]
+
+        type Fields = Map[Symbol, Type]
+
+        type ClassDecl = (Type, Fields, Methods) //(Type, Fields, Methods)
 
         type Reqs = Map[Symbol, Type]
 
-        type CReqs = Map[Symbol, ClassDecl]
+        type CReqs = Map[Type, ClassDecl]
 
-        def Subtype(C: Symbol, D: Type): CReqs = {
+        type Signature = Map[Type, ClassDecl]
+
+        def Subtype(C: Type, D: Type): CReqs = {
           val cld: ClassDecl = (D, Map(), Map())
           Map(C -> cld)
         }
@@ -40,25 +48,36 @@ import incremental.Node._
         }
 
 
-        type StepResult = (Type, Reqs, CReqs, Seq[Constraint])
-        type Result = (Type, Reqs, CReqs, CS)
+        type StepResult = (Type, Reqs, CReqs, Signature, Seq[Constraint])
+        type Result = (Type, Reqs, CReqs, Signature, CS)
 
         def typecheckImpl(e: Node): Either[Type, TError] = {
           val root = e.withType[Result]
 
           Util.timed(localState -> Statistics.typecheckTime) {
             root.visitUninitialized { e =>
-              val (t, reqs, creqs, cons) = typecheckStep(e)
-              val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
+              val (t, reqs, creqs, sig, cons) = typecheckStep(e)
+              val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._5)
               val cs = subcs addNewConstraints cons
               val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-              e.typ = (cs applyPartialSolution t, reqs2, creqs, cs.propagate)
-              val creqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)//does not work unification in the class declaration inside
-              e.typ = (cs applyPartialSolution t, reqs2, creqs, cs.propagate)
+              e.typ = (cs applyPartialSolution t, reqs2, creqs, sig, cs.propagate)
+              var creqs2: CReqs = Map()
+              for ((tc, cld) <- creqs) {
+                val fld = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](cld._2, p => p._2)
+                var meth = Map[Symbol, (Type, Map[Symbol, Type])]()
+                for ((sm, body) <- cld._3) {
+                  val m = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](body._2, p => p._2)
+                  meth = meth ++ Map(sm ->(body._1, m))
+                }
+                creqs2 += (tc ->(cld._1, fld, meth))
+              } //change the merging of the class declaration
+              //val fld = cld._2
+              //val creqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)//does not work unification in the class declaration inside
+              e.typ = (cs applyPartialSolution t, reqs2, creqs2, sig, cs.propagate)
               true
             }
 
-            val (t_, reqs, creqs, cs_) = root.typ
+            val (t_, reqs, creqs, sig, cs_) = root.typ
             val cs = cs_.tryFinalize
             val t = t_.subst(cs.substitution)
 
@@ -73,46 +92,45 @@ import incremental.Node._
           }
         }
 
-
         def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
 
-          case Num => (TNum, Map(), Map(), Seq())
+          case Num => (TNum, Map(), Map(), Map(), Seq())
           case op if op == Add || op == Mul =>
-            val (t1, reqs1, creqs1, _) = e.kids(0).typ
-            val (t2, reqs2, creqs2, _) = e.kids(1).typ
+            val (t1, reqs1, creqs1, sig1, _) = e.kids(0).typ
+            val (t2, reqs2, creqs2, sig2, _) = e.kids(1).typ
 
             val lcons = EqConstraint(TNum, t1)
             val rcons = EqConstraint(TNum, t2)
             val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
             val (mcCons, mCreqs) = mergeCReqMaps(creqs1, creqs2)
 
-            (TNum, mreqs, mCreqs, mcons :+ lcons :+ rcons)
+            (TNum, mreqs, mCreqs, Map(), mcons :+ lcons :+ rcons)
 
           case Var =>
             val x = e.lits(0).asInstanceOf[Symbol]
             val X = freshCName()
             val cld: ClassDecl = (null, Map(), Map())
-            (X, Map(x -> X), Map(), Seq())// Map(X -> cld), needed at some examples
+            (X, Map(x -> X), Map(), Map(), Seq())// Map(X -> cld), needed at some examples
 
           case Fields =>
             val f = e.lits(0).asInstanceOf[Symbol] //symbol
-          val (t, reqs, creqs, _) = e.kids(0).typ //subsol
+          val (t, reqs, creqs,sig, _) = e.kids(0).typ //subsol
           val U = freshCName()
             val ct: ClassDecl = (null, Map(f -> U), Map())
 
-            val (cons, mcreqs) = mergeCReqMaps(creqs, Map(getX(t,reqs) -> ct))
-            (U, reqs, mcreqs, cons) //subsol
+            val (cons, mcreqs) = mergeCReqMaps(creqs, Map(t -> ct))
+            (U, reqs, mcreqs, Map (), cons) //subsol
 
           case Invk =>
             val m = e.lits(0).asInstanceOf[Symbol]
-            val (t0, reqs0, creqs0, _) = e.kids(0).typ
+            val (t0, reqs0, creqs0, sig0, _) = e.kids(0).typ
             val C = freshCName()
 
             var reqss: Seq[Reqs] = Seq(reqs0)
             var creqss: Seq[CReqs] = Seq(creqs0)
             var param = Map[Symbol, Type]()
             for (i <- 1 until e.kids.seq.size) {
-              val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
+              val (ti, subreqs, subcreqs, subsig, _) = e.kids.seq(i).typ
               var xi = 'b
               if (getX(ti, reqs0) == 'a) { //subreqs
                 xi = freshParam().x
@@ -129,9 +147,9 @@ import incremental.Node._
 
             val (mcons, mreqs) = mergeReqMaps(reqss)
             val (cCons, creqs) = mergeCReqMaps(creqss)
-            val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(getX(t0,reqs0) -> cld))
+            val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(t0 -> cld))
 
-            (C, mreqs, mcreqs, mcons ++ cCons ++ mcCons)
+            (C, mreqs, mcreqs, Map(), mcons ++ cCons ++ mcCons)
 
           case New =>
             val c = e.lits(0).asInstanceOf[CName]
@@ -140,7 +158,7 @@ import incremental.Node._
             var creqss = Seq[CReqs]()
             var fields = Map[Symbol, Type]()
             for (i <- 0 until e.kids.seq.size) {
-              val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
+              val (ti, subreqs, subcreqs, subsig, _) = e.kids.seq(i).typ
               var fi = 'b
               if (getX(ti, subreqs) == 'a) {
                 fi = freshField().x
@@ -157,28 +175,28 @@ import incremental.Node._
 
             val (mcons, mreqs) = mergeReqMaps(reqss)
             val (cCons, creqs) = mergeCReqMaps(creqss)
-            val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(c.x -> cld))
-            (c, mreqs, mcreqs, mcons ++ cCons ++ mcCons)
+            val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(c -> cld))
+            (c, mreqs, mcreqs, Map(), mcons ++ cCons ++ mcCons)
 
 
           case DCast =>
-            val (t, reqs, creqs, _) = e.kids(0).typ
+            val (t, reqs, creqs, sig, _) = e.kids(0).typ
             val c = e.lits(0).asInstanceOf[CName]
-            (c, reqs, creqs ++ Subtype(c.x, c), Seq((NotEqConstraint(t, c))))
+            (c, reqs, creqs ++ Subtype(c, c), Map(), Seq((NotEqConstraint(t, c))))
 
           case UCast =>
             val c = e.lits(0).asInstanceOf[CName]
-            val (t, reqs, creqs, _) = e.kids(0).typ
+            val (t, reqs, creqs, sig, _) = e.kids(0).typ
 
-            (c, reqs, creqs ++ Subtype(getX(t,reqs), c), Seq())
+            (c, reqs, creqs ++ Subtype(t, c), Map(), Seq())
 
           case SCast =>
             val c = e.lits(0).asInstanceOf[CName]
-            val (t, reqs, creqs, _) = e.kids(0).typ
-            (t, reqs, creqs, Seq())
+            val (t, reqs, creqs, sig, _) = e.kids(0).typ
+            (t, reqs, creqs, Map(), Seq())
 
           case MethodDec =>
-            val (e0, reqs, creqs, _) = e.kids(0).typ
+            val (e0, reqs, creqs, sig0, _) = e.kids(0).typ
             val C = e.lits(0).asInstanceOf[CName]
             val retT = e.lits(1).asInstanceOf[CName]
             val m = e.lits(2).asInstanceOf[Symbol]
@@ -190,8 +208,13 @@ import incremental.Node._
             var superT : Type = null
             var cldM = Map[Symbol, (Type, Map[Symbol, Type])]()
 
-            creqs.get(C.x) match {
-              case None =>
+
+            val sparam = params.map(a => a._1 -> a._2).toMap
+
+            var sig = sig0
+
+            creqs.get(C) match {
+              case None => sig += (C -> (null, Map(), Map(m -> (retT,sparam))))
               case Some(cldD) =>
                 superT = cldD._1
                 fld = cldD._2
@@ -214,26 +237,33 @@ import incremental.Node._
                         case Some(t1) => cons = EqConstraint(xC, t1) +: cons
                           param = param - x
                       }
-
                     }
                 }
                 if (param.isEmpty) {
                   cldM = cldM - m
                 }
                 else cldM = cldM
+
+
+                sig += (C -> (cldD._1, cldD._2, Map(m -> (retT, sparam))))
+
             }
+
 
             val cld: ClassDecl = (superT, fld, cldM)
 
+          val (mcons, mcreqs) = mergeCReqMaps(creqs, Map(C -> cld))
 
-          //  val (mcons, mcreqs) = mergeCReqMaps(creqs, Map(C -> cld))
+            (C, restReqs, mcreqs, sig, cons ++ mcons)
 
-            (C, restReqs, Map(C.x -> cld), cons)
+          case TClass =>
+            val c = e.lits(0).asInstanceOf[CName]
+            val fields = e.lits(1).asInstanceOf[Seq[(Symbol, Type)]]
+            val methods = e.lits(2).asInstanceOf[Seq[Methods]]
+            val constructor = e.lits(3)
 
-          //    case TClass =>
-          //      val (t, reqs, creqs, _) = e.kids(0).typ
-          //      (t, reqs, creqs, Seq())
-          //
+            (c, Map(), Map(), Map(),Seq())
+
 
         }
 
