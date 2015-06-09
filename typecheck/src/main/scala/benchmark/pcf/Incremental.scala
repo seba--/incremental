@@ -19,7 +19,7 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
     def du = DownUpCheckerFactory.makeChecker
 // Due to timeouts, we excluded BU1 from this experiment
 // val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
-    def bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
+    def bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(Int.MaxValue)
     def bu3 = BottomUpEagerSubstCheckerFactory.makeChecker
     def bu4 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10)
 

@@ -16,15 +16,19 @@ the JVM options such that they are in accordance to our evaluation, i.e., `-Xms2
 
 ## Artifact Contents
 
-We list the folders and files which are relevant for artifact evaluation:
+We list the folders and files which are relevant for artifact evaluation (the reader should be familiar with section 6 of our paper):
 
-* `./incremental.sh`: Invokes the incremental performance test suite (sec. 6 in the paper). 
-* `./nonincremental.sh`: Invokes the nonincremental performance test suite (sec. 6 in the paper)
+* `./incremental.sh`: Invokes the incremental performance test suite.
+* `./nonincremental.sh`: Invokes the nonincremental performance test suite.
 * `./src/main/scala/`: The root directory of the artifact's Scala source code.
   * `benchmark/`: Sources of the performance evaluation.
     * `pcf/Nonincremental.scala`: Source of the nonincremental performance test suite.
     * `pcf/Incremental.scala`: Source of the incremental performance test suite.
   * `incremental/`: Source code of the incremental type checkers.
+    * `pcf/DownUpChecker.scala`: Implementation of the `DU` type checker.
+    * `pcf/BottomUpSolveEndChecker.scala`: Implementation of the `BU1` type checker.
+    * `pcf/BottomUpSometimesEagerSubstChecker.scala`: Implementation of the `BU2` and `BU4` checkers. 
+    * `pcf/BottomUpEagerSubst.scala`: Implementation of the `BU3` type checker.
 * `./benchmark_paper/`: Contains the raw data files of our published performance results for reference. See below for an explanation of the data format. 
 Note that we manually created Excel spreadsheet files (`*.xlsx`) from the raw data, where we added a `speed` column to compute the average time per node spent.
 
@@ -44,14 +48,14 @@ as it writes measurement results out to files.
 It can take up to an hour or more per test suite, as ScalaMeter performs GC warmups and runs each test
 multiple times to collect statistics.
 You are welcome to substitute the height parameter 16 for some other positive integer in the invocation. 
-For higher numbers you may want to change the JVM heap size by editing the `./sbt` script file in the folder.
+For higher numbers you may want to change the JVM heap size by editing the `jvmopts` parameter in the file `./src/resources/benchmark.properties`.
 
 3. After you have run the tests, there should be the following files/folders in the current directory:
   * `./benchmark/`
     * `incremental/`: Delimiter Separated Values (DSV) files of incremental performance results. See next section for details.
     * `nonincremental/`: DSV files for nonincremental performance results.
   * `./tmp/report/index.html`: A graphical plot of ScalaMeter's performance results, which can be viewed in any modern web browser. This is the way we obtained figure 9 for our paper. 
-Note that this shows only the results of either `incremental` or `nonincremental`, but not both.
+Note that this shows only the results of the last test run, i.e., either of `incremental` or `nonincremental`.
    
 # Data Format
 
