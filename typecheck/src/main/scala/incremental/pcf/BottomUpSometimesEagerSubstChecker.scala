@@ -21,8 +21,6 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends BUChecker
   override def typecheck(e: Exp): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    //    val (uninitialized, ptime) = Util.timed {root.uninitialized}
-    //    preparationTime += ptime
     cs.state.withValue(localState) {
       val (res, ctime) = Util.timed {
         root.visitUninitialized { e =>
@@ -30,10 +28,7 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends BUChecker
           true
         }
 
-        val (t_, reqs, sol_) = solvePartially(root.typ)
-        println(s"t: $t_ \nreqs: $reqs \nsol: ${sol_.substitution}")
-        println("Enter to finalize")
-        StdIn.readLine()
+        val (t_, reqs, sol_) = root.typ
         val sol = sol_.tryFinalize
         val t = t_.subst(sol.substitution)
 
@@ -54,16 +49,9 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends BUChecker
     val sol = res._3
     val s = sol.substitution
     if (s.size > SUBST_THRESHOLD)
-      solvePartially(res)
+      (res._1.subst(s), res._2.mapValues(_.subst(s)), CSet(Map(), sol.notyet.map(_.subst(s)), sol.never.map(_.subst(s))))
     else
       res
-  }
-
-
-  def solvePartially(res: Result): Result = {
-    val sol = res._3
-    val s = sol.substitution
-    (res._1.subst(s), res._2.mapValues(_.subst(s)), CSet(Map(), sol.notyet.map(_.subst(s)), sol.never.map(_.subst(s))))
   }
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
@@ -77,8 +65,7 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends BUChecker
       val rcons = EqConstraint(TNum, t2)
 
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
-
-      val sol = subsol ++ (Seq(lcons, rcons) ++ mcons)
+      val sol = (subsol ++++ lcons.solve(subsol) ++++ rcons.solve(subsol)) ++ mcons
       (TNum, mreqs, sol)
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
