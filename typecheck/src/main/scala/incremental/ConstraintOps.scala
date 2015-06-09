@@ -5,11 +5,11 @@ import incremental.Type.Companion.UVar
 import incremental.Type.Companion._
 import incremental.pcf.UVar
 
-import scala.util.DynamicVariable
 
 /**
  * Created by seba on 13/11/14.
  */
+@SerialVersionUID(56521623966450L)
 object ConstraintOps extends ConstraintSystem[Type] {
   type Constraint = incremental.Constraint
   type NotYetSolvable = Seq[Constraint]
@@ -170,7 +170,7 @@ class Statistics {
   var mergeReqsTime = 0.0
 }
 
-abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) {
+abstract class ConstraintSystem[Type <: Typ[Type]](implicit val definitions: TypCompanion[Type]) extends Serializable {
   final type TSubst = definitions.TSubst
 
   type Constraint

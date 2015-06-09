@@ -9,8 +9,8 @@ import incremental.pcf._
 import incremental.Exp._
 
 abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
-  val opts = org.scalameter.api.Context( //TODO config file!
-    exec.jvmflags -> "-server -Xmx2048m -Xms2048m -XX:CompileThreshold=100"
+  val opts = org.scalameter.api.Context(
+    exec.jvmflags -> ("-server -XX:CompileThreshold=100 " + Settings("jvmopts"))
   )
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
