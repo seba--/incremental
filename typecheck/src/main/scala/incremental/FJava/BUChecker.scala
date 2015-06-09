@@ -258,9 +258,9 @@ import incremental.Node._
 
           case TClass =>
             val c = e.lits(0).asInstanceOf[CName]
-            val fields = e.lits(1).asInstanceOf[Seq[(Symbol, Type)]]
-            val methods = e.lits(2).asInstanceOf[Seq[Methods]]
-            val constructor = e.lits(3)
+            val sup = e.lits(1).asInstanceOf[CName]
+            val fields = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
+            val methods = e.lits(3).asInstanceOf[Seq[Methods]]
 
             (c, Map(), Map(), Map(),Seq())
 
