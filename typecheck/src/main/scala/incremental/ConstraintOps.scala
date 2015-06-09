@@ -24,13 +24,19 @@ object ConstraintOps extends ConstraintSystem[Type] {
 
     def ++(other: CSet): CSet = {
       val (res, time) = Util.timed {
-        var msolution = substitution mapValues (_.subst(other.substitution))
+        var msolution = substitution mapValues (_.subst(other.substitution)) filter {p => UVar(p._1) != p._2}
         val mnotyet = notyet ++ other.notyet
         var mnever = never ++ other.never
 
         for ((x, t2) <- other.substitution) {
           msolution.get(x) match {
-            case None => msolution += x -> t2.subst(msolution)
+            case None =>
+              val t = t2.subst(msolution)
+              if (t.occurs(x))
+                mnever = mnever :+ EqConstraint(UVar(x), t)
+              else
+                msolution += x -> t
+
             case Some(t1) =>
               val usol = t1.unify(t2, msolution)
               msolution = msolution.mapValues(_.subst(usol.substitution)) ++ usol.substitution

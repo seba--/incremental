@@ -2,9 +2,12 @@ package incremental.pcf
 
 import incremental.ConstraintOps._
 import incremental.Exp.Exp
+import incremental.Type.Companion
 import incremental.Type.Companion._
 import incremental.Exp._
 import incremental._
+
+import scala.io.StdIn
 
 /**
  * Created by seba on 13/11/14.
@@ -27,7 +30,10 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends BUChecker
           true
         }
 
-        val (t_, reqs, sol_) = root.typ
+        val (t_, reqs, sol_) = solvePartially(root.typ)
+        println(s"t: $t_ \nreqs: $reqs \nsol: ${sol_.substitution}")
+        println("Enter to finalize")
+        StdIn.readLine()
         val sol = sol_.tryFinalize
         val t = t_.subst(sol.substitution)
 
@@ -48,9 +54,16 @@ class BottomUpSometimesEagerSubstChecker(SUBST_THRESHOLD: Int) extends BUChecker
     val sol = res._3
     val s = sol.substitution
     if (s.size > SUBST_THRESHOLD)
-      (res._1.subst(s), res._2.mapValues(_.subst(s)), CSet(Map(), sol.notyet.map(_.subst(s)), sol.never.map(_.subst(s))))
+      solvePartially(res)
     else
       res
+  }
+
+
+  def solvePartially(res: Result): Result = {
+    val sol = res._3
+    val s = sol.substitution
+    (res._1.subst(s), res._2.mapValues(_.subst(s)), CSet(Map(), sol.notyet.map(_.subst(s)), sol.never.map(_.subst(s))))
   }
 
   def typecheckStep(e: Exp_[Result]): Result = e.kind match {
