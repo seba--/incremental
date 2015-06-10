@@ -5,7 +5,7 @@ We recommend a Unix-like environment with a standard Bourne shell (`/bin/sh`),
 as we included shell scripts which facilitate running our benchmarks specific
 to this platform.
 
-For reference, we ran the performance evaluation on a machine with Oracle JDK 7 (64bit), 
+For reference, we ran the performance evaluation on a machine with Oracle JDK 1.8.0_45 (64bit), 
 Mac OS X 10.10, a 2.8 Ghz Core i7 processor and 8 GB RAM.
 
 In addition, a working internet connection plus the Scala build tool `sbt` (http://www.scala-sbt.org/) 
