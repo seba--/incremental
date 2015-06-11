@@ -12,7 +12,7 @@ import incremental.{NodeKind, SyntaxChecking}
 trait NT_AnnoDec
 trait NT_AnnoDecHead
 case object AnnoDec extends NodeKind(_ => AnnoDecSyntax) with NT_AnnoDec
-case object AnnoDecHead extends NodeKind(ignore) with NT_AnnoDecHead
+case object AnnoDecHead extends NodeKind(litsFollowedBy(classOf[InterfaceMod], classOf[String]) andAlso unsafeAllKids(classOf[NT_Anno])) with NT_AnnoDecHead
 
 trait NT_AnnoElemDec
 trait NT_DefaultVal

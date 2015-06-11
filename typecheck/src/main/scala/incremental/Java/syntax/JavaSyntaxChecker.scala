@@ -233,6 +233,12 @@ object AnnoDecSyntax extends SyntaxChecking.SyntaxChecker(AnnoDec) {
   }
 }
 
+object AnnoDecHeadSyntax extends SyntaxChecking.SyntaxChecker(AnnoDecHead) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    //
+  }
+}
+
 object AnnoMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AnnoMethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(lits.size < 2)
@@ -262,8 +268,8 @@ object JavaSyntaxChecker {
   def unsafeAllKids(kidsType: Class[_]) = (k: NodeKind) => new UnsafeKidsSequenceSyntax(k, kidsType)
   //def followedByKids(first: Class[_ <: NodeKind], tail: Class[_ <: NodeKind]) = (k: NodeKind) => new KidFollowedByKidsSyntax(k, first, tail)
   //def kidsFollowedBy(head: Class[_ <: NodeKind], last: Class[_ <: NodeKind]) = (k: NodeKind) => new KidsFollowedByKidSyntax(k, head, last)
-  //def followedByLits(first: Class[_], tail: Class[_]) = (k: NodeKind) => new LitFollowedByLitsSyntax(k, first, tail)
-  //def litsFollowedBy(head: Class[_], last: Class[_]) = (k: NodeKind) => new LitsFollowedByLitSyntax(k, head, last)
+  def followedByLits(first: Class[_], tail: Class[_]) = (k: NodeKind) => new LitFollowedByLitsSyntax(k, first, tail)
+  def litsFollowedBy(head: Class[_], last: Class[_]) = (k: NodeKind) => new LitsFollowedByLitSyntax(k, head, last)
   //def exprKids = (k: NodeKind) => new ExprKindsSyntax(k)
   //def stmKids = (k: NodeKind) => new StmKindsSyntax(k)
   //def exprOrStmKids = (k: NodeKind) => new ExprOrStmKindsSyntax(k)
@@ -398,7 +404,7 @@ case class KidFollowedByKidsSyntax(k: NodeKind, firstType: Class[_ <: NodeKind],
       error(s"Alls kids but the first must be of kind $tailType, but found ${kids.dropRight(1).filter(!_.kind.isInstanceOf[tailType.type])}")
   }
 }
-
+*/
 
 case class LitsFollowedByLitSyntax(k: NodeKind, headsType: Class[_], lastType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
@@ -408,8 +414,9 @@ case class LitsFollowedByLitSyntax(k: NodeKind, headsType: Class[_], lastType: C
     if(!lastType.isInstance(lits.last))
       error(s"The last literal must be of kind $lastType, but was ${lits.last.getClass}")
 
-    if(lits.dropRight(1).exists(!_.isInstanceOf[headsType.type]))
-      error(s"All literals but the last must be of kind $headsType, but found ${lits.dropRight(1).filter(!_.isInstanceOf[headsType.type])}")
+    for(lit <- lits.dropRight(1))
+      if(!headsType.isInstance(lit))
+        error(s"All literals but the last must be of kind $headsType, but found ${lit.getClass}")
   }
 }
 
@@ -421,9 +428,8 @@ case class LitFollowedByLitsSyntax(k: NodeKind, firstType: Class[_], tailType: C
     if(!firstType.isInstance(lits.head))
       error(s"The first literal must be of kind $firstType, but was ${lits.last.getClass}")
 
-    if(lits.drop(1).exists(!_.isInstanceOf[tailType.type]))
-      error(s"All literals but the first must be of kind $tailType, but found ${lits.drop(1).filter(!_.isInstanceOf[tailType.type])}")
+    for(lit <- lits.drop(1))
+      if(!tailType.isInstance(lit))
+        error(s"All literals but the first must be of kind $tailType, but found ${lit.getClass}")
   }
 }
-
-*/
