@@ -9,13 +9,17 @@ import incremental.{NodeKind, SyntaxChecking}
  */
 
 // AnnotationTypes
-case class AnnoDec(head: AnnoDecHead, elems: Seq[AnnoElemDec])
-case class AnnoDecHead(annos: Seq[Anno], ifacemods: Seq[InterfaceMod], id: String)
+trait NT_AnnoDec
+trait NT_AnnoDecHead
+case object AnnoDec extends NodeKind(_ => AnnoDecSyntax) with NT_AnnoDec
+case object AnnoDecHead extends NodeKind(ignore) with NT_AnnoDecHead
 
-trait AnnoElemDec
-case class AnnoMethodDec(methodMods: Seq[AbstractMethodMod], t: Type, id: String, defaultVal: Option[DefaultVal]) extends AnnoElemDec
-case class Semicolon() extends AnnoElemDec
-case class DefaultVal(elemVal: ElemVal)
+trait NT_AnnoElemDec
+trait NT_DefaultVal
+case object AnnoMethodDec extends NodeKind(_ => AnnoMethodDecSyntax) with NT_AnnoElemDec
+case object DefaultVal extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT_ElemVal]))) with NT_DefaultVal
+
+/////////////
 
 // AbstractMethodDeclarations
 abstract class AbstractMethodDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
@@ -27,7 +31,7 @@ case object ConstantDec extends NodeKind(_ => ConstantDecSyntax)
 
 // InterfaceDeclarations
 abstract class InterfaceDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object InterfaceDec extends InterfaceDec(followedByKids(classOf[InterfaceDecHead.type], classOf[InterfaceMemberDec]))
+//case object InterfaceDec extends InterfaceDec(followedByKids(InterfaceDecHead.getClass, classOf[InterfaceMemberDec]))
 
 case object InterfaceDecHead extends NodeKind(_ => InterfaceDecHeadSyntax)
 case object ExtendsInterfaces extends NodeKind(allLits(classOf[InterfaceType]) andAlso nonEmptyLits)

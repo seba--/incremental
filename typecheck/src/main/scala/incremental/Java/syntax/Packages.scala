@@ -5,8 +5,8 @@ package incremental.Java.syntax
  */
 
 // Package Declaration
-case class PackageDec(annotation: Seq[Anno], name: PackageName)
-// Anno* "package" PackageName ";" -> PackageDec {cons("PackageDec")}
+trait NT_PackageDec
+case class PackageDec(annotation: Seq[NT_Anno], name: PackageName) extends NT_PackageDec
 
 // Import Declarations
 trait ImportDec

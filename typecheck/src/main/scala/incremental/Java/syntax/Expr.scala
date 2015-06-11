@@ -8,7 +8,7 @@ import JavaSyntaxChecker._
 /**
  * Created by qwert on 27.03.15.
  */
-abstract class Expr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+abstract class Expr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck) with NT_ElemVal
 object Expr {
   val cExpr = classOf[Expr]
 }
@@ -88,18 +88,18 @@ case object CastRef extends Expr(simple(Seq(classOf[RefType]), cExpr))
 case object InstanceOf extends Expr(simple(Seq(classOf[RefType]), cExpr))
 
 // Assignment Operators
-case object Assign extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignMul extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignDiv extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignRemain extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignPlus extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignMinus extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignLeftShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignRightShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignURightShift extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignAnd extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignExcOr extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
-case object AssignOr extends Expr(simple(Seq(classOf[ExprName]), cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(classOf[ArrayAccess.type], cExpr))
+case object Assign extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignMul extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignDiv extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignRemain extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignPlus extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignMinus extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignLeftShift extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignRightShift extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignURightShift extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignAnd extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignExcOr extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object AssignOr extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
 
 // Array Access
 case object ArrayAccess extends Expr(simple(cExpr, cExpr))
