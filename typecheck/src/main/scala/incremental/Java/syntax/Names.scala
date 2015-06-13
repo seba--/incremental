@@ -30,3 +30,6 @@ case class PackageOrTypeNameExt(ext: PackageOrTypeName, id: String) extends Pack
 
 trait NT_ExprName
 case object ExprName extends Expr(simple(Seq(classOf[String])) orElse simple(Seq(classOf[AmbName], classOf[String]))) with NT_ExprName
+
+trait Id extends NT_VarDecId
+case class ID(s: String) extends Id

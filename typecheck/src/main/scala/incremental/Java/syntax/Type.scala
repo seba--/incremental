@@ -65,3 +65,6 @@ case class Wildcard(wildcard: WildcardBound) extends ActualTypeArg
 trait WildcardBound{}
 case class WildcardUpperBound(extendsT: RefType) extends WildcardBound
 case class WildcardLowerBound(superT: RefType) extends WildcardBound
+
+trait ResultType extends Type
+case class Void() extends ResultType

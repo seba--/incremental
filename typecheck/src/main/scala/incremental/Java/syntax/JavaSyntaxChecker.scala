@@ -79,22 +79,6 @@ object FieldDecSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
   }
 }
 
-object ArrayVarDecIdSyntax extends SyntaxChecking.SyntaxChecker(ArrayVarDecId) {
-  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    if(lits.size != 1)
-      error(s"Just one literal allowed, but found ${lits.size}")
-
-    if(!classOf[String].isInstance(lits.head))
-      error(s"The first literal must be an identifier, but was ${lits.head.getClass}")
-
-    if(kids.isEmpty)
-      error(s"Kids must not be empty")
-
-    if(kids.exists(!_.kind.isInstanceOf[Dimension]))
-      error(s"All kids must be of kind Dim, but found ${kids.filter(!_.kind.isInstanceOf[Dimension])}")
-  }
-}
-
 /*
 object ArrayVarDecSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {

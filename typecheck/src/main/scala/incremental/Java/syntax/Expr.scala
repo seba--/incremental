@@ -8,7 +8,7 @@ import JavaSyntaxChecker._
 /**
  * Created by qwert on 27.03.15.
  */
-abstract class Expr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck) with NT_ElemVal
+abstract class Expr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck) with NT_ElemVal with NT_VarInit
 object Expr {
   val cExpr = classOf[Expr]
 }

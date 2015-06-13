@@ -2,37 +2,31 @@ package incremental.Java.syntax
 
 import incremental.Node._
 import incremental.{NodeKind, SyntaxChecking}
+import incremental.Java.syntax.JavaSyntaxChecker._
 
 /**
  * Created by qwert on 06.05.15.
  */
 
-
 import Stm._
 import Expr._
 import ArrayInit._
 
-// Field Dec
-abstract class FieldDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object FieldDec extends FieldDec(_ => FieldDecSyntax) // TODO: name conflict?
+// FieldDeclarations
+trait NT_FieldDec
+trait NT_VarDec
+trait NT_VarDecId
+trait NT_VarInit
+trait NT_Dim
 
-trait FieldMod // Public, Protected, Private, Static, Final, Transient, Volatile
+case object FieldDec extends NodeKind(_ => FieldDecSyntax) with NT_FieldDec
 
-abstract class VarDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-object VarDec{
-  val cVarDec = classOf[VarDec]
-}
-abstract class VarDecId(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-abstract class VarInit(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+case object VarDec extends NodeKind((noKids andAlso lits(Seq(classOf[NT_VarDecId]))) orElse
+                                    (lits(Seq(classOf[NT_VarDecId])) andAlso unsafeKids(Seq(classOf[NT_VarInit])))) with NT_VarDec
 
-case object VarDecl extends VarDec(simple(classOf[VarDecId]) orElse simple(Seq(classOf[VarDecId], classOf[VarInit])))
-//case object VariableDec extends VarDec(simple(Seq(classOf[String])) orElse (_ => ArrayVarDecSyntax))
-//case object VariableDecInit extends VarDec(simple(Seq(classOf[String], cExpr)) orElse simple(Seq(classOf[String], cArrayInit)) orElse (_ => ArrayVarDecInitSyntax))
+case class ArrayVarDecId(id: String, dims: Seq[NT_Dim]) extends NT_VarDecId
 
-case object VarDecId extends VarDecId(simple(Seq(classOf[String])))
-case object ArrayVarDecId extends VarDecId(_ => ArrayVarDecIdSyntax)
-
-case object VarInit extends VarInit(simple(cExpr) orElse simple(cArrayInit))
+case class DimV() extends NT_Dim
 
 // Method Dec
 abstract class MethodDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
@@ -46,14 +40,10 @@ abstract class MethodBody(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeK
 case object NoMethodBody extends MethodBody(simple())
 case object MethodBody extends MethodBody(simple(classOf[Block]))
 
-trait ResultType
-case class ResType(t: Type) extends ResultType
-case class Void() extends ResultType
-
 // FormalParam
 abstract class FormalParam(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object Param extends FormalParam(simple(Seq(classOf[Type], classOf[VarDecId]))) // TODO: (Anno | VarMod)*
-case object VarArityParam extends FormalParam(simple(Seq(classOf[Type], classOf[VarDecId])))
+case object Param extends FormalParam(simple(Seq(classOf[Type], classOf[NT_VarDecId]))) // TODO: (Anno | VarMod)*
+case object VarArityParam extends FormalParam(simple(Seq(classOf[Type], classOf[NT_VarDecId])))
 
 trait VarMod // Final
 trait MethodMod // Public, Protected, Private, Abstract, Static, Final, Synchronized, Native, StrictFP

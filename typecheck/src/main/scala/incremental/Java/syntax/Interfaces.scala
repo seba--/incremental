@@ -9,7 +9,7 @@ import incremental.{NodeKind, SyntaxChecking}
  */
 
 // AnnotationTypes
-trait NT_AnnoDec
+trait NT_AnnoDec extends NT_AnnoElemDec
 trait NT_AnnoDecHead
 case object AnnoDec extends NodeKind(_ => AnnoDecSyntax) with NT_AnnoDec
 case object AnnoDecHead extends NodeKind(litsFollowedBy(classOf[InterfaceMod], classOf[String]) andAlso unsafeAllKids(classOf[NT_Anno])) with NT_AnnoDecHead
@@ -22,9 +22,9 @@ case object DefaultVal extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT
 /////////////
 
 // AbstractMethodDeclarations
-abstract class AbstractMethodDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object AbstractMethodDec extends AbstractMethodDec(_ => AbstractMethodDecSyntax) // TODO: name conflict?
-case object DeprAbstractMethodDec extends AbstractMethodDec(_ => DeprAbstractMethodDecSyntax)
+trait NT_AbstractMethodDec
+case object AbstractMethodDec extends NodeKind(_ => AbstractMethodDecSyntax)
+case object DeprAbstractMethodDec extends NodeKind(_ => DeprAbstractMethodDecSyntax)
 
 // ConstantDeclarations
 case object ConstantDec extends NodeKind(_ => ConstantDecSyntax)
