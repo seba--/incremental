@@ -41,15 +41,13 @@ case object NoMethodBody extends MethodBody(simple())
 case object MethodBody extends MethodBody(simple(classOf[Block]))
 
 // FormalParam
+trait NT_FormalParam
 abstract class FormalParam(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object Param extends FormalParam(simple(Seq(classOf[Type], classOf[NT_VarDecId]))) // TODO: (Anno | VarMod)*
-case object VarArityParam extends FormalParam(simple(Seq(classOf[Type], classOf[NT_VarDecId])))
-
-trait VarMod // Final
-trait MethodMod // Public, Protected, Private, Abstract, Static, Final, Synchronized, Native, StrictFP
+case object Param extends FormalParam(_ => new FormalParamSyntax(Param)) with NT_FormalParam
+case object VarArityParam extends FormalParam(_ => new FormalParamSyntax(VarArityParam)) with NT_FormalParam
 
 trait Throws
-trait ExceptionType extends ClassType
+trait ExceptionType
 case class ThrowsDec(ex: Seq[ExceptionType]) extends Throws
 
 // Instance Initializers

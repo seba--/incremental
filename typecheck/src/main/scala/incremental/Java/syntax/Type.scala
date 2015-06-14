@@ -28,7 +28,7 @@ case class TDouble() extends FloatType
 trait RefType extends Type{}
 
 case class ClassOrInterfaceType(typename: TypeDecSpec, typeArgs: Option[TypeArgs]) extends RefType
-case class ClassType(typename: TypeDecSpec, typeArgs: Option[TypeArgs]) extends RefType
+case class ClassType(typename: TypeDecSpec, typeArgs: Option[TypeArgs]) extends RefType with ExceptionType
 case class InterfaceType(typename: TypeDecSpec, typeArgs: Option[TypeArgs]) extends RefType
 
 trait TypeDecSpec //TODO: extends TypeName{}

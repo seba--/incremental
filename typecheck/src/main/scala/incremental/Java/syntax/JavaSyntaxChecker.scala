@@ -116,6 +116,24 @@ object ArrayVarDecInitSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
   }
 }*/
 
+case class FormalParamSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(!k.isInstanceOf[NT_FormalParam])
+      error(s"FormalParamSyntax is just applicable to FormalParam, but was applied to ${k.getClass}")
+
+    if(lits.size < 2)
+      error(s"There must be at least 2 literals, but found only ${lits.size}")
+    if(lits.dropRight(2).exists(!_.isInstanceOf[VarMod]))
+      error(s"The first literals must be of kind VarMod, but found ${lits.dropRight(2).filter(!_.isInstanceOf[VarMod])}")
+    if(!lits(lits.size-2).isInstanceOf[Type])
+      error(s"The forelast literal must be of kind Type but was ${lits(lits.size-2).getClass}")
+    if(!lits.last.isInstanceOf[NT_VarDecId])
+      error(s"The last literal must be of kind VarDecId but was ${lits.last.getClass}")
+    if(kids.exists(!_.kind.isInstanceOf[NT_Anno]))
+      error(s"All kids must be of kind Anno, but found ${kids.filter(!_.kind.isInstanceOf[NT_Anno])}")
+  }
+}
+
 object MethodInvokationSyntax extends SyntaxChecking.SyntaxChecker(Invoke) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(lits.nonEmpty)
