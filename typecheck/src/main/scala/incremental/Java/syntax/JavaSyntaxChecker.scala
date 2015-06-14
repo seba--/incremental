@@ -3,6 +3,7 @@ package incremental.Java.syntax
 import incremental.Node._
 import incremental.{NodeKind, Node_, SyntaxChecking}
 import scala.util.control.Breaks._
+import JavaSyntaxChecker.firstIndexOf
 
 /**
  * Created by qwert on 29.04.15.
@@ -197,7 +198,52 @@ object QConstrInvSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
 
 object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-  // TODO: ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Throws? ";"
+  // ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Throws? ";"
+    // TODO: refactor: typeParamsPos and resultTypePos are statically known from syntax (because FormalParam is kid and not lit)
+    if(lits.size < 2)
+      error(s"There must be at least 2 literals, but found ${lits.size}")
+
+    if(lits.count(_.isInstanceOf[TypeParams]) == 1) {
+      // TypeParams
+      val typeParamsPos = firstIndexOf(lits, classOf[TypeParams])
+
+      // AbstractMethodMod*
+      if(lits.slice(0, typeParamsPos).exists(!_.isInstanceOf[AbstractMethodMod]))
+        error(s"All literals before TypeParams must be of kind AbstractMethodMod, but found ${lits.slice(0, typeParamsPos).filter(!_.isInstanceOf[AbstractMethodMod])}")
+
+      if(lits.count(_.isInstanceOf[Throws]) == 1) {
+        // Throws
+        // TypeParams ResultType Id Throws
+        if(typeParamsPos+3 > lits.size)
+          error(s"TypeParams must not occur in the last three positions.")
+        if(!classOf[ResultType].isInstance(lits(typeParamsPos+1)) && !classOf[String].isInstance(lits(typeParamsPos+2)) && !classOf[Throws].isInstance(lits(typeParamsPos+3)) && !classOf[Throws].isInstance(lits.last))
+          error(s"The literal sequence must be TypeParams, ResultType, String, Throws but was TypeParams, ${lits(typeParamsPos+1).getClass}, ${lits(typeParamsPos+2).getClass}, ${lits(typeParamsPos+3).getClass}")
+      } else {
+        // no Throws
+        // TypeParams ResultType Id
+        if(typeParamsPos+2 > lits.size)
+          error(s"TypeParams must not occur in the last two positions.")
+        if(!classOf[ResultType].isInstance(lits(typeParamsPos+1)) && !classOf[String].isInstance(lits(typeParamsPos+2)))
+          error(s"The literal sequence must be TypeParams, ResultType, String but was TypeParams, ${lits(typeParamsPos+1).getClass}, ${lits(typeParamsPos+2).getClass}")
+      }
+    } else {
+      // no TypeParams
+      val resultTypePos = firstIndexOf(lits, classOf[ResultType])
+
+      if(lits.count(_.isInstanceOf[Throws]) == 1) {
+        // Throws
+        if(resultTypePos+2 > lits.size)
+          error(s"ResultType must not occur in the last two positions")
+        if(!classOf[String].isInstance(lits(resultTypePos+1)) && !classOf[Throws].isInstance(lits(resultTypePos+2)) && !classOf[Throws].isInstance(lits.last))
+          error(s"The literal sequence must be ResultType, String, Throws but was ResultType, ${lits(resultTypePos+1).getClass}, ${lits(resultTypePos+2).getClass}")
+      } else {
+        // no Throws
+        if(resultTypePos+1 > lits.size)
+          error(s"ResultType must not occur in the last position")
+        if(!classOf[String].isInstance(lits(resultTypePos+1)))
+          error(s"The literal sequence must be ResultType, String but was ResultType, ${lits(resultTypePos+1).getClass}")
+      }
+    }
   }
 }
 
@@ -278,6 +324,14 @@ object JavaSyntaxChecker {
   def exprKids = allKids(classOf[Expr])
   def stmKids = allKids(classOf[Stm])
   def exprOrStmKids = (k: NodeKind) => new ExprOrStmKindsSyntax(k)
+
+
+  def firstIndexOf(list: Seq[_], elem: Class[_]): Int = {
+    for(i: Int <- list.indices)
+      if(elem.isInstance(list(i)))
+        return i
+    return 0
+  }
 }
 
 /*case class ExprKindsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {

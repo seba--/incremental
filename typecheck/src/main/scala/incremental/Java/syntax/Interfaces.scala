@@ -23,8 +23,8 @@ case object DefaultVal extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT
 
 // AbstractMethodDeclarations
 trait NT_AbstractMethodDec
-case object AbstractMethodDec extends NodeKind(_ => AbstractMethodDecSyntax)
-case object DeprAbstractMethodDec extends NodeKind(_ => DeprAbstractMethodDecSyntax)
+case object AbstractMethodDec extends NodeKind(_ => AbstractMethodDecSyntax) with NT_AbstractMethodDec
+case object DeprAbstractMethodDec extends NodeKind(_ => DeprAbstractMethodDecSyntax) with NT_AbstractMethodDec
 
 // ConstantDeclarations
 case object ConstantDec extends NodeKind(_ => ConstantDecSyntax)

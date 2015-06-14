@@ -28,6 +28,18 @@ case class ArrayVarDecId(id: String, dims: Seq[NT_Dim]) extends NT_VarDecId
 
 case class DimV() extends NT_Dim
 
+// FormalParam
+trait NT_FormalParam
+abstract class FormalParam(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+case object Param extends FormalParam(_ => new FormalParamSyntax(Param)) with NT_FormalParam
+case object VarArityParam extends FormalParam(_ => new FormalParamSyntax(VarArityParam)) with NT_FormalParam
+
+trait Throws
+trait ExceptionType
+case class ThrowsDec(ex: Seq[ExceptionType]) extends Throws
+
+///////////////////////////
+
 // Method Dec
 abstract class MethodDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 case object MethodDeclaration extends MethodDec(simple(Seq(classOf[MethodDecHead], classOf[MethodBody])))
@@ -39,16 +51,6 @@ case object DeprMethodDeclarationHead extends MethodDecHead(_ => DeprMethodDecHe
 abstract class MethodBody(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 case object NoMethodBody extends MethodBody(simple())
 case object MethodBody extends MethodBody(simple(classOf[Block]))
-
-// FormalParam
-trait NT_FormalParam
-abstract class FormalParam(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object Param extends FormalParam(_ => new FormalParamSyntax(Param)) with NT_FormalParam
-case object VarArityParam extends FormalParam(_ => new FormalParamSyntax(VarArityParam)) with NT_FormalParam
-
-trait Throws
-trait ExceptionType
-case class ThrowsDec(ex: Seq[ExceptionType]) extends Throws
 
 // Instance Initializers
 abstract class InstanceInit(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
