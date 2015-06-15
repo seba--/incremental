@@ -31,8 +31,8 @@ case class DimV() extends NT_Dim
 // FormalParam
 trait NT_FormalParam
 abstract class FormalParam(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object Param extends FormalParam(_ => new FormalParamSyntax(Param)) with NT_FormalParam
-case object VarArityParam extends FormalParam(_ => new FormalParamSyntax(VarArityParam)) with NT_FormalParam
+case object Param extends FormalParam(k => new FormalParamSyntax(k)) with NT_FormalParam
+case object VarArityParam extends FormalParam(k => new FormalParamSyntax(k)) with NT_FormalParam
 
 trait Throws
 trait ExceptionType

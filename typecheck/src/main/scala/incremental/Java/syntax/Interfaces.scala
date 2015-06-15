@@ -27,7 +27,8 @@ case object AbstractMethodDec extends NodeKind(_ => AbstractMethodDecSyntax) wit
 case object DeprAbstractMethodDec extends NodeKind(_ => DeprAbstractMethodDecSyntax) with NT_AbstractMethodDec
 
 // ConstantDeclarations
-case object ConstantDec extends NodeKind(_ => ConstantDecSyntax)
+trait NT_ConstantDec
+case object ConstantDec extends NodeKind(litsFollowedBy(classOf[ConstantMod], classOf[Type]) andAlso nonEmptyKids andAlso unsafeAllKids(classOf[NT_Anno], VarDec.getClass)) with NT_ConstantDec // _ => ConstantDecSyntax
 
 // InterfaceDeclarations
 abstract class InterfaceDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)

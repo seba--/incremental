@@ -267,7 +267,23 @@ object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMeth
 
 object DeprAbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(DeprAbstractMethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-  // TODO: ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Dim+ Throws? ";"
+  // ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Dim+ Throws? ";"
+    // lits
+    // TODO: AbstractMethodMod* TypeParams? ResultType Id Dim+ Throws? ";"
+
+    // kids
+    if(kids.exists(_.kind.isInstanceOf[NT_FormalParam])) {
+      val firstFormalParamPos = firstIndexOf(kids.map(n => n.kind), classOf[NT_FormalParam])
+
+      if(kids.slice(0, firstFormalParamPos).exists(!_.kind.isInstanceOf[NT_Anno]))
+        error(s"All kids until the first FormalParam must be of kind Anno, but found ${kids.slice(0, firstFormalParamPos).filter(!_.kind.isInstanceOf[NT_Anno])}")
+      if(kids.slice(firstFormalParamPos, kids.size).exists(!_.kind.isInstanceOf[NT_FormalParam]))
+        error(s"All kids after the first FormalParam must be of kind FormalParam, but found ${kids.slice(firstFormalParamPos, kids.size).filter(!_.kind.isInstanceOf[NT_FormalParam])}")
+    } else {
+      // no FormalParam
+      if(kids.exists(!_.kind.isInstanceOf[NT_Anno]))
+        error(s"All kids must be of kind Anno or FormalParam, but found ${kids.filter(!_.kind.isInstanceOf[NT_Anno])}")
+    }
   }
 }
 
@@ -328,8 +344,11 @@ object JavaSyntaxChecker {
   def lits(litTypes: Seq[Class[_]]) = (k: NodeKind) => new LitsSyntax(k, litTypes)
   def allLits(litsType: Class[_]) = (k: NodeKind) => new LitsSequenceSyntax(k, litsType)
   def noKids = (k: NodeKind) => new NoKidsSyntax(k)
+  def nonEmptyKids = (k: NodeKind) => new NonEmptyKidsSyntax(k)
   def kids(kidTypes: Seq[Class[_ <: NodeKind]]) = (k: NodeKind) => new KidsSyntax(k, kidTypes)
   def allKids(kidsType: Class[_ <: NodeKind]) = (k: NodeKind) => new KidsSequenceSyntax(k, kidsType)
+  def allKids(firstKidsType: Class[_ <: NodeKind], secondKidsType: Class[_ <: NodeKind]) = (k: NodeKind) => new DoubleSequenceKidsSyntax(k, firstKidsType, secondKidsType)
+  def unsafeAllKids(firstKidsType: Class[_], secondKidsType: Class[_]) = (k: NodeKind) => new UnsafeDoubleSequenceKidsSyntax(k, firstKidsType, secondKidsType)
   def unsafeKids(kidTypes: Seq[Class[_]]) = (k: NodeKind) => new UnsafeKidsSyntax(k, kidTypes)
   def unsafeAllKids(kidsType: Class[_]) = (k: NodeKind) => new UnsafeKidsSequenceSyntax(k, kidsType)
   //def followedByKids(first: Class[_ <: NodeKind], tail: Class[_ <: NodeKind]) = (k: NodeKind) => new KidFollowedByKidsSyntax(k, first, tail)
@@ -348,7 +367,7 @@ object JavaSyntaxChecker {
     for(i: Int <- list.indices)
       if(elem.isInstance(list(i)))
         return i
-    return 0
+    return list.size
   }
 }
 
@@ -378,6 +397,13 @@ case class NoKidsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(kids.nonEmpty)
       error(s"No kids allowed, but found ${kids.size}")
+  }
+}
+
+case class NonEmptyKidsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.isEmpty)
+      error(s"Kids must not be empty")
   }
 }
 
@@ -452,17 +478,17 @@ case class LitsSequenceSyntax(k: NodeKind, litsType: Class[_])extends SyntaxChec
   }
 }
 
-/*
 case class KidsFollowedByKidSyntax(k: NodeKind, headsType: Class[_ <: NodeKind], lastType: Class[_ <: NodeKind]) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(kids.isEmpty)
       error(s"At least one kid needed")
 
     if(!lastType.isInstance(kids.last.kind))
-      error(s"The last kid must be of kind $lastType, but was ${kids.last.kind.getClass}")
+      error(s"The last kid must be of kind ${lastType.getClass}, but was ${kids.last.kind.getClass}")
 
-    if(kids.dropRight(1).exists(!_.kind.isInstanceOf[headsType.type]))
-      error(s"Alls kids but the last must be of kind $headsType, but found ${kids.dropRight(1).filter(!_.kind.isInstanceOf[headsType.type])}")
+    for(kid <- kids.dropRight(1))
+      if(!headsType.isInstance(kid.kind))
+        error(s"All kids but the last must be of kind ${headsType.getClass}, but found ${kid.kind.getClass}")
   }
 }
 
@@ -472,13 +498,41 @@ case class KidFollowedByKidsSyntax(k: NodeKind, firstType: Class[_ <: NodeKind],
       error(s"At least one kid needed")
 
     if(!firstType.isInstance(kids.head.kind))
-      error(s"The first kid must be of kind $firstType, but was ${kids.head.kind}")
+      error(s"The first kid must be of kind ${firstType.getClass}, but found ${kids.head.kind.getClass}")
 
-    if(kids.drop(1).exists(!_.kind.isInstanceOf[tailType.type]))
-      error(s"Alls kids but the first must be of kind $tailType, but found ${kids.dropRight(1).filter(!_.kind.isInstanceOf[tailType.type])}")
+    for(kid <- kids.drop(1))
+      if(!tailType.isInstance(kid.kind))
+        error(s"All kids but the first must be of kind ${tailType.getClass}, but found ${kid.kind.getClass}")
   }
 }
-*/
+
+case class DoubleSequenceKidsSyntax(k: NodeKind, firstType: Class[_ <: NodeKind], secondType: Class[_ <: NodeKind]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    val splitPos = firstIndexOf(kids.map(k => k.kind), secondType)
+
+    for(kid <- kids.slice(0, splitPos))
+      if(!firstType.isInstance(kid.kind))
+        error(s"The first kids must be of kind $firstType, but was ${kid.kind.getClass}")
+
+    for(kid <- kids.slice(splitPos, kids.size))
+      if(!secondType.isInstance(kid.kind))
+        error(s"The last kids must be of kind $secondType, but was ${kid.kind.getClass}")
+  }
+}
+
+case class UnsafeDoubleSequenceKidsSyntax(k: NodeKind, firstType: Class[_], secondType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    val splitPos = firstIndexOf(kids.map(k => k.kind), secondType)
+
+    for(kid <- kids.slice(0, splitPos))
+      if(!firstType.isInstance(kid.kind))
+        error(s"The first kids must be of kind $firstType, but was ${kid.kind.getClass}")
+
+    for(kid <- kids.slice(splitPos, kids.size))
+      if(!secondType.isInstance(kid.kind))
+        error(s"The last kids must be of kind $secondType, but was ${kid.kind.getClass}")
+  }
+}
 
 case class LitsFollowedByLitSyntax(k: NodeKind, headsType: Class[_], lastType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
@@ -490,7 +544,7 @@ case class LitsFollowedByLitSyntax(k: NodeKind, headsType: Class[_], lastType: C
 
     for(lit <- lits.dropRight(1))
       if(!headsType.isInstance(lit))
-        error(s"All literals but the last must be of kind $headsType, but found ${lit.getClass}")
+        error(s"All literals but the last must be of kind ${headsType.getClass}, but found ${lit.getClass}")
   }
 }
 
@@ -500,10 +554,10 @@ case class LitFollowedByLitsSyntax(k: NodeKind, firstType: Class[_], tailType: C
       error(s"At least one literal needed")
 
     if(!firstType.isInstance(lits.head))
-      error(s"The first literal must be of kind $firstType, but was ${lits.last.getClass}")
+      error(s"The first literal must be of kind ${firstType.getClass}, but was ${lits.last.getClass}")
 
     for(lit <- lits.drop(1))
       if(!tailType.isInstance(lit))
-        error(s"All literals but the first must be of kind $tailType, but found ${lit.getClass}")
+        error(s"All literals but the first must be of kind ${tailType.getClass}, but found ${lit.getClass}")
   }
 }
