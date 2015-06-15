@@ -230,6 +230,10 @@ object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMeth
       // no TypeParams
       val resultTypePos = firstIndexOf(lits, classOf[ResultType])
 
+      // AbstractMethodMod*
+      if(lits.slice(0, resultTypePos).exists(!_.isInstanceOf[AbstractMethodMod]))
+        error(s"All literals before TypeParams must be of kind AbstractMethodMod, but found ${lits.slice(0, resultTypePos).filter(!_.isInstanceOf[AbstractMethodMod])}")
+
       if(lits.count(_.isInstanceOf[Throws]) == 1) {
         // Throws
         if(resultTypePos+2 > lits.size)
@@ -243,6 +247,20 @@ object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMeth
         if(!classOf[String].isInstance(lits(resultTypePos+1)))
           error(s"The literal sequence must be ResultType, String but was ResultType, ${lits(resultTypePos+1).getClass}")
       }
+    }
+
+    // kids
+    if(kids.exists(_.kind.isInstanceOf[NT_FormalParam])) {
+      val firstFormalParamPos = firstIndexOf(kids.map(n => n.kind), classOf[NT_FormalParam])
+
+      if(kids.slice(0, firstFormalParamPos).exists(!_.kind.isInstanceOf[NT_Anno]))
+        error(s"All kids until the first FormalParam must be of kind Anno, but found ${kids.slice(0, firstFormalParamPos).filter(!_.kind.isInstanceOf[NT_Anno])}")
+      if(kids.slice(firstFormalParamPos, kids.size).exists(!_.kind.isInstanceOf[NT_FormalParam]))
+        error(s"All kids after the first FormalParam must be of kind FormalParam, but found ${kids.slice(firstFormalParamPos, kids.size).filter(!_.kind.isInstanceOf[NT_FormalParam])}")
+    } else {
+      // no FormalParam
+      if(kids.exists(!_.kind.isInstanceOf[NT_Anno]))
+        error(s"All kids must be of kind Anno or FormalParam, but found ${kids.filter(!_.kind.isInstanceOf[NT_Anno])}")
     }
   }
 }
