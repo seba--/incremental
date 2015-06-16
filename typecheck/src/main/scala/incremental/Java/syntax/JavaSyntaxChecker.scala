@@ -287,17 +287,20 @@ object DeprAbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(DeprAbst
   }
 }
 
-object ConstantDecSyntax extends SyntaxChecking.SyntaxChecker(ConstantDec) {
+/*object ConstantDecSyntax extends SyntaxChecking.SyntaxChecker(ConstantDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-  // TODO: ( Anno | ConstantMod )* Type {VarDec ","}+ ";"
+  // ( Anno | ConstantMod )* Type {VarDec ","}+ ";"
   }
-}
+}*/
 
-object InterfaceDecHeadSyntax extends SyntaxChecking.SyntaxChecker(InterfaceDecHead) {
+/*object InterfaceDecHeadSyntax extends SyntaxChecking.SyntaxChecker(InterfaceDecHead) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    // TODO: ( Anno | InterfaceMod )* "interface" Id TypeParams? ExtendsInterfaces?
+    // ( Anno | InterfaceMod )* "interface" Id TypeParams? ExtendsInterfaces?
+    // lits InterfaceMod* "interface" Id TypeParams?
+
+    // kids Anno* ExtendsInterfaces?
   }
-}
+}*/
 
 object AnnoDecSyntax extends SyntaxChecking.SyntaxChecker(AnnoDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
@@ -351,10 +354,14 @@ object JavaSyntaxChecker {
   def unsafeAllKids(firstKidsType: Class[_], secondKidsType: Class[_]) = (k: NodeKind) => new UnsafeDoubleSequenceKidsSyntax(k, firstKidsType, secondKidsType)
   def unsafeKids(kidTypes: Seq[Class[_]]) = (k: NodeKind) => new UnsafeKidsSyntax(k, kidTypes)
   def unsafeAllKids(kidsType: Class[_]) = (k: NodeKind) => new UnsafeKidsSequenceSyntax(k, kidsType)
-  //def followedByKids(first: Class[_ <: NodeKind], tail: Class[_ <: NodeKind]) = (k: NodeKind) => new KidFollowedByKidsSyntax(k, first, tail)
-  //def kidsFollowedBy(head: Class[_ <: NodeKind], last: Class[_ <: NodeKind]) = (k: NodeKind) => new KidsFollowedByKidSyntax(k, head, last)
+  def followedByKids(first: Class[_ <: NodeKind], tail: Class[_ <: NodeKind]) = (k: NodeKind) => new KidFollowedByKidsSyntax(k, first, tail)
+  def kidsFollowedBy(head: Class[_ <: NodeKind], last: Class[_ <: NodeKind]) = (k: NodeKind) => new KidsFollowedByKidSyntax(k, head, last)
+  def uFollowedByKids(first: Class[_], tail: Class[_]) = (k: NodeKind) => new UnsafeKidFollowedByKidsSyntax(k, first, tail)
+  def uKidsFollowedBy(head: Class[_], last: Class[_]) = (k: NodeKind) => new UnsafeKidsFollowedByKidSyntax(k, head, last)
   def followedByLits(first: Class[_], tail: Class[_]) = (k: NodeKind) => new LitFollowedByLitsSyntax(k, first, tail)
+  def followedByLits(lits: Seq[Class[_]], tail: Class[_]) = (k: NodeKind) => new LitSequenceFollowedByLitsSyntax(k, lits, tail)
   def litsFollowedBy(head: Class[_], last: Class[_]) = (k: NodeKind) => new LitsFollowedByLitSyntax(k, head, last)
+  def litsFollowedBy(head: Class[_], lits: Seq[Class[_]]) = (k: NodeKind) => new LitsFollowedByLitSequenceSyntax(k, head, lits)
   //def exprKids = (k: NodeKind) => new ExprKindsSyntax(k)
   //def stmKids = (k: NodeKind) => new StmKindsSyntax(k)
   //def exprOrStmKids = (k: NodeKind) => new ExprOrStmKindsSyntax(k)
@@ -506,6 +513,34 @@ case class KidFollowedByKidsSyntax(k: NodeKind, firstType: Class[_ <: NodeKind],
   }
 }
 
+case class UnsafeKidsFollowedByKidSyntax(k: NodeKind, headsType: Class[_], lastType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.isEmpty)
+      error(s"At least one kid needed")
+
+    if(!lastType.isInstance(kids.last.kind))
+      error(s"The last kid must be of kind ${lastType.getClass}, but was ${kids.last.kind.getClass}")
+
+    for(kid <- kids.dropRight(1))
+      if(!headsType.isInstance(kid.kind))
+        error(s"All kids but the last must be of kind ${headsType.getClass}, but found ${kid.kind.getClass}")
+  }
+}
+
+case class UnsafeKidFollowedByKidsSyntax(k: NodeKind, firstType: Class[_], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.isEmpty)
+      error(s"At least one kid needed")
+
+    if(!firstType.isInstance(kids.head.kind))
+      error(s"The first kid must be of kind ${firstType.getClass}, but found ${kids.head.kind.getClass}")
+
+    for(kid <- kids.drop(1))
+      if(!tailType.isInstance(kid.kind))
+        error(s"All kids but the first must be of kind ${tailType.getClass}, but found ${kid.kind.getClass}")
+  }
+}
+
 case class DoubleSequenceKidsSyntax(k: NodeKind, firstType: Class[_ <: NodeKind], secondType: Class[_ <: NodeKind]) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     val splitPos = firstIndexOf(kids.map(k => k.kind), secondType)
@@ -548,6 +583,21 @@ case class LitsFollowedByLitSyntax(k: NodeKind, headsType: Class[_], lastType: C
   }
 }
 
+case class LitsFollowedByLitSequenceSyntax(k: NodeKind, headsType: Class[_], litTypes: Seq[Class[_]]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(lits.size < litTypes.size)
+      error(s"Expected at least ${litTypes.size} literals but found ${lits.size} literals")
+
+    for (i <- (lits.size-litTypes.size) until lits.size)
+      if (!litTypes(i).isInstance(lits(i)))
+        error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
+
+    for(lit <- lits.dropRight(litTypes.size))
+      if(!headsType.isInstance(lit))
+        error(s"All literals but the last ${litTypes.size} must be of kind ${headsType.getClass}, but found ${lit.getClass}")
+  }
+}
+
 case class LitFollowedByLitsSyntax(k: NodeKind, firstType: Class[_], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(lits.isEmpty)
@@ -559,5 +609,20 @@ case class LitFollowedByLitsSyntax(k: NodeKind, firstType: Class[_], tailType: C
     for(lit <- lits.drop(1))
       if(!tailType.isInstance(lit))
         error(s"All literals but the first must be of kind ${tailType.getClass}, but found ${lit.getClass}")
+  }
+}
+
+case class LitSequenceFollowedByLitsSyntax(k: NodeKind, litTypes: Seq[Class[_]], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(lits.size < litTypes.size)
+      error(s"Expected at least ${litTypes.size} literals but found ${lits.size} literals")
+
+    for (i <- 0 until litTypes.size)
+      if (!litTypes(i).isInstance(lits(i)))
+        error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
+
+    for(lit <- lits.drop(litTypes.size))
+      if(!tailType.isInstance(lit))
+        error(s"All literals but the first ${litTypes.size} must be of kind ${tailType.getClass}, but found ${lit.getClass}")
   }
 }
