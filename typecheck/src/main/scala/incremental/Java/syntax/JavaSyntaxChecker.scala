@@ -334,10 +334,12 @@ object AnnoMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AnnoMethodDec) {
       error(s"The last literal must be of kind Type, but was ${lits.last.getClass}")
     if(!lits.last.isInstanceOf[String])
       error(s"The last literal must be of kind Id, but was ${lits.last.getClass}")
-    if(kids.size != 1)
-      error(s"There must be exact one kid, but found ${kids.size}")
-    if(!kids.head.kind.isInstanceOf[NT_DefaultVal])
-      error(s"The kid must be of type DefaultVal but was ${kids.head.kind.getClass}")
+    if(kids.size == 1) {
+      if(!kids.head.kind.isInstanceOf[NT_DefaultVal])
+        error(s"The kid must be of type DefaultVal but was ${kids.head.kind.getClass}")
+    } else if (kids.size > 1) {
+      error(s"There must be at most one kid, but found ${kids.size}")
+    }
   }
 }
 

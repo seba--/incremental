@@ -120,5 +120,21 @@ class TestSyntax extends FunSuite{
   errornousSyntaxTest("scala types in CastPrim", CastPrim(Int, Lit(Deci("2"))))
   errornousSyntaxTest("Stmt in Expr", PreIncr(Empty()))
   errornousSyntaxTest("Too many arguments in shift", LeftShift(Lit(Deci("1")), Lit(Deci("1")), Lit(Deci("1"))))
+
+  // Field Declaration
+  syntaxTest("vardec: foo", VarDec(ID("foo")))
+  syntaxTest("vardec: foo = 5", VarDec(ID("foo"), Lit(Deci("5"))))
+  syntaxTest("vardec: foo = 1+2", VarDec(ID("foo"), Plus(Lit(Deci("1")), Lit(Deci("2")))))
+  //lazy val varDecFoo = VarDec(ID("foo"))
+  //lazy val varDecFooInit = VarDec(ID("foo"), Lit(Deci("5")))
+  syntaxTest("field: int foo;", FieldDec(TInt(), VarDec(ID("foo"))))
+  syntaxTest("field: int foo, bar;", FieldDec(TInt(), VarDec(ID("foo")), VarDec(ID("bar"))))
+  syntaxTest("field: public double foo = 5;", FieldDec(Public(), TDouble(), VarDec(ID("foo"), Lit(Deci("5")))))
+  //syntaxTest("field: public static final double foo = 5;", FieldDec(Public(), Static(), Final(), TDouble(), VarDec(ID("foo"), Lit(Deci("5")))))
+
+  // Annotation Types
+  lazy val annoDecHead = AnnoDecHead(Private(), "foo")
+  lazy val annoMethodDec = AnnoMethodDec(TInt(), "bar")
+  syntaxTest("anno dec", AnnoDec(annoDecHead, annoMethodDec))
 }
 
