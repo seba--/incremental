@@ -3,9 +3,7 @@ package incremental.Java.syntax
 /**
  * Created by qwert on 04.04.15.
  */
-trait Type{
-
-}
+trait Type extends ResultType
 
 // Primitive Types
 trait PrimType extends Type with ArrayBaseType{}
@@ -66,5 +64,5 @@ trait WildcardBound{}
 case class WildcardUpperBound(extendsT: RefType) extends WildcardBound
 case class WildcardLowerBound(superT: RefType) extends WildcardBound
 
-trait ResultType extends Type
+trait ResultType
 case class Void() extends ResultType

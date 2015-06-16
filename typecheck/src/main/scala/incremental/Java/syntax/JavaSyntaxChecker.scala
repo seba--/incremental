@@ -232,7 +232,7 @@ object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMeth
 
       // AbstractMethodMod*
       if(lits.slice(0, resultTypePos).exists(!_.isInstanceOf[AbstractMethodMod]))
-        error(s"All literals before TypeParams must be of kind AbstractMethodMod, but found ${lits.slice(0, resultTypePos).filter(!_.isInstanceOf[AbstractMethodMod])}")
+        error(s"All literals before ResultType must be of kind AbstractMethodMod, but found ${lits.slice(0, resultTypePos).filter(!_.isInstanceOf[AbstractMethodMod])}")
 
       if(lits.count(_.isInstanceOf[Throws]) == 1) {
         // Throws

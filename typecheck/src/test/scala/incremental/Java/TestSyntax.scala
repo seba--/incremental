@@ -130,11 +130,19 @@ class TestSyntax extends FunSuite{
   syntaxTest("field: int foo;", FieldDec(TInt(), VarDec(ID("foo"))))
   syntaxTest("field: int foo, bar;", FieldDec(TInt(), VarDec(ID("foo")), VarDec(ID("bar"))))
   syntaxTest("field: public double foo = 5;", FieldDec(Public(), TDouble(), VarDec(ID("foo"), Lit(Deci("5")))))
-  //syntaxTest("field: public static final double foo = 5;", FieldDec(Public(), Static(), Final(), TDouble(), VarDec(ID("foo"), Lit(Deci("5")))))
+  syntaxTest("field: public static final double foo = 5;", FieldDec(Seq(Public(), Static(), Final(), TDouble()), Seq(VarDec(ID("foo"), Lit(Deci("5"))))))
 
   // Annotation Types
   lazy val annoDecHead = AnnoDecHead(Private(), "foo")
   lazy val annoMethodDec = AnnoMethodDec(TInt(), "bar")
   syntaxTest("anno dec", AnnoDec(annoDecHead, annoMethodDec))
-}
 
+  // Abstract Method Dec
+  syntaxTest("void foo();", AbstractMethodDec(Void(), "foo"))
+  syntaxTest("public void foo();", AbstractMethodDec(Seq(Public(), Void(), "foo"), Seq()))
+  syntaxTest("public void foo(int a);", AbstractMethodDec(Seq(Public(), Void(), "foo"), Seq(Param(TInt(), ID("a")))))
+  syntaxTest("public void foo(int a, int b);", AbstractMethodDec(Seq(Public(), Void(), "foo"), Seq(Param(TInt(), ID("a")), Param(TInt(), ID("b")))))
+  syntaxTest("public abstract int foobar() throws Exception;", AbstractMethodDec(Seq(Public(), Abstract(), TInt(), "foobar", ClassType(TypeNameT("Exception"), None)), Seq()))
+  syntaxTest("public abstract int foobar(double a, char c) throws Exception;", AbstractMethodDec(Seq(Public(), Abstract(), TInt(), "foobar", ClassType(TypeNameT("Exception"), None)), Seq(Param(TDouble(), ID("a")), Param(TChar(), ID("c")))))
+  errornousSyntaxTest("private abstract void foo(int a);", AbstractMethodDec(Seq(Private(), Abstract(), Void(), "foo"), Seq(Param(TInt(), ID("a")))))
+}
