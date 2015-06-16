@@ -240,38 +240,47 @@ object JoinBUChecker {
 
   final class ThreadPool {
     private var _live = false
-    private val queue = new ConcurrentLinkedQueue[Runnable]()
+    private val buffer = collection.mutable.ArrayBuffer[Runnable]()
+    private val pool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+
+    //private val queue = new ConcurrentLinkedQueue[Runnable]()
 
     def start(): Unit = {
       _live = true
-      (1 to Runtime.getRuntime.availableProcessors()) foreach {
-        i =>
-          new Thread {
-            override def run() = {
-              while (_live) {
-                val thunk = queue.poll()
-                if (thunk != null) {
-                  try {
-                    thunk.run()
-                  }
-                  catch {
-                    case e: Exception => println(e)
-                  }
-                }
-              }
-            }
-          }.start()
-      }
+      buffer.foreach(pool.execute(_))
+      buffer.clear()
+//      (1 to Runtime.getRuntime.availableProcessors()) foreach {
+//        i =>
+//          new Thread {
+//            override def run() = {
+//              while (_live) {
+//                val thunk = queue.poll()
+//                if (thunk != null) {
+//                  try {
+//                    thunk.run()
+//                  }
+//                  catch {
+//                    case e: Exception => println(e)
+//                  }
+//                }
+//              }
+//            }
+//          }.start()
+//      }
 
     }
 
-    def shutdown(): Unit = {
+    def shutdown() = pool.shutdownNow()
+    
+    def stop(): Unit = {
       _live = false
     }
 
     @inline
     def submit(thunk: Runnable) = {
-      queue.add(thunk)
+      //queue.add(thunk)
+      if (!_live) buffer += thunk
+      else pool.execute(thunk)
     }
   }
 
@@ -284,8 +293,8 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
 
   val clusterParam = 4
 
-  final def work(thunk: => Unit): Unit = work(new Runnable {  def run() = thunk })
-  final def work(thunk: Runnable): Unit = JoinBUChecker.pool.submit(thunk)
+  final def work(thunk: => Unit): Unit = work(new Runnable { def run() = thunk })
+  final def work(thunk: Runnable): Unit = { JoinBUChecker.pool.submit(thunk) }
 
   def prepareSchedule(root: Node_[Result]): Join = {
     val typeCheckDone: Join = Join(0)
@@ -293,7 +302,9 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
     def recurse(e: Node_[Result], parentJoin: Join): Unit = {
       if (e.height <= clusterParam) {
         parentJoin.join()
+  //      println(s"${System.nanoTime()} ${Thread.currentThread().getId}: putting ${System.identityHashCode(e)} with height ${e.height} and size ${e.size}")
         work {
+    //      println(s"${System.nanoTime()} ${Thread.currentThread().getId}: checking ${System.identityHashCode(e)} with height ${e.height} and size ${e.size}")
           e.visitInvalid { e =>
             typecheckRec(e)
             true
@@ -305,12 +316,16 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
         if (e.height % clusterParam == 0) {
           val nodeJoin = Join(0)
           parentJoin.join()
-          nodeJoin andThen work {
+          nodeJoin andThen {
+      //      println(s"${System.nanoTime()} ${Thread.currentThread().getId}: putting ${System.identityHashCode(e)} with height ${e.height} and size ${e.size}")
+            work {
+        //      println(s"${System.nanoTime()} ${Thread.currentThread().getId}: checking ${System.identityHashCode(e)} with height ${e.height} and size ${e.size}")
             e.visitInvalid { e =>
               typecheckRec(e)
               true
             }
             parentJoin.leave()
+          }
           }
 
           e.kids.seq.foreach { k => recurse(k, nodeJoin) }
@@ -318,7 +333,7 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
         else e.kids.seq.foreach { k => recurse(k, parentJoin) }
       }
     }
-    println("height: " + root.height)
+
     if (root.height % clusterParam != 0) {
       val joinRoot = Join(0)
       typeCheckDone.join()
@@ -329,7 +344,7 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
         }
         typeCheckDone.leave()
       }
-      recurse(root, joinRoot)
+      root.kids.seq.foreach { k => recurse(k, joinRoot) }
     }
     else recurse(root, typeCheckDone)
     typeCheckDone
@@ -338,15 +353,22 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
   override def typecheckImpl(e: Node): Either[T, TError] = {
     val root = e.withType[Result]
     val join = prepareSchedule(root)
-    val thread = Thread.currentThread()
+    var complete = false
     join andThen {
-      thread.resume()
+      this.synchronized {
+        complete = true
+        this.notify()
+      }
     }
 
     localState.stats(TypeCheck) {
       JoinBUChecker.pool.start()
-      thread.suspend()
-      JoinBUChecker.pool.shutdown()
+
+      this.synchronized {
+        while (!complete)
+          this.wait()
+      }
+      JoinBUChecker.pool.stop()
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
       val t = t_.subst(sol.substitution)

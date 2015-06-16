@@ -103,25 +103,11 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   }
 
   def visitInvalid(f: Node_[T] => Boolean): Boolean = {
-    var hasSubchange = false
-    for(k <- _kids if !k.valid) {
-      hasSubchange = k.visitInvalid(f)  || hasSubchange
-    }
-    if (!valid || hasSubchange)
-      f(this)
-    else
+    if (valid)
       false
-  }
-
-  def visitUpto(depth: Int)(f: Node_[T] => Boolean): Boolean = {
-    if (depth > 0) {
-      val hasSubchange = _kids.foldLeft(false){ (changed, k) => k.visitUpto(depth - 1)(f) || changed }
-      if (!valid || hasSubchange)
-        f(this)
-      else false
-    }
-    else
-      false
+    for(k <- _kids if !k.valid)
+      k.visitInvalid(f)
+    f(this)
   }
 
   def foreach[U](f: Node_[T] => U): U = {
