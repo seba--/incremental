@@ -496,7 +496,7 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
 }
 
 case class Join2BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
-  def makeChecker = new JoinBUChecker[CS] {
+  def makeChecker = new Join2BUChecker[CS] {
     type CSFactory = factory.type
     implicit val csFactory: CSFactory = factory
   }
