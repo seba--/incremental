@@ -11,6 +11,7 @@ import incremental.Node_
 import incremental.pcf._
 import util.Join
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
@@ -295,10 +296,8 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
 
   final def work(thunk: => Unit): Unit = work(new Runnable { def run() = thunk })
   final def work(thunk: Runnable): Unit = { JoinBUChecker.pool.submit(thunk) }
-
   def prepareSchedule(root: Node_[Result]): Join = {
     val typeCheckDone: Join = Join(0)
-
     def recurse(e: Node_[Result], parentJoin: Join): Unit = {
       if (e.height <= clusterParam) {
         parentJoin.join()
@@ -384,6 +383,119 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
 }
 
 case class JoinBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new JoinBUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
+}
+
+abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
+  import Join.Join
+
+  val clusterParam = 8
+
+  private var _nextBucket = 0
+  final def work(thunk: => Unit): Unit = workThunk(() => thunk)
+  final def workThunk(thunk: Thunk): Unit = {
+    buckets(_nextBucket).append(thunk)
+    _nextBucket = (_nextBucket + 1) % buckets.length
+  }
+
+
+  type Thunk = () => Unit
+  //TODO precalculate the amount of memory required and use arraybuffer/vectors?
+  val buckets = Array.fill(Runtime.getRuntime.availableProcessors())(ListBuffer[Thunk]())
+
+  def prepareSchedule(root: Node_[Result]): Join = {
+    buckets foreach {_.clear()}
+    val typeCheckDone: Join = Join(0)
+    def recurse(e: Node_[Result], parentJoin: Join): Unit = {
+      if (e.height <= clusterParam) {
+        parentJoin.join()
+        work {
+          e.visitInvalid { e =>
+            typecheckRec(e)
+            true
+          }
+          parentJoin.leave()
+        }
+      }
+      else {
+        if (e.height % clusterParam == 0) {
+          val nodeJoin = Join(0)
+          parentJoin.join()
+          nodeJoin andThen {
+            e.visitInvalid { e =>
+              typecheckRec(e)
+              true
+            }
+            parentJoin.leave()
+          }
+
+          e.kids.seq.foreach { k => recurse(k, nodeJoin) }
+        }
+        else e.kids.seq.foreach { k => recurse(k, parentJoin) }
+      }
+    }
+
+    if (root.height % clusterParam != 0) {
+      val joinRoot = Join(0)
+      typeCheckDone.join()
+      joinRoot andThen {
+        root.visitInvalid { e =>
+          typecheckRec(e)
+          true
+        }
+        typeCheckDone.leave()
+      }
+      root.kids.seq.foreach { k => recurse(k, joinRoot) }
+    }
+    else recurse(root, typeCheckDone)
+    typeCheckDone
+  }
+
+  override def typecheckImpl(e: Node): Either[T, TError] = {
+    val root = e.withType[Result]
+    val join = prepareSchedule(root)
+    val threads = (0 until buckets.length) map { i =>
+      new Thread(new Runnable() {
+        override def run() {
+          for (thunk <- buckets(i))
+            thunk()
+        }
+      })
+    }
+    var complete = false
+    join andThen {
+      this.synchronized {
+        complete = true
+        this.notify()
+      }
+    }
+
+    localState.stats(TypeCheck) {
+      threads foreach {_.start()}
+
+      this.synchronized {
+        while (!complete)
+          this.wait()
+      }
+
+      val (t_, reqs, sol_) = root.typ
+      val sol = sol_.tryFinalize
+      val t = t_.subst(sol.substitution)
+
+      if (!reqs.isEmpty)
+        Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
+      else if (!sol.isSolved)
+        Right(s"Unresolved constraints ${sol.unsolved}, type $t")
+      else
+        Left(t)
+    }
+  }
+}
+
+case class Join2BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
   def makeChecker = new JoinBUChecker[CS] {
     type CSFactory = factory.type
     implicit val csFactory: CSFactory = factory

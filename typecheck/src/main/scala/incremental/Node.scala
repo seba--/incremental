@@ -24,11 +24,28 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
 
   private var _height: Int = maxHeight(kidsArg)
   private var _size = sumSize(kidsArg)
+
+//  def computeDiameter(kidsArg: Seq[Node_[T]]) = {
+//    if (kidsArg.isEmpty) {
+//      0
+//    }
+//    else {
+//      val (heights, diameters) = kidsArg.map(k => (k._height, k._diameter)).unzip
+//      val (max, secondmax) = heights.foldLeft((0,0)) {
+//        case ((fst, snd), h) if h > fst => (h, snd)
+//        case ((fst, snd), h) if h > snd => (fst, h)
+//        case (p, _) => p
+//      }
+//      (max + secondmax + 2).max(diameters.max)
+//    }
+//  }
+//
+//  private var _diameter: Int = computeDiameter(kidsArg)
   private var _typ: T = _
   private var _valid = false
 
   def height = _height
-
+//  def diameter = _diameter
   def size = _size
   def valid = _valid // needed for propagation pruning
   def typ = _typ
@@ -55,6 +72,7 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       else
         ee._typ = kids(i)._typ
       _kids(i) = ee
+//      _diameter = computeDiameter(_kids)
       _height = maxHeight(_kids)
       _size = sumSize(_kids)
     }
