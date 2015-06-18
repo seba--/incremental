@@ -460,8 +460,12 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
     val threads = (0 until buckets.length) map { i =>
       new Thread(new Runnable() {
         override def run() {
+          val start = System.nanoTime()
+      //    println(s"START ${Thread.currentThread().getId}")
           for (thunk <- buckets(i))
             thunk()
+          val end = System.nanoTime()
+          println(s"TERM ${Thread.currentThread().getId}, duration: ${(end - start)/1000000d} ms")
         }
       })
     }
@@ -474,12 +478,17 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
     }
 
     localState.stats(TypeCheck) {
+      val start = System.nanoTime()
       threads foreach {_.start()}
 
       this.synchronized {
-        while (!complete)
+        while (!complete) {
           this.wait()
+        }
       }
+      val end = System.nanoTime()
+
+      println(s"resuming, waited ${(end-start)/1000000d} ms")
 
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
