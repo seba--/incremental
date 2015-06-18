@@ -242,7 +242,7 @@ object JoinBUChecker {
   final class ThreadPool {
     private var _live = false
     private val buffer = collection.mutable.ArrayBuffer[Runnable]()
-    private val pool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+    private val pool = Executors.newWorkStealingPool(Runtime.getRuntime.availableProcessors())//Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
 
     //private val queue = new ConcurrentLinkedQueue[Runnable]()
 
@@ -292,7 +292,7 @@ object JoinBUChecker {
 abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
   import Join.Join
 
-  val clusterParam = 4
+  val clusterParam = 8
 
   final def work(thunk: => Unit): Unit = work(new Runnable { def run() = thunk })
   final def work(thunk: Runnable): Unit = { JoinBUChecker.pool.submit(thunk) }
