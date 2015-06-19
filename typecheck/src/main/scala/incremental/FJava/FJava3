@@ -141,8 +141,14 @@ import incremental.Node._
             var param = Map[Symbol, Type]()
             for (i <- 1 until e.kids.seq.size) {
               val (ti, subreqs, subcreqs, subsig, _) = e.kids.seq(i).typ
-
+              // var xi = 'b
+              // if (getX(ti, reqs0) == 'a) { //subreqs
               val xi = freshParam().x
+              // }
+              // else {
+              // xi = getX(ti, reqs0)
+              // }
+
               reqss = reqss :+ subreqs
               creqss = creqss :+ subcreqs
               param += (xi -> ti)
@@ -229,24 +235,40 @@ import incremental.Node._
                 cldD._3.get(m) match {
                   case None => cldM = cldD._3
                   case Some(m1) =>
-                    for (i <- 0 until params.size) {
-                      val x = params(i)._1
-                      val xC = params(i)._2
-                      reqs.get(x) match {
-                        case Some(treq) =>
-                          restReqs = restReqs - x
-                          cons = EqConstraint(xC, treq) +: cons
-                      }
-                    }
+                                      // param = m1._2
+                                        //cons = EqConstraint(m1._1, retT) +: cons
+                                        for (i <- 0 until params.size) {
+                                          val x = params(i)._1
+                                          val xC = params(i)._2
+                                          reqs.get(x) match {
+                                            case Some(treq) =>
+                                              restReqs = restReqs - x
+                                              cons = EqConstraint(xC, treq) +: cons
+                                          }
 
+                                         // param.get(x) match {
+                                           //case Some(t1) => cons = EqConstraint(xC, t1) +: cons
+                                             //param = param - x
+                                          //}
+                                        }
+
+                    // if (param.isEmpty) {
                     cldM = cldD._3 - m
+                    // }
+                    // else cldM = cldM
+
+
                     sig += (C ->(cldD._1, cldD._2, Map(m ->(retT, sparam))))
+
                 }
             }
+
 
             val cld: ClassDecl = (superT, fld, cldM)
 
             if (fld.isEmpty && cldM.isEmpty) cCreqs = cCreqs - C
+
+        //  val (mcons, mcreqs) = mergeCReqMaps(creqs, Map(C -> cld))
 
             (C, restReqs, cCreqs, sig, cons)
 
@@ -264,30 +286,38 @@ import incremental.Node._
             ( c, Map(), Map(),Map(c -> cld),Seq())
 
           case ProgramM =>
+
+            //val C = e.lits(0).asInstanceOf[CName]
             val (tm, req1, creqs1, sig1, _) = e.kids(0).typ
             val (tmink, req2, creqs2, sig2, _) = e.kids(1).typ
 
             val (mcons, mreqs) = mergeReqMaps(req1, req2)
+
             val (mCons1, mCreqs1) = mergeCReqMaps(creqs1, creqs2)
             val (mCons2, mCreqs2) = mergeCReqMaps(sig1, sig2)
             val (mCons, mCreqs) = mergeCReqMaps(mCreqs1, mCreqs2)
 
+        //    val params = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]]
             var fld = Map[Symbol,Type]()
             var superT : Type = null
             var cldM = Map[Symbol, (Type, Map[Symbol, Type])]()
 
+            //var cld = mCreqs1.get(tm)
+            //val sig = mCreqs2.get(tm) match Some(cld)
             var cCreqs = mCreqs1
             var restReqs = mreqs
             var crq = mCreqs1
             var cons = Seq[Constraint]()
 
             mCreqs2.get(tm) match {
+            //  case None =>
               case Some(sig) =>
                 mCreqs1.get(tm) match {
                   case Some(cld) =>
                     cldM = cld._3
                     for ((m,(t, params)) <- sig._3) {
                       if (cld._3.keySet.exists(_ == m)) {
+
                         for ((x, xC) <- params) {
                           mreqs.get(x) match {
                             case Some(treq) =>
@@ -297,14 +327,21 @@ import incremental.Node._
 
                         }
                          cldM = cldM - m
+
+
                       }
                     }}}
 
+
             val cld: ClassDecl = (superT, fld, cldM)
-            if (fld.isEmpty && cldM.isEmpty) cCreqs = cCreqs - tm
+
+
+              if (fld.isEmpty && cldM.isEmpty) cCreqs = cCreqs - tm
             for ((c,cldC) <- cCreqs) {
               if (cldC._2.isEmpty && cldC._3.isEmpty) cCreqs = cCreqs - c
-            }
+
+            }//
+            // if (mCreqs.equals(mCreqs2)) val crq = Map()
 
             (tm, mreqs,cCreqs, mCreqs2, mcons ++ mCons ++ mCons1 ++ mCons2)
 

@@ -54,3 +54,4 @@ case class UCName(x: CVar[Type]) extends Type { // should not use CVar, but CNAm
           cs.solved(CSubst(x -> t))
     }
 }
+

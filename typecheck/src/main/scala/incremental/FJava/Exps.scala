@@ -13,6 +13,8 @@ case object ClassDec extends NodeKind(_ => ClassSyntax)
 case object FieldDec extends NodeKind(_ => FieldSyntax)
 case object MethodDec extends NodeKind(_ => MethodSyntax)
 
+case object ProgramM extends NodeKind(_ => ProgramSyntax)
+
 abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 object Exp {
   val cExp = classOf[Exp]
@@ -22,6 +24,8 @@ import Exp._
 case object Num extends Exp(simple(Seq(classOf[Integer])))
 case object Add extends Exp(simple(cExp, cExp))
 case object Mul extends Exp(simple(cExp, cExp))
+
+//case object ProgramM extends Exp(simple(cExp, cExp))
 
 case object Var  extends Exp(simple(Seq(classOf[Symbol])))
 case object Fields extends Exp(simple(Seq(classOf[Symbol]), cExp))
@@ -44,11 +48,11 @@ object NewSyntax extends SyntaxChecking.SyntaxChecker(New) {
 
 object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
-    if (lits.exists(l => !l.isInstanceOf[Node] || !(l.asInstanceOf[Node].kind == FieldDec)))
-      error(s"Expected field declarations but got ${lits.filter(l => !l.isInstanceOf[Node] || !l.asInstanceOf[Node].kind.isInstanceOf[FieldDec.type])}")
+    //if (lits.exists(l => !l.isInstanceOf[Node] || !(l.asInstanceOf[Node].kind == FieldDec)))
+      //error(s"Expected field declarations but got ${lits.filter(l => !l.isInstanceOf[Node] || !l.asInstanceOf[Node].kind.isInstanceOf[FieldDec.type])}")
 
-    if (kids.exists(k => !(k.kind == MethodDec)))
-      error(s"Expected method declarations but got ${kids.filter(k => !(k.kind == MethodDec))}")
+//    if (kids.exists(k => !(k.kind == MethodDec)))
+  //    error(s"Expected method declarations but got ${kids.filter(k => !(k.kind == MethodDec))}")
   }
 }
 
@@ -75,6 +79,12 @@ object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
    // if (lits.exists(l => !l.isInstanceOf[Node] || !(l.asInstanceOf[Node].kind == FieldDec)))
      // error(s"Expected field declarations but got ${lits.filter(l => !l.isInstanceOf[Node] || !l.asInstanceOf[Node].kind.isInstanceOf[FieldDec.type])}")
 
+
+  }
+}
+
+object ProgramSyntax extends SyntaxChecking.SyntaxChecker(ProgramM) {
+  def check[T](lits: Seq[Lit] , kids: Seq[Node_[T]]){
 
   }
 }

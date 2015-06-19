@@ -14,6 +14,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   val checker: BUChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
+
   def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
@@ -32,7 +33,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val req = ev.withType[checker.Result].typ._2
       val creq = ev.withType[checker.Result].typ._3
       val sig = ev.withType[checker.Result].typ._4
-      assert(actual.isLeft, s"Reqs = $req, CReqs = $creq, Signature = $sig ")
+      val cons = ev.withType[checker.Result].typ._5
+      assert(actual.isLeft, s"Reqs = $req, CReqs = $creq, Signature = $sig , Constraint = $cons")
 
     }
 
@@ -79,7 +81,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestFJ("Int getX(x: Int) {(new Number).gX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('gX),Seq(New(CName('Number)),Var('x))))))(CName('Number))
 
-  typecheckTestFJ("Int getX(x: Int) {(new Number(x)).getX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(New(CName('Number), Var('x)),Var('x))))))(CName('Number))
+  typecheckTestFJ(" => Int getX(x: Int) {(new Number(x)).getX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(New(CName('Number)),Var('x))))))(CName('Number))
 
   typecheckTestFJ("Int getX(x: Int, y: Int) {(new Number).getX(x): Int} in Number", MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))),('y, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(New(CName('Number)),Var('x))))))(CName('Number))
 
@@ -94,14 +96,35 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestFJ("New Pair(new A(), new B()).snd", Fields('snd, New(Seq(CName('Pair)), Seq((New(CName('A))), (New(CName('B)))))))(CName('B))
   typecheckTestFJ("New Pair(new A(), 'snd).snd", Fields('snd, New(Seq(CName('Pair)), Seq((New(CName('A))), Var('snd)))))(CName('B))
 
-
   typecheckTestFJ("e0.m(x) + e0.m(x)",Add(Invk(Seq('m), Seq(Var('e0), Var('x))),Invk(Seq('m), Seq(Var('e0), Var('x)))))(TNum)
-typecheckTestFJ("x + x", Add(Var('x),Var('x)))(TNum)
-}
+  typecheckTestFJ("x + x", Add(Var('x),Var('x)))(TNum)
 
+  typecheckTestFJ("(New Pair(fst, snd)).setFirst(fst)", Invk(Seq('setFrist),Seq(New(Seq(CName('Pair)), Seq(Var('frt), Var('snd))),Var('frt))))(TNum)
+
+  typecheckTestFJ(" Pair Int First ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int)))), Seq()), Seq()))(CName('Pair))
+
+  typecheckTestFJ(" Pair Int First, Int setFirst(Int First) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int)))),Seq(('setFirst, (CName('Void),Map('First -> UCName(CVar('Int))))))), Seq()))(CName('Pair))
+
+  typecheckTestFJ(" Object Int setFirst(Int First) ", ClassDec(Seq(CName('Object), CName('Object), Seq(),Seq(('setFirst, (CName('Void),Map('First -> UCName(CVar('Int))))))), Seq()))(CName('Object))
+
+  typecheckTestFJ(" Pair Int First, Int Second,setFirst(Int First) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int))), ('Second, UCName(CVar('Int)))),Seq(('setFirst, (CName('Void),Map('First -> UCName(CVar('Int))))))), Seq()))(CName('Pair))
+
+  typecheckTestFJ(" Pair Int First, Int Second,  setSecond(Int Second) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int))), ('Second, UCName(CVar('Int)))),Seq(('setSecond, (CName('Void),Map('Second -> UCName(CVar('Int))))))), Seq()))(CName('Pair))
+
+
+  typecheckTestFJ(" Pair Int First, Int Second, Int sum(Int First, Int Second) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int))), ('Second, UCName(CVar('Int)))),Seq(('sum, (CName('Int),Map('First -> UCName(CVar('Int)), 'Second -> UCName(CVar('Int))))))), Seq()))(CName('Pair))
+
+  typecheckTestFJ("Int m(x Int){return x} in C, C.m(x Int)", ProgramM(Seq(CName('Number)), Seq(MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(New(CName('Int)))), Invk(Seq('m), Seq(Var('e0), Var('x))))))(CName('Object))
+
+  typecheckTestFJ("Int getX(x Int){return x} in Number, Int Number.get(x Int)", ProgramM(Seq(), Seq(MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(New(CName('Int)))), Invk(Seq('getX), Seq(New(CName('Number)), Var('x))))))(CName('Number))
+
+
+ // typecheckTestFJ("Int ")
+}
 
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 //class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
 //class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 //class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
+
