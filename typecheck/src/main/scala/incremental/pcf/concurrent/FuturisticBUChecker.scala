@@ -1,6 +1,7 @@
 package incremental.pcf.concurrent
 
-import java.util.concurrent.{Executors, ConcurrentLinkedQueue}
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.{ThreadFactory, Executors, ConcurrentLinkedQueue}
 import java.util.concurrent.atomic.AtomicInteger
 
 import constraints.StatKeys._
@@ -11,6 +12,7 @@ import incremental.Node_
 import incremental.pcf._
 import util.Join
 
+import scala.collection.JavaConversions
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -238,13 +240,14 @@ case class FuturisticLevelBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: 
 
 
 object JoinBUChecker {
+  val stats = JavaConversions.mapAsScalaMap(new ConcurrentHashMap[Long, Long]())
 
   final class ThreadPool {
     private var _live = false
     private val buffer = collection.mutable.ArrayBuffer[Runnable]()
-    private val pool = Executors.newWorkStealingPool(Runtime.getRuntime.availableProcessors())//Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+    private val pool = Executors.newWorkStealingPool(Runtime.getRuntime.availableProcessors())
+    //private val pool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
 
-    //private val queue = new ConcurrentLinkedQueue[Runnable]()
 
     def start(): Unit = {
       _live = true
@@ -275,6 +278,10 @@ object JoinBUChecker {
     
     def stop(): Unit = {
       _live = false
+      for ((k, v) <- stats) {
+        println(s"Thread $k: ${v/1000000d} ms")
+      }
+      stats.clear()
     }
 
     @inline
@@ -294,7 +301,13 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
 
   val clusterParam = 8
 
-  final def work(thunk: => Unit): Unit = work(new Runnable { def run() = thunk })
+  final def work(thunk: => Unit): Unit = work(new Runnable { def run() = {
+    val start = System.nanoTime()
+    thunk
+    val end = System.nanoTime()
+    val id = Thread.currentThread().getId
+    JoinBUChecker.stats += (id -> (JoinBUChecker.stats.getOrElse(id, 0l) + (end - start)))
+  } })
   final def work(thunk: Runnable): Unit = { JoinBUChecker.pool.submit(thunk) }
   def prepareSchedule(root: Node_[Result]): Join = {
     val typeCheckDone: Join = Join(0)
@@ -390,46 +403,46 @@ case class JoinBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintS
 }
 
 abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
-  import Join.Join
+  import util.Jn
+  import Jn.Join
 
   val clusterParam = 8
 
   private var _nextBucket = 0
-  final def work(thunk: => Unit): Unit = workThunk(() => thunk)
-  final def workThunk(thunk: Thunk): Unit = {
-    buckets(_nextBucket).append(thunk)
+  final def enqueue(join: Join): Unit = {
+    buckets(_nextBucket).enqueue(join)
     _nextBucket = (_nextBucket + 1) % buckets.length
   }
 
 
   type Thunk = () => Unit
   //TODO precalculate the amount of memory required and use arraybuffer/vectors?
-  val buckets = Array.fill(Runtime.getRuntime.availableProcessors())(ListBuffer[Thunk]())
+  val buckets = Array.fill(Runtime.getRuntime.availableProcessors())(collection.mutable.Queue[Join]())
 
   def prepareSchedule(root: Node_[Result]): Join = {
     buckets foreach {_.clear()}
-    val typeCheckDone: Join = Join(0)
+    val typeCheckDone: Join = Jn(null, 0)
     def recurse(e: Node_[Result], parentJoin: Join): Unit = {
       if (e.height <= clusterParam) {
         parentJoin.join()
-        work {
+        val j = Jn(parentJoin, 0)
+        j andThen  {
           e.visitInvalid { e =>
             typecheckRec(e)
             true
           }
-          parentJoin.leave()
         }
+        enqueue(j)
       }
       else {
         if (e.height % clusterParam == 0) {
-          val nodeJoin = Join(0)
+          val nodeJoin = Jn(parentJoin, 0)
           parentJoin.join()
           nodeJoin andThen {
             e.visitInvalid { e =>
               typecheckRec(e)
               true
             }
-            parentJoin.leave()
           }
 
           e.kids.seq.foreach { k => recurse(k, nodeJoin) }
@@ -439,14 +452,13 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
     }
 
     if (root.height % clusterParam != 0) {
-      val joinRoot = Join(0)
+      val joinRoot = Jn(typeCheckDone, 0)
       typeCheckDone.join()
       joinRoot andThen {
         root.visitInvalid { e =>
           typecheckRec(e)
           true
         }
-        typeCheckDone.leave()
       }
       root.kids.seq.foreach { k => recurse(k, joinRoot) }
     }
@@ -462,8 +474,21 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
         override def run() {
           val start = System.nanoTime()
       //    println(s"START ${Thread.currentThread().getId}")
-          for (thunk <- buckets(i))
-            thunk()
+          while (buckets(i).nonEmpty) {
+            val join = buckets(i).dequeue()
+            join.tryClaim() match {
+              case Some(thunk) =>
+              //  println(s"${Thread.currentThread().getId} CLAIM")
+                thunk()
+                join.parent.foreach { p => buckets(i).enqueue(p); p.leave() }
+              case None =>
+                if (join.probe() >= 0) {
+                  buckets(i).enqueue(join)
+                //  println(s"${Thread.currentThread().getId} TRY LATER")
+                }
+                else join.parent foreach (buckets(i).enqueue(_))
+            }
+          }
           val end = System.nanoTime()
           println(s"TERM ${Thread.currentThread().getId}, duration: ${(end - start)/1000000d} ms")
         }

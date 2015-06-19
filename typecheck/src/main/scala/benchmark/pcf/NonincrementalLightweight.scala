@@ -34,7 +34,7 @@ class LightweightPerformanceTest(maxHeight: Int) {
 //      measureT("FuturisticLevelBUSolveContinuousSubst", (e: Node) => FuturisticLevelBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
 //      measureT("FuturisticBUSolveContinuousSubst", (e: Node) => FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       measureT("JoinHeight", (e: Node) => JoinBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-    //  measureT("Join2Height", (e: Node) => Join2BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+      measureT("Join2Height", (e: Node) => Join2BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       val optSpeedup = optimalSpeedup(tree)
       println(s"Optimal speedup: $optSpeedup")
       println()
