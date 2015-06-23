@@ -3,7 +3,7 @@ package util
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Created by oliver on 07.06.15.
+ * Joins which immediately trigger at completion time
  */
 object Join {
   final class Join(size: Int) {
@@ -33,17 +33,23 @@ object Join {
   def apply(size: Int): Join = new Join(size)
 }
 
+/**
+ * Joins with completion and trigger separated in order to avoid
+ * "the slowest thread gets all the work" scenarios. Multiple threads
+ * may compete over the reaction body of a completed join via a method. The implementation
+ * ensures that exactly one threads gets to execute the trigger.
+ */
 object Jn {
   type Thunk = () => Unit
-  final class Join(p: Join, size: Int) {
+  final class Join[T](p: Join[T], size: Int) {
     private val counter = new AtomicInteger(size)
-    private[Join] var kont: Thunk = () => ()
+    private[Join] var kont: T = _
 
     val parent = Option(p)
 
     @inline
-    def andThen(k: => Unit) = {
-      kont = () => k
+    def andThen(k: T) = {
+      kont = k
     }
 
     @inline
@@ -61,8 +67,8 @@ object Jn {
     }
 
     @inline
-    def tryClaim(): Option[Thunk] = {
-      if (counter.compareAndSet(0, -1))
+    def tryClaim(): Option[T] = {
+      if (counter.compareAndSet(0, -1) && kont != null)
         Some(kont)
       else
         None
@@ -70,7 +76,6 @@ object Jn {
   }
 
   @inline
-  def when(j: Join)(k: => Unit) = j andThen k
-  def apply(parent: Join, size: Int): Join = new Join(parent, size)
-  def apply(parent: Join) = new Join(parent, 0)
+  def apply[T](parent: Join[T], size: Int): Join[T] = new Join[T](parent, size)
+  def apply[T](parent: Join[T]): Join[T] = this(parent, 0)
 }
