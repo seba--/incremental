@@ -464,6 +464,7 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
     val threads = (0 until buckets.length) map { i =>
       new Thread(new Runnable() {
         override def run() {
+          var count = 0
           val start = System.nanoTime()
       //    println(s"START ${Thread.currentThread().getId}")
           while (buckets(i).nonEmpty) {
@@ -475,6 +476,7 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
                   typecheckRec(e)
                   true
                 }
+                count += 1
                 join.parent.foreach { p => buckets(i).enqueue(p); p.leave() }
               case None =>
                 if (join.probe() >= 0) {
@@ -484,7 +486,7 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
             }
           }
           val end = System.nanoTime()
-          println(s"TERM ${Thread.currentThread().getId}, duration: ${(end - start)/1000000d} ms")
+          println(s"Join2BU: TERM ${Thread.currentThread().getId}, duration: ${(end - start)/1000000d} ms, count: $count")
           if (j.decrementAndGet() == 0) {
             complete = true
             self.synchronized {
@@ -615,7 +617,7 @@ abstract class Join3BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
             }
           }
           val end = System.nanoTime()
-          println(s"TERM ${Thread.currentThread().getId}, duration: ${(end - start)/1000000d} ms, count: $count")
+          println(s"Join3BU: TERM ${Thread.currentThread().getId}, duration: ${(end - start)/1000000d} ms, count: $count")
         }
       })
     }
