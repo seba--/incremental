@@ -486,7 +486,7 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
             }
           }
           val end = System.nanoTime()
-          println(s"Join2BU: TERM ${Thread.currentThread().getId}, duration: ${(end - start)/1000000d} ms, count: $count")
+          println(s"Join2BU: TERM $i, duration: ${(end - start)/1000000d} ms, count: $count")
           if (j.decrementAndGet() == 0) {
             complete = true
             self.synchronized {
@@ -494,7 +494,7 @@ abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
             }
           }
         }
-      })
+      }, s"Join2BU-$i")
     }
 
     localState.stats(TypeCheck) {
@@ -617,9 +617,9 @@ abstract class Join3BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
             }
           }
           val end = System.nanoTime()
-          println(s"Join3BU: TERM ${Thread.currentThread().getId}, duration: ${(end - start)/1000000d} ms, count: $count")
+          println(s"Join3BU: TERM $i, duration: ${(end - start)/1000000d} ms, count: $count")
         }
-      })
+      }, s"Join3BU-$i")
     }
     join andThen {
       this.synchronized {
