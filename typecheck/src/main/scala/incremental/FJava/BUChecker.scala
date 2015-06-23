@@ -33,8 +33,6 @@ import incremental.Node._
 
         type CReqs = Map[Type, ClassDecl]
 
-        type Signature = Map[Type, ClassDecl]
-
         def Subtype(C: Type, D: Type): CReqs = {
           val cld: ClassDecl = (D, Map(), Map())
           Map(C -> cld)
@@ -49,19 +47,16 @@ import incremental.Node._
         }
 
 
-        type StepResult = (Type, Reqs, CReqs, Signature, Seq[Constraint])
-        type Result = (Type, Reqs, CReqs, Signature, CS)
-
-        type StepResultD = (Signature, Reqs, CReqs, Seq[Constraint])
-        type ResultD = (Signature, Reqs, CReqs, CS)
+        type StepResult = (Type, Reqs, CReqs, Seq[Constraint])
+        type Result = (Type, Reqs, CReqs, CS)
 
         def typecheckImpl(e: Node): Either[Type, TError] = {
           val root = e.withType[Result]
 
           Util.timed(localState -> Statistics.typecheckTime) {
             root.visitUninitialized { e =>
-              val (t, reqs, creqs, sig, cons) = typecheckStep(e)
-              val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._5)
+              val (t, reqs, creqs, cons) = typecheckStep(e)
+              val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
               val cs = subcs addNewConstraints cons
               val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
               //  e.typ = (cs applyPartialSolution t, reqs2, creqs, sig, cs.propagate)
@@ -77,11 +72,11 @@ import incremental.Node._
               } //change the merging of the class declaration
               //val fld = cld._2
               //val creqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)//does not work unification in the class declaration inside
-              e.typ = (cs applyPartialSolution t, reqs2, creqs, sig, cs.propagate)
+              e.typ = (cs applyPartialSolution t, reqs2, creqs, cs.propagate)
               true
             }
 
-            val (t_, reqs, creqs, sig, cs_) = root.typ
+            val (t_, reqs, creqs, cs_) = root.typ
             val cs = cs_.tryFinalize
             val t = t_.subst(cs.substitution)
 
@@ -100,47 +95,45 @@ import incremental.Node._
 
         def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
 
-          case Num => (TNum, Map(), Map(), Map(), Seq())
+          case Num => (TNum, Map(), Map(), Seq())
           case op if op == Add || op == Mul =>
-            val (t1, reqs1, creqs1, sig1, _) = e.kids(0).typ
-            val (t2, reqs2, creqs2, sig2, _) = e.kids(1).typ
+            val (t1, reqs1, creqs1, _) = e.kids(0).typ
+            val (t2, reqs2, creqs2, _) = e.kids(1).typ
 
             val lcons = EqConstraint(TNum, t1)
             val rcons = EqConstraint(TNum, t2)
             val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
             val (mcCons, mCreqs) = mergeCReqMaps(creqs1, creqs2)
 
-            val (sCons, sReqs) = mergeCReqMaps(sig1, sig2)
+          //  val (resCons, resReqs) = mergeCReqMaps(sReqs, mCreqs)
 
-            val (resCons, resReqs) = mergeCReqMaps(sReqs, mCreqs)
-
-            (TNum, mreqs, mCreqs, Map(), mcons :+ lcons :+ rcons)
+            (TNum, mreqs, mCreqs, mcons :+ lcons :+ rcons)
 
           case Var =>
             val x = e.lits(0).asInstanceOf[Symbol]
             val X = freshCName()
             val cld: ClassDecl = (null, Map(), Map())
-            (X, Map(x -> X), Map(), Map(), Seq()) // Map(X -> cld), needed at some examples
+            (X, Map(x -> X), Map(), Seq()) // Map(X -> cld), needed at some examples
 
           case Fields =>
             val f = e.lits(0).asInstanceOf[Symbol] //symbol
-          val (t, reqs, creqs, sig, _) = e.kids(0).typ //subsol
+          val (t, reqs, creqs, _) = e.kids(0).typ //subsol
           val U = freshCName()
             val ct: ClassDecl = (null, Map(f -> U), Map())
 
             val (cons, mcreqs) = mergeCReqMaps(creqs, Map(t -> ct))
-            (U, reqs, mcreqs, Map(), cons) //subsol
+            (U, reqs, mcreqs, cons) //subsol
 
           case Invk =>
             val m = e.lits(0).asInstanceOf[Symbol]
-            val (t0, reqs0, creqs0, sig0, _) = e.kids(0).typ
+            val (t0, reqs0, creqs0, _) = e.kids(0).typ
             val C = freshCName()
 
             var reqss: Seq[Reqs] = Seq(reqs0)
             var creqss: Seq[CReqs] = Seq(creqs0)
             var param = Map[Symbol, Type]()
             for (i <- 1 until e.kids.seq.size) {
-              val (ti, subreqs, subcreqs, subsig, _) = e.kids.seq(i).typ
+              val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
 
               val xi = freshParam().x
               reqss = reqss :+ subreqs
@@ -153,7 +146,7 @@ import incremental.Node._
             val (cCons, creqs) = mergeCReqMaps(creqss)
             val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(t0 -> cld))
 
-            (C, mreqs, mcreqs, Map(), mcons ++ cCons ++ mcCons)
+            (C, mreqs, mcreqs, mcons ++ cCons ++ mcCons)
 
           case New =>
             val c = e.lits(0).asInstanceOf[CName]
@@ -162,7 +155,7 @@ import incremental.Node._
             var creqss = Seq[CReqs]()
             var fields = Map[Symbol, Type]()
             for (i <- 0 until e.kids.seq.size) {
-              val (ti, subreqs, subcreqs, subsig, _) = e.kids.seq(i).typ
+              val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
               var fi = 'b
               if (getX(ti, subreqs) == 'a) {
                 fi = freshField().x
@@ -180,75 +173,70 @@ import incremental.Node._
             val (mcons, mreqs) = mergeReqMaps(reqss)
             val (cCons, creqs) = mergeCReqMaps(creqss)
             val (mcCons, mcreqs) = mergeCReqMaps(creqs, Map(c -> cld))
-            (c, mreqs, mcreqs, Map(), mcons ++ cCons ++ mcCons)
+            (c, mreqs, mcreqs, mcons ++ cCons ++ mcCons)
 
 
           case DCast =>
-            val (t, reqs, creqs, sig, _) = e.kids(0).typ
+            val (t, reqs, creqs, _) = e.kids(0).typ
             val c = e.lits(0).asInstanceOf[CName]
 
-            (c, reqs, creqs ++ Subtype(c, c), Map(), Seq((NotEqConstraint(t, c)))) //cs.never(EqConstraint(t,c)
+            (c, reqs, creqs ++ Subtype(c, c), Seq((NotEqConstraint(t, c)))) //cs.never(EqConstraint(t,c)
 
           case UCast =>
             val c = e.lits(0).asInstanceOf[CName]
-            val (t, reqs, creqs, sig, _) = e.kids(0).typ
+            val (t, reqs, creqs, _) = e.kids(0).typ
 
-            (c, reqs, creqs ++ Subtype(t, c), Map(), Seq())
+            (c, reqs, creqs ++ Subtype(t, c), Seq())
 
           case SCast =>
             val c = e.lits(0).asInstanceOf[CName]
-            val (t, reqs, creqs, sig, _) = e.kids(0).typ
-            (t, reqs, creqs, Map(), Seq())
+            val (t, reqs, creqs, _) = e.kids(0).typ
+            (t, reqs, creqs, Seq())
 
           case MethodDec =>
-            val (e0, reqs, creqs, sig0, _) = e.kids(0).typ
-            val C = e.lits(0).asInstanceOf[CName]
-            val retT = e.lits(1).asInstanceOf[CName]
-            val m = e.lits(2).asInstanceOf[Symbol]
-            var param = Map[Symbol, Type]()
+            val (e0, reqs, creqs, _) = e.kids(0).typ
+            val retT = e.lits(0).asInstanceOf[CName]
+            val m = e.lits(1).asInstanceOf[Symbol]
             var restReqs = reqs
             var cons = Seq[Constraint]()
-            val params = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]]
+            val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
             var fld = Map[Symbol,Type]()
             var superT : Type = null
             var cldM = Map[Symbol, (Type, Map[Symbol, Type])]()
 
+            var sparam = params.toMap
 
-            val sparam = params.map(a => a._1 -> a._2).toMap
-
-            var sig = sig0
+            var sig = Signature(null, retT, m, sparam, e0)
 
             var cCreqs = creqs
-
-            creqs.get(C) match {
-              case None => sig += (C ->(null, Map(), Map(m ->(retT, sparam))))
-              case Some(cldD) =>
-                superT = cldD._1
-                fld = cldD._2
-                cldM = cldD._3
+          for ((c, cldD) <- creqs){
                 cldD._3.get(m) match {
-                  case None => cldM = cldD._3
-                  case Some(m1) =>
-                    for (i <- 0 until params.size) {
+                  case None => sig = sig
+                  case Some(cldM1) =>
+                    var param = cldM1._2
+                    for (i <- 0 until(params.size)) {
                       val x = params(i)._1
                       val xC = params(i)._2
                       reqs.get(x) match {
+                        case None => param = param
                         case Some(treq) =>
-                          restReqs = restReqs - x
+                          restReqs = restReqs
                           cons = EqConstraint(xC, treq) +: cons
+                          //param. = param - x
                       }
                     }
+                    if (param.isEmpty) cldM = cldD._3 - m
+                    else cldM = cldD._3 - m +  (m -> (retT, param))
 
-                    cldM = cldD._3 - m
-                    sig += (C ->(cldD._1, cldD._2, Map(m ->(retT, sparam))))
+                    sig = Signature(c, retT,m, params.toMap, e0)
+                    if (fld.isEmpty && cldM.isEmpty) cCreqs = cCreqs - c
                 }
             }
+            for ((c,cldC) <- creqs) {
+              if (cldC._2.isEmpty && cldC._3.isEmpty) cCreqs = cCreqs - c
+            }
 
-            val cld: ClassDecl = (superT, fld, cldM)
-
-            if (fld.isEmpty && cldM.isEmpty) cCreqs = cCreqs - C
-
-            (C, restReqs, cCreqs, sig, cons)
+            (sig, restReqs, cCreqs, cons)
 
 
           case ClassDec =>
@@ -256,21 +244,21 @@ import incremental.Node._
             val sup = e.lits(1).asInstanceOf[CName]
             val fields = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
             val methods = e.lits(3).asInstanceOf[Seq[(Symbol, (Type, Map[Symbol, Type]))]]
-            val field = fields.map(a => a._1 -> a._2).toMap
-            val method = methods.map(a => a._1 -> a._2).toMap
+            val field = fields.toMap
+            val method = methods.toMap
 
             val cld : ClassDecl = (sup,field , method)
 
-            ( c, Map(), Map(),Map(c -> cld),Seq())
+            ( c, Map(), Map(), Seq())
 
           case ProgramM =>
-            val (tm, req1, creqs1, sig1, _) = e.kids(0).typ
-            val (tmink, req2, creqs2, sig2, _) = e.kids(1).typ
+            val (tm, req1, creqs1, _) = e.kids(0).typ
+            val (tmink, req2, creqs2,  _) = e.kids(1).typ
 
             val (mcons, mreqs) = mergeReqMaps(req1, req2)
             val (mCons1, mCreqs1) = mergeCReqMaps(creqs1, creqs2)
-            val (mCons2, mCreqs2) = mergeCReqMaps(sig1, sig2)
-            val (mCons, mCreqs) = mergeCReqMaps(mCreqs1, mCreqs2)
+            //val (mCons2, mCreqs2) = mergeCReqMaps(sig1, sig2)
+            val (mCons, mCreqs) = mergeCReqMaps(mCreqs1)//, mCreqs2)
 
             var fld = Map[Symbol,Type]()
             var superT : Type = null
@@ -281,7 +269,7 @@ import incremental.Node._
             var crq = mCreqs1
             var cons = Seq[Constraint]()
 
-            mCreqs2.get(tm) match {
+            mCreqs1.get(tm) match { //mCreqs2.get(m)
               case Some(sig) =>
                 mCreqs1.get(tm) match {
                   case Some(cld) =>
@@ -306,7 +294,7 @@ import incremental.Node._
               if (cldC._2.isEmpty && cldC._3.isEmpty) cCreqs = cCreqs - c
             }
 
-            (tm, mreqs,cCreqs, mCreqs2, mcons ++ mCons ++ mCons1 ++ mCons2)
+            (tm, mreqs,cCreqs, mcons ++ mCons ++ mCons1 )  //(....., mCreqs2, ... ++ mCons2)
 
         }
 
