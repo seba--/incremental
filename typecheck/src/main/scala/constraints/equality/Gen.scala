@@ -6,13 +6,11 @@ import constraints.{CVar, GenBase}
 
 
 class Gen extends GenBase {
-  private val _next = new ThreadLocal[AtomicInteger]() {
-    override def initialValue = new AtomicInteger(0)
-  }
+  private val _next = new AtomicInteger()
 
   @inline
-  def next(): Int = _next.get().incrementAndGet()
+  def next(): Int = _next.incrementAndGet()
 
   def freshSymbol[T](prefix: String): CVar[T] =
-    CVar(Symbol(s"$prefix:${Thread.currentThread().getId}:${next()}"))
+    CVar(Symbol(prefix + next()))
 }
