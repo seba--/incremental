@@ -10,7 +10,6 @@ import incremental.Node.Node
 import incremental.Node_
 
 import incremental.pcf._
-import util.Join
 
 import scala.collection.JavaConversions
 import scala.collection.mutable.ListBuffer
@@ -87,7 +86,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
     val (fut, trigger) = bottomUpFuture(root)
 
     localState.stats(TypeCheck) {
-      trigger success ()
+      trigger.success(())
       Await.result(fut, 1 minute)
 
       val (t_, reqs, sol_) = root.typ
@@ -299,6 +298,7 @@ object JoinBUChecker {
 
 //threadpool based, the first to complete the join gets to process the parent
 abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
+  import util.Join
   import Join.Join
 
   val clusterParam = 4
@@ -407,7 +407,6 @@ case class JoinBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintS
 //one bucket per processor, completion and claiming of joins is separated ->  homogenuous utilization
 abstract class Join2BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](true) {
   import util.Jn
-  import Jn.Join
 
   val clusterParam = 4
 
@@ -655,3 +654,10 @@ abstract class Join3BUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](
   }
 }
 
+
+case class Join3BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new Join3BUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
+}
