@@ -2,6 +2,7 @@ package incremental.Java.syntax
 
 import incremental.Node._
 import incremental.{NodeKind, SyntaxChecking}
+import incremental.Java.syntax.JavaSyntaxChecker._
 
 /**
  * Created by qwert on 05.04.15.
@@ -33,3 +34,12 @@ case object For(init: Expr, cond: Expr, update: Seq[Expr], body: Stm) extends St
 
 case object Continue extends Stm(simple()) // TODO: label with orElse
 case object Break extends Stm(simple())*/
+
+
+//////////////
+// LocalVariableDeclarations
+trait NT_LocalVarDecStm
+trait NT_LocalVarDec
+
+case object LocalVarDecStm extends NodeKind(simple(LocalVarDec.getClass)) with NT_LocalVarDecStm
+case object LocalVarDec extends NodeKind(litsFollowedBy(classOf[VarMod], classOf[Type]) andAlso unsafeAllKids(classOf[NT_Anno], classOf[NT_VarDec]) andAlso nonEmptyKids) with NT_LocalVarDec
