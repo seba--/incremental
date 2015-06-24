@@ -13,7 +13,7 @@ import Expr._
 import ArrayInit._
 
 // FieldDeclarations
-trait NT_FieldDec
+trait NT_FieldDec extends NT_ClassMemberDec
 trait NT_VarDec
 trait NT_VarDecId
 trait NT_VarInit
@@ -39,7 +39,7 @@ trait ExceptionType
 case class ThrowsDec(ex: Seq[ExceptionType]) extends Throws
 
 // EnumDeclarations
-trait NT_EnumDec
+trait NT_EnumDec extends NT_ClassDec
 trait NT_EnumDecHead
 trait NT_EnumBody
 trait NT_EnumConst
@@ -47,17 +47,20 @@ trait NT_EnumConstArgs
 trait NT_EnumBodyDecs
 
 case object EnumDec extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT_EnumDecHead], classOf[NT_EnumBody]))) with NT_EnumDec
-case object EnumDecHead extends NodeKind(litsFollowedBy(classOf[ClassMod], classOf[String]) andAlso unsafeAllKids(classOf[NT_Anno])) with NT_EnumDecHead // TODO: lits: orElse Interfaces
+
+case object EnumDecHead extends NodeKind((litsFollowedBy(classOf[ClassMod], classOf[String]) orElse litsFollowedBy(classOf[ClassMod], Seq(classOf[String], classOf[Interfaces])))
+                                         andAlso unsafeAllKids(classOf[NT_Anno])) with NT_EnumDecHead
+
 case object EnumBody extends NodeKind((noLits andAlso unsafeAllKids(classOf[NT_EnumConst])) orElse
                                       (noLits andAlso uKidsFollowedBy(classOf[NT_EnumConst], classOf[NT_EnumBodyDecs]))) with NT_EnumBody
 case object EnumConst extends NodeKind(simple(Seq(classOf[String])) orElse
-                                       (lits(Seq(classOf[String])) andAlso allKids(cExpr))) with NT_EnumConst
-// TODO: (lits(Seq(classOf[String])) andAlso unsafeKids(Seq(classOf[NT_ClassBody])))
-// TODO: (lits(Seq(classOf[String])) andAlso uKidsFollowedBy(cExpr, classOf[NT_ClassBody]))
-case object EnumBodyDecs extends NodeKind(simple()) with NT_EnumBodyDecs // TODO: ";" ClassBodyDec* -> EnumBodyDecs
+                                       (lits(Seq(classOf[String])) andAlso allKids(cExpr)) orElse
+                                       (lits(Seq(classOf[String])) andAlso unsafeKids(Seq(classOf[NT_ClassBody]))) orElse
+                                       (lits(Seq(classOf[String])) andAlso uKidsFollowedBy(cExpr, classOf[NT_ClassBody]))) with NT_EnumConst
+case object EnumBodyDecs extends NodeKind(unsafeAllKids(classOf[NT_ClassBodyDec])) with NT_EnumBodyDecs
 
 // ConstructorDeclarations
-trait NT_ConstrDec
+trait NT_ConstrDec extends NT_ClassBodyDec
 trait NT_ConstrBody
 trait NT_ConstrHead
 trait NT_ConstrInv
@@ -75,15 +78,15 @@ case object SuperConstrInv extends NodeKind((noLits orElse lits(Seq(classOf[Type
 case object QSuperConstrInv extends NodeKind((noLits orElse lits(Seq(classOf[TypeArgs]))) andAlso allKids(cExpr) andAlso nonEmptyKids) with NT_ConstrInv
 
 // StaticInitializers
-trait NT_StaticInit
+trait NT_StaticInit extends NT_ClassBodyDec
 case object StaticInit extends NodeKind(simple(Block.getClass)) with NT_StaticInit
 
 // InstanceInitializers
-trait NT_InstanceInit
+trait NT_InstanceInit extends NT_ClassBodyDec
 case object InstanceInit extends NodeKind(simple(Block.getClass)) with NT_InstanceInit
 
 // MethodDeclarations
-trait NT_MethodDec
+trait NT_MethodDec extends NT_ClassMemberDec
 trait NT_MethodDecHead
 
 case object MethodDec extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT_MethodDecHead], classOf[NT_MethodBody]))) with NT_MethodDec
@@ -96,3 +99,31 @@ case object DeprMethodDecHead extends NodeKind(simple()) with NT_MethodDecHead /
 
 trait NT_MethodBody
 case object NoMethodBody extends NodeKind(simple()) with NT_MethodBody
+
+// ClassDeclarations
+trait NT_ClassDec extends NT_ClassMemberDec with NT_TypeDec
+trait NT_ClassBody
+trait NT_ClassDecHead
+
+case object ClassDec extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT_ClassDecHead], classOf[NT_ClassBody]))) with NT_ClassDec
+case object ClassBody extends NodeKind(noLits andAlso unsafeAllKids(classOf[NT_ClassBodyDec])) with NT_ClassBody
+case object ClassDecHead extends NodeKind(unsafeAllKids(classOf[NT_Anno]) andAlso
+                                          (litsFollowedBy(classOf[ClassMod], classOf[String]) orElse
+                                           litsFollowedBy(classOf[ClassMod], Seq(classOf[String], classOf[TypeParams])) orElse
+                                           litsFollowedBy(classOf[ClassMod], Seq(classOf[String], classOf[Super])) orElse
+                                           litsFollowedBy(classOf[ClassMod], Seq(classOf[String], classOf[Interfaces])) orElse
+                                           litsFollowedBy(classOf[ClassMod], Seq(classOf[String], classOf[TypeParams], classOf[Super])) orElse
+                                           litsFollowedBy(classOf[ClassMod], Seq(classOf[String], classOf[TypeParams], classOf[Interfaces])) orElse
+                                           litsFollowedBy(classOf[ClassMod], Seq(classOf[String], classOf[Super], classOf[Interfaces])) orElse
+                                           litsFollowedBy(classOf[ClassMod], Seq(classOf[String], classOf[TypeParams], classOf[Super], classOf[Interfaces])))) with NT_ClassDecHead
+
+trait Super
+case class SuperDec(t: ClassType) extends Super
+
+trait Interfaces
+case class ImplementsDec(ifaces: Seq[InterfaceType]) extends Interfaces
+
+trait NT_ClassBodyDec
+trait NT_ClassMemberDec extends NT_ClassBodyDec
+
+trait NT_TypeDec

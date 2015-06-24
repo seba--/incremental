@@ -29,7 +29,7 @@ trait NT_ConstantDec extends NT_InterfaceMemberDec
 case object ConstantDec extends NodeKind(litsFollowedBy(classOf[ConstantMod], classOf[Type]) andAlso nonEmptyKids andAlso unsafeAllKids(classOf[NT_Anno], VarDec.getClass)) with NT_ConstantDec // _ => ConstantDecSyntax
 
 // InterfaceDeclarations
-trait NT_InterfaceDec extends NT_AnnoElemDec with NT_InterfaceMemberDec
+trait NT_InterfaceDec extends NT_AnnoElemDec with NT_InterfaceMemberDec with NT_ClassMemberDec with NT_TypeDec
 trait NT_InterfaceDecHead
 trait NT_ExtendsInterfaces
 trait NT_InterfaceMemberDec
@@ -40,4 +40,4 @@ case object InterfaceDecHead extends NodeKind(/* kids */(unsafeAllKids(classOf[N
                                                          litsFollowedBy(classOf[InterfaceMod], Seq(classOf[String], classOf[TypeParams])))) with NT_InterfaceDecHead
 case object ExtendsInterfaces extends NodeKind(allLits(classOf[InterfaceType]) andAlso nonEmptyLits) with NT_ExtendsInterfaces
 
-case object Semicolon extends NodeKind(simple()) with NT_InterfaceMemberDec
+case object Semicolon extends NodeKind(simple()) with NT_InterfaceMemberDec with NT_ClassMemberDec with NT_TypeDec
