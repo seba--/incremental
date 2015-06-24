@@ -57,7 +57,22 @@ case object EnumConst extends NodeKind(simple(Seq(classOf[String])) orElse
 case object EnumBodyDecs extends NodeKind(simple()) with NT_EnumBodyDecs // TODO: ";" ClassBodyDec* -> EnumBodyDecs
 
 // ConstructorDeclarations
+trait NT_ConstrDec
+trait NT_ConstrBody
+trait NT_ConstrHead
+trait NT_ConstrInv
 
+case object ConstrDec extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT_ConstrHead], classOf[NT_ConstrBody]))) with NT_ConstrDec
+case object ConstrDecHead extends NodeKind((litsFollowedBy(classOf[ConstrMod], classOf[String]) orElse
+                                           litsFollowedBy(classOf[ConstrMod], Seq(classOf[TypeParams], classOf[String])) orElse
+                                           litsFollowedBy(classOf[ConstrMod], Seq(classOf[String], classOf[Throws])) orElse
+                                           litsFollowedBy(classOf[ConstrMod], Seq(classOf[TypeParams], classOf[String], classOf[Throws])))
+                                          andAlso
+                                          unsafeAllKids(classOf[NT_Anno], classOf[NT_FormalParam])) with NT_ConstrHead
+case object ConstrBody extends NodeKind(uFollowedByKids(classOf[NT_ConstrInv], classOf[Block])) with NT_ConstrBody // TODO: change Block to NT_BlockStm
+case object AltConstrInv extends NodeKind((noLits orElse lits(Seq(classOf[TypeArgs]))) andAlso allKids(cExpr)) with NT_ConstrInv
+case object SuperConstrInv extends NodeKind((noLits orElse lits(Seq(classOf[TypeArgs]))) andAlso allKids(cExpr)) with NT_ConstrInv
+case object QSuperConstrInv extends NodeKind((noLits orElse lits(Seq(classOf[TypeArgs]))) andAlso allKids(cExpr) andAlso nonEmptyKids) with NT_ConstrInv
 
 ///////////////////////////
 
@@ -82,16 +97,14 @@ abstract class StaticInit(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeK
 case object StaticInit extends StaticInit(simple(classOf[Block]))
 
 // Constructor Declarations
-abstract class ConstrDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-abstract class ConstrBody(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-abstract class ConstrHead(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-abstract class ConstrInv(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+//abstract class ConstrDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+//abstract class ConstrBody(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+//abstract class ConstrHead(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+//abstract class ConstrInv(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 
-case object ConstrDec extends ConstrDec(simple(classOf[ConstrHead], classOf[ConstrBody]))
-case object ConstrDecHead extends ConstrHead(_ => ConstrDecHeadSyntax)
-case object ConstrBody extends ConstrBody(_ => ConstrBodySyntax)
-case object AltConstrInv extends ConstrInv(k => ConstrInvSyntax(k))
-case object SuperConstrInv extends ConstrInv(k => ConstrInvSyntax(k))
-case object QSuperConstrInv extends ConstrInv(_ => QConstrInvSyntax)
-
-trait ConstrMod // Public, Protected, Private
+//case object ConstrDec extends ConstrDec(simple(classOf[ConstrHead], classOf[ConstrBody]))
+//case object ConstrDecHead extends ConstrHead(_ => ConstrDecHeadSyntax)
+//case object ConstrBody extends ConstrBody(_ => ConstrBodySyntax)
+//case object AltConstrInv extends ConstrInv(k => ConstrInvSyntax(k))
+//case object SuperConstrInv extends ConstrInv(k => ConstrInvSyntax(k))
+//case object QSuperConstrInv extends ConstrInv(_ => QConstrInvSyntax)
