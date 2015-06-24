@@ -17,26 +17,46 @@ import Stm._
 import Expr._
 
 case object Empty extends Stm(simple())
+case object Labeled extends Stm(simple(Seq(classOf[String]), cStm))
 case object ExprStm extends Stm(simple(cExpr))
 
-case object If extends Stm(simple(Seq(cExpr, cStm)))
-case object IfElse extends Stm(simple(Seq(cExpr, cStm, cStm)))
+case object If extends Stm(simple(cExpr, cStm) orElse simple(cExpr, cStm, cStm))
 
-//abstract class Block(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Stm(syntaxcheck)
-//case object Block extends Block(_ => BlockSyntax)
+case object AssertStm extends Stm(simple(cExpr) orElse simple(cExpr, cExpr))
 
-/*case object LocalVarDec() extends Stm // TODO local var dec/var dec
+// Switch
+trait NT_SwitchBlock
+trait NT_SwitchGroup
+trait NT_SwitchLabel
 
-case object While extends Stm(simple(Seq(cExpr, cStm)))
-case object DoWhile extends Stm(simple(Seq(cStm, cExpr)))
+case object Switch extends Stm(simple(cExpr, SwitchBlock.getClass))
+case object SwitchBlock extends NodeKind(noLits andAlso unsafeAllKids(classOf[NT_SwitchGroup], classOf[NT_SwitchLabel])) with NT_SwitchBlock
+case object SwitchGroup extends NodeKind(noLits andAlso nonEmptyKids andAlso unsafeAllKids(classOf[NT_SwitchLabel], classOf[NT_BlockStm])) with NT_SwitchGroup
+case object Case extends NodeKind(simple(cExpr)) with NT_SwitchLabel
+case object Default extends NodeKind(simple()) with NT_SwitchLabel
 
-case object For(init: Expr, cond: Expr, update: Seq[Expr], body: Stm) extends Stm // TODO: init is var dec
+// Loops
+case object While extends Stm(simple(cExpr, cStm))
+case object DoWhile extends Stm(simple(cStm, cExpr))
 
-case object Continue extends Stm(simple()) // TODO: label with orElse
-case object Break extends Stm(simple())*/
+case object For extends Stm((noLits andAlso uFollowedByKids(Seq(classOf[NT_LocalVarDec], cStm), cExpr)) orElse // first the statement then the increasing expressions
+                            (noLits andAlso uFollowedByKids(Seq(classOf[NT_LocalVarDec], cExpr, cStm), cExpr))) // TODO: orElse: "for" "(" {Expr ","}* ";" Expr? ";" {Expr ","}* ")" Stm -> Stm {cons("For")}
+case object ForEach extends Stm(simple(classOf[FormalParam], cExpr, cStm))
 
+case object Break extends Stm(simple() orElse simple(Seq(classOf[String])))
+case object Continue extends Stm(simple() orElse simple(Seq(classOf[String])))
+case object Return extends Stm(simple() orElse simple(cExpr))
+case object Throw extends Stm(simple(cExpr))
 
-//////////////
+case object Synchronized extends Stm(simple(cExpr, Block.getClass))
+
+// CatchClause
+trait NT_CatchClause
+
+case object Try extends Stm((noLits andAlso nonEmptyKids andAlso uFollowedByKids(classOf[NT_Block], classOf[NT_CatchClause])) orElse
+                            (noLits andAlso uFollowedByKids(Seq(classOf[NT_Block], classOf[NT_Block]), classOf[NT_CatchClause])))
+case object Catch extends NodeKind(simple(classOf[FormalParam], Block.getClass)) with NT_CatchClause
+
 // Blocks
 trait NT_BlockStm
 trait NT_Block

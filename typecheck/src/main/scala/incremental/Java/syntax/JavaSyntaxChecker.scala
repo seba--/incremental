@@ -332,7 +332,9 @@ object JavaSyntaxChecker {
   def followedByKids(first: Class[_ <: NodeKind], tail: Class[_ <: NodeKind]) = (k: NodeKind) => new KidFollowedByKidsSyntax(k, first, tail)
   def kidsFollowedBy(head: Class[_ <: NodeKind], last: Class[_ <: NodeKind]) = (k: NodeKind) => new KidsFollowedByKidSyntax(k, head, last)
   def uFollowedByKids(first: Class[_], tail: Class[_]) = (k: NodeKind) => new UnsafeKidFollowedByKidsSyntax(k, first, tail)
+  def uFollowedByKids(kids: Seq[Class[_]], tail: Class[_]) = (k: NodeKind) => new UnsafeKidSequenceFollowedByKidsSyntax(k, kids, tail)
   def uKidsFollowedBy(head: Class[_], last: Class[_]) = (k: NodeKind) => new UnsafeKidsFollowedByKidSyntax(k, head, last)
+  def uKidsFollowedBy(head: Class[_], kids: Seq[Class[_]]) = (k: NodeKind) => new UnsafeKidsFollowedByKidSequenceSyntax(k, head, kids)
   def followedByLits(first: Class[_], tail: Class[_]) = (k: NodeKind) => new LitFollowedByLitsSyntax(k, first, tail)
   def followedByLits(lits: Seq[Class[_]], tail: Class[_]) = (k: NodeKind) => new LitSequenceFollowedByLitsSyntax(k, lits, tail)
   def litsFollowedBy(head: Class[_], last: Class[_]) = (k: NodeKind) => new LitsFollowedByLitSyntax(k, head, last)
@@ -502,6 +504,21 @@ case class UnsafeKidsFollowedByKidSyntax(k: NodeKind, headsType: Class[_], lastT
   }
 }
 
+case class UnsafeKidsFollowedByKidSequenceSyntax(k: NodeKind, headsType: Class[_], kidTypes: Seq[Class[_]]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.size < kidTypes.size)
+      error(s"Expected at least ${kidTypes.size} kids but found ${kids.size} kids")
+
+    for (i <- 0 until kidTypes.size)
+      if (!kidTypes(i).isInstance(kids(kids.size-kidTypes.size+i).kind))
+        error(s"Expected kid of ${kidTypes(i).getClass} at position $i but found ${kids(kids.size-kidTypes.size+i).kind.getClass}")
+
+    for(kid <- kids.dropRight(kidTypes.size))
+      if(!headsType.isInstance(kid.kind))
+        error(s"All kids but the first ${kidTypes.size} must be of kind ${headsType.getClass}, but found ${kid.kind.getClass}")
+  }
+}
+
 case class UnsafeKidFollowedByKidsSyntax(k: NodeKind, firstType: Class[_], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if(kids.isEmpty)
@@ -513,6 +530,21 @@ case class UnsafeKidFollowedByKidsSyntax(k: NodeKind, firstType: Class[_], tailT
     for(kid <- kids.drop(1))
       if(!tailType.isInstance(kid.kind))
         error(s"All kids but the first must be of kind ${tailType.getClass}, but found ${kid.kind.getClass}")
+  }
+}
+
+case class UnsafeKidSequenceFollowedByKidsSyntax(k: NodeKind, kidTypes: Seq[Class[_]], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if(kids.size < kidTypes.size)
+      error(s"Expected at least ${kidTypes.size} kids but found ${kids.size} kids")
+
+    for (i <- kidTypes.indices)
+      if (!kidTypes(i).isInstance(kids(i).kind))
+        error(s"Expected kid of ${kidTypes(i).getClass} at position $i but found ${kids(i).kind.getClass}")
+
+    for(kid <- kids.drop(kidTypes.size))
+      if(!tailType.isInstance(kid.kind))
+        error(s"All kids but the first ${kidTypes.size} must be of kind ${tailType.getClass}, but found ${kid.kind.getClass}")
   }
 }
 
@@ -563,9 +595,9 @@ case class LitsFollowedByLitSequenceSyntax(k: NodeKind, headsType: Class[_], lit
     if(lits.size < litTypes.size)
       error(s"Expected at least ${litTypes.size} literals but found ${lits.size} literals")
 
-    for (i <- (lits.size-litTypes.size) until lits.size)
-      if (!litTypes(i).isInstance(lits(i)))
-        error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
+    for (i <- 0 until litTypes.size)
+      if (!litTypes(i).isInstance(lits(lits.size-litTypes.size+i)))
+        error(s"Expected literal of kind ${litTypes(i)} at position $i but found ${lits(lits.size-litTypes.size+i).getClass}")
 
     for(lit <- lits.dropRight(litTypes.size))
       if(!headsType.isInstance(lit))

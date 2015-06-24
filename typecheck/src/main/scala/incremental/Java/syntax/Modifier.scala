@@ -16,7 +16,7 @@ case class Static() extends Modifier with ConstantMod with InterfaceMod with Fie
 case class Native() extends Modifier with MethodMod
 case class Transient() extends Modifier with FieldMod
 case class Volatile() extends Modifier with FieldMod
-case class Synchronized() extends Modifier with MethodMod
+case class SynchronizedMod() extends Modifier with MethodMod // name conflict with synchronized statement
 case class StrictFP() extends Modifier with InterfaceMod with MethodMod
 
 trait AbstractMethodMod
