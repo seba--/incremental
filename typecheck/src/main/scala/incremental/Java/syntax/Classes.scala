@@ -39,7 +39,7 @@ trait ExceptionType
 case class ThrowsDec(ex: Seq[ExceptionType]) extends Throws
 
 // EnumDeclarations
-trait NT_EnumDec extends NT_ClassDec
+trait NT_EnumDec extends NT_ClassDec with NT_AnnoElemDec
 trait NT_EnumDecHead
 trait NT_EnumBody
 trait NT_EnumConst
@@ -101,7 +101,7 @@ trait NT_MethodBody
 case object NoMethodBody extends NodeKind(simple()) with NT_MethodBody
 
 // ClassDeclarations
-trait NT_ClassDec extends NT_ClassMemberDec with NT_TypeDec
+trait NT_ClassDec extends NT_ClassMemberDec with NT_TypeDec with NT_InterfaceMemberDec with NT_AnnoElemDec
 trait NT_ClassBody
 trait NT_ClassDecHead
 
