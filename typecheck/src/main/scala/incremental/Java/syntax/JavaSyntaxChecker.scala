@@ -169,33 +169,6 @@ object DeprMethodDecHeadSyntax extends SyntaxChecking.SyntaxChecker(DeprMethodDe
   }
 }
 
-/*object ConstrDecHeadSyntax extends SyntaxChecking.SyntaxChecker(ConstrDecHead) {
-  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    // TODO: ( Anno | ConstrMod )* TypeParams? Id "(" {FormalParam ","}* ")" Throws?
-  }
-}*/
-
-/*object ConstrBodySyntax extends SyntaxChecking.SyntaxChecker(ConstrBody) {
-  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    // TODO: "{" ConstrInv? BlockStm* "}"
-  }
-}*/
-
-/*case class ConstrInvSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    // TODO: reject QSuperConstrInv (maybe split)
-
-    // TODO: TypeArgs? "this" "(" {Expr ","}* ")" ";"
-    // TODO: same for "super"
-  }
-}*/
-
-/*object QConstrInvSyntax extends SyntaxChecking.SyntaxChecker(QSuperConstrInv) {
-  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    // TODO: Expr "." TypeArgs? "super" "(" {Expr ","}* ")" ";"
-  }
-}*/
-
 object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
   // ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Throws? ";"

@@ -95,16 +95,3 @@ case object InstanceInit extends InstanceInit(simple(classOf[Block]))
 // Static Initializers
 abstract class StaticInit(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 case object StaticInit extends StaticInit(simple(classOf[Block]))
-
-// Constructor Declarations
-//abstract class ConstrDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-//abstract class ConstrBody(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-//abstract class ConstrHead(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-//abstract class ConstrInv(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-
-//case object ConstrDec extends ConstrDec(simple(classOf[ConstrHead], classOf[ConstrBody]))
-//case object ConstrDecHead extends ConstrHead(_ => ConstrDecHeadSyntax)
-//case object ConstrBody extends ConstrBody(_ => ConstrBodySyntax)
-//case object AltConstrInv extends ConstrInv(k => ConstrInvSyntax(k))
-//case object SuperConstrInv extends ConstrInv(k => ConstrInvSyntax(k))
-//case object QSuperConstrInv extends ConstrInv(_ => QConstrInvSyntax)
