@@ -153,7 +153,7 @@ object MethodInvokationSyntax extends SyntaxChecking.SyntaxChecker(Invoke) {
   }
 }
 
-object MethodDecHeadSyntax extends SyntaxChecking.SyntaxChecker(MethodDeclarationHead) {
+/*object MethodDecHeadSyntax extends SyntaxChecking.SyntaxChecker(MethodDeclarationHead) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     /* TODO: (Anno | MethodMod)*
      *
@@ -167,7 +167,7 @@ object DeprMethodDecHeadSyntax extends SyntaxChecking.SyntaxChecker(DeprMethodDe
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     // TODO: (Anno | MethodMod)*
   }
-}
+}*/
 
 object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {

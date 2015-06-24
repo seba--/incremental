@@ -59,7 +59,7 @@ case object Catch extends NodeKind(simple(classOf[FormalParam], Block.getClass))
 
 // Blocks
 trait NT_BlockStm
-trait NT_Block
+trait NT_Block extends NT_MethodBody
 
 case object Block extends Stm(noLits andAlso unsafeAllKids(classOf[NT_BlockStm])) with NT_Block
 case object ClassDecStm extends NodeKind(noLits andAlso unsafeKids(Seq())) with NT_BlockStm // TODO: classOf[NT_ClassDec] in kids

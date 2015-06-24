@@ -82,16 +82,17 @@ case object StaticInit extends NodeKind(simple(Block.getClass)) with NT_StaticIn
 trait NT_InstanceInit
 case object InstanceInit extends NodeKind(simple(Block.getClass)) with NT_InstanceInit
 
-///////////////////////////
+// MethodDeclarations
+trait NT_MethodDec
+trait NT_MethodDecHead
 
-// Method Dec
-abstract class MethodDec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object MethodDeclaration extends MethodDec(simple(Seq(classOf[MethodDecHead], classOf[MethodBody])))
+case object MethodDec extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT_MethodDecHead], classOf[NT_MethodBody]))) with NT_MethodDec
+case object MethodDecHead extends NodeKind((litsFollowedBy(classOf[MethodMod], Seq(classOf[ResultType], classOf[String])) orElse
+                                            litsFollowedBy(classOf[MethodMod], Seq(classOf[TypeParams], classOf[ResultType], classOf[String])) orElse
+                                            litsFollowedBy(classOf[MethodMod], Seq(classOf[ResultType], classOf[String], classOf[Throws])) orElse
+                                            litsFollowedBy(classOf[MethodMod], Seq(classOf[TypeParams], classOf[ResultType], classOf[String], classOf[Throws])))
+                                           andAlso unsafeAllKids(classOf[NT_Anno], classOf[NT_FormalParam])) with NT_MethodDecHead
+case object DeprMethodDecHead extends NodeKind(simple()) with NT_MethodDecHead // TODO: ( Anno | MethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Dim+ Throws?
 
-abstract class MethodDecHead(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object MethodDeclarationHead extends MethodDecHead(_ => MethodDecHeadSyntax)
-case object DeprMethodDeclarationHead extends MethodDecHead(_ => DeprMethodDecHeadSyntax)
-
-abstract class MethodBody(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object NoMethodBody extends MethodBody(simple())
-case object MethodBody extends MethodBody(simple(Block.getClass))
+trait NT_MethodBody
+case object NoMethodBody extends NodeKind(simple()) with NT_MethodBody
