@@ -9,7 +9,7 @@ import incremental.Java.syntax.JavaSyntaxChecker._
  */
 
 
-abstract class Stm(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+abstract class Stm(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck) with NT_BlockStm
 object Stm {
   val cStm = classOf[Stm]
 }
@@ -22,8 +22,8 @@ case object ExprStm extends Stm(simple(cExpr))
 case object If extends Stm(simple(Seq(cExpr, cStm)))
 case object IfElse extends Stm(simple(Seq(cExpr, cStm, cStm)))
 
-abstract class Block(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Stm(syntaxcheck)
-case object Block extends Block(_ => BlockSyntax)
+//abstract class Block(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Stm(syntaxcheck)
+//case object Block extends Block(_ => BlockSyntax)
 
 /*case object LocalVarDec() extends Stm // TODO local var dec/var dec
 
@@ -37,8 +37,15 @@ case object Break extends Stm(simple())*/
 
 
 //////////////
+// Blocks
+trait NT_BlockStm
+trait NT_Block
+
+case object Block extends Stm(noLits andAlso unsafeAllKids(classOf[NT_BlockStm])) with NT_Block
+case object ClassDecStm extends NodeKind(noLits andAlso unsafeKids(Seq())) with NT_BlockStm // TODO: classOf[NT_ClassDec] in kids
+
 // LocalVariableDeclarations
-trait NT_LocalVarDecStm
+trait NT_LocalVarDecStm extends NT_BlockStm
 trait NT_LocalVarDec
 
 case object LocalVarDecStm extends NodeKind(simple(LocalVarDec.getClass)) with NT_LocalVarDecStm

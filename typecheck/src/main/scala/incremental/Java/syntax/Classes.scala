@@ -69,7 +69,7 @@ case object ConstrDecHead extends NodeKind((litsFollowedBy(classOf[ConstrMod], c
                                            litsFollowedBy(classOf[ConstrMod], Seq(classOf[TypeParams], classOf[String], classOf[Throws])))
                                           andAlso
                                           unsafeAllKids(classOf[NT_Anno], classOf[NT_FormalParam])) with NT_ConstrHead
-case object ConstrBody extends NodeKind(uFollowedByKids(classOf[NT_ConstrInv], classOf[Block])) with NT_ConstrBody // TODO: change Block to NT_BlockStm
+case object ConstrBody extends NodeKind(uFollowedByKids(classOf[NT_ConstrInv], classOf[NT_BlockStm])) with NT_ConstrBody
 case object AltConstrInv extends NodeKind((noLits orElse lits(Seq(classOf[TypeArgs]))) andAlso allKids(cExpr)) with NT_ConstrInv
 case object SuperConstrInv extends NodeKind((noLits orElse lits(Seq(classOf[TypeArgs]))) andAlso allKids(cExpr)) with NT_ConstrInv
 case object QSuperConstrInv extends NodeKind((noLits orElse lits(Seq(classOf[TypeArgs]))) andAlso allKids(cExpr) andAlso nonEmptyKids) with NT_ConstrInv
@@ -86,12 +86,12 @@ case object DeprMethodDeclarationHead extends MethodDecHead(_ => DeprMethodDecHe
 
 abstract class MethodBody(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 case object NoMethodBody extends MethodBody(simple())
-case object MethodBody extends MethodBody(simple(classOf[Block]))
+case object MethodBody extends MethodBody(simple(Block.getClass))
 
 // Instance Initializers
 abstract class InstanceInit(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object InstanceInit extends InstanceInit(simple(classOf[Block]))
+case object InstanceInit extends InstanceInit(simple(Block.getClass))
 
 // Static Initializers
 abstract class StaticInit(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
-case object StaticInit extends StaticInit(simple(classOf[Block]))
+case object StaticInit extends StaticInit(simple(Block.getClass))
