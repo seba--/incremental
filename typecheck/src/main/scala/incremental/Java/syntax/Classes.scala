@@ -38,6 +38,27 @@ trait Throws
 trait ExceptionType
 case class ThrowsDec(ex: Seq[ExceptionType]) extends Throws
 
+// EnumDeclarations
+trait NT_EnumDec
+trait NT_EnumDecHead
+trait NT_EnumBody
+trait NT_EnumConst
+trait NT_EnumConstArgs
+trait NT_EnumBodyDecs
+
+case object EnumDec extends NodeKind(noLits andAlso unsafeKids(Seq(classOf[NT_EnumDecHead], classOf[NT_EnumBody]))) with NT_EnumDec
+case object EnumDecHead extends NodeKind(litsFollowedBy(classOf[ClassMod], classOf[String]) andAlso unsafeAllKids(classOf[NT_Anno])) with NT_EnumDecHead // TODO: lits: orElse Interfaces
+case object EnumBody extends NodeKind((noLits andAlso unsafeAllKids(classOf[NT_EnumConst])) orElse
+                                      (noLits andAlso uKidsFollowedBy(classOf[NT_EnumConst], classOf[NT_EnumBodyDecs]))) with NT_EnumBody
+case object EnumConst extends NodeKind(simple(Seq(classOf[String])) orElse
+                                       (lits(Seq(classOf[String])) andAlso allKids(cExpr))) with NT_EnumConst
+// TODO: (lits(Seq(classOf[String])) andAlso unsafeKids(Seq(classOf[NT_ClassBody])))
+// TODO: (lits(Seq(classOf[String])) andAlso uKidsFollowedBy(cExpr, classOf[NT_ClassBody]))
+case object EnumBodyDecs extends NodeKind(simple()) with NT_EnumBodyDecs // TODO: ";" ClassBodyDec* -> EnumBodyDecs
+
+// ConstructorDeclarations
+
+
 ///////////////////////////
 
 // Method Dec

@@ -25,3 +25,4 @@ trait InterfaceMod
 trait FieldMod
 trait VarMod // Final
 trait MethodMod // Public, Protected, Private, Abstract, Static, Final, Synchronized, Native, StrictFP
+trait ClassMod
