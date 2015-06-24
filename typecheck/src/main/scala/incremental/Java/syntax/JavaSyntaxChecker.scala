@@ -8,7 +8,7 @@ import JavaSyntaxChecker.firstIndexOf
 /**
  * Created by qwert on 29.04.15.
  */
-object ArrayInitSyntax extends SyntaxChecking.SyntaxChecker(ArrayInitialize){
+/*object ArrayInitSyntax extends SyntaxChecking.SyntaxChecker(ArrayInitialize){
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
     for(kid <- kids)
       if(!classOf[Expr].isInstance(kid.kind) || !classOf[ArrayInit].isInstance(kid.kind))
@@ -20,7 +20,7 @@ object ArrayInitSyntax extends SyntaxChecking.SyntaxChecker(ArrayInitialize){
     if(lits.nonEmpty)
       error(s"No literals allowed, but found ${lits.size}")
   }
-}
+}*/
 
 object ArrayCreationSyntax extends SyntaxChecking.SyntaxChecker(NewArray){
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
@@ -55,7 +55,7 @@ object ArrayCreationSyntax extends SyntaxChecking.SyntaxChecker(NewArray){
       if(kids.dropRight(1).exists(!_.kind.isInstanceOf[Dim.type]))
         error(s"All kids except the last must be of kind Dim but found ${kids.dropRight(1).filter(!_.kind.isInstanceOf[Dim.type])}")
 
-      if(!kids.last.kind.isInstanceOf[ArrayInit])
+      if(!kids.last.kind.isInstanceOf[NT_ArrayInit])
         error(s"The last kid must be of kind ArrayInit, but was ${kids.last.kind.getClass}")
     } else {
       error(s"The first kid must be of kind Dimension, but was ${kids.head.kind.getClass}")
