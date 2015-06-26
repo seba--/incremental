@@ -304,11 +304,11 @@ abstract class JoinBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS](t
   val clusterParam = 4
 
   final def work(thunk: => Unit): Unit = work(new Runnable { def run() = {
-    val start = System.nanoTime()
+  //  val start = System.nanoTime()
     thunk
-    val end = System.nanoTime()
-    val id = Thread.currentThread().getId
-    JoinBUChecker.stats += (id -> (JoinBUChecker.stats.getOrElse(id, 0l) + (end - start)))
+  //  val end = System.nanoTime()
+  //  val id = Thread.currentThread().getId
+  //  JoinBUChecker.stats += (id -> (JoinBUChecker.stats.getOrElse(id, 0l) + (end - start)))
   } })
   final def work(thunk: Runnable): Unit = { JoinBUChecker.pool.submit(thunk) }
   def prepareSchedule(root: Node_[Result]): Join = {
