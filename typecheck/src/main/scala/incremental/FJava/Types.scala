@@ -4,6 +4,7 @@ import constraints.equality.CSubst
 import constraints.equality.CSubst.CSubst
 import constraints.CVar
 import constraints.equality.{ConstraintSystem, EqConstraint, Type}
+import incremental.{NodeKind, Node_}
 
 
 /**
@@ -25,14 +26,24 @@ case class CName(x: Symbol) extends Type {
   def occurs(x2: CVar[_]) = x == x2
 
   def subst(cs : CSubst) = this
-  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
-    case CName(x1) => other.unify(this,
-      if (x1 == x) cs.solved(CSubst(CVar[Type](x1) -> CName(x)))
-      else cs)
-    case UCName(x1) => other.unify(this, cs.solved(CSubst(x1 -> CName(x))))
-    case _ => cs.never(EqConstraint(this, other))
- }
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
+    if (this == other) cs
+    else cs.substitution.hget(CVar[Type](x)) match {
+      case None => other match {
+        case UCName(x) => other.unify(this, cs)
+        case _ => cs.never(EqConstraint(this, other))
+      }
+      case Some(t) => t.unify(other, cs)
+    }
+  //other match {
+    //case CName(x1) => other.unify(this,
+      //if (x1 == x) cs.solved(CSubst(CVar[Type](x1) -> CName(x))) without(Set(CVar(x1)))// cs
+      //else cs) // cs.never(EqConstraint(CName(x), CName(x1)))
+    //case UCName(x1) => other.unify(this, cs.solved(CSubst(x1 -> CName(x))))
+   // case _ => cs.never(EqConstraint(this, other))
+ //}
 }
+
 case class UCName(x: CVar[Type]) extends Type { // should not use CVar, but CNAme, have to change that
   def freeTVars = Set()
   def normalize = this
@@ -55,6 +66,11 @@ case class UCName(x: CVar[Type]) extends Type { // should not use CVar, but CNAm
     }
 }
 
+//other match {
+//case UCName(x1) => other.unify(this, cs.solved(CSubst(x -> UCName(x1))))
+//case CName(x1) => other.unify(this, cs.solved(CSubst(x -> CName(x1))))
+//case _ => cs.never(EqConstraint(this, other))/
+//}
 
 case class Signature(c: Type, ret: CName, m: Symbol, params: Map[Symbol, Type], body: Type) extends Type{
   def freeTVars = Set()

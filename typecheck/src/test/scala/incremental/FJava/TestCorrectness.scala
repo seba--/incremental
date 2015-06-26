@@ -68,14 +68,14 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestFJ("'void m() ", MethodDec(Seq(CName('void),'m, Seq(('x,UCName(CVar('x))),('y,UCName(CVar('y))))),Seq(New(CName('Object)))))(CName('Object))
   typecheckTestFJ("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void),'m, Seq(('c,UCName(CVar('c))))),Seq(Invk(Seq('m), Seq(Var('e0), Var('c))))))(UCName(CVar('e0)))
  typecheckTestFJ("void m(f: p0) {New Pair first}", MethodDec(Seq(CName('void),'m,Seq(('f,UCName(CVar('f))))),Seq(Invk(Seq('setfst),Seq(New(CName('Pair),Var('f)), Var('f))))))(CName('Pair))
-  //typecheckTestFJ("Pair first second", MethodDec(Seq(CName('Double),'getSum,Seq(('fst,UCName(CVar('fst))))),Seq(Invk(Seq('add),Seq(Var('Point),Var('fst), Var('snd))))))(CName('Double))
+  typecheckTestFJ("Pair first second", MethodDec(Seq(CName('Double),'getSum,Seq(('fst,UCName(CVar('fst))))),Seq(Invk(Seq('add),Seq(Var('Point),Var('fst), Var('snd))))))(CName('Double))
 
   typecheckTestFJ("Adding two points", MethodDec(Seq(CName('Double),'getSum,Seq(('fst,UCName(CVar('fst))), ('snd, UCName(CVar('snd))))),Seq(Invk(Seq('add),Seq(Var('Point),Var('fst), Var('snd))))))(CName('Point))
 //
 
   //typecheckTestError("(C) e0 : C", DCast(CName('c),Var('e)))
   //typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-  typecheckTestFJ("Int getX(x: Int) {return Int} ", MethodDec(Seq( CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(New(CName('Int)))))(CName('Number))
+ typecheckTestFJ("Int getX(x: Int) {return Int} ", MethodDec(Seq( CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(New(CName('Int)))))(CName('Number))
  typecheckTestFJ("Int getX(x: Int) {Number.getX(x): Int}", MethodDec(Seq( CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(Var('Number),Var('x))))))(CName('Number))
 
   typecheckTestFJ("Int getX(x: Int) {(new Nr).getX(x): Int} ", MethodDec(Seq( CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(Invk(Seq('getX),Seq(New(CName('Nr)),Var('x))))))(CName('Number))
@@ -88,7 +88,7 @@ typecheckTestFJ("Int getX(x: Int) {(new Number).gX(x): Int}", MethodDec(Seq(CNam
 
   typecheckTestFJ("Int getX(x: Int) {(new Number(x).x : Int in Number}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))), Seq(Fields('x, New(CName('Number),Var('x))))))(CName('Number))
 
-  //typecheckTestFJ("Int getX(x: Int) {(new Number(x,y).x : Int in Number}", MethodDec(Seq(CName('Number), CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))), Seq(Fields('x, New(CName('Number),Var('x),Var('y))))))(CName('Number))
+  typecheckTestFJ("Int getX(x: Int) {(new Number(x,y).x : Int in Number}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))), Seq(Fields('x, New(CName('Number),Var('x),Var('y))))))(CName('Number))
   // /typecheckTestError("Int getXY(x,y) {return Int} in Number", Method(CName('Number), CName('Int), 'getXY, Seq('x, 'y),Var('e0)))
 
 
@@ -102,18 +102,25 @@ typecheckTestFJ("Int getX(x: Int) {(new Number).gX(x): Int}", MethodDec(Seq(CNam
 
   typecheckTestFJ("(New Pair(fst, snd)).setFirst(fst)", Invk(Seq('setFrist),Seq(New(Seq(CName('Pair)), Seq(Var('frt), Var('snd))),Var('frt))))(TNum)
 
-  typecheckTestFJ(" Pair Int First ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int)))), Seq()), Seq()))(CName('Pair))
+  typecheckTestFJ(" Pair Int First ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)))), Seq()))(CName('Pair))
 
-  typecheckTestFJ(" Pair Int First, Int setFirst(Int First) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int)))),Seq(('setFirst, (CName('Void),Map('First -> UCName(CVar('Int))))))), Seq()))(CName('Pair))
+ typecheckTestFJ(" Pair Int First, Int getX(Int First) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)))),Seq( MethodDec(Seq(CName('Int),'getX, Seq(('x, CName('Int)))),Seq(Invk(Seq('gX),Seq(New(CName('Number)),Var('x))))))))(CName('Pair))
 
-  typecheckTestFJ(" Object Int setFirst(Int First) ", ClassDec(Seq(CName('Object), CName('Object), Seq(),Seq(('setFirst, (CName('Void),Map('First -> UCName(CVar('Int))))))), Seq()))(CName('Object))
+  typecheckTestFJ(" Pair Int First, Int {(new Number(x)).getX(x): Int} ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)))),Seq(MethodDec(Seq( CName('Int),'getX, Seq(('x, CName('Int)))),Seq(New(CName('Int)))))))(CName('Pair))
 
-  typecheckTestFJ(" Pair Int First, Int Second,setFirst(Int First) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int))), ('Second, UCName(CVar('Int)))),Seq(('setFirst, (CName('Void),Map('First -> UCName(CVar('Int))))))), Seq()))(CName('Pair))
+  typecheckTestFJ(" Pair String First, Double getX(First : Double){ return (New Pair).First} ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('String)))),Seq( MethodDec(Seq(CName('Double),'getX, Seq()),Seq(Fields('First, New(CName('Pair),Var('First))))))))(CName('Pair))
 
-  typecheckTestFJ(" Pair Int First, Int Second,  setSecond(Int Second) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int))), ('Second, UCName(CVar('Int)))),Seq(('setSecond, (CName('Void),Map('Second -> UCName(CVar('Int))))))), Seq()))(CName('Pair))
+  typecheckTestFJ(" Pair Double First, Double getX(First : Double){ return (New Pair).First}  ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Double)))),Seq( MethodDec(Seq(CName('Double),'getX, Seq()),Seq(Fields('First, New(CName('Pair),Var('First))))))))(CName('Pair))
 
 
-  typecheckTestFJ(" Pair Int First, Int Second, Int sum(Int First, Int Second) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, UCName(CVar('Int))), ('Second, UCName(CVar('Int)))),Seq(('sum, (CName('Int),Map('First -> UCName(CVar('Int)), 'Second -> UCName(CVar('Int))))))), Seq()))(CName('Pair))
+   typecheckTestFJ(" Object Int setFirst(Int First) ", ClassDec(Seq(CName('Object), CName('Object), Seq()),Seq(MethodDec(Seq(CName('Object), 'setFirst, Seq(('First, CName('Int)))), Seq(New(CName('Object)))))))(CName('Object))
+
+  typecheckTestFJ(" Pair Int First, Int Second,setFirst(Int First) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)), ('Second, CName('Int)))),Seq(MethodDec(Seq(CName('Void),'setFirst, Seq(('First, CName('Int)))), Seq(New(CName('Void)))))))(CName('Pair))
+
+ typecheckTestFJ(" Pair Int First, Int Second,  setSecond(Int Second) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)), ('Second, CName('Int)))),Seq(MethodDec(Seq(CName('Void),'setFirst, Seq(('Second , CName('Int)))), Seq(New(CName('Void)))))))(CName('Pair))
+
+  typecheckTestFJ(" Pair Int First, Int Second, Int sum(Int First, Int Second) ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)), ('Second, CName('Int)))),Seq(MethodDec(Seq(CName('Int), 'sum,  Seq(('First, CName('Int)),('Second, CName('Int)))), Seq(New(CName('Sum)))))))(CName('Pair))
+
 
   //typecheckTestFJ("Int m(x Int){return x} in C, C.m(x Int)", ProgramM(Seq(CName('Number)), Seq(MethodDec(Seq(CName('Number), CName('Int),'getX, Seq(('x, UCName(CVar('Int))))),Seq(New(CName('Int)))), Invk(Seq('m), Seq(Var('e0), Var('x))))))(CName('Object))
 
