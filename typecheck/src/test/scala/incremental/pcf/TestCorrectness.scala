@@ -5,6 +5,7 @@ import constraints.equality.impl._
 import constraints.equality._
 import incremental.Node._
 import incremental.Util
+import incremental.pcf.concurrent.FuturisticBUCheckerFactory
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
