@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Joins which immediately trigger at completion time
  */
 object Join {
-  final class Join(size: Int) {
+  final class Join(size: Int, val id: Int) {
     private val counter = new AtomicInteger(size)
     private[Join] var kont: () => Unit = () => ()
 
@@ -30,7 +30,11 @@ object Join {
 
   @inline
   def when(j: Join)(k: => Unit) = j andThen k
-  def apply(size: Int): Join = new Join(size)
+  var count = -1
+  def apply(size: Int): Join = {
+    count += 1
+    new Join(size, count)
+  }
 }
 
 /**

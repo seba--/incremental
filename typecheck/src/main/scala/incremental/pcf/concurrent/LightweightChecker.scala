@@ -1,5 +1,7 @@
 package incremental.pcf.concurrent
 
+import java.io.{File, PrintWriter}
+import java.time.LocalDateTime
 import java.util.concurrent.{Executors, ConcurrentHashMap}
 
 import constraints.CVar
@@ -12,6 +14,7 @@ import util.Join
 import util.Join.Join
 
 import scala.collection.JavaConversions
+import scala.collection.mutable.ListBuffer
 
 /**
  * Created by oliver on 24.06.15.
@@ -258,11 +261,11 @@ class SequentialChecker extends LightweightChecker.Checker {
 }
 
 object WorkStealingChecker {
-  val stats = JavaConversions.mapAsScalaMap(new ConcurrentHashMap[Long, Long]())
+  val stats = Array.fill(Runtime.getRuntime.availableProcessors())(0l)
 
   final class ThreadPool {
     private var _live = false
-    private val buffer = collection.mutable.ArrayBuffer[Runnable]()
+    private val buffer = collection.mutable.ListBuffer[Runnable]()
     private val pool = Executors.newWorkStealingPool(Runtime.getRuntime.availableProcessors())
     //private val pool = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
 
@@ -277,10 +280,12 @@ object WorkStealingChecker {
 
     def stop(): Unit = {
       _live = false
-      for ((k, v) <- stats) {
-        println(s"Thread $k: ${v/1000000d} ms")
-      }
-      stats.clear()
+//      var i = 0
+//      while (i < stats.length) {
+//        println(s"Thread $i: ${stats(i)} ms")
+//        stats(i) = 0l
+//        i += 1
+//      }
     }
 
     @inline
@@ -296,74 +301,74 @@ object WorkStealingChecker {
 }
 
 
-class WorkStealingChecker extends LightweightChecker.Checker {
+class WorkStealingChecker(val clusterParam: Int = 2) extends LightweightChecker.Checker {
   import LightweightChecker._
 
-  val clusterParam = 4
+  @inline
+  private final def threadId = Thread.currentThread().getId.toInt % WorkStealingChecker.stats.length
 
-  final def work(thunk: => Unit): Unit = work(new Runnable { def run() = {
-  //  val start = System.nanoTime()
-    thunk
-  //  val end = System.nanoTime()
-  //  val id = Thread.currentThread().getId
-  //  WorkStealingChecker.stats += (id -> (WorkStealingChecker.stats.getOrElse(id, 0l) + (end - start)))
-  } })
+  private final def processNode(e: Node_[Result]): Unit = {
+    e.visitInvalid { e =>
+      typecheckRec(e)(threadId)
+      true
+    }
+  }
+
+  private def isJoinNode(e: Node_[Result]): Boolean = (e.height - clusterParam) % (clusterParam + 1) == 0
+
+  val stats = Array.fill(Runtime.getRuntime.availableProcessors())(new ListBuffer[String])
+  val colors = Array("red", "green", "blue", "orange")
+
+  final def work(e: Node_[Result], id: Int, parent: Join): Unit = {
+    work(new Runnable { def run() = {
+    //  val start = System.currentTimeMillis()
+      stats(threadId) += "%d -> %d".format(id, parent.id)
+      stats(threadId) += "%d [label=%d,color=%s]".format(id, Thread.currentThread().getId, colors(threadId))
+      processNode(e)
+      parent.leave()
+     // val end = System.currentTimeMillis()
+     // WorkStealingChecker.stats(threadId) += (end - start)
+    } })
+  }
   final def work(thunk: Runnable): Unit = { WorkStealingChecker.pool.submit(thunk) }
   def prepareSchedule(root: Node_[Result]): Join = {
+    var leafId = 32768
+    var innerJoins = 0
     val typeCheckDone: Join = Join(0)
     def recurse(e: Node_[Result], parentJoin: Join): Unit = {
       if (e.height <= clusterParam) {
         parentJoin.join()
-        //      println(s"${System.nanoTime()} ${Thread.currentThread().getId}: putting ${System.identityHashCode(e)} with height ${e.height} and size ${e.size}")
-        work {
-          //      println(s"${System.nanoTime()} ${Thread.currentThread().getId}: checking ${System.identityHashCode(e)} with height ${e.height} and size ${e.size}")
-          e.visitInvalid { e =>
-            typecheckRec(e)(Thread.currentThread().getId.toInt % ids.length)
-            true
-          }
-          parentJoin.leave()
-        }
+        work(e, leafId, parentJoin)
+        util.Join.count += 1
+        leafId += 1
       }
       else {
-        if (e.height % clusterParam == 0) {
+        if (isJoinNode(e)) {
           val nodeJoin = Join(0)
           parentJoin.join()
-          nodeJoin andThen {
-            //      println(s"${System.nanoTime()} ${Thread.currentThread().getId}: putting ${System.identityHashCode(e)} with height ${e.height} and size ${e.size}")
-            work {
-              //      println(s"${System.nanoTime()} ${Thread.currentThread().getId}: checking ${System.identityHashCode(e)} with height ${e.height} and size ${e.size}")
-              e.visitInvalid { e =>
-                typecheckRec(e)(Thread.currentThread().getId.toInt % ids.length)
-                true
-              }
-              parentJoin.leave()
-            }
-          }
-
+          nodeJoin andThen work(e, nodeJoin.id, parentJoin)
+          innerJoins += 1
           e.kids.seq.foreach { k => recurse(k, nodeJoin) }
         }
         else e.kids.seq.foreach { k => recurse(k, parentJoin) }
       }
     }
 
-    if (root.height % clusterParam != 0) {
+    if (!isJoinNode(root)) {
       val joinRoot = Join(0)
       typeCheckDone.join()
-      joinRoot andThen work {
-        root.visitInvalid { e =>
-          typecheckRec(e)(Thread.currentThread().getId.toInt % ids.length)
-          true
-        }
-        typeCheckDone.leave()
-      }
+      joinRoot andThen work(root, joinRoot.id, typeCheckDone)
       root.kids.seq.foreach { k => recurse(k, joinRoot) }
     }
     else recurse(root, typeCheckDone)
+    println(s"produced $innerJoins inner joins")
     typeCheckDone
   }
 
 
   def doCheck(root: Node_[Result]) = {
+    util.Join.count = -1
+    println(s"root has height ${root.height} and size ${root.size}")
     val join = prepareSchedule(root)
     var complete = false
     join andThen {
@@ -378,6 +383,19 @@ class WorkStealingChecker extends LightweightChecker.Checker {
         this.wait()
     }
     WorkStealingChecker.pool.stop()
+    println(s"PRODUCED ${util.Join.count} joins")
+    writeFile()
+  }
+
+  def writeFile(): Unit = {
+    val writer = new PrintWriter(new File("graph-" + LocalDateTime.now() + ".dot"))
+    try {
+      writer.println("digraph tree {")
+      for(items <- stats; item <- items)
+        writer.println(item)
+      writer.println("}")
+    }
+    finally writer.close()
   }
 }
 

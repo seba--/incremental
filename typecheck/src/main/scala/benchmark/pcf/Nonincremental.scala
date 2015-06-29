@@ -29,15 +29,17 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
 
     //measureT("BUSolveContinuousSubst", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     //measureT("FuturisticBUSolveContinuousSubst", (e:Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-    measureT("BU", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+ //   measureT("BU", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
  //   measureT("SingleFutureBUSolveContinuousSubst", (e: Node) => new SingleFutureBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
    // measureT("FuturisticBUSolveContinuousSubst", (e:Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-   measureT("FuturisticHeight", (e:Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-    measureT("JoinHeight", (e: Node) => JoinBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-   measureT("Join2Height", (e: Node) => Join2BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+  // measureT("FuturisticHeight", (e:Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+  //  measureT("JoinHeight", (e: Node) => JoinBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+  // measureT("Join2Height", (e: Node) => Join2BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     //measureT("FuturisticLevelBUSolveContinuousSubst", (e: Node) => new FuturisticLevelBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     measureT("LightBU", (e: Node) => (new SequentialChecker).typecheckImpl(e))(trees)
-    measureT("LightJoin", (e: Node) => (new WorkStealingChecker).typecheckImpl(e))(trees)
+    for (i <- 0 until 6) {
+      measureT(s"LightJoin($i)", (e: Node) => (new WorkStealingChecker(i)).typecheckImpl(e))(trees)
+    }
     //measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
    // measureT("BottomUpEagerSubstConcurrent", (e:Node) => BottomUpEagerSubstConcurrentCheckerFactory.makeChecker.typecheck(e))(trees)
 

@@ -28,16 +28,18 @@ class LightweightPerformanceTest(maxHeight: Int) {
     baselineTime = 0l
     for (params <- trees.dataset) {
       val tree = trees.generate(params)
-      measureT("DU", (e: Node) =>  BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+   //   measureT("DU", (e: Node) =>  BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
 //      measureT("SingleFutureBUSolveContinuousSubst", (e: Node) => SingleFutureBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-      measureT("FuturisticHeight", (e: Node) => FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+  //    measureT("FuturisticHeight", (e: Node) => FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
 //      measureT("FuturisticLevelBUSolveContinuousSubst", (e: Node) => FuturisticLevelBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
 //      measureT("FuturisticBUSolveContinuousSubst", (e: Node) => FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-      measureT("JoinHeight", (e: Node) => JoinBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
+   //   measureT("JoinHeight", (e: Node) => JoinBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       //measureT("Join2Height", (e: Node) => Join2BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       //measureT("Join3Height", (e: Node) => Join3BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       measureT("Seq", (e: Node) => (new SequentialChecker).typecheckImpl(e))(params, tree)
-      measureT("WSJoin", (e: Node) => (new WorkStealingChecker).typecheckImpl(e))(params, tree)
+     // for (i <- 0 to 6) {
+        measureT(s"WSJoin(3)", (e: Node) => (new WorkStealingChecker(3)).typecheckImpl(e))(params, tree)
+      //}
       val optSpeedup = optimalSpeedup(tree)
       println(s"Optimal speedup: $optSpeedup")
       println()
@@ -51,7 +53,7 @@ class LightweightPerformanceTest(maxHeight: Int) {
 //    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
   }
 
-  val baselineName = "DU"
+  val baselineName = "Seq"
   var baselineTime = 0l
 
   def measureT(name: String, check: Node => _)(params: Parameters, tree: Node): Unit = {
