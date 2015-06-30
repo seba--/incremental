@@ -3,18 +3,16 @@ package incremental.pcf.concurrent
 import java.io.{File, PrintWriter}
 import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{Executors, ConcurrentHashMap}
+import java.util.concurrent.Executors
 
-import constraints.CVar
-import constraints.equality.Type
+import Types._
 import incremental.Node._
 import incremental.Node_
-import incremental.pcf._
+import incremental.pcf.{TFun => _, TNum => _, UVar => _, _}
 
 import util.{GenericJoin, Join}
 import util.Join.Join
 
-import scala.collection.JavaConversions
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -25,6 +23,7 @@ object LightweightChecker {
   type Reqs = Map[Symbol, Type]
   type StepResult = (Type, Reqs, Seq[EqConstraint])
   type Result = (Type, Reqs, CS)
+  type Subst = Map[Var, Type]
 
   abstract class Checker {
     final def typecheckImpl(e: Node): Either[Type, TError] = {
@@ -35,11 +34,6 @@ object LightweightChecker {
         i += 1
       }
       doCheck(root)
-
-      /*root.visitUninitialized { e =>
-        typecheckRec(e)
-        true
-      }*/
 
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
@@ -76,7 +70,7 @@ object LightweightChecker {
 
         (TNum, mreqs, mcons :+ lcons :+ rcons)
       case Var =>
-        val x = e.lits(0).asInstanceOf[Symbol]
+        val x = e.lits(0).asInstanceOf[Symbol]  //TODO also remove Symbols from expression syntax?
         val X = freshUVar(thread)
         (X, Map(x -> X), Seq())
       case App =>
@@ -128,7 +122,7 @@ object LightweightChecker {
     }
   }
 
-  case class CS(substitution: Map[Symbol, Type], notyet: Seq[EqConstraint], never: Seq[EqConstraint]) {
+  case class CS(substitution: Subst, notyet: Seq[EqConstraint], never: Seq[EqConstraint]) {
     def applyPartialSolution(t: Type) = subst(t, substitution)
 
     def addNewConstraints(cons: Seq[EqConstraint]) = cons.foldLeft(this)((cs, c) => c.solve(cs))
@@ -138,7 +132,7 @@ object LightweightChecker {
     def notyet(c: EqConstraint): CS = CS(substitution, notyet :+ c, never)
     def never(c: EqConstraint): CS  = CS(substitution, notyet, never :+ c)
 
-    def solved(s: Map[Symbol, Type]) = {
+    def solved(s: Subst) = {
       var current = CS(substitution mapValues (x => subst(x, s)), notyet, never)
       for ((x, t2) <- s) {
         current.substitution.get(x) match {
@@ -188,13 +182,13 @@ object LightweightChecker {
 
   def unify(t1: Type, t2: Type, cs: CS): CS = (t1, t2) match {
     case (UVar(x), other) if t1 == t2 => cs
-    case (UVar(cv@CVar(x)), other) => cs.substitution.get(x) match {
+    case (UVar(x), other) => cs.substitution.get(x) match {
       case Some(t) => unify(t, other, cs)
       case None =>
         val t = subst(other, cs.substitution)
         if (t1 == t)
           cs
-        else if (t.occurs(cv))
+        else if (occurs(x, t))  //TODO bitset-based occurs check?
           cs.never(EqConstraint(t1, t))
         else
           cs.solved(Map(x -> t))
@@ -205,8 +199,8 @@ object LightweightChecker {
     case _ => cs.never(EqConstraint(t1, t2))
   }
 
-  def subst(t: Type, sigma: Map[Symbol, Type]): Type = t match {
-    case UVar(CVar(x)) => sigma.getOrElse(x, t)
+  def subst(t: Type, sigma: Subst): Type = t match {
+    case UVar(x) => sigma.getOrElse(x, t)
     case TNum => TNum
     case TFun(t1, t2) =>
       var args = List(subst(t1, sigma))
@@ -222,7 +216,7 @@ object LightweightChecker {
       res
   }
 
-  def subst(eq: EqConstraint, sigma: Map[Symbol, Type]): EqConstraint = EqConstraint(subst(eq.actual, sigma), subst(eq.expected, sigma))
+  def subst(eq: EqConstraint, sigma: Subst): EqConstraint = EqConstraint(subst(eq.actual, sigma), subst(eq.expected, sigma))
 
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[EqConstraint], Reqs) = mergeReqMaps(req +: reqs)
 
@@ -247,10 +241,11 @@ object LightweightChecker {
   def freshUVar(index: Int): UVar = {
     val next = ids(index)
     ids(index) += 1
-    UVar(CVar(Symbol("x$" + index + "$" + next)))
+    UVar((mask << index) | next)
   }
 
-  val ids = Array.fill(Runtime.getRuntime.availableProcessors())(0)
+  private val mask = 1l << 32
+  val ids = Array.fill(Runtime.getRuntime.availableProcessors())(0l) //TODO find a cleaner solution to inject variable generators
 }
 
 class SequentialChecker extends LightweightChecker.Checker {
@@ -480,20 +475,20 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
   }
 
   def doCheck(root: Node_[Result]) = {
-    var i = 0
-    while (i < WorkStealingChecker.stats.length) {
-      WorkStealingChecker.stats(i) = 0l
-      i += 1
-    }
+//    var i = 0
+//    while (i < WorkStealingChecker.stats.length) {
+//      WorkStealingChecker.stats(i) = 0l
+//      i += 1
+//    }
     prepareSchedule(root)
     next.set(-1)
     val threads = Array.tabulate(cores - 1){ threadId =>
        new Thread(new Runnable {
          override def run(): Unit = {
-           val start = System.currentTimeMillis()
+          // val start = System.currentTimeMillis()
            threadFun(threadId + 1)
-           val end = System.currentTimeMillis()
-           WorkStealingChecker.stats(threadId + 1) += (end - start)
+          // val end = System.currentTimeMillis()
+        //   WorkStealingChecker.stats(threadId + 1) += (end - start)
          }
        })
     }
@@ -503,7 +498,9 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
     val end = System.currentTimeMillis()
     WorkStealingChecker.stats(0) += (end - start)
     threads.foreach(_.join())
-    (0 until cores).foreach(i => println(s"Thread${i}: ${WorkStealingChecker.stats(i)}ms"))
+  //  (0 until cores).foreach(i => println(s"Thread${i}: ${WorkStealingChecker.stats(i)}ms"))
+
+  //  println(s"Generated a total of ${ids.sum} variables")
 
   }
 

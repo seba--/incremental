@@ -38,7 +38,7 @@ class LightweightPerformanceTest(maxHeight: Int) {
       //measureT("Join3Height", (e: Node) => Join3BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       measureT("Seq", (e: Node) => (new SequentialChecker).typecheckImpl(e))(params, tree)
      // for (i <- 0 to 6) {
-      measureT(s"WSJoin(3)", (e: Node) => (new WorkStealingChecker(3)).typecheckImpl(e))(params, tree)
+   //   measureT(s"WSJoin(3)", (e: Node) => (new WorkStealingChecker(3)).typecheckImpl(e))(params, tree)
 
       for (i <- 0 to 6)
         measureT(s"ThreadJoin($i)", (e: Node) => (new ThreadChecker(i)).typecheckImpl(e))(params, tree)
