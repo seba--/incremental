@@ -37,6 +37,35 @@ object Join {
   }
 }
 
+object GenericJoin {
+  final class Join[T](size: Int) {
+    private val counter = new AtomicInteger(size)
+    private[Join] var kont: T = _
+
+    @inline
+    def andThen(k: T) = {
+      kont = k
+    }
+
+    @inline
+    def join() = counter.incrementAndGet()
+
+    @inline
+    def leave(): Option[T] = {
+      val i = counter.decrementAndGet()
+      if (i == 0)
+        Option(kont)
+      else if (i < 0)
+        throw new IllegalStateException("Join already completed")
+      else None
+    }
+  }
+
+  def apply[T](size: Int): Join[T] = {
+    new Join[T](size)
+  }
+}
+
 /**
  * Joins with completion and trigger separated in order to avoid
  * "the slowest thread gets all the work" scenarios. Multiple threads

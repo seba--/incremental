@@ -2,6 +2,7 @@ package incremental.pcf.concurrent
 
 import java.io.{File, PrintWriter}
 import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{Executors, ConcurrentHashMap}
 
 import constraints.CVar
@@ -10,7 +11,7 @@ import incremental.Node._
 import incremental.Node_
 import incremental.pcf._
 
-import util.Join
+import util.{GenericJoin, Join}
 import util.Join.Join
 
 import scala.collection.JavaConversions
@@ -323,7 +324,7 @@ class WorkStealingChecker(val clusterParam: Int = 2) extends LightweightChecker.
     work(new Runnable { def run() = {
     //  val start = System.currentTimeMillis()
       stats(threadId) += "%d -> %d".format(id, parent.id)
-      stats(threadId) += "%d [label=%d,color=%s]".format(id, Thread.currentThread().getId, colors(threadId))
+      stats(threadId) += "%d [label=%d,fillcolor=%s,style=filled]".format(id, Thread.currentThread().getId, colors(threadId))
       processNode(e)
       parent.leave()
      // val end = System.currentTimeMillis()
@@ -399,3 +400,121 @@ class WorkStealingChecker(val clusterParam: Int = 2) extends LightweightChecker.
   }
 }
 
+class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checker {
+  import LightweightChecker._
+
+  import util.{GenericJoin => Join}
+
+  type Join = GenericJoin.Join[Int => Unit]
+
+  private val cores = Runtime.getRuntime.availableProcessors()
+
+
+  private final def processNode(e: Node_[Result], threadId: Int): Unit = {
+    e.visitInvalid { e =>
+      typecheckRec(e)(threadId)
+      true
+    }
+  }
+
+  private def isJoinNode(e: Node_[Result]): Boolean = (e.height - clusterParam) % (clusterParam + 1) == 0
+
+
+  val stats = Array.fill(Runtime.getRuntime.availableProcessors())(new ListBuffer[String])
+  val colors = Array("red", "green", "blue", "orange")
+  val leafs = collection.mutable.ArrayBuffer[(Node_[Result], Join)]()
+
+  final def work(e: Node_[Result], id: Int, parent: Join): Unit = {
+    //work(new Runnable { def run() = {
+
+      //stats(threadId) += "%d -> %d".format(id, parent.id)
+      //stats(threadId) += "%d [label=%d,fillcolor=%s,style=filled]".format(id, Thread.currentThread().getId, colors(threadId))
+      processNode(e, id)
+      parent.leave() match {
+        case Some(k) => k(id)
+        case _ =>
+      }
+   // } })
+  }
+  //final def work(thunk: Runnable): Unit = { WorkStealingChecker.pool.submit(thunk) }
+  def prepareSchedule(root: Node_[Result]): Join = {
+    var leafId = 32768
+    var innerJoins = 0
+    val typeCheckDone: Join = Join(0)
+    def recurse(e: Node_[Result], parentJoin: Join): Unit = {
+      if (e.height <= clusterParam) {
+        parentJoin.join()
+        leafs += ((e, parentJoin))
+        leafId += 1
+      }
+      else {
+        if (isJoinNode(e)) {
+          val nodeJoin: Join = Join(0)
+          parentJoin.join()
+          nodeJoin andThen {id => work(e, id, parentJoin)}
+          innerJoins += 1
+          e.kids.seq.foreach { k => recurse(k, nodeJoin) }
+        }
+        else e.kids.seq.foreach { k => recurse(k, parentJoin) }
+      }
+    }
+
+    if (!isJoinNode(root)) {
+      val joinRoot: Join = Join(0)
+      typeCheckDone.join()
+      joinRoot andThen {id => work(root, id, typeCheckDone)}
+      root.kids.seq.foreach { k => recurse(k, joinRoot) }
+    }
+    else recurse(root, typeCheckDone)
+    typeCheckDone
+  }
+
+  val next = new AtomicInteger(-1)
+  def threadFun(id: Int): Unit = {
+    var i = next.incrementAndGet()
+    while (i < leafs.length) {
+      val (e, join) = leafs(i)
+      work(e, id, join)
+      i = next.incrementAndGet()
+    }
+  }
+
+  def doCheck(root: Node_[Result]) = {
+    var i = 0
+    while (i < WorkStealingChecker.stats.length) {
+      WorkStealingChecker.stats(i) = 0l
+      i += 1
+    }
+    prepareSchedule(root)
+    next.set(-1)
+    val threads = Array.tabulate(cores - 1){ threadId =>
+       new Thread(new Runnable {
+         override def run(): Unit = {
+           val start = System.currentTimeMillis()
+           threadFun(threadId + 1)
+           val end = System.currentTimeMillis()
+           WorkStealingChecker.stats(threadId + 1) += (end - start)
+         }
+       })
+    }
+    threads.foreach(_.start())
+    val start = System.currentTimeMillis()
+    threadFun(0)
+    val end = System.currentTimeMillis()
+    WorkStealingChecker.stats(0) += (end - start)
+    threads.foreach(_.join())
+    (0 until cores).foreach(i => println(s"Thread${i}: ${WorkStealingChecker.stats(i)}ms"))
+
+  }
+
+  def writeFile(): Unit = {
+    val writer = new PrintWriter(new File("graph-" + LocalDateTime.now() + ".dot"))
+    try {
+      writer.println("digraph tree {")
+      for(items <- stats; item <- items)
+        writer.println(item)
+      writer.println("}")
+    }
+    finally writer.close()
+  }
+}

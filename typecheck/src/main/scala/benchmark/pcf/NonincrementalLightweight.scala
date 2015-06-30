@@ -38,7 +38,11 @@ class LightweightPerformanceTest(maxHeight: Int) {
       //measureT("Join3Height", (e: Node) => Join3BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       measureT("Seq", (e: Node) => (new SequentialChecker).typecheckImpl(e))(params, tree)
      // for (i <- 0 to 6) {
-        measureT(s"WSJoin(3)", (e: Node) => (new WorkStealingChecker(3)).typecheckImpl(e))(params, tree)
+      measureT(s"WSJoin(3)", (e: Node) => (new WorkStealingChecker(3)).typecheckImpl(e))(params, tree)
+
+      for (i <- 0 to 6)
+        measureT(s"ThreadJoin($i)", (e: Node) => (new ThreadChecker(i)).typecheckImpl(e))(params, tree)
+
       //}
       val optSpeedup = optimalSpeedup(tree)
       println(s"Optimal speedup: $optSpeedup")
@@ -61,21 +65,23 @@ class LightweightPerformanceTest(maxHeight: Int) {
     var oks = 0
     var errors= 0
 
-    tree.invalidate
-    val start = System.nanoTime()
-    val res = check(tree)
-    res match {
-      case Left(_) =>
-        oks += 1
-      case _ => errors += 1
+    for(i <- 0 until 3) {
+      tree.invalidate
+      val start = System.nanoTime()
+      val res = check(tree)
+      res match {
+        case Left(_) =>
+          oks += 1
+        case _ => errors += 1
+      }
+      val end = System.nanoTime()
+      time += (end - start)
+
+      if (name == baselineName)
+        baselineTime = time
+
     }
-    val end = System.nanoTime()
-    time += (end-start)
-
-    if (name == baselineName)
-      baselineTime = time
-
-    val avg = time/1000000.0
+    val avg = time/3/1000000.0
     println(f"$name (${params("height")}):\nt: $avg%2.2fms ok: $oks fail: $errors speedup: ${baselineTime.toDouble/time}%2.2f")
   }
 
