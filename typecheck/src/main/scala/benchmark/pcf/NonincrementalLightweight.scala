@@ -36,12 +36,12 @@ class LightweightPerformanceTest(maxHeight: Int) {
    //   measureT("JoinHeight", (e: Node) => JoinBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       //measureT("Join2Height", (e: Node) => Join2BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
       //measureT("Join3Height", (e: Node) => Join3BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(params, tree)
-      measureT("Seq", (e: Node) => (new SequentialChecker).typecheckImpl(e))(params, tree)
+      measureT("Seq", new SequentialChecker)(params, tree)
      // for (i <- 0 to 6) {
    //   measureT(s"WSJoin(3)", (e: Node) => (new WorkStealingChecker(3)).typecheckImpl(e))(params, tree)
 
       for (i <- 0 to 6)
-        measureT(s"ThreadJoin($i)", (e: Node) => (new ThreadChecker(i)).typecheckImpl(e))(params, tree)
+        measureT(s"ThreadJoin($i)", new ThreadChecker(i))(params, tree)
 
       //}
       val optSpeedup = optimalSpeedup(tree)
@@ -60,15 +60,16 @@ class LightweightPerformanceTest(maxHeight: Int) {
   val baselineName = "Seq"
   var baselineTime = 0l
 
-  def measureT(name: String, check: Node => _)(params: Parameters, tree: Node): Unit = {
+  def measureT(name: String, mkChecker: => LightweightChecker.Checker)(params: Parameters, tree: Node): Unit = {
     var time = 0l
     var oks = 0
     var errors= 0
+    val checker = mkChecker
 
     for(i <- 0 until 3) {
       tree.invalidate
       val start = System.nanoTime()
-      val res = check(tree)
+      val res = checker.typecheckImpl(tree)
       res match {
         case Left(_) =>
           oks += 1
@@ -77,11 +78,14 @@ class LightweightPerformanceTest(maxHeight: Int) {
       val end = System.nanoTime()
       time += (end - start)
 
-      if (name == baselineName)
-        baselineTime = time
+
 
     }
-    val avg = time/3/1000000.0
+    val avgnano = time/3
+    val avg = avgnano/1000000.0
+    if (name == baselineName)
+      baselineTime = time
+
     println(f"$name (${params("height")}):\nt: $avg%2.2fms ok: $oks fail: $errors speedup: ${baselineTime.toDouble/time}%2.2f")
   }
 

@@ -400,7 +400,7 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
 
   import util.{GenericJoin => Join}
 
-  type Join = GenericJoin.Join[Int => Unit]
+  type Join = GenericJoin.Join[Int => Unit] //TODO try to avoid continuation functions
 
   private val cores = Runtime.getRuntime.availableProcessors()
 
@@ -420,16 +420,11 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
   val leafs = collection.mutable.ArrayBuffer[(Node_[Result], Join)]()
 
   final def work(e: Node_[Result], id: Int, parent: Join): Unit = {
-    //work(new Runnable { def run() = {
-
-      //stats(threadId) += "%d -> %d".format(id, parent.id)
-      //stats(threadId) += "%d [label=%d,fillcolor=%s,style=filled]".format(id, Thread.currentThread().getId, colors(threadId))
       processNode(e, id)
       parent.leave() match {
         case Some(k) => k(id)
         case _ =>
       }
-   // } })
   }
   //final def work(thunk: Runnable): Unit = { WorkStealingChecker.pool.submit(thunk) }
   def prepareSchedule(root: Node_[Result]): Join = {
@@ -475,20 +470,13 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
   }
 
   def doCheck(root: Node_[Result]) = {
-//    var i = 0
-//    while (i < WorkStealingChecker.stats.length) {
-//      WorkStealingChecker.stats(i) = 0l
-//      i += 1
-//    }
-    prepareSchedule(root)
+    leafs.sizeHint((1 << (root.height - clusterParam).max(0) + 1) - 1)
     next.set(-1)
+    prepareSchedule(root)
     val threads = Array.tabulate(cores - 1){ threadId =>
        new Thread(new Runnable {
          override def run(): Unit = {
-          // val start = System.currentTimeMillis()
            threadFun(threadId + 1)
-          // val end = System.currentTimeMillis()
-        //   WorkStealingChecker.stats(threadId + 1) += (end - start)
          }
        })
     }
@@ -498,10 +486,7 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
     val end = System.currentTimeMillis()
     WorkStealingChecker.stats(0) += (end - start)
     threads.foreach(_.join())
-  //  (0 until cores).foreach(i => println(s"Thread${i}: ${WorkStealingChecker.stats(i)}ms"))
-
-  //  println(s"Generated a total of ${ids.sum} variables")
-
+    leafs.clear()
   }
 
   def writeFile(): Unit = {
