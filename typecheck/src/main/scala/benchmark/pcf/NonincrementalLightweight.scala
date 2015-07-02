@@ -61,12 +61,15 @@ class LightweightPerformanceTest(maxHeight: Int) {
   var baselineTime = 0l
 
   def measureT(name: String, mkChecker: => LightweightChecker.Checker)(params: Parameters, tree: Node): Unit = {
+//    System.gc()
+//    Thread.sleep(1000)
     var time = 0l
     var oks = 0
     var errors= 0
     val checker = mkChecker
+    val iterations = 3
 
-    for(i <- 0 until 3) {
+    for(i <- 0 until iterations) {
       tree.invalidate
       val start = System.nanoTime()
       val res = checker.typecheckImpl(tree)
@@ -81,7 +84,7 @@ class LightweightPerformanceTest(maxHeight: Int) {
 
 
     }
-    val avgnano = time/3
+    val avgnano = time/iterations
     val avg = avgnano/1000000.0
     if (name == baselineName)
       baselineTime = time
@@ -120,52 +123,52 @@ class LightweightPerformanceTest(maxHeight: Int) {
 
 
 
-  /* ADD */
-
-  performance("Tree{Add,[1..n]}") {
-    val trees: Gen[Node] = for {
-      height <- heights
-    } yield makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
-
-    measureCheckers(trees)
-  }
-
-  performance("Abs{x,Tree{Add,[x..x]}}") {
-    val trees: Gen[Node] = for {
-      height <- heights
-    } yield Abs('x, makeBinTree(height, Add, constantLeaveMaker(Var('x))))
-
-    measureCheckers(trees)
-  }
-
-  performance("Abs{x,Tree{Add,[x1..xn]}}") {
-    val trees: Gen[Node] = for {
-      height <- heights
-    } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
-
-    measureCheckers(trees)
-  }
-
-
-
-
-  /* APP */
-
-  performance("Tree{App,[1..n]}") {
-    val trees: Gen[Node] = for {
-      height <- heights
-    } yield makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
-
-    measureCheckers(trees)
-  }
-
-  performance("Abs{x,Tree{App,[x..x]}}") {
-    val trees: Gen[Node] = for {
-      height <- heights
-    } yield Abs('x, makeBinTree(height, App, constantLeaveMaker(Var('x))))
-
-    measureCheckers(trees)
-  }
+//  /* ADD */
+//
+//  performance("Tree{Add,[1..n]}") {
+//    val trees: Gen[Node] = for {
+//      height <- heights
+//    } yield makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
+//
+//    measureCheckers(trees)
+//  }
+//
+//  performance("Abs{x,Tree{Add,[x..x]}}") {
+//    val trees: Gen[Node] = for {
+//      height <- heights
+//    } yield Abs('x, makeBinTree(height, Add, constantLeaveMaker(Var('x))))
+//
+//    measureCheckers(trees)
+//  }
+//
+//  performance("Abs{x,Tree{Add,[x1..xn]}}") {
+//    val trees: Gen[Node] = for {
+//      height <- heights
+//    } yield Abs(usedVars(height), makeBinTree(height, Add, stateLeaveMaker[Int](1, i => i + 1, i => Var(Symbol(s"x$i")))))
+//
+//    measureCheckers(trees)
+//  }
+//
+//
+//
+//
+//  /* APP */
+//
+//  performance("Tree{App,[1..n]}") {
+//    val trees: Gen[Node] = for {
+//      height <- heights
+//    } yield makeBinTree(height, App, stateLeaveMaker[Int](1, i => i + 1, i => Num(i)))
+//
+//    measureCheckers(trees)
+//  }
+//
+//  performance("Abs{x,Tree{App,[x..x]}}") {
+//    val trees: Gen[Node] = for {
+//      height <- heights
+//    } yield Abs('x, makeBinTree(height, App, constantLeaveMaker(Var('x))))
+//
+//    measureCheckers(trees)
+//  }
 
   performance("Abs{x,Tree{App,[x1..xn]}}") {
     val trees: Gen[Node] = for {

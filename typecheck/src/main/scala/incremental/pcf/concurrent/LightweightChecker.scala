@@ -30,7 +30,7 @@ object LightweightChecker {
       val root = e.withType[Result]
       var i = 0
       while (i < ids.length) {
-        ids(i) = 0
+        ids(i) = mask << i
         i += 1
       }
       doCheck(root)
@@ -241,7 +241,7 @@ object LightweightChecker {
   def freshUVar(index: Int): UVar = {
     val next = ids(index)
     ids(index) += 1
-    UVar((mask << index) | next)
+    UVar(next)
   }
 
   private val mask = 1l << 32
