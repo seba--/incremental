@@ -203,18 +203,7 @@ object LightweightChecker {
   def subst(t: Type, sigma: Subst): Type = t match {
     case UVar(x) => sigma.getOrElse(x, t)
     case TNum => TNum
-    case TFun(t1, t2) =>
-      var args = List(subst(t1, sigma))
-      var res = t2
-      while (res.isInstanceOf[TFun]) {
-        val resfun = res.asInstanceOf[TFun]
-        args = subst(resfun.t1, sigma) :: args
-        res = resfun.t2
-      }
-      res = subst(res, sigma)
-      for (a <- args)
-        res = TFun(a, res)
-      res
+    case TFun(t1, t2) => TFun(subst(t1, sigma), subst(t2, sigma))
   }
 
   def subst(eq: EqConstraint, sigma: Subst): EqConstraint = EqConstraint(subst(eq.actual, sigma), subst(eq.expected, sigma))
