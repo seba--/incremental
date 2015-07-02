@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
 object LightweightChecker {
   type TError = String
   type Reqs = Map[Symbol, Type]
-  type StepResult = (Type, Reqs, Seq[EqConstraint])
+  type StepResult = (Type, Reqs, List[EqConstraint])
   type Result = (Type, Reqs, CS)
   type Subst = Map[Var, Type]
 
@@ -60,7 +60,7 @@ object LightweightChecker {
 
 
     final def typecheckStep(e: Node_[Result])(thread: Int): StepResult = e.kind match {
-      case Num => (TNum, Map(), Seq())
+      case Num => (TNum, Map(), List())
       case op if op == Add || op == Mul =>
         val (t1, reqs1, _) = e.kids(0).typ
         val (t2, reqs2, _) = e.kids(1).typ
@@ -69,11 +69,11 @@ object LightweightChecker {
         val rcons = EqConstraint(TNum, t2)
         val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
-        (TNum, mreqs, mcons :+ lcons :+ rcons)
+        (TNum, mreqs, lcons :: rcons :: mcons)
       case Var =>
         val x = e.lits(0).asInstanceOf[Symbol]  //TODO also remove Symbols from expression syntax?
         val X = freshUVar(thread)
-        (X, Map(x -> X), Seq())
+        (X, Map(x -> X), List())
       case App =>
         val (t1, reqs1, _) = e.kids(0).typ
         val (t2, reqs2, _) = e.kids(1).typ
@@ -82,7 +82,7 @@ object LightweightChecker {
         val fcons = EqConstraint(TFun(t2, X), t1)
         val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
-        (X, mreqs, mcons :+ fcons)
+        (X, mreqs, fcons :: mcons)
       case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
         val x = e.lits(0).asInstanceOf[Symbol]
         val (t, reqs, _) = e.kids(0).typ
@@ -90,14 +90,14 @@ object LightweightChecker {
         reqs.get(x) match {
           case None =>
             val X = if (e.lits.size == 2) e.lits(1).asInstanceOf[Type] else freshUVar(thread)
-            (TFun(X, t), reqs, Seq())
+            (TFun(X, t), reqs, List())
           case Some(treq) =>
             val otherReqs = reqs - x
             if (e.lits.size == 2) {
-              (TFun(treq, t), otherReqs, Seq(EqConstraint(e.lits(1).asInstanceOf[Type], treq)))
+              (TFun(treq, t), otherReqs, List(EqConstraint(e.lits(1).asInstanceOf[Type], treq)))
             }
             else
-              (TFun(treq, t), otherReqs, Seq())
+              (TFun(treq, t), otherReqs, List())
         }
       case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
         val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
@@ -119,19 +119,19 @@ object LightweightChecker {
           }
         }
 
-        (tfun, restReqs, Seq())
+        (tfun, restReqs, List())
     }
   }
 
-  case class CS(substitution: Subst, notyet: Seq[EqConstraint], never: Seq[EqConstraint]) {
+  case class CS(substitution: Subst, notyet: List[EqConstraint], never: List[EqConstraint]) {
     def applyPartialSolution(t: Type) = subst(t, substitution)
 
     def addNewConstraints(cons: Seq[EqConstraint]) = cons.foldLeft(this)((cs, c) => c.solve(cs))
 
     def mergeSubsystem(other: CS) = CS(Map(), notyet ++ other.notyet, never ++ other.never)
 
-    def notyet(c: EqConstraint): CS = CS(substitution, notyet :+ c, never)
-    def never(c: EqConstraint): CS  = CS(substitution, notyet, never :+ c)
+    def notyet(c: EqConstraint): CS = CS(substitution, c :: notyet, never)
+    def never(c: EqConstraint): CS  = CS(substitution, notyet, c :: never)
 
     def solved(s: Subst) = {
       var current = CS(substitution mapValues (x => subst(x, s)), notyet, never)
@@ -174,7 +174,7 @@ object LightweightChecker {
     }
   }
   object CS {
-    def apply(): CS = new CS(Map(), Seq(), Seq())
+    def apply(): CS = new CS(Map(), List(), List())
   }
 
   case class EqConstraint(expected: Type, actual: Type) {
@@ -208,23 +208,15 @@ object LightweightChecker {
 
   def subst(eq: EqConstraint, sigma: Subst): EqConstraint = EqConstraint(subst(eq.actual, sigma), subst(eq.expected, sigma))
 
-  def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[EqConstraint], Reqs) = mergeReqMaps(req +: reqs)
-
-  def mergeReqMaps(reqs: Seq[Reqs]): (Seq[EqConstraint], Reqs) =
-      reqs.foldLeft[(Seq[EqConstraint], Reqs)](init)(_mergeReqMaps)
-
-  private val init: (Seq[EqConstraint], Reqs) = (Seq(), Map())
-
-  private def _mergeReqMaps(was: (Seq[EqConstraint], Reqs), newReqs: Reqs) = {
-    val wasReqs = was._2
-    var mcons = was._1
-    var mreqs = wasReqs
-    for ((x, r2) <- newReqs)
-      wasReqs.get(x) match {
-        case None => mreqs += x -> r2
-        case Some(r1) =>
-          mcons = EqConstraint(r1, r2) +: mcons
+  def mergeReqMaps(req1: Reqs, req2: Reqs): (List[EqConstraint], Reqs) = {
+    var mreqs = req1
+    var mcons = List[EqConstraint]()
+    for (p@(x, r2) <- req2) {
+      req1.get(x) match {
+        case None => mreqs += p
+        case Some(r1) => mcons = EqConstraint(r1, r2) :: mcons
       }
+    }
     (mcons, mreqs)
   }
 
