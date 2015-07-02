@@ -42,6 +42,12 @@ object GenericJoin {
     private val counter = new AtomicInteger(size)
     private[Join] var kont: T = _
 
+    private var _parent: Option[Join[T]] = None
+
+    def parent_=(p: Join[T]): Unit = {
+      _parent = Option(p)
+    }
+
     @inline
     def andThen(k: T) = {
       kont = k
@@ -51,10 +57,10 @@ object GenericJoin {
     def join() = counter.incrementAndGet()
 
     @inline
-    def leave(): Option[T] = {
+    def leave(): Option[(Option[T], Option[Join[T]])] = {
       val i = counter.decrementAndGet()
       if (i == 0)
-        Option(kont)
+        Some(Option(kont), _parent)
       else if (i < 0)
         throw new IllegalStateException("Join already completed")
       else None

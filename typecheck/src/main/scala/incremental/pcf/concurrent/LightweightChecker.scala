@@ -13,6 +13,7 @@ import incremental.pcf.{TFun => _, TNum => _, UVar => _, _}
 import util.{GenericJoin, Join}
 import util.Join.Join
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -400,7 +401,7 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
 
   import util.{GenericJoin => Join}
 
-  type Join = GenericJoin.Join[Int => Unit] //TODO try to avoid continuation functions
+  type Join = GenericJoin.Join[Node_[Result]]
 
   private val cores = Runtime.getRuntime.availableProcessors()
 
@@ -419,10 +420,15 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
   val colors = Array("red", "green", "blue", "orange")
   val leafs = collection.mutable.ArrayBuffer[(Node_[Result], Join)]()
 
-  final def work(e: Node_[Result], id: Int, parent: Join): Unit = {
+  @tailrec
+  final def work(e: Node_[Result], id: Int, parent: Option[Join]): Unit = {
       processNode(e, id)
-      parent.leave() match {
-        case Some(k) => k(id)
+      parent match {
+        case Some(p) =>
+          p.leave() match {
+            case Some ((Some (e), j) ) => work (e, id, j)
+           case _ =>
+         }
         case _ =>
       }
   }
@@ -441,7 +447,8 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
         if (isJoinNode(e)) {
           val nodeJoin: Join = Join(0)
           parentJoin.join()
-          nodeJoin andThen {id => work(e, id, parentJoin)}
+          nodeJoin.parent_=(parentJoin)
+          nodeJoin andThen e
           innerJoins += 1
           e.kids.seq.foreach { k => recurse(k, nodeJoin) }
         }
@@ -452,7 +459,8 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
     if (!isJoinNode(root)) {
       val joinRoot: Join = Join(0)
       typeCheckDone.join()
-      joinRoot andThen {id => work(root, id, typeCheckDone)}
+      joinRoot.parent_=(typeCheckDone)
+      joinRoot andThen root
       root.kids.seq.foreach { k => recurse(k, joinRoot) }
     }
     else recurse(root, typeCheckDone)
@@ -464,7 +472,7 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
     var i = next.incrementAndGet()
     while (i < leafs.length) {
       val (e, join) = leafs(i)
-      work(e, id, join)
+      work(e, id, Some(join))
       i = next.incrementAndGet()
     }
   }
