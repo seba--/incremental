@@ -36,9 +36,9 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
   //  measureT("JoinHeight", (e: Node) => JoinBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
   // measureT("Join2Height", (e: Node) => Join2BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     //measureT("FuturisticLevelBUSolveContinuousSubst", (e: Node) => new FuturisticLevelBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-    measureT("LightBU", (e: Node) => (new SequentialChecker).typecheckImpl(e))(trees)
-    for (i <- 0 until 6) {
-      measureT(s"LightJoin($i)", (e: Node) => (new WorkStealingChecker(i)).typecheckImpl(e))(trees)
+    measureT("Seq", (e: Node) => (new SequentialChecker).typecheckImpl(e))(trees)
+    for (i <- 0 until 16) {
+      measureT(s"ThreadJoin($i)", (e: Node) => (new ThreadChecker(i)).typecheckImpl(e))(trees)
     }
     //measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
    // measureT("BottomUpEagerSubstConcurrent", (e:Node) => BottomUpEagerSubstConcurrentCheckerFactory.makeChecker.typecheck(e))(trees)
