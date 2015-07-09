@@ -14,6 +14,7 @@ import util.{GenericJoin, Join}
 import util.Join.Join
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -24,7 +25,7 @@ object LightweightChecker {
   type Reqs = Map[Symbol, Type]
   type StepResult = (Type, Reqs, List[EqConstraint])
   type Result = (Type, Reqs, CS)
-  type Subst = Map[Var, Type]
+ // type Subst = Map[Var, Type]
 
   abstract class Checker {
     final def typecheckImpl(e: Node): Either[Type, TError] = {
@@ -36,9 +37,8 @@ object LightweightChecker {
       }
       doCheck(root)
 
-      val (t_, reqs, sol_) = root.typ
+      val (t, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
-      val t = subst(t_, sol.substitution)
 
       if (!reqs.isEmpty)
         Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
@@ -54,8 +54,7 @@ object LightweightChecker {
       val res@(t, reqs, cons) = typecheckStep(e)(thread)
       val subcs = e.kids.seq.foldLeft(CS())((cs, res) => cs mergeSubsystem res.typ._3)
       val cs = subcs addNewConstraints cons
-      val reqs2 = reqs.mapValues(subst(_, cs.substitution))
-      e.typ = (cs applyPartialSolution t, reqs2, cs.propagate)
+      e.typ = (t, reqs, cs)
     }
 
 
@@ -123,26 +122,13 @@ object LightweightChecker {
     }
   }
 
-  case class CS(substitution: Subst, notyet: List[EqConstraint], never: List[EqConstraint]) {
-    def applyPartialSolution(t: Type) = subst(t, substitution)
-
+  case class CS(notyet: List[EqConstraint], never: List[EqConstraint]) {
     def addNewConstraints(cons: Seq[EqConstraint]) = cons.foldLeft(this)((cs, c) => c.solve(cs))
 
-    def mergeSubsystem(other: CS) = CS(Map(), notyet ++ other.notyet, never ++ other.never)
+    def mergeSubsystem(other: CS) = CS(notyet ++ other.notyet, never ++ other.never)
 
-    def notyet(c: EqConstraint): CS = CS(substitution, c :: notyet, never)
-    def never(c: EqConstraint): CS  = CS(substitution, notyet, c :: never)
-
-    def solved(s: Subst) = {
-      var current = CS(substitution mapValues (x => subst(x, s)), notyet, never)
-      for ((x, t2) <- s) {
-        current.substitution.get(x) match {
-          case None => current = CS(current.substitution + (x -> subst(t2, current.substitution)), current.notyet, current.never)
-          case Some(t1) => current = unify(t1, t2, current)
-        }
-      }
-      current
-    }
+    def notyet(c: EqConstraint): CS = CS(c :: notyet, never)
+    def never(c: EqConstraint): CS  = CS(notyet, c :: never)
 
     def unsolved = notyet ++ never
     def isSolved = notyet.isEmpty && never.isEmpty
@@ -151,15 +137,13 @@ object LightweightChecker {
 
     def tryFinalize = trySolve(true)
 
-    def propagate: CS = CS(Map(), notyet.map(subst(_, substitution)), never.map(subst(_, substitution)))
-
     private def trySolve(finalize: Boolean): CS = {
       var current = this
       var stepsWithoutChange = 0
       while (!current.notyet.isEmpty) {
         val next = current.notyet.head
         val rest = current.notyet.tail
-        current = CS(current.substitution, rest, current.never)
+        current = CS(rest, current.never)
         current = next.solve(current)
 
         if (current.notyet.size == rest.size + 1) {
@@ -174,7 +158,8 @@ object LightweightChecker {
     }
   }
   object CS {
-    def apply(): CS = new CS(Map(), List(), List())
+    val empty = new CS(List(), List())
+    def apply(): CS = empty
   }
 
   case class EqConstraint(expected: Type, actual: Type) {
@@ -182,25 +167,19 @@ object LightweightChecker {
   }
 
   def unify(t1: Type, t2: Type, cs: CS): CS = (t1, t2) match {
-    case (UVar(x), other) if t1 == t2 => cs
-    case (UVar(x), other) => cs.substitution.get(x) match {
-      case Some(t) => unify(t, other, cs)
-      case None =>
-        val t = subst(other, cs.substitution)
-        if (t1 == t)
-          cs
-        else if (occurs(x, t))  //TODO bitset-based occurs check?
-          cs.never(EqConstraint(t1, t))
-        else
-          cs.solved(Map(x -> t))
-    }
+    case (UVar(x), UVar(y)) if x == y => cs
+    case (UVar(x), other) if occurs(x, other) =>
+      cs.never(EqConstraint(t1, t2))
+    case (uv@UVar(x), other) =>
+      uv._forward = Some(other)
+      cs
     case (_, UVar(_)) => unify(t2, t1, cs)
     case (TNum, TNum) => cs
     case (TFun(t1_, t2_), TFun(t1__, t2__)) => unify(t2_, t2__, unify(t1_, t1__, cs))
     case _ => cs.never(EqConstraint(t1, t2))
   }
 
-  def subst(t: Type, sigma: Subst): Type = t match {
+  /*def subst(t: Type, sigma: Subst): Type = t match {
     case UVar(x) => sigma.getOrElse(x, t)
     case t1 if t1.isGround => t1
     case TFun(t1, t2) =>
@@ -217,7 +196,7 @@ object LightweightChecker {
       res
   }
 
-  def subst(eq: EqConstraint, sigma: Subst): EqConstraint = EqConstraint(subst(eq.actual, sigma), subst(eq.expected, sigma))
+  def subst(eq: EqConstraint, sigma: Subst): EqConstraint = EqConstraint(subst(eq.actual, sigma), subst(eq.expected, sigma))*/
 
   def mergeReqMaps(req1: Reqs, req2: Reqs): (List[EqConstraint], Reqs) = {
     var mreqs = req1
@@ -231,10 +210,10 @@ object LightweightChecker {
     (mcons, mreqs)
   }
 
-  def freshUVar(index: Int): UVar = {
+  def freshUVar(index: Int): RVar = {
     val next = ids(index)
     ids(index) += 1
-    UVar(next)
+    RVar(next)
   }
 
   private val mask = 1l << 32
@@ -269,12 +248,6 @@ object WorkStealingChecker {
 
     def stop(): Unit = {
       _live = false
-//      var i = 0
-//      while (i < stats.length) {
-//        println(s"Thread $i: ${stats(i)} ms")
-//        stats(i) = 0l
-//        i += 1
-//      }
     }
 
     @inline
@@ -481,22 +454,9 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
        })
     }
     threads.foreach(_.start())
-    val start = System.currentTimeMillis()
     threadFun(0)
     val end = System.currentTimeMillis()
-    WorkStealingChecker.stats(0) += (end - start)
     threads.foreach(_.join())
     leafs.clear()
-  }
-
-  def writeFile(): Unit = {
-    val writer = new PrintWriter(new File("graph-" + LocalDateTime.now() + ".dot"))
-    try {
-      writer.println("digraph tree {")
-      for(items <- stats; item <- items)
-        writer.println(item)
-      writer.println("}")
-    }
-    finally writer.close()
   }
 }
