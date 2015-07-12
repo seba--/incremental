@@ -24,6 +24,9 @@ import Exp._
 case object Num extends Exp(simple(Seq(classOf[Integer])))
 case object Add extends Exp(simple(cExp, cExp))
 case object Mul extends Exp(simple(cExp, cExp))
+
+//case object ProgramM extends Exp(simple(cExp, cExp))
+
 case object Var  extends Exp(simple(Seq(classOf[Symbol])))
 case object Fields extends Exp(simple(Seq(classOf[Symbol]), cExp))
 case object New extends Exp(_ => NewSyntax)
@@ -51,6 +54,8 @@ object NewSyntax extends SyntaxChecking.SyntaxChecker(New) {
 
 object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
+    //if (lits.exists(l => !l.isInstanceOf[Node] || !(l.asInstanceOf[Node].kind == FieldDec)))
+      //error(s"Expected field declarations but got ${lits.filter(l => !l.isInstanceOf[Node] || !l.asInstanceOf[Node].kind.isInstanceOf[FieldDec.type])}")
 
     if (kids.exists(k => !(k.kind == MethodDec)))
       error(s"Expected method declarations but got ${kids.filter(k => !(k.kind == MethodDec))}")
@@ -88,7 +93,8 @@ object FieldSyntax extends SyntaxChecking.SyntaxChecker(FieldDec) {
 
 object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
-
+    //if (lits.exists(l => !l.isInstanceOf[Node] || !(l.asInstanceOf[Node].kind == Exp)))
+      //error(s"Expected field declarations but got ${lits.filter(l => !l.isInstanceOf[Node] || !l.asInstanceOf[Node].kind.isInstanceOf[Exp])}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
 

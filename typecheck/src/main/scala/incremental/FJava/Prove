@@ -105,6 +105,8 @@ import incremental.Node._
             val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
             val (mcCons, mCreqs) = mergeCReqMaps(creqs1, creqs2)
 
+          //  val (resCons, resReqs) = mergeCReqMaps(sReqs, mCreqs)
+
             (CName('TNum), mreqs, mCreqs, mcons :+ lcons :+ rcons)
 
           case Var =>
@@ -154,13 +156,13 @@ import incremental.Node._
             var fields = Map[Symbol, Type]()
             for (i <- 0 until e.kids.seq.size) {
               val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
-              //var fi = 'b
-              //if (getX(ti, subreqs) == 'a) {
-              //  fi = freshField().x
-              // }
-              //else {
-               val  fi = getX(ti, subreqs)
-             // }
+              var fi = 'b
+              if (getX(ti, subreqs) == 'a) {
+                fi = freshField().x
+              }
+              else {
+                fi = getX(ti, subreqs)
+              }
               reqss = reqss :+ subreqs
               creqss = creqss :+ subcreqs
               fields += (fi -> ti)
@@ -204,7 +206,7 @@ import incremental.Node._
 
             var sparam = params.toMap
 
-            var sig = Signature( retT, m, sparam, e0)
+            var sig = Signature(null, retT, m, sparam, e0)
 
             var cCreqs = creqs
           for ((c, cldD) <- creqs){
@@ -229,7 +231,7 @@ import incremental.Node._
                     if (param.isEmpty) cldM = cldD._3 - m
                     else cldM = cldD._3 - m +  (m -> (retT, param))
 
-                    sig = Signature(retT,m, params.toMap, e0)
+                    sig = Signature(c, retT,m, params.toMap, e0)
                     if (fld.isEmpty && cldM.isEmpty) cCreqs = cCreqs - c
                 }
 //            fld = cldD._2
@@ -262,12 +264,11 @@ import incremental.Node._
           case ClassDec =>
             val c = e.lits(0).asInstanceOf[CName]
             val sup = e.lits(1).asInstanceOf[CName]
-            val fields = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
+            val fields = e.lits(2).asInstanceOf[Seq[(Symbol, CName)]]
           //  val (m, reqs, creqs, _ ) = e.kids(0).typ //asInstanceOf[Seq[(Symbol, (Type, Map[Symbol, Type]))]]
             val field = fields.toMap
             // val method = m.to map
 
-            var sig = Map[Symbol, Type]()
             var restReq = Seq[Reqs]()
             var restCreq = Seq[CReqs]()
             var cons = Seq[Constraint]()
@@ -284,11 +285,8 @@ import incremental.Node._
 
               restCreq = restCreq :+ creq
 
-              val Signature(ret, m, params, bod) = t.asInstanceOf[Signature]
-             // var me= Signature(ret, m1, params, bod)
-
-              sig = sig ++ Map(Signature(ret, m, params, bod).meth -> Signature(ret, m, params, bod).returnTyp)
-
+              //val Signature(cnew, ret, m1, params, bod) = t.asIn
+              //var method = Signature(cnew, ret, m1, params, bod)
             }
 
          var (mcons, mreqs) = mergeReqMaps(restReq)
@@ -297,6 +295,14 @@ import incremental.Node._
          var fieldn = Map[Symbol, Type]()
             var creq = mcreqs
 
+            for ((f, typ1) <- field) {
+              mreqs.get(f) match {
+                case None => mreqs
+                case Some(typ2) =>
+                  mreqs = mreqs - f
+                 cons = EqConstraint(typ1, typ2) +: cons
+              }
+            }
 
             mcreqs.get(c) match {
               case None =>
@@ -312,20 +318,22 @@ import incremental.Node._
                 }
 
               }
-              for ((m,cldm) <- cldM) {
+              for ((m, cldm) <- cldM) {
                 var mparam = cldm._2
-                sig.get(m) match {
-                  case None =>
-                    if (mparam.isEmpty) cldM = cld._3 - m
-                    else cldM = cld._3 - m + (m ->(cldm._1, mparam))
-                  case Some(ret2) =>
-                    cons = EqConstraint(cldm._1, ret2) +: cons
-                    if (mparam.isEmpty) cldM = cld._3 - m
-                    else cldM = cld._3 - m + (m ->(cldm._1, mparam))
+                for ((p, ptyp) <- mparam) {
+                  for ((f, ftyp )<- field){
+                    if (ptyp ==  ftyp) mparam - p
+                  }
+                  field.get(p) match {
+                    case None => mparam
+                    case Some(typ2) => cons = EqConstraint(typ2, ptyp) +: cons
 
+                  }
                 }
-              }
+                if (mparam.isEmpty) cldM = cld._3 - m
+                else cldM = cld._3 - m +  (m -> (cldm._1, mparam))
 
+              }
                creq = creq - c ++ Map(c -> (cld._1, fieldn, cldM))
 
 
