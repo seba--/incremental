@@ -41,9 +41,9 @@ object LightweightChecker {
       val sol = sol_.tryFinalize
 
       if (!reqs.isEmpty)
-        Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
+        Right(s"Unresolved context requirements") //$reqs, type $t, unres ${sol.unsolved}")
       else if (!sol.isSolved)
-        Right(s"Unresolved constraints ${sol.unsolved}, type $t")
+        Right(s"Unresolved constraints")// ${sol.unsolved}, type $t")
       else
         Left(t)
     }
@@ -455,7 +455,6 @@ class ThreadChecker(val clusterParam: Int = 2) extends LightweightChecker.Checke
     }
     threads.foreach(_.start())
     threadFun(0)
-    val end = System.currentTimeMillis()
     threads.foreach(_.join())
     leafs.clear()
   }
