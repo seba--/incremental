@@ -72,10 +72,11 @@ case class UCName(x: CVar[Type]) extends Type { // should not use CVar, but CNAm
 //case _ => cs.never(EqConstraint(this, other))/
 //}
 
-case class Signature(ret: CName, m: Symbol, params: Map[Symbol, Type], body: Type) extends Type{
+case class Signature(ret: CName, m: Symbol, params: Map[Symbol, Type], bod : Type) extends Type{
   val returnTyp = this.ret
   val meth = this.m
   val parameters = this.params
+  val body = this.bod
   def freeTVars = Set()
   def normalize = this
   def occurs(m2: CVar[_]) = m == m2

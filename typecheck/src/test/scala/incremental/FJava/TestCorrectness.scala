@@ -177,6 +177,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)))))),
       MethodDec(Seq(CName('String), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(New(CName('C)))))))))//(CName('C))
 
+
+  typecheckTestFJ("Class C, TNum add(a Int, b Int){ C.add(1, 2)}", ClassDec(Seq(CName('C), CName('Object), Seq()),
+    Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(New(CName('C)), Num(1), Num(2))))))))(CName('C))
+
 }
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
