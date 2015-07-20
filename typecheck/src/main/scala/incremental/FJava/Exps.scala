@@ -22,9 +22,11 @@ object Exp {
 import Exp._
 
 case object Num extends Exp(simple(Seq(classOf[Integer])))
+case object Str extends Exp(simple(Seq(classOf[Symbol])))
 case object Add extends Exp(simple(cExp, cExp))
 case object Mul extends Exp(simple(cExp, cExp))
 case object Var  extends Exp(simple(Seq(classOf[Symbol])))
+case object This extends Exp(_ => ThisSyntax)
 case object Fields extends Exp(simple(Seq(classOf[Symbol]), cExp))
 case object New extends Exp(_ => NewSyntax)
 case object UCast extends Exp(simple(Seq(classOf[CName]),cExp))
@@ -35,6 +37,8 @@ case object SCast extends Exp(simple(cExp))
 
 object InvkSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if ((lits.size > 1) && (!(lits(0).isInstanceOf[Symbol])))
+      error(s"Method name should be a symbol, but found ${(!(lits(0).isInstanceOf[Symbol]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
 
@@ -43,6 +47,8 @@ object InvkSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
 
 object NewSyntax extends SyntaxChecking.SyntaxChecker(New) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if ((lits.size > 1) && (!(lits(0).isInstanceOf[CName])))
+      error(s"Class name should be a CName, but found ${(!(lits(0).isInstanceOf[CName]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
 
@@ -52,8 +58,11 @@ object NewSyntax extends SyntaxChecking.SyntaxChecker(New) {
 object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
 
-    if (kids.exists(k => !(k.kind == MethodDec)))
-      error(s"Expected method declarations but got ${kids.filter(k => !(k.kind == MethodDec))}")
+    if (!(lits(0).isInstanceOf[CName]))
+      error(s"Expected Class type CName, but got ${!(lits(0).isInstanceOf[CName])}")
+
+    if (!(lits(1).isInstanceOf[CName]))
+      error(s"Expected Super type CName, but got ${!(lits(0).isInstanceOf[CName])}")
 
     for (i <- 2 until lits.size - 2 by 2) {
       val name = lits(i)
@@ -65,6 +74,9 @@ object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
       if (!typ.isInstanceOf[Type])
         error(s"Expected field type of type Type but got $typ")
     }
+
+    if (kids.exists(k => !(k.kind == MethodDec)))
+      error(s"Expected method declarations but got ${kids.filter(k => !(k.kind == MethodDec))}")
   }
 }
 
@@ -89,10 +101,13 @@ object FieldSyntax extends SyntaxChecking.SyntaxChecker(FieldDec) {
 object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
 
-    if (kids.exists(!_.kind.isInstanceOf[Exp]))
-      error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
+    if (!(lits(0).isInstanceOf[CName]))
+      error(s"Expected return type CName, but got ${!(lits(0).isInstanceOf[CName])}")
 
-    for (i <- 2 until lits.size - 2 by 2) {
+    if (!(lits(1).isInstanceOf[Symbol]))
+      error(s"Expected Method name Symbol, but got ${!(lits(0).isInstanceOf[Symbol])}")
+
+      for (i <- 2 until lits.size - 2 by 2) {
       val name = lits(i)
       if (i + 1 >= lits.size)
         error(s"Field $name misses annotated type")
@@ -103,7 +118,8 @@ object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
         error(s"Expected field type of type Type but got $typ")
     }
 
-
+    if (kids.exists(!_.kind.isInstanceOf[Exp]))
+      error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
   }
 }
 
@@ -112,3 +128,9 @@ object ProgramSyntax extends SyntaxChecking.SyntaxChecker(ProgramM) {
 
   }
 }
+
+object ThisSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+  }
+}
+

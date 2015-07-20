@@ -20,6 +20,17 @@ case object TNum extends Type {
     case _ => cs.never(EqConstraint(this, other))
   }
 }
+
+case object TString extends Type {
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TString => cs
+    case UCName(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
 case class CName(x: Symbol) extends Type {
   def freeTVars = Set()
   def normalize = this
