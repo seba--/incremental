@@ -4,9 +4,9 @@ import scala.language.implicitConversions
 
 import scala.virtualization.lms.common._
 
-trait Staged extends BaseExp with MapOpsExp {
+trait Staged extends BaseExp with MapOpsExp with Functions {
   type Env = Map[String, Val]
-  type Dom = Rep[Env] => Rep[Val]
+  type Dom = Rep[Env => Val]
 
   trait Val
   case class NumVal(n: Int) extends Val
@@ -18,17 +18,17 @@ trait Staged extends BaseExp with MapOpsExp {
   implicit def unitVal[T <: Val](x: T)(implicit mf: Manifest[T]): Rep[Val] = Const(x)
 
   trait Arith extends Sig.Arith[Dom] {
-    override def num(n: Int) = _ => NumVal(n)
+    override def num(n: Int) = (env: Rep[Env]) => unit(NumVal(n))
 
-    override def add(e1: Dom, e2: Dom) = env => (e1(env), e2(env)) match {
-      case (Const(NumVal(n1)), Const(NumVal(n2))) => NumVal(n1 + n2)
+    override def add(e1: Dom, e2: Dom) = (env: Rep[Env]) => (e1(env), e2(env)) match {
+      case (Const(NumVal(n1)), Const(NumVal(n2))) => unit(NumVal(n1 + n2))
     }
 
-    override def mul(e1: Dom, e2: Dom) = env => (e1(env), e2(env)) match {
-      case (Const(NumVal(n1)), Const(NumVal(n2))) => NumVal(n1 * n2)
+    override def mul(e1: Dom, e2: Dom) = (env: Rep[Env]) => (e1(env), e2(env)) match {
+      case (Const(NumVal(n1)), Const(NumVal(n2))) => unit(NumVal(n1 * n2))
     }
 
-    override def if0(c: Dom, t: Dom, e: Dom) = env => c(env) match {
+    override def if0(c: Dom, t: Dom, e: Dom) = (env: Rep[Env]) => c(env) match {
       case Const(NumVal(n)) =>
         if (n == 0)
           t(env)
@@ -39,17 +39,17 @@ trait Staged extends BaseExp with MapOpsExp {
 
   trait Fun extends Sig.Fun[Dom] {
     def lookup(env: Rep[Env], x: String) = env(unit(x))
-    override def va(x: String) = env => lookup(env, x)
+    override def va(x: String) = (env: Rep[Env]) => lookup(env, x)
 
-    override def abs(x: String, e: Dom) = env => FunVal(x, e, env)
+    override def abs(x: String, e: Dom) = (env: Rep[Env]) => unit(FunVal(x, e, env))
 
-    override def app(e1: Dom, e2: Dom) = env => (e1(env), e2(env)) match {
+    override def app(e1: Dom, e2: Dom) = (env: Rep[Env]) => (e1(env), e2(env)) match {
       case (Const(FunVal(x, e, eenv)), v) => e(eenv + (unit(x), v))
     }
   }
 
   trait Fix extends Sig.Fix[Dom] {
-    override def fix(e: Dom) = env => e(env) match {
+    override def fix(e: Dom) = (env: Rep[Env]) => e(env) match {
       case Const(FunVal(x, fe, fenv)) =>
         val rv = RecVal(null)
         val f = fe(fenv + unit(x -> rv))
