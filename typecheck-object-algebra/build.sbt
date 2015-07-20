@@ -1,29 +1,34 @@
 
-
-name := "typecheck-object-incremental.algebra"
+name := "typecheck-object-algebra"
 
 version := "1.0"
 
-scalaVersion := "2.11.6"
+scalaOrganization := "org.scala-lang.virtualized"
 
-parallelExecution in Test := false
+scalaVersion := "2.11.2"
 
-logBuffered in Test := false
+scalacOptions ++= Seq(
+  "-feature",
+  "-deprecation",
+  "-Yvirtualize"
+)
 
-libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.1" % "test"
+libraryDependencies += "org.scala-lang.virtualized" % "scala-compiler" % "2.11.2"
 
-testOptions in Test += Tests.Argument("-oD")
+libraryDependencies += "org.scala-lang.virtualized" % "scala-library" % "2.11.2"
 
-scalacOptions ++= Seq("-feature", "-deprecation")
+libraryDependencies += "org.scala-lang.virtualized" % "scala-reflect" % "2.11.2"
 
-resolvers += "Sonatype OSS Snapshots" at
-  "https://oss.sonatype.org/content/repositories/releases"
+libraryDependencies += "EPFL" %% "lms" % "0.3-SNAPSHOT"
 
-resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.2"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.10"
+libraryDependencies += "org.scala-lang.virtualized" % "scala-actors" % "2.11.2" % "test"
 
 libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.6"
+
+
+testOptions in Test += Tests.Argument("-oD")
 
 fork in run := true
 

@@ -1,4 +1,4 @@
-package algebra
+package experiment
 
 object Sig {
   trait Arith[E] {
