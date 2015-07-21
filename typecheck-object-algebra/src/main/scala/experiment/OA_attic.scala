@@ -19,22 +19,32 @@ object Sig {
   }
 }
 
+trait Program {
+  import Sig._
+  def apply[E](alg: Arith[E] with Fun[E] with Fix[E]): E
+}
+
 object Programs {
   import Sig._
 
-  def fact[E](alg: Arith[E] with Fun[E] with Fix[E]) = {
-    import alg._
-    fix(abs("f", abs("x",
-      if0(va("x"),
-        num(1),
-        mul(va("x"), app(va("f"), add(va("x"), num(-1))))))))
+  object fact extends Program {
+    def apply[E](alg: Arith[E] with Fun[E] with Fix[E]) = {
+      import alg._
+      fix(abs("f", abs("x",
+        if0(va("x"),
+          num(1),
+          mul(va("x"), app(va("f"), add(va("x"), num(-1))))))))
+    }
   }
 
-  def fact5[E](alg: Arith[E] with Fun[E] with Fix[E]) = {
-    import alg._
-    app(fact(alg), num(5))
+  object fact5 extends Program {
+    def apply[E] (alg: Arith[E] with Fun[E] with Fix[E]) = {
+      import alg._
+      app(fact.apply(alg), num(5))
+    }
   }
 }
+
 
 object Eval {
   type Env = collection.Map[String, Val]
@@ -220,11 +230,11 @@ object Types {
 
 object Test extends App {
   override def main(args: Array[String]) = {
-    println("fact: " + Programs.fact(Eval.ArithFunFix)(Map()))
-    println("fact5: " + Programs.fact5(Eval.ArithFunFix)(Map()))
+    println("fact: " + Programs.fact.apply(Eval.ArithFunFix)(Map()))
+    println("fact5: " + Programs.fact5.apply(Eval.ArithFunFix)(Map()))
 
     println("unbound x: " + Types.ArithFunFix.va("x"))
-    println("fact: " + Programs.fact(Types.ArithFunFix))
-    println("fact5: " + Programs.fact5(Types.ArithFunFix))
+    println("fact: " + Programs.fact.apply(Types.ArithFunFix))
+    println("fact5: " + Programs.fact5.apply(Types.ArithFunFix))
   }
 }

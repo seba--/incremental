@@ -3,7 +3,8 @@ package experiment
 import scala.language.implicitConversions
 
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common.{TupleOps, EffectExp, Base}
+import scala.virtualization.lms.common._
+import scala.virtualization.lms.internal.GenericNestedCodegen
 
 trait MapOps extends Base with TupleOps {
   object Map {
@@ -38,7 +39,7 @@ trait MapOps extends Base with TupleOps {
   def map_iterator[K:Manifest,V:Manifest](m: Rep[Map[K,V]])(implicit pos: SourceContext): Rep[Iterable[(K,V)]]
 }
 
-trait MapOpsExp extends MapOps with EffectExp {
+trait MapOpsExp extends MapOps with BaseExp with TupleOpsExp {
 
   abstract class MapDef[K:Manifest,V:Manifest,R:Manifest] extends Def[R] {
     val mK = manifest[K]
@@ -69,4 +70,24 @@ trait MapOpsExp extends MapOps with EffectExp {
   override def map_keyset[K: Manifest, V: Manifest](m: Rep[Map[K, V]])(implicit pos: SourceContext) = MapKeyset(m)
   override def map_keys[K: Manifest, V: Manifest](m: Rep[Map[K, V]])(implicit pos: SourceContext) = MapKeys(m)
   override def map_iterator[K: Manifest, V: Manifest](m: Rep[Map[K, V]])(implicit pos: SourceContext) = MapIterator(m)
+}
+
+trait ScalaGenMapOps extends GenericNestedCodegen with ScalaGenBase {
+  val IR: MapOpsExp
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case MapNew(xs) => emitValDef(sym, src"Map($xs)")
+    case MapApply(m, k) => emitValDef(sym, src"$m($k)")
+    case MapGet(m, k) => emitValDef(sym, src"$m.get($k)")
+    case MapUpdated(m, k, v) => emitValDef(sym, src"$m.updated($k, $v)")
+    case MapMinus(m, k) => emitValDef(sym, src"($m - $k)")
+    case MapContains(m, k) => emitValDef(sym, src"$m.contains($k)")
+    case MapSize(m) => emitValDef(sym, src"$m.size")
+    case MapValues(m) => emitValDef(sym, src"$m.values")
+    case MapKeyset(m) => emitValDef(sym, src"$m.keyset")
+    case MapKeys(m) => emitValDef(sym, src"$m.keys")
+    case MapIterator(m) => emitValDef(sym, src"$m.iterator")
+    case _ => super.emitNode(sym, rhs)
+  }
 }

@@ -4,7 +4,7 @@ import scala.language.implicitConversions
 
 import scala.virtualization.lms.common._
 
-trait Staged extends BaseExp with MapOpsExp with Functions {
+trait StagedEval extends ScalaOpsPkgExp with MapOpsExp {
   type Env = Map[String, Val]
   type Dom = Rep[Env => Val]
 
@@ -63,15 +63,52 @@ trait Staged extends BaseExp with MapOpsExp with Functions {
   object ArithFunFix extends Arith with Fun with Fix
 }
 
+object StagedEvalIR extends StagedEval
 
+trait FunctionCompiler extends CompileScala with FunctionsExp {
+//  val IR: FunctionsExp
+
+  override def reset {
+//    IR.reset
+    super.reset
+  }
+
+  override def isPrimitiveType[T](m: Manifest[T]) = super.isPrimitiveType(m)
+
+  def compile[A: Manifest, B: Manifest](e: Rep[A => B]): A => B = {
+    val fun = (x: Rep[A]) => doApply(e, x)
+    super.compile(fun)
+  }
+}
+
+object StagedEvalScalaCodeGen extends StagedEval with FunctionCompiler with ScalaCodeGenPkg with ScalaGenMapOps {
+  override val codegen = new ScalaCodeGenPkg {
+    override val IR: StagedEvalScalaCodeGen.type = StagedEvalScalaCodeGen
+  }
+
+  override val IR = StagedEvalIR
+
+  override def reset {
+    IR.reset
+    super.reset
+  }
+
+  override def isPrimitiveType[T](m: Manifest[T]) = super.isPrimitiveType(m)
+
+  def compile[E](e: Program): Env => Val = {
+    val fun = e.apply(ArithFunFix)
+    val f = compile(fun)
+    f
+  }
+}
 
 object Test_staged extends App {
   override def main(args: Array[String]) = {
-    println("fact: " + Programs.fact(Eval.ArithFunFix)(Map()))
-    println("fact5: " + Programs.fact5(Eval.ArithFunFix)(Map()))
-
-    println("unbound x: " + Types.ArithFunFix.va("x"))
-    println("fact: " + Programs.fact(Types.ArithFunFix))
-    println("fact5: " + Programs.fact5(Types.ArithFunFix))
+    println("fact: " + StagedEvalScalaCodeGen.compile(Programs.fact)(Map()))
+//    println("fact5: " + Programs.fact5.apply(Eval.ArithFunFix)(Map()))
+//
+//    println("unbound x: " + Types.ArithFunFix.va("x"))
+//    println("fact: " + Programs.fact.apply(Types.ArithFunFix))
+//    println("fact5: " + Programs.fact5.apply(Types.ArithFunFix))
   }
 }
