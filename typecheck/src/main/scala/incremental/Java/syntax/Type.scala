@@ -1,9 +1,17 @@
 package incremental.Java.syntax
 
+import constraints.CVar
+import constraints.javacons.CSubst.CSubst
+import constraints.javacons.ConstraintSystem
+
 /**
  * Created by qwert on 04.04.15.
  */
-trait Type extends ResultType
+trait Type extends ResultType {
+  def occurs(x: CVar[_]): Boolean = false // TODO: default impl to avoid errors
+  def subst(s: CSubst): Type = TBoolean()
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs
+}
 
 // Primitive Types
 trait PrimType extends Type with ArrayBaseType{}
