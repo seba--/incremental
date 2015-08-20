@@ -1,6 +1,7 @@
 package benchmark
 
-import java.io.File
+import java.io.{PrintWriter, File}
+import java.util.Locale
 import java.util.regex.Pattern
 
 import scopt.OptionParser
@@ -14,7 +15,9 @@ object ProcessData extends App {
     dir: File,
     isIncrementalData: Boolean,
     progs: Map[String, String], // file name fragment -> latex representation
-    checkers: Map[String, String] // file name fragment -> latex representation
+    checkers: Map[String, String], // file name fragment -> latex representation
+    baselineChecker: String,
+    outfile: File
   )
 
   var pcfProgs = ListMap[String, String]()
@@ -39,6 +42,14 @@ object ProcessData extends App {
       config.copy(isIncrementalData = inc)
     }
 
+    opt[String]("baseline") required() action { (baseline, config) =>
+      config.copy(baselineChecker = baseline)
+    }
+
+    opt[File]('o', "outfile") required() action { (f, config) =>
+      config.copy(outfile = f)
+    }
+
     arg[File]("<directory>") action { (dir, config) =>
       config.copy(dir = dir)
     } validate { f =>
@@ -46,7 +57,7 @@ object ProcessData extends App {
     }
   }
 
-  optionParser.parse(args, Config(null, false, pcfProgs, pcfCheckers)) match {
+  optionParser.parse(args, Config(null, false, pcfProgs, pcfCheckers, "", null)) match {
     case None =>
     case Some(config) => run(config)
   }
@@ -57,30 +68,109 @@ object ProcessData extends App {
 
     val rows = config.progs.size + 1
     val cols = config.checkers.size + 1
-    val table = Array[Array[String]].ofDim(row, cols) // list of rows
-
-    table(0)(0) = "Tree"
-    var i = 1
-    for (checker <- config.checkers) {
-      table(0)(i) = checker._2
-      i += 1
-    }
+    val rawtable = Array.ofDim[Option[Double]](rows, cols)
+    val table = Array.ofDim[String](rows + 1, cols) // list of rows
 
     for (checker <- config.checkers;
          prog <- config.progs) {
 
       val fileRegex = Pattern.quote(s"${prog._1}.${checker._1}.Test-") + "\\d*" + Pattern.quote(".dsv")
       val mfile = files.find(f => f.getName.matches(fileRegex))
+      val rowIndex = config.progs.toList.indexOf(prog) + 1
+      val colIndex = config.checkers.toList.indexOf(checker) + 1
 
       mfile match {
         case None =>
-          println(s"${prog._1}.${checker._1}.Test-*.dsv -> n/a")
+          rawtable(rowIndex)(colIndex) = None
         case Some(file) =>
           val avg = processFile(file, config.isIncrementalData, checker, prog)
-          println(s"${file.getName} -> $avg")
+          rawtable(rowIndex)(colIndex) = Some(avg)
       }
     }
+
+    table(0)(0) = "Tree"
+    for (checker <- config.checkers) {
+      val colIndex = config.checkers.toList.indexOf(checker) + 1
+      table(0)(colIndex) = checker._2
+    }
+    for (prog <- config.progs) {
+      val rowIndex = config.progs.toList.indexOf(prog) + 1
+      table(rowIndex)(0) = prog._2
+    }
+    val baselineCol = config.checkers.toList.unzip._1.indexOf(config.baselineChecker) + 1
+
+    for (row <- 1 until rows; col <- 1 until cols) {
+      if (col == baselineCol) {
+        table(row)(col) = math(rawtable(row)(col).get)
+      }
+      else {
+        val cell = rawtable(row)(col) match {
+          case None => "\\hfake{600.00 (0.00)}{n/a}"
+          case Some(avg) =>
+            val speedup = avg / rawtable(row)(baselineCol).get
+            math(avg) + " (" + math(speedup) + ")"
+        }
+        table(row)(col) = cell
+      }
+    }
+
+    val last = table.length - 1
+    table(last)(0) = "{\\scriptsize overall performance}"
+    for (col <- 1 until cols) {
+      var numVals = 0
+      var sumPerf = 0.0
+      var sumSpeedup = 0.0
+      for (row <- 1 until rows) {
+        rawtable(row)(col) match {
+          case None =>
+          case Some(avg) =>
+            numVals += 1
+            sumPerf += avg
+            val speedup = avg / rawtable(row)(baselineCol).get
+            sumSpeedup += speedup
+        }
+       }
+
+      if (numVals != 0 && col != baselineCol) {
+        val avgPerformance = sumPerf / numVals
+        val avgSpeedup = sumSpeedup / numVals
+        val cell = math(avgPerformance) + " (" + math(avgSpeedup) + ")"
+        table(last)(col) = cell
+      }
+      else if (numVals != 0) {
+        val avgPerformance = sumPerf / numVals
+        val cell = math(avgPerformance)
+        table(last)(col) = cell
+      }
+      else
+        table(last)(col) = "n/a"
+    }
+
+    new PrintWriter(config.outfile) { write(prettyPrintTable(table)); close }
   }
+
+  def rowString(strings: Array[String]) = strings.mkString("", " & ", "\\\\")
+
+  def prettyPrintTable(table: Array[Array[String]]) = {
+    val buffer = StringBuilder.newBuilder
+    val cols = (1 to table(0).length).map(_ => "r").mkString("@{\\hskip1em}", "@{\\hskip1em}", "")
+    buffer ++=  s"\\begin{tabular}[t]{l$cols}\n"
+    buffer ++= "\\toprule\n"
+    buffer ++= rowString(table(0)) += '\n'
+    buffer ++= "\\midrule\n"
+    for (row <- 1 until table.length) {
+      buffer ++= rowString(table(row))
+      if (row % 3 == 0)
+        buffer ++= "\\midrule"
+      buffer += '\n'
+    }
+    buffer ++= "\\bottomrule\n"
+    buffer ++= "\\end{tabular}"
+    buffer.toString()
+  }
+
+
+  def math(s: Double) = "$" + String.format(Locale.US, "%.2f", Double.box(s)) + "$"
 
   def processFile(file: File, isIncremental: Boolean, checker: (String, String), prog: (String, String)): Double = {
     val lines = io.Source.fromFile(file).getLines()
