@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 
 import scopt.OptionParser
 
-import scala.collection.immutable.{ListMap, TreeMap}
+import scala.collection.immutable.ListMap
 
 object ProcessData extends App {
 
