@@ -1,43 +1,35 @@
 package benchmark.pcf
 
 import constraints.equality.impl.SolveContinuousSubst
-import incremental.{TypeChecker, TypeCheckerFactory}
-import org.scalameter.DSL
 import org.scalameter.api._
 import benchmark.ExpGenerator._
+
+import scala.io.StdIn
 
 import incremental.pcf._
 import incremental.Node._
 
-import scala.io.StdIn
-
 abstract class NonincrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
-
   val opts = org.scalameter.api.Context(
-    exec.jvmflags -> "-server -Xmx4096m -Xms2048m -XX:CompileThreshold=100"
+    exec.jvmflags -> ("-server -XX:CompileThreshold=100 " + Settings("jvmopts"))
   )
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
   def measureCheckers(trees: Gen[Node]): Unit = {
-   // measureT("DownUp", (e:Node) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
-   // measureT("BottomUpSolveEnd", (e:Node) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
-   // measureT("BottomUpIncrementalSolve", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
-   // measureT("BottomUpEagerSubst", (e:Node) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    //measureT("DU", (e:Node) => DownUpCheckerFactory.makeChecker.typecheck(e))(trees)
+    
+    //BU1 is very slow for heights bigger than 12, therefore we exclude it
+    //if (maxHeight <= 12)
+    //  measureT("BU1", (e:Node) => BottomUpSolveEndCheckerFactory.makeChecker.typecheck(e))(trees)
 
-    //measureT("BUSolveContinuousSubst", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-    //measureT("FuturisticBUSolveContinuousSubst", (e:Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
+    //measureT("BU2", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(Int.MaxValue).typecheck(e))(trees)
+    //measureT("BU3", (e:Node) => BottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
+    //measureT("BU4", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
     measureT("BUSolveContinuousSubst", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     measureT("FuturisticBUSolveContinuousSubst", (e:Node) => new FuturisticBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     measureT("FuturisticHeightBUSolveContinuousSubst", (e:Node) => new FuturisticHeightBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
     measureT("FuturisticHeightListBUSolveContinuousSubst", (e:Node) => new FuturisticHeightListBUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(trees)
-    //measureT("FuturisticBottomUpEagerSubst", (e:Node) => FuturisticBottomUpEagerSubstCheckerFactory.makeChecker.typecheck(e))(trees)
-   // measureT("BottomUpEagerSubstConcurrent", (e:Node) => BottomUpEagerSubstConcurrentCheckerFactory.makeChecker.typecheck(e))(trees)
-
-   // measureT(s"BottomUpSometimesEagerSubst-10", (e:Node) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(10).typecheck(e))(trees)
-//    val thresholds = Gen.exponential("threshold")(10, 10000, 10)
-//    val tupled = Gen.tupled(trees,thresholds)
-//    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
   }
 
   def measureT(name: String, check: Node => _)(trees: Gen[Node]): Unit = {
@@ -47,16 +39,6 @@ abstract class NonincrementalPerformanceTest(maxHeight: Int) extends Performance
       in { check }
     }
   }
-
-//  def measureTwith[T](name: String, check: ((Exp,T)) => _)(trees: Gen[(Exp,T)]): Unit = {
-//    measure method (name) in {
-//      using(trees).
-//        setUp { _._1.invalidate }.
-//        in { check }
-//    }
-//  }
-
-
 
   /* ADD */
 
@@ -160,3 +142,4 @@ class NonincrementalOfflineReport(maxHeight: Int)
 class NonincrementalQuickBenchmark(maxHeight: Int)
   extends NonincrementalPerformanceTest(maxHeight)
   with PerformanceTest.Quickbenchmark
+
