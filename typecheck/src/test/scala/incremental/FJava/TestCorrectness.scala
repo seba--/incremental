@@ -66,8 +66,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestError("'void m(x, y) ", MethodDec(Seq(CName('void), 'm, Seq(('x, UCName(CVar('x))), ('y, UCName(CVar('y))))),
     Seq(New(CName('Object)))))//(CName('Object))
-  typecheckTestFJ("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void), 'm, Seq(('c, UCName(CVar('c))))),
-    Seq(Invk(Seq('m), Seq(Var('e0), Var('c))))))(UCName(CVar('e0))) // recoursive call, so it is correct
+  typecheckTestError("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void), 'm, Seq(('c, UCName(CVar('c))))),
+    Seq(Invk(Seq('m), Seq(Var('e0), Var('c)))))) // recoursive call, so it is correct
   typecheckTestError("void m() {New Pair first}", MethodDec(Seq(CName('void), 'm, Seq()), Seq(Invk(Seq('setfst),
     Seq(New(CName('Pair), Var('first)), Var('first))))))//(CName('Pair))
   typecheckTestError("Pair first second", MethodDec(Seq(CName('Double), 'getSum, Seq()), Seq(Invk(Seq('add),
@@ -82,13 +82,13 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   //typecheckTestError("(C) e0 : C", DCast(CName('c),Var('e)))
   //typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-  typecheckTestFJ("Int getX(x: Int) {return Int} ", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
-    Seq(New(CName('Int)))))(CName('Number))
+  typecheckTestFJ("Int getX(x: Int) {return Int} ", MethodDec(Seq(CName('TNum), 'getX, Seq(('x, CName('TNum)))),
+    Seq(Num(0))))(CName('Number))
   typecheckTestFJ("Int getX(x: Int) {Number.getX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
-    Seq(Invk(Seq('getX), Seq(Var('Number), Var('x))))))(CName('Number))
+    Seq(Invk(Seq('getX), Seq(New(CName('Number)), Num(1))))))(CName('Number))
 
   typecheckTestFJ("Int getX(x: Int) {(new Nr).getX(x): Int} ", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
-    Seq(Invk(Seq('getX), Seq(New(CName('Nr)), Var('x))))))(CName('Number))
+    Seq(Invk(Seq('getX), Seq(New(CName('Nr)), Var('x))))))(CName('Nr))
 
   typecheckTestError("Int getX(x: Int) {(new Number).gX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
     Seq(Invk(Seq('gX), Seq(New(CName('Number)), Var('x))))))//(CName('Number))
@@ -110,50 +110,52 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("New Pair(new A(), 'snd).snd", Fields('snd, New(Seq(CName('Pair)), Seq((New(CName('A))), Var('snd)))))//(CName('B))
 
   typecheckTestError("e0.m(x) + e0.m(x)", Add(Invk(Seq('m), Seq(Var('e0), Var('x))), Invk(Seq('m), Seq(Var('e0), Var('x)))))//(TNum)
-  typecheckTest("x + x", Add(Var('x), Var('x)))(CName('TNum))
+  typecheckTestError("x + x", Add(Var('x), Var('x)))
 
   typecheckTestError("(New Pair(fst, snd)).setFirst(fst)", Invk(Seq('setFrist), Seq(New(Seq(CName('Pair)), Seq(Var('frt), Var('snd))), Var('frt))))//(TNum)
 
   typecheckTestFJ(" Pair Int First ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)))), Seq()))(CName('Pair))
 
   typecheckTestFJ(" Pair Int First, Int {(new Number(x)).getX(x): Int} ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)))),
-    Seq(MethodDec(Seq(CName('Int), 'getX, Seq(('x, CName('Int)))), Seq(New(CName('Int)))))))(CName('Pair))
+    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq(('x, CName('Int)))), Seq(Num(0))))))(CName('Pair))
   typecheckTestError(" Pair String First, Double getX(First : Double){ return (New Pair).First} ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('String)))),
     Seq(MethodDec(Seq(CName('Double), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Var('First))))))))//(CName('Pair))
-  typecheckTestFJ(" Pair Double First, Double getX(First : Double){ return (New Pair).First}  ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Double)))),
-    Seq(MethodDec(Seq(CName('Double), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Var('First))))))))(CName('Pair))
 
-  typecheckTestFJ(" Pair Int First, Int Second, Int setFirst() ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)), ('Second, CName('Int)))),
-    Seq(MethodDec(Seq(CName('Int), 'setFirst, Seq()), Seq(Fields('First,New(CName('Pair))))))))(CName('Pair))
-  typecheckTestError(" Pair Int First, Int Second, String setFirst() ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('Int)), ('Second, CName('Int)))),
-    Seq(MethodDec(Seq(CName('String), 'setFirst, Seq()), Seq(Fields('First,New(CName('Pair))))))))//(CName('Pair))
+
+  typecheckTestFJ(" ========>>>> Pair Double First, Double getX(){ return (New Pair(Num(1))).First}  ", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('TNum)))),
+    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(1))))))))(CName('Pair)) // look again at the combination of these examples
+
+  typecheckTestFJ("Pair Tnum First, Tnum Second, TNum getX() {return (New Pair(Num(1), Num(2)).First)}", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
+    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(1), Num(2))))))))(CName('Pair))
+
+  typecheckTestError("Pair Tnum First, Tnum Second, TNum getX() {return (New Pair(Num(1), String(a)).First)}", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
+    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(1), Str('a))))))))
+
+  typecheckTestError("Pair TNum first, TNum second, String getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
+  Seq(MethodDec(Seq(CName('TString), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(0), Num(1))))))))
+
+  typecheckTestError("Pair TNum first, string second, TNum getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair), CName('Object), Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
+    Seq(MethodDec(Seq(CName('TString), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(0), Num(1))))))))
 
   typecheckTestFJ("Pair Int First, Int Second, Int add() { return (New Pair).add(first, second) }", ClassDec(Seq(CName('Pair), CName('Object),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('Pair), Var('First))), Fields('Second, New(CName('Pair), Var('Second)))))))))(CName('Pair))
-
-  typecheckTestFJ("Pair Int First, Int Second, Int addField() { return add(first Int, second Int) }", ClassDec(Seq(CName('TNum), CName('Object),
-    Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('TNum))), Fields('Second, New(CName('TNum)))))))))(CName('TNum))
+    Seq(Add(Fields('First, New(CName('Pair), Num(1), Num(2))), Fields('Second, New(CName('Pair), Num(1), Num(2)))))))))(CName('Pair))
 
   typecheckTestError("Pair Int First, Int Second, String addField() { return add(first Int, second Int) }", ClassDec(Seq(CName('TNum), CName('Object),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('String), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('TNum))), Fields('Second, New(CName('TNum)))))))))//(CName('TNum))
+    Seq(Add(Fields('First, New(CName('Pair), Num(0))), Fields('Second, New(CName('Pair), Num(1)))))))))//(CName('TNum))
 
   typecheckTestError("Pair String First, Int Second, Int addField() { return add(first, second) }", ClassDec(Seq(CName('TNum), CName('Object),
     Seq(('First, CName('String)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('TNum))), Fields('Second, New(CName('TNum))))))))) //(CName('TNum))
+    Seq(Add(Fields('First, New(CName('Pair), Num(0))), Fields('Second, New(CName('Pair), Num(1))))))))) //(CName('TNum))
 
   typecheckTestError("Pair Int First, Int Second, Int addField() { return add(first : String, second : TNum) }", ClassDec(Seq(CName('TNum), CName('Object),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('String))), Fields('Second, New(CName('TNum)))))))))//(CName('TNum))
-
-  typecheckTestFJ("Pair Int x, Int getX(){ New(Pair, Var(x)).x}",
-    ClassDec(Seq(CName('Pair), CName('Object), Seq(('x, CName('Int)))),
-      Seq(MethodDec(Seq(CName('Int), 'getX, Seq()), Seq(Fields('x, New(CName('Pair), Var('x))))))))(CName('Pair))
+    Seq(Add(Fields('First, New(CName('Pair), Str('a))), Fields('Second, New(CName('Pair), Num(0)))))))))//(CName('TNum))
 
   typecheckTestFJ("Class C, Int foo(){return 1+1}} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))))))(CName('C))
+
   typecheckTestError("String foo(){return 1+1}", MethodDec(Seq(CName('String), 'foo, Seq()), Seq(Add(Num(1), Num(1)))))//(CName('C))
 
   typecheckTestFJ("Int foo(){return 1+1}", MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))))(CName('C))
@@ -177,7 +179,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTest("Class C, Tnum foo(x int){return 1+1}, TNum bar(){return foo(Num(1));} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
-      MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Num(1))))))))(CName('C))
+      MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)),Num(0))))))))(CName('C))
 
   typecheckTestError("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Num(1));} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
@@ -187,30 +189,34 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Num(1), Str('a))))))))
 
+  typecheckTestError("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Var(x), Num(2));} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
+    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
+      MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Var('x), Num(2))))))))
+
   typecheckTestFJ("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Num(1), Num(2));} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Num(1), Num(2))))))))(CName('C))
 
   typecheckTestFJ("Class C, Tnum foo(){return 1+1}, TNum bar(){return foo()}, TNum getBar() {return bar} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))),
-      MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('This))))),
-    MethodDec(Seq(CName('TNum), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(Var('This))))))))(CName('C))
+      MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(This('C))))),
+    MethodDec(Seq(CName('TNum), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(This('C))))))))(CName('C))
 
   typecheckTestError("Class C, Tnum foo(){return 1+1}, TNum bar(){return foo()}, String getBar() {return bar} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)))))),
       MethodDec(Seq(CName('String), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(New(CName('C)))))))))//(CName('C))
 
-
   typecheckTestFJ("Class C, TNum add(a Int, b Int){ C.add(1, 2)}", ClassDec(Seq(CName('C), CName('Object), Seq()),
-    Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(New(CName('C)), Num(1), Num(2))))))))(CName('C))
+    Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(This('C), Num(1), Num(2))))))))(CName('C))
+  //ne vend te this eshte New(CName('C))
 
   typecheckTestError("Class C, TNum add(a Int, b Int){ C.add('a 2)}", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(New(CName('C)), Str('a), Num(2))))))))
 
   typecheckTestError("Class C, TNum add(a Int, b Int){ C.add(2)}", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(New(CName('C)), Num(2))))))))
-
+//shoulde see again the code and not to make the difference when it is missing one field or not and to see if they have the same type or the subtype of each other
 }
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))

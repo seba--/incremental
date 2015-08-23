@@ -21,6 +21,16 @@ case object TNum extends Type {
   }
 }
 
+case object TThis extends Type {
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TThis => cs
+    case UCName(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
 case object TString extends Type {
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this

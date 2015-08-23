@@ -82,9 +82,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val cs = cs_.tryFinalize
       val t = t_.subst(cs.substitution)
 
-      // if (!reqs.isEmpty)
-      //   Right(s"Unresolved variable requirements $reqs, type $t, unres ${cs.unsolved}")
-      if (!creqs.isEmpty)
+      if (!reqs.isEmpty)
+        Right(s"Unresolved variable requirements $reqs, type $t, unres ${cs.unsolved}")
+      else if (!creqs.isEmpty)
         Right(s"Unresolved type-variable requirements $creqs, type $t, unres ${cs.unsolved}")
       else if (!cs.isSolved)
         Right(s"Unresolved constraints ${cs.unsolved}, type $t")
@@ -116,10 +116,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (X, Map(x -> X), Map(), Seq()) // Map(X -> cld), needed at some examples
 
     case This =>
-      var th = e.lits(0).asInstanceOf[Symbol]
-       th = 'This
-      val Th = freshCName()
-      (Th, Map(th -> Th), Map(), Seq())
+      val x = e.lits(0).asInstanceOf[Symbol]
+      val X = CName(x)
+      (X, Map('This -> X), Map(), Seq())
 
     case Fields =>
       val f = e.lits(0).asInstanceOf[Symbol] //symbol
@@ -162,7 +161,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var fields = Map[Symbol, Type]()
       for (i <- 0 until e.kids.seq.size) {
         val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
-        val  fi = getX(ti, subreqs) // ========> see again, it should be fresh field
+       // val  fi = getX(ti, subreqs) // ========> see again, it should be fresh field
+        val fi = freshField().x
         reqss = reqss :+ subreqs
         creqss = creqss :+ subcreqs
         fields += (fi -> ti)
@@ -215,19 +215,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           case Some(cldM1) =>
            // restReqs = restReqs + (This -> c)
             var param = cldM1._2
-            for (i <- 0 until(params.size)) {
-              val x = params(i)._1
-              val xC = params(i)._2
+            if (param.size == sparam.size) {
+            for ((x,xC) <- params) {
+              for ((p, re) <- param) {
               reqs.get(x) match {
                 case None => param = param
                 case Some(treq) =>
-                  for ((p, re) <- param) {
-                    if (treq == re) param = param - p
-                  }
                   restReqs = restReqs - x
                   cons = EqConstraint(xC, treq) +: cons
               }
-            }
+                cons = EqConstraint(xC,re) +: cons
+                param = param - p
+            }}}
+            else cons =  EqConstraint(TNum, TString) +: cons
+
             cons = EqConstraint(e0, cldM1._3) +: cons
             if (param.isEmpty) cldMC = cldC._3 - m
             else {
@@ -241,7 +242,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
                       case Some(mD) =>
                         cldMD = cldD._3 - m + (m ->(retT, param, e0))
                         cCreqs = cCreqs - cldC._1 + (cldC._1 -> (cldD._1, cldD._2, cldMD))
-
                     }
                 }
               }
@@ -253,18 +253,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
                 restReqs = restReqs - 'This
             }
             cCreqs = cCreqs - c + (c -> (cldC._1, cldC._2, cldMC))
-
             sig = Signature(retT,m, params.toMap, e0)
             if (fld.isEmpty && cldMC.isEmpty) cCreqs = cCreqs - c
         }
-
       }
-     // for ((c,cldC) <- creqs) {
-       // if (cldC._2.isEmpty && cldC._3.isEmpty) cCreqs = cCreqs - c
-      //}
 
       (sig, restReqs, cCreqs, cons :+ EqConstraint(e0, retT))
-
 
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
@@ -296,73 +290,25 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       mreqs.get('This) match {
         case None => mreqs = mreqs
-        case Some(typ2) =>
-          cons = EqConstraint(c, typ2) +: cons
-          typ = typ :+ typ2
-       //   mreqs = mreqs - 'This
-          for (i <- 0 until typ.size)
-          mcreqs.get(typ(i)) match {
-            case None =>
-            case Some(cld) =>
-              fieldn = cld._2
-              cldM = cld._3
-              for ((f, typ1) <- field) {
-                cld._2.get(f) match {
-                  case None => fieldn
-                  case Some(typ2) =>
-                    fieldn = fieldn - f
-                    cons = EqConstraint(typ1, typ2) +: cons
-                }
-              }
-
-              for ((m, cldm) <- cld._3) {
-                var mparam = cldm._2
-                sig.get(m) match {
-                  case None =>
-                    cldM = cldM
-                  case Some(mSig) =>
-                    cons = EqConstraint(cldm._1, mSig._1) +: cons // unify the return type
-                    cons = EqConstraint(cldm._3, mSig._3) +: cons // unify the body
-                  var param = mSig._2
-                    if (param.size == mparam.size) {
-                      for ((x, xC) <- param) {
-                        // unify equaly-named parameters
-
-                        for ((p, tParam) <- mparam) {
-                          mparam = mparam - p
-                          cons = EqConstraint(xC, tParam) +: cons
-                        }
-                      }
-                    }
-                    if (mparam.isEmpty) cldM = cldM - m
-                    else cldM = cldM - m + (m ->(mSig._1, mparam, mSig._3))
-                }
-              }
-              if (fieldn.isEmpty && cldM.isEmpty)
-                creq = creq - typ(i)
-              else
-                creq = creq - typ(i) ++ Map(typ(i) ->(cld._1, fieldn, cldM))
-
-          }
+        case Some(typ1) =>
+          cons = EqConstraint(c, typ1) +: cons
+          mreqs = mreqs - 'This
       }
-
-
-      //restReq = mreqs
-
 
       mcreqs.get(c) match {
         case None =>
         case Some(cld) =>
           fieldn = cld._2
           cldM = cld._3
-          for ((f, typ1) <- field) {
-            cld._2.get(f) match {
-              case None => fieldn
-              case Some(typ2) =>
-                fieldn = fieldn - f
+          if (fieldn.size == field.size) {
+            for ((f, typ1) <- field) {
+              for ((f2, typ2) <- cld._2) {
+                fieldn = fieldn - f2
                 cons = EqConstraint(typ1, typ2) +: cons
+              }
             }
           }
+          else cons =  EqConstraint(TNum, TString) +: cons
 
           for ((m, cldm) <- cld._3) {
             var mparam = cldm._2
@@ -478,9 +424,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     var cldf = wasF
     var cldm = wasM
     for ((f, typ) <- cld2._2)
-      wasF.get(f) match {
-        case None => cldf += (f -> typ)
-        case Some(typ1) => mcons = EqConstraint(typ1, typ) +: mcons
+      for ((f1, typ1) <- wasF) {
+
+        mcons = EqConstraint(typ1, typ) +: mcons
       }
     for ((m, mbody) <- cld2._3)
       wasM.get(m) match {
