@@ -87,8 +87,8 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
         New(CName('Succ), Invk('plus, Fields('x, Var('this)), Var('other)))) // plus(Succ(x), other) = Succ(plus(x, other))
     )
   )
-  // Succ does not refer to any other class and should sheck successfully on its own
-  typecheckTest("Succ ok", Succ)(CName('Succ))
+  // Succ refers to Nat and should fail to check
+  typecheckTestError("Succ ok", Succ)
 
   // Taking all classes into consideration, checking should succeed
   typecheckTest("{Nat, Zero, Succ} ok", ProgramM(Nat, Zero, Succ))(ProgramOK)
