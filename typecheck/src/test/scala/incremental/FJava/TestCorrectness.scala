@@ -15,16 +15,6 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  def typecheckTest(desc: String, e: => Node)(expected: Type): Unit =
-    test(s"$classdesc: Type check $desc") {
-      val actual = checker.typecheck(e)
-      assert(actual.isLeft, s"Expected $expected but got $actual")
-      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
-        expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
-      }
-      assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
-    }
-
   def typecheckTestFJ(desc: String, e: => Node)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
       val ev = e
@@ -36,6 +26,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, s"Type = $typ, Reqs = $req, CReqs = $creq, Constraint = $cons")
 
+      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
+        expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
+      }
+      assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
   def typecheckTestError(desc: String, e: => Node) =
@@ -177,7 +171,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Str('a))))))))
 
-  typecheckTest("Class C, Tnum foo(x int){return 1+1}, TNum bar(){return foo(Num(1));} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
+  typecheckTestFJ("Class C, Tnum foo(x int){return 1+1}, TNum bar(){return foo(Num(1));} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)),Num(0))))))))(CName('C))
 
