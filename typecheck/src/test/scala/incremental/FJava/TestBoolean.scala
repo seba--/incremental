@@ -44,7 +44,10 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
     Seq(
       MethodDec(
         CName('Bool), 'not, Seq(),
-        New(CName('Bool))) // dummy body, will be overwritten by subclasses
+        New(CName('Bool))), // dummy body, will be overwritten by subclasses
+      MethodDec(
+        CName('Bool), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
+        Var('then)) // dummy body, will be overwritten by subclasses
     )
   )
   typecheckTest("Bool ok", Bool)(CName('Bool))
@@ -55,7 +58,10 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
     Seq(
       MethodDec(
         CName('Bool), 'not, Seq(),
-        New(CName('False)))
+        New(CName('False))),
+      MethodDec(
+        CName('Bool), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
+        Var('then))
     )
   )
   val False = ClassDec(
@@ -64,7 +70,10 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
     Seq(
       MethodDec(
         CName('Bool), 'not, Seq(),
-        New(CName('True)))
+        New(CName('True))),
+      MethodDec(
+        CName('Bool), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
+        Var('else))
     )
   )
 
