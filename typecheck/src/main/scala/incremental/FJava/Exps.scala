@@ -59,10 +59,10 @@ object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
 
     if (!(lits(0).isInstanceOf[CName]))
-      error(s"Expected Class type CName, but got ${!(lits(0).isInstanceOf[CName])}")
+      error(s"Expected Class type CName, but got ${lits(0)}")
 
     if (!(lits(1).isInstanceOf[CName]))
-      error(s"Expected Super type CName, but got ${!(lits(0).isInstanceOf[CName])}")
+      error(s"Expected Super type CName, but got ${lits(0)}")
 
     for (i <- 2 until lits.size - 2 by 2) {
       val name = lits(i)
@@ -102,10 +102,10 @@ object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
 
     if (!(lits(0).isInstanceOf[CName]))
-      error(s"Expected return type CName, but got ${!(lits(0).isInstanceOf[CName])}")
+      error(s"Expected return type CName, but got ${lits(0)}")
 
     if (!(lits(1).isInstanceOf[Symbol]))
-      error(s"Expected Method name Symbol, but got ${!(lits(0).isInstanceOf[Symbol])}")
+      error(s"Expected Method name Symbol, but got ${lits(0)}")
 
       for (i <- 2 until lits.size - 2 by 2) {
       val name = lits(i)
@@ -125,7 +125,11 @@ object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
 
 object ProgramSyntax extends SyntaxChecking.SyntaxChecker(ProgramM) {
   def check[T](lits: Seq[Lit] , kids: Seq[Node_[T]]){
+    if (lits.nonEmpty)
+      error(s"No literals expected")
 
+    if (kids.exists(_.kind != ClassDec))
+      error(s"All children of a program must be class declarations, but found ${kids.filter(_.kind != ClassDec)}")
   }
 }
 

@@ -11,6 +11,16 @@ import incremental.{NodeKind, Node_}
  * Created by lirakuci on 3/10/15.
  */
 
+case object ProgramOK extends Type {
+  override def occurs(x: CVar[_]) = false
+  override def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case ProgramOK => cs
+    case UCName(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
 case object TNum extends Type {
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
