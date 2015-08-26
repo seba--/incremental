@@ -19,3 +19,8 @@ case class Join(target: Type, ts: Set[Type]) extends Constraint {
 case class Meet(target: Type, ts: Set[Type]) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = ts.foldLeft(cs)((cs, t) => target.subtype(t, cs))
 }
+
+case class NotEqConstraint(expected: Type, actual: Type) extends Constraint {
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS =  cs.never(Subtype(expected, actual))  // actual.unify(actual, cs)
+
+}

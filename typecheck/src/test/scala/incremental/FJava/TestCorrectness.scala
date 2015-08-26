@@ -1,8 +1,8 @@
 package incremental.FJava
 
 import constraints.CVar
-import constraints.equality.impl._
-import constraints.equality._
+import constraints.subtype.impl._
+import constraints.subtype._
 import incremental.Node._
 import incremental.{ Node_, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
@@ -27,8 +27,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assert(actual.isLeft, s"Type = $typ, Reqs = $req, CReqs = $creq, Constraint = $cons")
 
       val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
-        expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
-      }
+        Equal(expected, actual.left.get).solve(SolveContinuously.freshConstraintSystem).tryFinalize      }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
@@ -71,18 +70,21 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestError("String add(first, second) {first + seconds}", MethodDec(Seq(CName('String), 'getSum, Seq(('fst, CName('TNum)), ('snd, CName('TNum)))),
     Seq(Add(Num(1), Num(2)))))//(CName('TNum))
-  typecheckTestFJ("TNum add(first, second) {first + seconds}", MethodDec(Seq(CName('TNum), 'getSum, Seq(('fst, CName('TNum)), ('snd, CName('TNum)))),
-    Seq(Add(Num(1), Num(2)))))(CName('TNum))
+
+ // typecheckTestFJ("TNum add(first, second) {first + seconds}", MethodDec(Seq(CName('TNum), 'getSum, Seq(('fst, CName('TNum)), ('snd, CName('TNum)))),
+   // Seq(Add(Num(1), Num(2)))))(CName('TNum))
 
   //typecheckTestError("(C) e0 : C", DCast(CName('c),Var('e)))
   //typecheckTestError("(C) e0 : C", SCast(CName('c),'e))
-  typecheckTestFJ("Int getX(x: Int) {return Int} ", MethodDec(Seq(CName('TNum), 'getX, Seq(('x, CName('TNum)))),
-    Seq(Num(0))))(CName('Number))
-  typecheckTestFJ("Int getX(x: Int) {Number.getX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
-    Seq(Invk(Seq('getX), Seq(New(CName('Number)), Num(1))))))(CName('Number))
 
-  typecheckTestFJ("Int getX(x: Int) {(new Nr).getX(x): Int} ", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
-    Seq(Invk(Seq('getX), Seq(New(CName('Nr)), Var('x))))))(CName('Nr))
+//  typecheckTestFJ("Int getX(x: Int) {return Int} ", MethodDec(Seq(CName('TNum), 'getX, Seq(('x, CName('TNum)))),
+   // Seq(Num(0))))(CName('Number))
+
+//  typecheckTestFJ("Int getX(x: Int) {Number.getX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
+    //Seq(Invk(Seq('getX), Seq(New(CName('Number)), Num(1))))))(CName('Number))
+
+//  typecheckTestFJ("Int getX(x: Int) {(new Nr).getX(x): Int} ", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
+    //Seq(Invk(Seq('getX), Seq(New(CName('Nr)), Var('x))))))(CName('Nr))
 
   typecheckTestError("Int getX(x: Int) {(new Number).gX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
     Seq(Invk(Seq('gX), Seq(New(CName('Number)), Var('x))))))//(CName('Number))
@@ -152,7 +154,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestError("String foo(){return 1+1}", MethodDec(Seq(CName('String), 'foo, Seq()), Seq(Add(Num(1), Num(1)))))//(CName('C))
 
-  typecheckTestFJ("Int foo(){return 1+1}", MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))))(CName('C))
+ // typecheckTestFJ("Int foo(){return 1+1}", MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))))(CName('C))
   typecheckTestError("string c.foo", MethodDec(Seq(CName('String), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)))))))//(CName('C))
 
   typecheckTestError("Class C, Int foo(){return 1+1}, String bar(){return foo();} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
@@ -193,8 +195,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestFJ("Class C, Tnum foo(){return 1+1}, TNum bar(){return foo()}, TNum getBar() {return bar} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))),
-      MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(This('C))))),
-    MethodDec(Seq(CName('TNum), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(This('C))))))))(CName('C))
+      MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this))))),
+    MethodDec(Seq(CName('TNum), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))))))(CName('C))
 
   typecheckTestError("Class C, Tnum foo(){return 1+1}, TNum bar(){return foo()}, String getBar() {return bar} ", ClassDec(Seq(CName('C), CName('Object), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))),
@@ -202,7 +204,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       MethodDec(Seq(CName('String), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(New(CName('C)))))))))//(CName('C))
 
   typecheckTestFJ("Class C, TNum add(a Int, b Int){ C.add(1, 2)}", ClassDec(Seq(CName('C), CName('Object), Seq()),
-    Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(This('C), Num(1), Num(2))))))))(CName('C))
+    Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(Var('this), Num(1), Num(2))))))))(CName('C))
   //ne vend te this eshte New(CName('C))
 
   typecheckTestError("Class C, TNum add(a Int, b Int){ C.add('a 2)}", ClassDec(Seq(CName('C), CName('Object), Seq()),

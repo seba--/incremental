@@ -1,7 +1,7 @@
 package incremental.FJava
 
-import constraints.equality._
-import constraints.equality.impl._
+import constraints.subtype._
+import constraints.subtype.impl._
 import incremental.Node._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
@@ -25,7 +25,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
       assert(actual.isLeft, s"Expected $expected but got Type = $typ, Reqs = $req, CReqs = $creq, Constraint = $cons")
 
       val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
-        expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
+        Equal(expected, actual.left.get).solve(SolveContinuously.freshConstraintSystem).tryFinalize
       }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
@@ -73,7 +73,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
   typecheckTestError("Zero ok", Zero)
 
   val Succ = ClassDec(
-    Seq(CName('False), CName('Bool),
+    Seq(CName('Succ), CName('Nat),
       Seq('x -> CName('Nat))), // x is the predecessor of this nat
     Seq(
       MethodDec(

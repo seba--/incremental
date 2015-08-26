@@ -1,7 +1,7 @@
 package incremental.FJava
 
-import constraints.equality._
-import constraints.equality.impl._
+import constraints.subtype._
+import constraints.subtype.impl._
 import incremental.Node._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
@@ -25,7 +25,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
       assert(actual.isLeft, s"Expected $expected but got Type = $typ, Reqs = $req, CReqs = $creq, Constraint = $cons")
 
       val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
-        expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
+        Equal(expected, actual.left.get).solve(SolveContinuously.freshConstraintSystem).tryFinalize
       }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
@@ -64,7 +64,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
         Var('this)), // dummy body, will be overwritten by subclasses
       MethodDec(
         CName('Title), 'title, Seq(),
-        Var('this)) // dummy body, will be overwritten by subclasses
+        New(CName('Title))) // dummy body, will be overwritten by subclasses  Var(This) ==> check agian the diffference bettwen them
     )
   )
   val Professor = ClassDec(
