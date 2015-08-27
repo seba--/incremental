@@ -1,21 +1,38 @@
 package incremental.Java.syntax
 
+import incremental.Java.JavaCheck
 import incremental.Node._
-import incremental.{NodeKind, SyntaxChecking}
+import incremental.{Node_, NodeKind, SyntaxChecking}
 import JavaSyntaxChecker._
 
 
 /**
  * Created by qwert on 27.03.15.
  */
-abstract class Expr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck) with NT_ElemVal with NT_VarInit
+abstract class Expr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck) with NT_ElemVal with NT_VarInit with JavaCheck
 object Expr {
   val cExpr = classOf[Expr]
 }
 import Expr._
 
 // Literals
-case object Lit extends Expr(simple(Seq(classOf[Literal])))
+case object Lit extends Expr(simple(Seq(classOf[Literal]))){
+  def typeOfInt(s: String): Type = if (s.endsWith("l") || s.endsWith("L")) TLong() else TInt()
+  def typeOfFloat(s: String): Type = if (s.endsWith("f") || s.endsWith("F")) TFloat() else TDouble()
+
+  def checkStep(node: Node_[StepResult]): StepResult = node.kids(0) match {
+    case Deci(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
+    case Hexa(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
+    case Octa(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
+    case Float(s)    => (ExprType(typeOfFloat(s)), emptyCReqs, emptyVReqs, emptyCons)
+    case Bool(b)     => (ExprType(TBoolean()), emptyCReqs, emptyVReqs, emptyCons)
+    case Char(s)     => (ExprType(TChar()), emptyCReqs, emptyVReqs, emptyCons)
+    case StringL(s)  => (ExprType(TString), emptyCReqs, emptyVReqs, emptyCons)
+    case Null()      => (ExprType(???), emptyCReqs, emptyVReqs, emptyCons) // TODO: new type var (ref) for result type
+    case ClassL(t)   => (ExprType(t), emptyCReqs, emptyVReqs, emptyCons)
+    case VoidClass() => ???
+  }
+}
 
 //abstract class Literal(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
 //case object Deci extends Literal(simple(Seq(classOf[String])))

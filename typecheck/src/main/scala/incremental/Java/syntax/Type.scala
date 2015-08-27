@@ -37,7 +37,7 @@ case class ClassOrInterfaceType(typename: TypeDecSpec, typeArgs: Option[TypeArgs
 case class ClassType(typename: TypeDecSpec, typeArgs: Option[TypeArgs]) extends RefType with ExceptionType
 case class InterfaceType(typename: TypeDecSpec, typeArgs: Option[TypeArgs]) extends RefType
 
-trait TypeDecSpec //TODO: extends TypeName{}
+trait TypeDecSpec // is extended by TypeName
 // TypeName -> TypeDecSpec
 case class Member(typeDecSpec: TypeDecSpec, typeArgs: TypeArgs, id: String) extends TypeDecSpec
 
