@@ -1,6 +1,7 @@
 package incremental.pcf
 
 import constraints.equality.Gen
+import incremental.Node.Node
 import incremental.Node_
 
 object EvalWithConstraints {
@@ -9,11 +10,17 @@ object EvalWithConstraints {
     override def toString = s"Box($v)"
   }
   
-  trait Val
-  case class VNum(n: Integer) extends Val
-  case class VFun(vx: UVar, body: Val) extends Val // dynamically scoped
+  trait Val {
+    def get = this
+  }
+  case class VNum(n: Integer) extends Val {
+    override def toString = n.toString
+  }
+  case class VFun(vx: UVar, body: Val) extends Val { // dynamically scoped
+    override def toString = s"($vx => $body)"
+  }
   case class UVar(x: Symbol, private var box: Box[Val] = new Box(null)) extends Val {
-    def get = box.v
+    override def get = box.v
     def set(v: Val): Unit = {
       if (box.v != null) // just for debugging
         throw new IllegalStateException(s"Attempt to overwrite UVar $this")
@@ -23,6 +30,11 @@ object EvalWithConstraints {
         box.v = v
     }
     def isSet = box.v != null
+    override def toString =
+      if (isSet)
+        get.toString
+      else
+        "$" + x.name
   }
 
   val gen = new Gen
@@ -48,34 +60,35 @@ object EvalWithConstraints {
     }
   }
   case class VAdd(vres: UVar)(v1: Val, v2: Val) extends VConstraint {
-    override def solve = (v1, v2) match {
+    override def solve = (v1.get, v2.get) match {
+      case (null,_) | (_,null) => notyet
       case (VNum(n1), VNum(n2)) => solved(vres.set(VNum(n1 + n2)))
-      case (_: UVar, _) | (_, _: UVar) => notyet
       case _ => never
     }
+    override def toString = s"$vres = $v1 + $v2"
   }
   case class VMul(vres: UVar)(v1: Val, v2: Val) extends VConstraint {
-    override def solve = (v1, v2) match {
+    override def solve = (v1.get, v2.get) match {
+      case (null,_) | (_,null) => notyet
       case (VNum(n1), VNum(n2)) => solved(vres.set(VNum(n1 * n2)))
-      case (_: UVar, _) | (_, _: UVar) => notyet
       case _ => never
     }
   }
   case class VApp(vres: UVar)(v1: Val, v2: Val) extends VConstraint {
-    override def solve = v1 match {
+    override def solve = v1.get match {
+      case null => notyet
       case VFun(vx, body) => solved {vx.set(v2); vres.set(body)}
-      case _: UVar => notyet
       case _ => never
     }
   }
   case class VIf0(vres: UVar)(v1: Val, v2: Val, v3: Val) extends VConstraint {
-    override def solve = v1 match {
+    override def solve = v1.get match {
+      case null => notyet
       case VNum(n) =>
         if (n == 0)
           solved(vres.set(v2))
         else
           solved(vres.set(v3))
-      case _: UVar => notyet
       case _ => never
     }
   }
@@ -83,6 +96,31 @@ object EvalWithConstraints {
   type Cons = Seq[VConstraint]
   type Reqs = Map[Symbol, UVar]
   type StepResult = (Val, Reqs, Cons)
+
+
+  def eval(e: Node): Either[Val, String] = {
+    val root = e.withType[StepResult]
+    root.visitUninitialized { e =>
+      e.typ = evalStep(e)
+      true
+    }
+
+    val (v, r, c) = root.typ
+
+    var oldsize = c.size
+    var newsize = oldsize
+    var unsolved = c
+    do {
+      oldsize = newsize
+      unsolved = unsolved.filter(!_.solve)
+      newsize = unsolved.size
+    } while (newsize < oldsize)
+
+    if (unsolved.isEmpty && r.isEmpty)
+      Left(v.get)
+    else
+      Right(s"Unsolved requirements=$r, value=$v, unsolved constraints=$unsolved")
+  }
 
   def evalStep(e: Node_[StepResult]): StepResult = e.kind match {
     case Num =>
