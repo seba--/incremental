@@ -2,15 +2,17 @@ package incremental
 
 import Node._
 
-abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
+abstract class NodeKind[T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
   def unapplySeq(e: Node_[_]): Option[Seq[Node_[_]]] =
     if (e.kind == this)
       Some(e.kids.seq)
     else
       None
+
+  def check(lits: Seq[Any], kids: Seq[Node_[T]]): T
 }
 
-class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
+class Node_[T](val kind: NodeKind[T], val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
   kind.syntaxcheck(kind).check(lits, kidsArg)
 
   protected def maxHeight(seq: Seq[Node_[T]]): Int = {
@@ -59,6 +61,8 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
     }
     def seq: Seq[Node_[T]] = _kids
   }
+
+  def typs(i: Int) = _kids(i)._typ
 
   def withType[T] = this.asInstanceOf[Node_[T]]
 

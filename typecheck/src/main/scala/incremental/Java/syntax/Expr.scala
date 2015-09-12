@@ -1,15 +1,14 @@
 package incremental.Java.syntax
 
-import incremental.Java.JavaCheck
+import incremental.Java.JavaCheck._
 import incremental.Node._
 import incremental.{Node_, NodeKind, SyntaxChecking}
 import JavaSyntaxChecker._
 
-
 /**
  * Created by qwert on 27.03.15.
  */
-abstract class Expr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck) with NT_ElemVal with NT_VarInit with JavaCheck
+abstract class Expr(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[StepResult](syntaxcheck) with NT_ElemVal with NT_VarInit
 object Expr {
   val cExpr = classOf[Expr]
 }
@@ -20,7 +19,7 @@ case object Lit extends Expr(simple(Seq(classOf[Literal]))){
   def typeOfInt(s: String): Type = if (s.endsWith("l") || s.endsWith("L")) TLong() else TInt()
   def typeOfFloat(s: String): Type = if (s.endsWith("f") || s.endsWith("F")) TFloat() else TDouble()
 
-  def checkStep(node: Node_[StepResult]): StepResult = node.kids(0) match {
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = lits(0) match {
     case Deci(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
     case Hexa(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
     case Octa(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
