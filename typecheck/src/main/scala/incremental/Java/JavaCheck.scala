@@ -1,6 +1,7 @@
 package incremental.Java
 
-import constraints.{Constraint, ConstraintSystem, ConstraintSystemFactory}
+import constraints.CVar
+import constraints.javacons._
 import incremental.Java.syntax._
 import incremental.Node_
 
@@ -18,20 +19,38 @@ object JavaCheck {
   case class StmType(t: Type) extends CheckRes
   case class ExprType(t: Type) extends CheckRes
 
-  type CS <: ConstraintSystem[CS]
+  //type CS <: ConstraintSystem[CS]
 
   type VReqs = Map[Symbol, Type]
   type CReqs = Map[Symbol, Type] // TODO: find suitable type for class requirements
 
-  type Result = (CheckRes, CReqs, VReqs, CS)
-  type StepResult = (CheckRes, CReqs, VReqs, Seq[Constraint])
+  type Result = (CheckRes, VReqs, CReqs, CS)
+  type StepResult = (CheckRes, VReqs, CReqs, Seq[Constraint])
   type Kid = Node_[StepResult]
 
-  val emptyCReqs : Map[Symbol, Type] = Map()
-  val emptyVReqs : Map[Symbol, Type] = Map()
+  val emptyCReqs : CReqs = Map()
+  val emptyVReqs : VReqs = Map()
   val emptyCons : Seq[Constraint] = Seq()
 
   val TString : Type = ClassOrInterfaceType(TypeNameExt(PackageOrTypeNameExt(PackageOrTypeNameT("java"), "lang"), "String"), None)
+
+  val numTypes: Seq[Type] = Seq() // TODO: list numeric types (primitive)
+
+  def freshUVar()  = UVar(CVar(Symbol("foo"))) // TODO: fresh symbol creation?
+
+  def mergeVReqs(reqs1: VReqs, reqs2: VReqs): (Seq[Constraint], VReqs) = {
+    var cons = emptyCons
+    var reqs = reqs1
+
+    for((x, t2) <- reqs2){
+      reqs1.get(x) match {
+        case None => reqs += x -> t2
+        case Some(t1) => Equality(t1, t2) +: cons
+      }
+    }
+
+    (cons, reqs)
+  }
 
   //val csf: ConstraintSystemFactory[CS]
 

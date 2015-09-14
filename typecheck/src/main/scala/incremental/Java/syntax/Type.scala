@@ -74,3 +74,6 @@ case class WildcardLowerBound(superT: RefType) extends WildcardBound
 
 trait ResultType
 case class Void() extends ResultType
+
+// Type Variables (for Constraints)
+case class UVar(x: CVar[Type]) extends Type

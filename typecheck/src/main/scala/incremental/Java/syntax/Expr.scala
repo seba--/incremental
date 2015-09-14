@@ -2,8 +2,11 @@ package incremental.Java.syntax
 
 import incremental.Java.JavaCheck._
 import incremental.Node._
+import incremental.pcf.UVar
 import incremental.{Node_, NodeKind, SyntaxChecking}
 import JavaSyntaxChecker._
+import constraints.javacons._
+import incremental.Java.TypeChecker
 
 /**
  * Created by qwert on 27.03.15.
@@ -20,15 +23,15 @@ case object Lit extends Expr(simple(Seq(classOf[Literal]))){
   def typeOfFloat(s: String): Type = if (s.endsWith("f") || s.endsWith("F")) TFloat() else TDouble()
 
   def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = lits(0) match {
-    case Deci(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
-    case Hexa(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
-    case Octa(s)     => (ExprType(typeOfInt(s)), emptyCReqs, emptyVReqs, emptyCons)
-    case Float(s)    => (ExprType(typeOfFloat(s)), emptyCReqs, emptyVReqs, emptyCons)
-    case Bool(b)     => (ExprType(TBoolean()), emptyCReqs, emptyVReqs, emptyCons)
-    case Char(s)     => (ExprType(TChar()), emptyCReqs, emptyVReqs, emptyCons)
-    case StringL(s)  => (ExprType(TString), emptyCReqs, emptyVReqs, emptyCons)
-    case Null()      => (ExprType(???), emptyCReqs, emptyVReqs, emptyCons) // TODO: new type var (ref) for result type
-    case ClassL(t)   => (ExprType(t), emptyCReqs, emptyVReqs, emptyCons)
+    case Deci(s)     => (ExprType(typeOfInt(s)), emptyVReqs, emptyCReqs, emptyCons)
+    case Hexa(s)     => (ExprType(typeOfInt(s)), emptyVReqs, emptyCReqs, emptyCons)
+    case Octa(s)     => (ExprType(typeOfInt(s)), emptyVReqs, emptyCReqs, emptyCons)
+    case Float(s)    => (ExprType(typeOfFloat(s)), emptyVReqs, emptyCReqs, emptyCons)
+    case Bool(b)     => (ExprType(TBoolean()), emptyVReqs, emptyCReqs, emptyCons)
+    case Char(s)     => (ExprType(TChar()), emptyVReqs, emptyCReqs, emptyCons)
+    case StringL(s)  => (ExprType(TString), emptyVReqs, emptyCReqs, emptyCons)
+    case Null()      => (ExprType(freshUVar()), emptyVReqs, emptyCReqs, emptyCons)
+    case ClassL(t)   => (ExprType(t), emptyVReqs, emptyCReqs, emptyCons)
     case VoidClass() => ???
   }
 }
@@ -59,16 +62,95 @@ case class ClassL(t: Type) extends ClassLiteral // name conflict with Class type
 case class VoidClass() extends ClassLiteral
 
 // this reference
-case object This extends Expr(simple())
-case object QThis extends Expr(simple(Seq(classOf[TypeName])))
+case object This extends Expr(simple()){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val X = freshUVar()
+    (ExprType(X), Map('this -> X), emptyCReqs, emptyCons)
+  }
+}
+case object QThis extends Expr(simple(Seq(classOf[TypeName]))){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+}
 
 // Comparison Operators
-case object Gt extends Expr(simple(cExpr, cExpr))
-case object GtEq extends Expr(simple(cExpr, cExpr))
-case object Lt extends Expr(simple(cExpr, cExpr))
-case object LtEq extends Expr(simple(cExpr, cExpr))
-case object Eq extends Expr(simple(cExpr, cExpr))
-case object NotEq extends Expr(simple(cExpr, cExpr))
+case object Gt extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val widen: Constraint = PrimitiveWidening(t1, t2)
+    val t1inNum: Constraint = OneOf(t1, numTypes)
+    val t2inNum: Constraint = OneOf(t2, numTypes)
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+
+    (ExprType(TBoolean()), mReqs, emptyCReqs, mCons :+ widen :+ t1inNum :+ t2inNum)
+  }
+}
+case object GtEq extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val widen: Constraint = PrimitiveWidening(t1, t2)
+    val t1inNum: Constraint = OneOf(t1, numTypes)
+    val t2inNum: Constraint = OneOf(t2, numTypes)
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+
+    (ExprType(TBoolean()), mReqs, emptyCReqs, mCons :+ widen :+ t1inNum :+ t2inNum)
+  }
+}
+case object Lt extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val widen: Constraint = PrimitiveWidening(t1, t2)
+    val t1inNum: Constraint = OneOf(t1, numTypes)
+    val t2inNum: Constraint = OneOf(t2, numTypes)
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+
+    (ExprType(TBoolean()), mReqs, emptyCReqs, mCons :+ widen :+ t1inNum :+ t2inNum)
+  }
+}
+case object LtEq extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val widen: Constraint = PrimitiveWidening(t1, t2)
+    val t1inNum: Constraint = OneOf(t1, numTypes)
+    val t2inNum: Constraint = OneOf(t2, numTypes)
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+
+    (ExprType(TBoolean()), mReqs, emptyCReqs, mCons :+ widen :+ t1inNum :+ t2inNum)
+  }
+}
+case object Eq extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val widen = PrimitiveWidening(t1, t2)
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+
+    (ExprType(TBoolean()), mReqs, emptyVReqs, mCons :+ widen)
+  }
+}
+case object NotEq extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val widen = PrimitiveWidening(t1, t2)
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+
+    (ExprType(TBoolean()), mReqs, emptyVReqs, mCons :+ widen)
+  }
+}
 
 // Arithmetic Operators
 case object Plus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr)))
