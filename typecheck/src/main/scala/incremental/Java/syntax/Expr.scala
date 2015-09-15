@@ -83,8 +83,9 @@ case object Gt extends Expr(simple(cExpr, cExpr)){
     val t2inNum: Constraint = OneOf(t2, numTypes)
 
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons
 
-    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen :+ t1inNum :+ t2inNum)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), cons :+ widen :+ t1inNum :+ t2inNum)
   }
 }
 case object GtEq extends Expr(simple(cExpr, cExpr)){
@@ -97,8 +98,9 @@ case object GtEq extends Expr(simple(cExpr, cExpr)){
     val t2inNum: Constraint = OneOf(t2, numTypes)
 
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons
 
-    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen :+ t1inNum :+ t2inNum)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), cons :+ widen :+ t1inNum :+ t2inNum)
   }
 }
 case object Lt extends Expr(simple(cExpr, cExpr)){
@@ -111,8 +113,9 @@ case object Lt extends Expr(simple(cExpr, cExpr)){
     val t2inNum: Constraint = OneOf(t2, numTypes)
 
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons
 
-    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen :+ t1inNum :+ t2inNum)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), cons :+ widen :+ t1inNum :+ t2inNum)
   }
 }
 case object LtEq extends Expr(simple(cExpr, cExpr)){
@@ -125,8 +128,9 @@ case object LtEq extends Expr(simple(cExpr, cExpr)){
     val t2inNum: Constraint = OneOf(t2, numTypes)
 
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons
 
-    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen :+ t1inNum :+ t2inNum)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), cons :+ widen :+ t1inNum :+ t2inNum)
   }
 }
 case object Eq extends Expr(simple(cExpr, cExpr)){
@@ -136,8 +140,9 @@ case object Eq extends Expr(simple(cExpr, cExpr)){
 
     val widen = PrimitiveWidening(t1, t2)
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons
 
-    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), cons :+ widen)
   }
 }
 case object NotEq extends Expr(simple(cExpr, cExpr)){
@@ -147,8 +152,9 @@ case object NotEq extends Expr(simple(cExpr, cExpr)){
 
     val widen = PrimitiveWidening(t1, t2)
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons
 
-    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), cons :+ widen)
   }
 }
 
