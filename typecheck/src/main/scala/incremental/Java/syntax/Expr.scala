@@ -159,8 +159,68 @@ case object NotEq extends Expr(simple(cExpr, cExpr)){
 }
 
 // Arithmetic Operators
-case object Plus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr)))
-case object Minus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr)))
+case object Plus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr))){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = kids.size match {
+    case 1 => {
+      val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
+
+      val X = freshUVar()
+      val tInNum = OneOf(t, numTypes)
+      val xInNumOps = OneOf(X, numericOpsTypes)
+      val eq = Equality(t, X)
+
+      (ExprType(X), vReqs, cReqs, cons :+ tInNum :+ xInNumOps :+ eq)
+    }
+    case 2 => {
+      val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+      val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+      val X = freshUVar()
+
+      val widenString = PrimitiveWideningString(t1, t2)
+      val widenEq = PrimitiveWideningEq(X, t1, t2)
+      val oneOfCons = Seq(OneOf(t1, TString +: numTypes)
+                        , OneOf(t2, TString +: numTypes)
+                        , OneOf( X, TString +: numericOpsTypes))
+
+      val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+      val cons = cons1 ++ cons2 ++ mCons ++ oneOfCons :+ widenString :+ widenEq
+
+      (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2), cons)
+    }
+  }
+}
+case object Minus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr))){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = kids.size match {
+    case 1 => {
+      val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
+
+      val X = freshUVar()
+      val tInNum = OneOf(t, numTypes)
+      val xInNumOps = OneOf(X, numericOpsTypes)
+      val eq = Equality(t, X)
+
+      (ExprType(X), vReqs, cReqs, cons :+ tInNum :+ xInNumOps :+ eq)
+    }
+    case 2 => {
+      val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+      val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+      val X = freshUVar()
+
+      val widen = PrimitiveWidening(t1, t2)
+      val widenEq = PrimitiveWideningEq(X, t1, t2)
+      val oneOfCons = Seq(OneOf(t1, numTypes)
+                        , OneOf(t2, numTypes)
+                        , OneOf( X, numericOpsTypes))
+
+      val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+      val cons = cons1 ++ cons2 ++ mCons ++ oneOfCons :+ widen :+ widenEq
+
+      (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2), cons)
+    }
+  }
+}
 case object Mul extends Expr(simple(cExpr, cExpr))
 case object Div extends Expr(simple(cExpr, cExpr))
 case object Remain extends Expr(simple(cExpr, cExpr))
