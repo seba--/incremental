@@ -25,8 +25,8 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar[Type], (LBound, UBound)], 
   def notyet = {
     var cons = Seq[Constraint]()
     for ((x, (l, u)) <- bounds) {
-      val join = subtype.Join(UVar(x), l.nonground ++ l.ground.toSet)
-      val meet = subtype.Meet(UVar(x), u.nonground ++ u.ground.toSet)
+      val join = subtype.Join(UCName(x), l.nonground ++ l.ground.toSet)
+      val meet = subtype.Meet(UCName(x), u.nonground ++ u.ground.toSet)
       cons = cons :+ join :+ meet
     }
     cons
@@ -79,7 +79,7 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar[Type], (LBound, UBound)], 
       if (error.isEmpty)
         never
       else
-        never :+ subtype.Join(UVar(v), error)
+        never :+ subtype.Join(UCName(v), error)
     val newbounds = bounds + (v -> (newLower, upper))
     val cs = SolveEndCanonicalBoundsCS(newbounds, newnever)
 
@@ -95,7 +95,7 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar[Type], (LBound, UBound)], 
       if (error.isEmpty)
         never
       else
-        never :+ subtype.Meet(UVar(v), error)
+        never :+ subtype.Meet(UCName(v), error)
     val newbounds = bounds + (v -> (lower, newUpper))
     val cs = SolveEndCanonicalBoundsCS(newbounds, newnever)
 

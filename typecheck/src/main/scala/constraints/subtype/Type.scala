@@ -20,7 +20,7 @@ trait Type extends CTerm[Type] {
 
 }
 
-case class UVar(x: CVar[Type]) extends Type {
+case class UCName(x: CVar[Type]) extends Type {
   val isGround = false
   def occurs(x2: CVar[_]) = x == x2
   def subst(s: CSubst): Type = s.hgetOrElse(x, this)
@@ -42,7 +42,7 @@ case class UVar(x: CVar[Type]) extends Type {
     else cs.substitution.hget(x) match {
       case Some(t) => t.subtype(other, cs)
       case None => other match {
-        case UVar(y) =>
+        case UCName(y) =>
           if (cs.state.gen.isNegative(x))
             cs.addUpperBound(x, other)
           else
@@ -62,7 +62,7 @@ case class UVar(x: CVar[Type]) extends Type {
     else cs.substitution.hget(x) match {
       case Some(t) => other.subtype(t, cs)
       case None => other match {
-        case UVar(y) => other.subtype(this, cs)
+        case UCName(y) => other.subtype(this, cs)
         case _ =>
           if (other.occurs(x))
             cs.never(Subtype(other, this))
@@ -85,7 +85,7 @@ case object Top extends Type {
     [CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
   = other match {
     case Top => cs
-    case v@UVar(x) => v.supertype(this, cs)
+    case v@UCName(x) => v.supertype(this, cs)
     case _ => cs.never(Subtype(this, other))
   }
 

@@ -51,9 +51,9 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
       (SolveContinuously.freshConstraintSystem addNewConstraints notyet).tryFinalize
     }
 
-  def addLowerBound(v: CVar[Type], t: Type) = SolveEndCS(notyet :+ subtype.Subtype(t, UVar(v)))
+  def addLowerBound(v: CVar[Type], t: Type) = SolveEndCS(notyet :+ subtype.Subtype(t, UCName(v)))
 
-  def addUpperBound(v: CVar[Type], t: Type) = SolveEndCS(notyet :+ subtype.Subtype(UVar(v), t))
+  def addUpperBound(v: CVar[Type], t: Type) = SolveEndCS(notyet :+ subtype.Subtype(UCName(v), t))
 
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t
 

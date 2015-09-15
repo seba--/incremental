@@ -96,7 +96,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
 
 }
 
-class TestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+class vTestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 //class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
 //class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 //class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))

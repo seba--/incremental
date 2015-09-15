@@ -23,8 +23,8 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
   def notyet = {
     var cons = Seq[Constraint]()
     for ((x, (l, u)) <- bounds) {
-      val join = subtype.Join(UVar(x), l.nonground ++ l.ground.toSet)
-      val meet = subtype.Meet(UVar(x), u.nonground ++ u.ground.toSet)
+      val join = subtype.Join(UCName(x), l.nonground ++ l.ground.toSet)
+      val meet = subtype.Meet(UCName(x), u.nonground ++ u.ground.toSet)
       cons = cons :+ join :+ meet
     }
     cons
@@ -42,9 +42,9 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       val (newL, errorl) = l2 merge l1
       val (newU, erroru) = u2 merge u1
       if(errorl.nonEmpty)
-        mnever = mnever :+ subtype.Join(UVar(tv), errorl)
+        mnever = mnever :+ subtype.Join(UCName(tv), errorl)
       if(erroru.nonEmpty)
-        mnever = mnever :+ subtype.Meet(UVar(tv), erroru)
+        mnever = mnever :+ subtype.Meet(UCName(tv), erroru)
       val merged = (newL, newU)
       mbounds = mbounds + (tv -> merged)
     }
@@ -86,9 +86,9 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       val (newLb, errorl) = lb.subst(s)
       val (newUb, erroru) = ub.subst(s)
       if(errorl.nonEmpty)
-        newnever  = newnever  :+ subtype.Join(UVar(tv).subst(s), errorl)
+        newnever  = newnever  :+ subtype.Join(UCName(tv).subst(s), errorl)
       if(erroru.nonEmpty)
-        newnever  = newnever  :+ subtype.Meet(UVar(tv).subst(s), erroru)
+        newnever  = newnever  :+ subtype.Meet(UCName(tv).subst(s), erroru)
       (tv -> (newLb, newUb))
     }
     (newbounds, newnever)
@@ -111,7 +111,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       var temp = SolveContinuousSubstCS(subst, SolveContinuousSubst.defaultBounds, Seq())
 
       for ((tv, (lb, ub)) <- newbounds) {
-        val t = subst.hgetOrElse(tv, UVar(tv))
+        val t = subst.hgetOrElse(tv, UCName(tv))
         for(tpe <- lb.ground.toSet ++ lb.nonground)
           temp = tpe.subtype(t, temp)
         for(tpe <- ub.ground.toSet ++ ub.nonground)
@@ -152,7 +152,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       if (error.isEmpty)
         never
       else
-        never :+ subtype.Join(UVar(v), error)
+        never :+ subtype.Join(UCName(v), error)
     val newbounds = bounds + (v -> (newLower, upper))
     val cs = SolveContinuousSubstCS(substitution, newbounds, newnever)
 
@@ -168,7 +168,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       if (error.isEmpty)
         never
       else
-        never :+ subtype.Meet(UVar(v), error)
+        never :+ subtype.Meet(UCName(v), error)
     val newbounds = bounds + (v -> (lower, newUpper))
     val cs = SolveContinuousSubstCS(substitution, newbounds, newnever)
 

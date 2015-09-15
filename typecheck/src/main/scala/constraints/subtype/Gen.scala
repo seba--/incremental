@@ -19,14 +19,14 @@ class Gen extends GenBase {
     CVar(Symbol(prefix + next))
   }
 
-  def freshUVar(positive: Boolean): UVar = {
-    val v = UVar(freshSymbol("x$"))
+  def freshUVar(positive: Boolean): UCName = {
+    val v = UCName(freshSymbol("x$"))
     if (positive) _pos += v.x
     else _neg += v.x
     v
   }
 
-  def freshBiVar(): UVar = {
+  def freshBiVar(): UCName = {
     val res = freshUVar(true)
     _neg += res.x
     res
