@@ -22,13 +22,13 @@ object JavaCheck {
   //type CS <: ConstraintSystem[CS]
 
   type VReqs = Map[Symbol, Type]
-  type CReqs = Map[Symbol, Type] // TODO: find suitable type for class requirements
+  type CReqs = Seq[Any] // TODO: find suitable type for class requirements
 
   type Result = (CheckRes, VReqs, CReqs, CS)
   type StepResult = (CheckRes, VReqs, CReqs, Seq[Constraint])
   type Kid = Node_[StepResult]
 
-  val emptyCReqs : CReqs = Map()
+  val emptyCReqs : CReqs = Seq()
   val emptyVReqs : VReqs = Map()
   val emptyCons : Seq[Constraint] = Seq()
 
@@ -45,12 +45,14 @@ object JavaCheck {
     for((x, t2) <- reqs2){
       reqs1.get(x) match {
         case None => reqs += x -> t2
-        case Some(t1) => Equality(t1, t2) +: cons
+        case Some(t1) => cons = Equality(t1, t2) +: cons<
       }
     }
 
     (cons, reqs)
   }
+
+  def mergeCReqs(reqs1: CReqs, reqs2: CReqs): CReqs = reqs1 ++ reqs2
 
   //val csf: ConstraintSystemFactory[CS]
 

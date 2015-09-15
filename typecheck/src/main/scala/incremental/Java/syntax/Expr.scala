@@ -84,7 +84,7 @@ case object Gt extends Expr(simple(cExpr, cExpr)){
 
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
-    (ExprType(TBoolean()), mReqs, emptyCReqs, mCons :+ widen :+ t1inNum :+ t2inNum)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen :+ t1inNum :+ t2inNum)
   }
 }
 case object GtEq extends Expr(simple(cExpr, cExpr)){
@@ -98,7 +98,7 @@ case object GtEq extends Expr(simple(cExpr, cExpr)){
 
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
-    (ExprType(TBoolean()), mReqs, emptyCReqs, mCons :+ widen :+ t1inNum :+ t2inNum)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen :+ t1inNum :+ t2inNum)
   }
 }
 case object Lt extends Expr(simple(cExpr, cExpr)){
@@ -112,7 +112,7 @@ case object Lt extends Expr(simple(cExpr, cExpr)){
 
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
-    (ExprType(TBoolean()), mReqs, emptyCReqs, mCons :+ widen :+ t1inNum :+ t2inNum)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen :+ t1inNum :+ t2inNum)
   }
 }
 case object LtEq extends Expr(simple(cExpr, cExpr)){
@@ -126,7 +126,7 @@ case object LtEq extends Expr(simple(cExpr, cExpr)){
 
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
-    (ExprType(TBoolean()), mReqs, emptyCReqs, mCons :+ widen :+ t1inNum :+ t2inNum)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen :+ t1inNum :+ t2inNum)
   }
 }
 case object Eq extends Expr(simple(cExpr, cExpr)){
@@ -137,7 +137,7 @@ case object Eq extends Expr(simple(cExpr, cExpr)){
     val widen = PrimitiveWidening(t1, t2)
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
-    (ExprType(TBoolean()), mReqs, emptyVReqs, mCons :+ widen)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen)
   }
 }
 case object NotEq extends Expr(simple(cExpr, cExpr)){
@@ -148,7 +148,7 @@ case object NotEq extends Expr(simple(cExpr, cExpr)){
     val widen = PrimitiveWidening(t1, t2)
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
-    (ExprType(TBoolean()), mReqs, emptyVReqs, mCons :+ widen)
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), mCons :+ widen)
   }
 }
 
@@ -186,7 +186,9 @@ case object CastRef extends Expr(simple(Seq(classOf[RefType]), cExpr))
 case object InstanceOf extends Expr(simple(Seq(classOf[RefType]), cExpr))
 
 // Assignment Operators
-case object Assign extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
+case object Assign extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+}
 case object AssignMul extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
 case object AssignDiv extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
 case object AssignRemain extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr))
