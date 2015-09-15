@@ -481,12 +481,48 @@ case object LazyOr extends Expr(simple(cExpr, cExpr)){
 }
 
 // Conditional Operator (Expr ? Expr : Expr)
-case object Cond extends Expr(simple(cExpr, cExpr, cExpr))
+case object Cond extends Expr(simple(cExpr, cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+    val (ExprType(t3), vReqs3, cReqs3, cons3) = kids(2).typ
+
+    val X = freshUVar()
+
+    val t1IsBool = Equality(TBoolean(), t1)
+    val widen = PrimitiveWidening(t2, t3)
+    val widenEq = PrimitiveWideningEq(X, t2, t3)
+    val t2isPrimitive = OneOf(t2, primTypes)
+    val t3isPrimitive = OneOf(t3, primTypes)
+    val XisNumOps = OneOf(X, TBoolean() +: numericOpsTypes)
+
+    val (mCons, mReqs) = mergeVReqs(vReqs2, vReqs3) // TODO: expand merge to multiple operands
+    val cReqs = mergeCReqs(mergeCReqs(cReqs1, cReqs2), cReqs3) // TODO: expand merge to multiple operands
+    val cons = cons1 ++ cons2 ++ cons3 ++ mCons :+ t1IsBool :+ widen :+ widenEq :+ t2isPrimitive :+ t3isPrimitive :+ XisNumOps
+
+    (ExprType(X), mReqs, cReqs, cons)
+  }
+}
 
 // Cast Operators
-case object CastPrim extends Expr(simple(Seq(classOf[PrimType]), cExpr))
-case object CastRef extends Expr(simple(Seq(classOf[RefType]), cExpr))
-case object InstanceOf extends Expr(simple(Seq(classOf[RefType]), cExpr))
+case object CastPrim extends Expr(simple(Seq(classOf[PrimType]), cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    //val t1: PrimType = lits(0)
+    val t1 = lits(0).asInstanceOf[PrimType]
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(0).typ
+
+    val t1IsNumerical = OneOf(t1, numTypes)
+    val t2IsNumerical = OneOf(t2, numTypes)
+
+    (ExprType(t1), vReqs2, cReqs2, t1IsNumerical +: t2IsNumerical +: cons2)
+  }
+}
+case object CastRef extends Expr(simple(Seq(classOf[RefType]), cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+}
+case object InstanceOf extends Expr(simple(Seq(classOf[RefType]), cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+}
 
 // Assignment Operators
 case object Assign extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr)){
