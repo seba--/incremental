@@ -34,7 +34,11 @@ object JavaCheck {
 
   val TString : Type = ClassOrInterfaceType(TypeNameExt(PackageOrTypeNameExt(PackageOrTypeNameT("java"), "lang"), "String"), None)
 
-  val numTypes: Seq[Type] = Seq() // TODO: list numeric types (primitive)
+  val primTypes: Seq[Type] = Seq(TByte(), TShort(), TInt(), TLong(), TChar(), TFloat(), TDouble(), TBoolean())
+  val numTypes: Seq[Type] = Seq(TByte(), TShort(), TInt(), TLong(), TChar(), TFloat(), TDouble())
+  val integralTypes: Seq[Type] = Seq(TByte(), TShort(), TInt(), TLong(), TChar())
+  val floatTypes: Seq[Type] = Seq(TFloat(), TDouble())
+  val numericOpsTypes: Seq[Type] = Seq(TInt(), TLong(), TFloat(), TDouble())
 
   def freshUVar()  = UVar(CVar(Symbol("foo"))) // TODO: fresh symbol creation?
 
