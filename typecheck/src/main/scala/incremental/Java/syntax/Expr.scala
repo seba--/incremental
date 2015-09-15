@@ -333,7 +333,7 @@ case object PostDecr extends Expr(simple(cExpr)){
 case object LeftShift extends Expr(simple(cExpr, cExpr)){
   def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
-    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
     val t1InIntegral = OneOf(t1, integralTypes)
     val t2InIntegral = OneOf(t2, integralTypes)
@@ -347,7 +347,7 @@ case object LeftShift extends Expr(simple(cExpr, cExpr)){
 case object RightShift extends Expr(simple(cExpr, cExpr)){
   def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
-    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
     val t1InIntegral = OneOf(t1, integralTypes)
     val t2InIntegral = OneOf(t2, integralTypes)
@@ -361,7 +361,7 @@ case object RightShift extends Expr(simple(cExpr, cExpr)){
 case object URightShift extends Expr(simple(cExpr, cExpr)){
   def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
-    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
     val t1InIntegral = OneOf(t1, integralTypes)
     val t2InIntegral = OneOf(t2, integralTypes)
@@ -374,15 +374,111 @@ case object URightShift extends Expr(simple(cExpr, cExpr)){
 }
 
 // Bitwise Operators
-case object Complement extends Expr(simple(cExpr))
-case object And extends Expr(simple(cExpr, cExpr))
-case object Or extends Expr(simple(cExpr, cExpr))
-case object ExcOr extends Expr(simple(cExpr, cExpr))
+case object Complement extends Expr(simple(cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
+
+    val tIsIntegral = OneOf(t, integralTypes)
+
+    (ExprType(t), vReqs, cReqs, cons :+ tIsIntegral)
+  }
+}
+case object And extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val X = freshUVar()
+
+    val widen = PrimitiveWidening(t1, t2)
+    val widenEq = PrimitiveWideningEq(X, t1, t2)
+    val oneOfCons = Seq(OneOf(t1, TBoolean() +: integralTypes)
+                      , OneOf(t2, TBoolean() +: integralTypes)
+                      , OneOf( X, numericOpsTypes)) // TODO: + Boolean?
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons ++ oneOfCons :+ widen :+ widenEq
+
+    (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2), cons)
+  }
+}
+case object Or extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val X = freshUVar()
+
+    val widen = PrimitiveWidening(t1, t2)
+    val widenEq = PrimitiveWideningEq(X, t1, t2)
+    val oneOfCons = Seq(OneOf(t1, TBoolean() +: integralTypes)
+                      , OneOf(t2, TBoolean() +: integralTypes)
+                      , OneOf( X, numericOpsTypes)) // TODO: + Boolean?
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons ++ oneOfCons :+ widen :+ widenEq
+
+    (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2), cons)
+  }
+}
+case object ExcOr extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val X = freshUVar()
+
+    val widen = PrimitiveWidening(t1, t2)
+    val widenEq = PrimitiveWideningEq(X, t1, t2)
+    val oneOfCons = Seq(OneOf(t1, TBoolean() +: integralTypes)
+                      , OneOf(t2, TBoolean() +: integralTypes)
+                      , OneOf( X, numericOpsTypes)) // TODO: + Boolean?
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons ++ oneOfCons :+ widen :+ widenEq
+
+    (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2), cons)
+  }
+}
 
 // Logical Operators
-case object Not extends Expr(simple(cExpr))
-case object LazyAnd extends Expr(simple(cExpr, cExpr))
-case object LazyOr extends Expr(simple(cExpr, cExpr))
+case object Not extends Expr(simple(cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
+
+    val tIsBool = Equality(TBoolean(), t)
+
+    (ExprType(TBoolean()), vReqs, cReqs, cons :+ tIsBool)
+  }
+}
+case object LazyAnd extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val t1IsBool = Equality(TBoolean(), t1)
+    val t2IsBool = Equality(TBoolean(), t2)
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons :+ t1IsBool :+ t2IsBool
+
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), cons)
+  }
+}
+case object LazyOr extends Expr(simple(cExpr, cExpr)){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+    val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
+
+    val t1IsBool = Equality(TBoolean(), t1)
+    val t2IsBool = Equality(TBoolean(), t2)
+
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+    val cons = cons1 ++ cons2 ++ mCons :+ t1IsBool :+ t2IsBool
+
+    (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2), cons)
+  }
+}
 
 // Conditional Operator (Expr ? Expr : Expr)
 case object Cond extends Expr(simple(cExpr, cExpr, cExpr))
