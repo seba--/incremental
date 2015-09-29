@@ -1,6 +1,7 @@
-package incremental.Java.syntax
+package incremental.java.syntax
 
 import incremental.Node._
+import incremental.java.syntax.expr.{ArrayBaseType, Expr}
 
 /**
  * Created by qwert on 04.04.15.

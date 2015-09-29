@@ -1,8 +1,8 @@
-package incremental.Java
+package incremental.java
 
 import constraints.CVar
 import constraints.javacons._
-import incremental.Java.syntax._
+import incremental.java.syntax._
 import incremental.Node_
 
 /**

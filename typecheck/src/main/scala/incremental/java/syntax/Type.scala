@@ -1,8 +1,9 @@
-package incremental.Java.syntax
+package incremental.java.syntax
 
 import constraints.CVar
 import constraints.javacons.CSubst.CSubst
 import constraints.javacons.ConstraintSystem
+import incremental.java.syntax.expr.ArrayBaseType
 
 /**
  * Created by qwert on 04.04.15.

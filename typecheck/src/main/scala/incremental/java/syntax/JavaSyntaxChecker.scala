@@ -1,6 +1,8 @@
-package incremental.Java.syntax
+package incremental.java.syntax
 
+import incremental.Node.Lit
 import incremental.Node._
+import incremental.java.syntax.expr._
 import incremental.{NodeKind, Node_, SyntaxChecking}
 import scala.util.control.Breaks._
 import JavaSyntaxChecker.firstIndexOf

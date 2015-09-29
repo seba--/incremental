@@ -1,7 +1,7 @@
-package incremental.Java
+package incremental.java
 
 import constraints.javacons._
-import incremental.Java.syntax.{UVar, Type}
+import incremental.java.syntax.{UVar, Type}
 
 /**
  * Created by qwert on 22.07.15.

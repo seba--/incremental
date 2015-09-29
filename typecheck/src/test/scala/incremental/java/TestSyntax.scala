@@ -1,7 +1,12 @@
-package incremental.Java
+package incremental.java
 
 import incremental.Node._
-import incremental.Java.syntax._
+import incremental.java.syntax._
+import incremental.java.syntax.expr.Lit
+import incremental.java.syntax.expr._
+
+import scala.Null
+
 //import incremental.SyntaxChecking.SyntaxChecker.SyntaxError
 import org.scalatest.FunSuite
 

@@ -1,6 +1,6 @@
 package constraints.javacons
 
-import incremental.Java.syntax.Type /* TODO: new type trait like in other constraint systems
+import incremental.java.syntax.Type /* TODO: new type trait like in other constraint systems
                                             or extend java type with unification functions? */
 import constraints.javacons.CSubst.CSubst
 

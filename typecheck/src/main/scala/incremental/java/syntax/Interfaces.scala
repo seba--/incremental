@@ -1,7 +1,7 @@
-package incremental.Java.syntax
+package incremental.java.syntax
 
 import incremental.Node._
-import incremental.Java.syntax.JavaSyntaxChecker._
+import incremental.java.syntax.JavaSyntaxChecker._
 import incremental.{NodeKind, SyntaxChecking}
 
 /**
