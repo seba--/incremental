@@ -2,9 +2,9 @@ package incremental.java.syntax.expr
 
 import constraints.javacons._
 import incremental.Node._
+import incremental.SyntaxChecking._
 import incremental.java.JavaCheck._
 import incremental.java.syntax._
-import incremental.{NodeKind, SyntaxChecking}
 import incremental.java.syntax.expr.Expr._
 
 /**

@@ -5,6 +5,7 @@ import incremental.Node._
 import incremental.java.JavaCheck._
 import incremental.java.syntax._
 import incremental.{NodeKind, SyntaxChecking}
+import incremental.java.syntax.JavaSyntaxChecker._
 
 /**
  * Created by qwert on 27.03.15.

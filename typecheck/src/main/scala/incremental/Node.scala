@@ -141,8 +141,8 @@ object Node {
   type Node = Node_[Any]
 
   import scala.language.implicitConversions
-  implicit def kindExpression(k: NodeKind) = new KindExpression(k)
-  class KindExpression(k: NodeKind) {
+  implicit def kindExpression(k: NodeKind[_]) = new KindExpression(k)
+  class KindExpression(k: NodeKind[Any]) { // TODO: Any?
     def apply(): Node = new Node_[Any](k, Seq(), Seq())
     def apply(l: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l), Seq(sub:_*))
     def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
@@ -150,33 +150,33 @@ object Node {
     def apply(lits: Seq[Lit], sub: Seq[Node]): Node = new Node_[Any](k, lits, sub)
   }
   
-  val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)
-  def simple(kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
-  def simple(litTypes: Seq[Class[_]], kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
+  val ignore = (k: NodeKind[_]) => new SyntaxChecking.IgnoreSyntax(k)
+  def simple(kidTypes: Class[_ <: NodeKind[_]]*) = (k: NodeKind[_]) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
+  def simple(litTypes: Seq[Class[_]], kidTypes: Class[_ <: NodeKind[_]]*) = (k: NodeKind[_]) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
   implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 
 object SyntaxChecking {
-  type SyntaxCheck = NodeKind => SyntaxChecker
+  type SyntaxCheck = NodeKind[_] => SyntaxChecker
 
-  abstract class SyntaxChecker(k: NodeKind) {
-    class SyntaxError(val k: NodeKind, val msg: String) extends IllegalArgumentException(msg) {
+  abstract class SyntaxChecker(k: NodeKind[_]) {
+    class SyntaxError(val k: NodeKind[_], val msg: String) extends IllegalArgumentException(msg) {
       override def getMessage(): String = s"Syntax error in $k node: $msg"
     }
     def error(msg: String) = throw new SyntaxError(k, msg)
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]])
   }
 
-  class SyntaxCheckOps(f: NodeKind => SyntaxChecker) {
-    def orElse(g: NodeKind => SyntaxChecker) = (k: NodeKind) => new AlternativeSyntax(k, f, g)
-    def andAlso(g: NodeKind => SyntaxChecker) = (k: NodeKind) => new ConjunctiveSyntax(k, f, g)
+  class SyntaxCheckOps(f: NodeKind[_] => SyntaxChecker) {
+    def orElse(g: NodeKind[_] => SyntaxChecker) = (k: NodeKind[_]) => new AlternativeSyntax(k, f, g)
+    def andAlso(g: NodeKind[_] => SyntaxChecker) = (k: NodeKind[_]) => new ConjunctiveSyntax(k, f, g)
   }
 
-  class IgnoreSyntax(k: NodeKind) extends SyntaxChecker(k) {
+  class IgnoreSyntax(k: NodeKind[_]) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) = {}
   }
 
-  case class KidTypesLitTypesSyntax(k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[_ <: NodeKind]]) extends SyntaxChecker(k) {
+  case class KidTypesLitTypesSyntax(k: NodeKind[_], litTypes: Seq[Class[_]], kidTypes: Seq[Class[_ <: NodeKind[_]]]) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
       if (kids.size != kidTypes.size)
         error(s"Expected ${kidTypes.size} subexpressions but found ${kids.size} subexpressions")
@@ -194,7 +194,7 @@ object SyntaxChecking {
     }
   }
 
-  case class AlternativeSyntax(k: NodeKind, f: NodeKind => SyntaxChecker, g: NodeKind => SyntaxChecker) extends SyntaxChecker(k) {
+  case class AlternativeSyntax(k: NodeKind[_], f: NodeKind[_] => SyntaxChecker, g: NodeKind[_] => SyntaxChecker) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
       try {
         f(k).check(lits, kids)
@@ -208,7 +208,7 @@ object SyntaxChecking {
     }
   }
 
-  case class ConjunctiveSyntax(k: NodeKind, f: NodeKind => SyntaxChecker, g: NodeKind => SyntaxChecker) extends SyntaxChecker(k) {
+  case class ConjunctiveSyntax(k: NodeKind[_], f: NodeKind[_] => SyntaxChecker, g: NodeKind[_] => SyntaxChecker) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
       try {
         f(k).check(lits, kids)
