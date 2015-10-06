@@ -1,5 +1,6 @@
 package incremental.java.syntax
 
+import incremental.java.JavaCheck._
 import incremental.{NodeKind, SyntaxChecking}
 import incremental.java.syntax.JavaSyntaxChecker._
 import incremental.Node._
@@ -10,4 +11,4 @@ import incremental.Node._
 
 
 trait NT_ArrayInit extends NT_VarInit
-case object ArrayInit extends NodeKind(noLits andAlso unsafeAllKids(classOf[NT_VarInit])) with NT_ArrayInit
+case object ArrayInit extends NodeKind_TMP[StepResult](noLits andAlso unsafeAllKids(classOf[NT_VarInit])) with NT_ArrayInit
