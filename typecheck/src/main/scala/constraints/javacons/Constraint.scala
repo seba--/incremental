@@ -28,5 +28,5 @@ case class PrimitiveWideningEq(res: Type, actual: Type, expected: Type) extends 
 }
 
 case class OneOf(actual: Type, expected: Seq[Type]) extends Constraint {
-  def subst(s: CSubst) = SortOf(actual.subst(s), expected.map(_.subst(s)))
+  def subst(s: CSubst) = OneOf(actual.subst(s), expected.map(_.subst(s)))
 }

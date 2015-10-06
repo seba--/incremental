@@ -1,6 +1,6 @@
 package incremental.java.syntax
 
-import incremental.{SyntaxChecking, NodeKind}
+import incremental.{Node_, SyntaxChecking, NodeKind}
 import incremental.Node._
 import incremental.java.syntax.JavaSyntaxChecker._
 import incremental.java.JavaCheck._
@@ -15,7 +15,7 @@ trait NT_ElemValPair
 
 // TODO: remove this, just for intermediate purpose (compilation)
 abstract class NodeKind_TMP[T](syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[T](syntaxcheck){
-  def check(lits: Seq[Any], kids: Seq[Kid]): T = ???
+  def check(lits: Seq[Any], kids: Seq[Node_[T]]): T = ???
 }
 
 case object Anno extends NodeKind_TMP[StepResult](lits(Seq(classOf[TypeName])) andAlso unsafeAllKids(classOf[NT_ElemValPair])) with NT_Anno

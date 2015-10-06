@@ -24,7 +24,7 @@ object JavaCheck {
   type VReqs = Map[Symbol, Type]
   type CReqs = Seq[Any] // TODO: find suitable type for class requirements
 
-  type Result = (CheckRes, VReqs, CReqs, CS)
+  //type Result = (CheckRes, VReqs, CReqs, CS)
   type StepResult = (CheckRes, VReqs, CReqs, Seq[Constraint])
   type Kid = Node_[StepResult]
 
@@ -49,7 +49,7 @@ object JavaCheck {
     for((x, t2) <- reqs2){
       reqs1.get(x) match {
         case None => reqs += x -> t2
-        case Some(t1) => cons = Equality(t1, t2) +: cons<
+        case Some(t1) => cons = Equality(t1, t2) +: cons
       }
     }
 

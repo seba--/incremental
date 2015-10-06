@@ -38,8 +38,12 @@ case object InstanceOf extends Expr(simple(Seq(classOf[RefType]), cExpr)){
 
 // Class Instance Creation
 case object NewInstance extends Expr((lits(Seq(classOf[TypeArgs], classOf[ClassOrInterfaceType])) andAlso exprKids) orElse
-                                     (lits(Seq(classOf[ClassOrInterfaceType])) andAlso exprKids)) // TODO: ClassBody? (orElse)
+                                     (lits(Seq(classOf[ClassOrInterfaceType])) andAlso exprKids)){ // TODO: ClassBody? (orElse)
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+}
 case object QNewInstance extends Expr((lits(Seq(classOf[String])) orElse lits(Seq(classOf[TypeArgs], classOf[String])) orElse
                                        lits(Seq(classOf[String], classOf[TypeArgs])) orElse lits(Seq(classOf[TypeArgs], classOf[String], classOf[TypeArgs])))
                                       andAlso
-                                       (exprKids)) //TODO: orElse manyFollowedByOne(cExpr, classOf[ClassBody])))
+                                       (exprKids)){ //TODO: orElse manyFollowedByOne(cExpr, classOf[ClassBody])))
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+}
