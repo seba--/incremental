@@ -12,7 +12,7 @@ abstract class NodeKind[T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends 
   def check(lits: Seq[Any], kids: Seq[Node_[T]]): T
 }
 
-class Node_[T](val kind: NodeKind[T], val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
+class Node_[T](val kind: NodeKind[_], val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
   kind.syntaxcheck(kind).check(lits, kidsArg)
 
   protected def maxHeight(seq: Seq[Node_[T]]): Int = {
@@ -142,7 +142,7 @@ object Node {
 
   import scala.language.implicitConversions
   implicit def kindExpression(k: NodeKind[_]) = new KindExpression(k)
-  class KindExpression(k: NodeKind[Any]) { // TODO: Any?
+  class KindExpression(k: NodeKind[_]) {
     def apply(): Node = new Node_[Any](k, Seq(), Seq())
     def apply(l: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l), Seq(sub:_*))
     def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
