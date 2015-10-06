@@ -92,14 +92,16 @@ case class CName(x: Symbol) extends Type {
 
   def subtype
   [CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS =
-    if (this.equals(other)) cs
-    else cs.substitution.hget((CVar[Type](x))) match {
-      case None => other match {
-        case UCName(x) => this.subtype(other, cs)//other.subtype(this, this.subtype(other,cs)) //have to check whetehr it should be subtype or supertype not clear
+    if (this == other) cs
+    else other match {
+ //   else cs.substitution.hget((CVar[Type](x))) match {
+   //   case None => other match {
+        //case UCName(x) => other.subtype(this, this.subtype(other,cs)) //have to check whetehr it should be subtype or supertype not clear
+        case v@UCName(_) => v.supertype(other,cs)
         case _ => cs.never(Subtype(this, other))
       }
-      case Some(t) => t.subtype(other, other.subtype(t,cs))
-    }
+   //   case Some(t) => t.subtype(other, other.subtype(t,cs))
+   // }
 
 }
 
