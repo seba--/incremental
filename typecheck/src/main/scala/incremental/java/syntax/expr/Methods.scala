@@ -12,9 +12,13 @@ import incremental.java.syntax.expr.Expr._
  */
 
 // Method Invocation
-case object Invoke extends Expr(_ => MethodInvokationSyntax)
+case object Invoke extends Expr(_ => MethodInvokationSyntax){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+}
 
-abstract class MethodSpec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+abstract class MethodSpec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[StepResult](syntaxcheck){
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ??? // TODO: move to case objects und impl
+}
 case object Method extends MethodSpec(simple(Seq(classOf[MethodName])) orElse simple(Seq(classOf[String]), cExpr) orElse simple(Seq(classOf[TypeArgs], classOf[String]), cExpr))
 case object SuperMethod extends MethodSpec(simple(Seq(classOf[String])) orElse simple(Seq(classOf[TypeArgs], classOf[String])))
 case object QSuperMethod extends MethodSpec(simple(Seq(classOf[TypeName], classOf[String])) orElse simple(Seq(classOf[TypeName], classOf[TypeArgs], classOf[String])))
