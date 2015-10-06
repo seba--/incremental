@@ -1,6 +1,7 @@
 package incremental.java.syntax
 
 import incremental.Node._
+import incremental.java.JavaCheck._
 import incremental.java.syntax.expr.{ArrayBaseType, Expr}
 
 /**
@@ -30,7 +31,9 @@ case class PackageOrTypeNameT(id: String) extends PackageOrTypeName
 case class PackageOrTypeNameExt(ext: PackageOrTypeName, id: String) extends PackageOrTypeName
 
 trait NT_ExprName
-case object ExprName extends Expr(simple(Seq(classOf[String])) orElse simple(Seq(classOf[AmbName], classOf[String]))) with NT_ExprName
+case object ExprName extends Expr(simple(Seq(classOf[String])) orElse simple(Seq(classOf[AmbName], classOf[String]))) with NT_ExprName{
+  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+}
 
 trait Id extends NT_VarDecId
 case class ID(s: String) extends Id
