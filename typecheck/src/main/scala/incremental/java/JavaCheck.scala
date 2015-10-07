@@ -9,9 +9,6 @@ import incremental.Node_
  * Created by qwert on 25.08.15.
  */
 
-/* TODO make Constraint system imports precise (javacons instead of general constraint.*)
- *
- */
 object JavaCheck {
   trait CheckRes
   case object ClassOk extends CheckRes
