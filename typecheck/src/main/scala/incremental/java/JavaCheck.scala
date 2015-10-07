@@ -40,7 +40,9 @@ object JavaCheck {
   val floatTypes: Seq[Type] = Seq(TFloat(), TDouble())
   val numericOpsTypes: Seq[Type] = Seq(TInt(), TLong(), TFloat(), TDouble())
 
-  def freshUVar()  = UVar(CVar(Symbol("foo"))) // TODO: fresh symbol creation?
+  val gen = new Gen
+
+  def freshUVar()  = UVar(gen.freshSymbol[Type]("T"))
 
   def mergeVReqs(reqs1: VReqs, reqs2: VReqs): (Seq[Constraint], VReqs) = {
     var cons = emptyCons
