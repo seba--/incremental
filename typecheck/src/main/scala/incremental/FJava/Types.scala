@@ -3,6 +3,7 @@ package incremental.FJava
 import constraints.subtype.CSubst.CSubst
 import constraints.CVar
 import constraints.subtype._
+import incremental.pcf.with_subtyping.TBase
 import incremental.{NodeKind, Node_}
 
 
@@ -29,44 +30,20 @@ case object ProgramOK extends Type {
 }
 
 
-case object TNum extends Type {
+case object TNum extends TBase(Set(Top))
+
+case object TString extends TBase(Set(Top))
+
+case object OObject extends TBase(Set(Top))
+case object Title extends TBase(Set(OObject))
+case object NoTitle extends TBase(Set(OObject))
+case object ProfTitle extends TBase(Set(Title))
+case object Person extends TBase(Set(OObject))
+case object Porfessor extends TBase(Set(Person))
+case object Student extends TBase(Set(Person))
+
+case class CName(x: Symbol) extends Type{
   val isGround = true
-  def occurs(x: CVar[_]) = false
-  def subst(s: CSubst) = this
-
-  def ||(that: Type) = Some(this)
-  def &&(that: Type) = Some(that)
-  def <(that: Type) = that == Top
-
-  def subtype
-  [CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
-  = other match {
-    case TNum => cs
-    case v@UCName(x) => v.supertype(this, cs)
-    case _ => cs.never(Subtype(this, other))
-  }
-}
-
-case object TString extends Type {
-  val isGround = true
-  def occurs(x: CVar[_]) = false
-  def subst(s: CSubst) = this
-
-  def ||(that: Type) = Some(this)
-  def &&(that: Type) = Some(that)
-  def <(that: Type) = that == Top
-
-  def subtype
-  [CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
-  = other match {
-    case TString => cs
-    case v@UCName(x) => v.supertype(this, cs)
-    case _ => cs.never(Subtype(this, other))
-  }
-}
-
-case class CName(x: Symbol) extends Type {
-  val isGround = false
 
   def freeTVars = Set()
 
@@ -88,17 +65,19 @@ case class CName(x: Symbol) extends Type {
 
   def &&(that: Type) = Some(that)
 
-  def <(that: Type) = that == Top
+  def <(that: Type) = that == CName('Object)
 
   def subtype
   [CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS =
-    if (this == other) cs
-    else other match {
+    other match {
+      case CName(x2) =>
+        if (x == x2) cs
+        else  cs//this.subtype(other, cs)
  //   else cs.substitution.hget((CVar[Type](x))) match {
    //   case None => other match {
         //case UCName(x) => other.subtype(this, this.subtype(other,cs)) //have to check whetehr it should be subtype or supertype not clear
-        case v@UCName(_) => v.supertype(other,cs)
-        case _ => cs.never(Subtype(this, other))
+      case v@UCName(_) => v.supertype(other,cs)
+      case _ => cs.never(Subtype(this, other))
       }
    //   case Some(t) => t.subtype(other, other.subtype(t,cs))
    // }
