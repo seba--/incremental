@@ -4,6 +4,9 @@ trait Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS
 }
 
+case class Extend(lower : Type, upper: Type) extends Constraint{
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) : CS = lower.extend(upper, cs)
+}
 case class Subtype(lower: Type, upper: Type) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = lower.subtype(upper, cs)
 }

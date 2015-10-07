@@ -61,25 +61,24 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val cs = subcs addNewConstraints cons
         val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
         //  e.typ = (cs applyPartialSolution t, reqs2, creqs, sig, cs.propagate)
-        var creqs2: CReqs = Map()
-        var param = List[Object]()
-       // var typ = Seq[Type]()
-//        for ((tc, cld) <- creqs) {
+//        var creqs2: CReqs = Map()
+//        var param = List[Object]()
+//        var typ = Seq[Type]()
+//         for ((tc, cld) <- creqs) {
 //          val fld = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](cld._2, p => p._2)
 //          var meth = Map[Symbol, (Type, List[Type])]()
-//        for ((sm, body) <- cld._3) {
-//          val rt = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](Map(sm, body._1), p => p._2)
-//          for (i <- 0 until body._2.length) {
-//            val p = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](Map(sm, body._2(i)), p => p._2)
-//            param = p.get(sm) +: param
-//          }
-//         // meth = meth ++ Map(sm ->(rt.get(sm), param))
-//          }
-//          creqs2 = creqs2 - tc + (tc.subst(cs.substitution) ->(cld._1, fld, meth))
-//        } //change the merging of the class declaration
+//      //  for ((sm, body) <- cld._3) {
+//          val rt = cs.applyPartialSolutionIt[(Symbol, (Type, List[Type])), Map[Symbol, (Type, List[Type])], (Type, List[Type])](cld._3, p => p._2)
+//          //for (i <- 0 until body._2.length) {
+//            //val p = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](Map(sm, body._2(i)), p => p._2)
+//            //param = p.get(sm) +: param
+//        //  }
+//         // meth = meth ++ Map(sm -> rt)
+//          //}
+//           creqs2 = creqs2 - tc + (tc.subst(cs.substitution) ->(cld._1, fld, rt))
+//       } //change the merging of the class declaration
 //        //val fld = cld._2
-        //val creqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)//does not work unification in the class declaration inside
-    //  val creqs3 = cs.applyPartialSolutionIt[(Type), Seq[Type], Type](creqs, p => p)
+        val creqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)//does not work unification in the class declaration inside /  val creqs3 = cs.applyPartialSolutionIt[(Type), Seq[Type], Type](creqs, p => p)
         e.typ = (cs applyPartialSolution t, reqs2, creqs, cs.propagate)
         true
       }
@@ -205,7 +204,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var sparam = params.toMap
       var sig = Signature( retT, m, sparam, e0)
       var cCreqs = creqs
-    //  cons = Subtype(e0, retT) +: cons
+      //cons = Subtype(e0, retT) +: cons
 
       for ((x, xC) <- params) {
         reqs.get(x) match {
@@ -245,7 +244,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var (mCcons, mcreqs) = mergeCReqMaps(restCreq)
 
       cons = cons ++ mcons ++ mCcons
-      cons = Subtype(c, sup) +: cons
+      cons = Extend(c, sup) +: cons
 
       var fieldn = Map[Symbol, Type]()
       var creq = mcreqs
@@ -319,7 +318,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       else{ creq = creq
   cons = cons }
 
-  // cons = cons :+ Subtype(c,sup)
       ( c, mreqs, creq, cons)
 
     case ProgramM =>

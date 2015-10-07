@@ -24,8 +24,8 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
       val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, s"Expected $expected but got Type = $typ, Reqs = $req, CReqs = $creq, Constraint = $cons")
 
-      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
-        Equal(expected, actual.left.get).solve(SolveContinuously.freshConstraintSystem).tryFinalize
+      val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
+        Equal(expected, actual.left.get).solve(SolveContinuousSubst.freshConstraintSystem).tryFinalize
       }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
@@ -105,7 +105,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   typecheckTestError("Person ok", Person)
   typecheckTest("{Title, Person} ok", ProgramM(Title, Person))(ProgramOK)
   typecheckTestError("Professor ok", Professor)
-  //typecheckTestError("Student ok", Student)
+  typecheckTestError("Student ok", Student)
 
   typecheckTestError("{ProfTitle, Professor} ok", ProgramM(ProfTitle, Professor)) // misses superclass Person
   //typecheckTestError("{ProfTitle, Professor, Person} ok", ProgramM(ProfTitle, Professor, Person)) // misses Title in Person.title()
@@ -115,7 +115,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   //typecheckTest("{ProfTitle, Professor, Person, Title, Student, NoTitle} ok", ProgramM(ProfTitle, Professor, Person, Title, Student, NoTitle))(ProgramOK)
 }
 
-class TestBUSolveEndPerson extends TestPerson("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+class TestBUSolveEndPerson extends TestPerson("BUSolveEnd", new BUCheckerFactory(SolveContinuousSubst))
 //class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
 //class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 //class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))

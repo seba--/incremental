@@ -10,9 +10,13 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def notyet: Seq[Constraint]
   def never: Seq[Constraint]
 
+  def extend: Map[Type, Type]
+
   def addUpperBound(v: CVar[Type], t: Type): CS
   def addLowerBound(v: CVar[Type], t: Type): CS
   def never(c: Constraint): CS
+
+  def addExtend(t1 : Type, t2 : Type): CS
 
   def unsolved = notyet ++ never
   def isSolved = notyet.isEmpty && never.isEmpty
