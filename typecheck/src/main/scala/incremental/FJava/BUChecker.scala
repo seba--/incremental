@@ -245,7 +245,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var (mCcons, mcreqs) = mergeCReqMaps(restCreq)
 
       cons = cons ++ mcons ++ mCcons
-     // cons = Subtype(c, sup) +: cons
+      cons = Subtype(c, sup) +: cons
 
       var fieldn = Map[Symbol, Type]()
       var creq = mcreqs
@@ -302,20 +302,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             creq = creq - c ++ Map(c ->(cld._1, fieldn, cldM))
 
       }
-     // for ((c,cldC) <- creq) {
-     //   if (cldC._2.isEmpty && cldC._3.isEmpty) creq = creq - c
-    //  }
-
       mreqs.get('this) match {
         case None => mreqs = mreqs
         case Some(typ1) =>
             cons = Subtype(c, typ1)  +: cons//+:  Subtype(typ1, c)
           mreqs = mreqs - 'this
-      //    creq = creq - typ1
-        //  for (Equal(x, y) <- cons){
-          //  if ( x == typ1)
-            //  creq = creq -y
-          //}
       }
 
 
