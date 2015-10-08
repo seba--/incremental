@@ -43,36 +43,45 @@ case class UCName(x: CVar[Type]) extends Type {
    = if (this == other)  cs
     else cs.substitution.hget(x) match {
       case Some(t) =>
-        if (findM(t, other, cs.extend)) cs
+        if (cs.findM(t, other, cs.extend)) cs
         else t.subtype(other, cs)
       case None => other match {
         case UCName(y) =>
-          if (findM(this, other, cs.extend)) cs
-          else this.subtype(other, cs)
-        case _ =>
-          if (other.occurs(x))
-            cs.never(Subtype(this, other))
-          else
-            cs.addUpperBound(x, other)
-      }
-    }
-
-  def findM(t1 : Type, t2 : Type, extend: Map[Type, Type]): Boolean
-  = extend.get(t1) match {
-    case None => false
-    case Some(u) =>
-      if (u == t2) true
-      else findM(u, t2, extend)
-  }
+        // if (cs.findM(this, other, cs.extend)) cs
+        // else {
+           if (cs.state.gen.isNegative(x))
+             cs.addUpperBound(x, other)
+           else
+             cs.addUpperBound(x, other).addLowerBound(y, this)
+           case _ =>
+             if (other.occurs(x))
+               cs.never(Subtype(this, other))
+             else
+               cs.addUpperBound(x, other)
+         }
+      //}
+//      case None => other match {
+//        case UCName(y) =>
+//          if (cs.findM(this, other, cs.extend)) cs
+//          else this.subtype(other, cs)
+//        case _ =>
+//          if (other.occurs(x))
+//            cs.never(Subtype(this, other))
+//          else
+//            cs.addUpperBound(x, other)
+//      }
+//
+}
 
 
   def extend[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
-  = if (this == other)  cs
-  else cs.substitution.hget(x) match {
-    case Some(t) =>  t.extend(other, cs)
+  =
+    if (this == other)  cs
+    else cs.substitution.hget(x) match {
+    case Some(t) =>  cs.addExtend(t, other)
     case None => other match {
       case UCName(y) =>
-      cs.addExtend(this, other) //UCName(x), UCName (y)
+        cs.addExtend(this, other)  //cs.addExtend(this, other) //UCName(x), UCName (y)
       case _ => cs.never(Extend(other, this))
     }
   }
@@ -80,9 +89,14 @@ case class UCName(x: CVar[Type]) extends Type {
   def supertype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
   = if (this == other)  cs
     else cs.substitution.hget(x) match {
-      case Some(t) => other.subtype(t, cs)
+      case Some(t) =>
+        if (cs.findM (other, t, cs.extend)) cs
+        else other.subtype(t, cs)
       case None => other match {
-        case UCName(y) => other.subtype(this, cs)
+        case UCName(y) =>
+          if (cs.findM(other, this, cs.extend)) cs
+          else other.subtype(this, cs)
+          //other.subtype(this, cs)
         case _ =>
           if (other.occurs(x))
             cs.never(Subtype(other, this))

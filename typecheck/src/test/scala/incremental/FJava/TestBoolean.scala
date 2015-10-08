@@ -46,7 +46,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         New(CName('Bool))), // dummy body, will be overwritten by subclasses
       MethodDec(
         CName('Bool), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
-        Var('then)) // dummy body, will be overwritten by subclasses
+        New(CName('Bool))) // dummy body, will be overwritten by subclasses
     )
   )
   typecheckTest("Bool ok", Bool)(CName('Bool))

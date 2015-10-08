@@ -11,6 +11,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def never: Seq[Constraint]
 
   def extend: Map[Type, Type]
+  def findM(t1 : Type, t2 : Type, extend : Map[Type, Type]): Boolean
 
   def addUpperBound(v: CVar[Type], t: Type): CS
   def addLowerBound(v: CVar[Type], t: Type): CS

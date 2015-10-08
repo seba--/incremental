@@ -57,14 +57,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
         val (t, reqs, creqs, cons) = typecheckStep(e)
-        val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
+        val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
         val cs = subcs addNewConstraints cons
-        val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
+       val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
         //  e.typ = (cs applyPartialSolution t, reqs2, creqs, sig, cs.propagate)
-//        var creqs2: CReqs = Map()
+        var creqs2: CReqs = Map()
 //        var param = List[Object]()
 //        var typ = Seq[Type]()
-//         for ((tc, cld) <- creqs) {
+      //   for ((tc, cld) <- creqs) {
+        //   var t = tc
+          //  if (tc.isInstanceOf[CName])
+            //  creqs2 = creqs2 ++ Map(t -> cld)
+           //else t = tc.subst(cs.substitution)
+             //  creqs2 = creqs2 ++ Map(t -> cld)
+
 //          val fld = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](cld._2, p => p._2)
 //          var meth = Map[Symbol, (Type, List[Type])]()
 //      //  for ((sm, body) <- cld._3) {
@@ -72,13 +78,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 //          //for (i <- 0 until body._2.length) {
 //            //val p = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](Map(sm, body._2(i)), p => p._2)
 //            //param = p.get(sm) +: param
-//        //  }
+    //    }
 //         // meth = meth ++ Map(sm -> rt)
 //          //}
 //           creqs2 = creqs2 - tc + (tc.subst(cs.substitution) ->(cld._1, fld, rt))
 //       } //change the merging of the class declaration
 //        //val fld = cld._2
-        val creqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)//does not work unification in the class declaration inside /  val creqs3 = cs.applyPartialSolutionIt[(Type), Seq[Type], Type](creqs, p => p)
+      // val creqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)//does not work unification in the class declaration inside /  val creqs3 = cs.applyPartialSolutionIt[(Type), Seq[Type], Type](creqs, p => p)
         e.typ = (cs applyPartialSolution t, reqs2, creqs, cs.propagate)
         true
       }
@@ -204,7 +210,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var sparam = params.toMap
       var sig = Signature( retT, m, sparam, e0)
       var cCreqs = creqs
-      //cons = Subtype(e0, retT) +: cons
+    cons = Subtype(e0, retT) +: cons
 
       for ((x, xC) <- params) {
         reqs.get(x) match {
@@ -225,6 +231,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
       val sup = e.lits(1).asInstanceOf[CName]
+
+      val tc = TC(c, sup)
       val fields = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
       val field = fields.toMap
       var sig = Map[Symbol, (Type, Map[Symbol, Type], Type)]()
@@ -304,7 +312,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       mreqs.get('this) match {
         case None => mreqs = mreqs
         case Some(typ1) =>
-            cons = Subtype(c, typ1)  +: cons//+:  Subtype(typ1, c)
+          cons = Equal(c, typ1)  +: cons//+:  Subtype(typ1, c)
           mreqs = mreqs - 'this
       }
 
@@ -318,20 +326,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       else{ creq = creq
   cons = cons }
 
-      ( c, mreqs, creq, cons)
+      ( tc, mreqs, creq, cons) //tc
 
     case ProgramM =>
 
       var restReq = Seq[Reqs]()
       var restCreq = Seq[CReqs]()
       var cons = Seq[Constraint]()
-      var cls = Seq[Type]()
+      var cls = List[Type]()
       for (i <- 0 until e.kids.seq.size) {
         val (t, req, creq, _) = e.kids.seq(i).typ
         restReq = restReq :+ req
         restCreq = restCreq :+ creq
-        cls = cls :+ t
-
+       val tc = t.asInstanceOf[TC]
+        cons = cons :+ Extend(tc.tclass, tc.tsuper)
+        cls = cls :+ tc.tclass
       }
       var (mcons, mreqs) = mergeReqMaps(restReq)
       var (mCcons, mcreqs) = mergeCReqMaps(restCreq)
@@ -370,10 +379,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       wasReqs.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-          mcons = mcons :+  Subtype(r1, r2) :+ Subtype(r2,r1)
-       //   val Xmeet = gen.freshUVar(false)
-         // mcons = Meet(Xmeet, Set(r1, r2)) +: mcons
-         // mreqs += x -> Xmeet
+       //   mcons = mcons :+  Subtype(r1, r2) :+ Subtype(r2,r1)
+          val Xmeet = gen.freshUVar(false)
+          mcons = Meet(Xmeet, Set(r1, r2)) +: mcons
+          mreqs += x -> Xmeet
       }
     (mcons, mreqs)
   }
@@ -392,10 +401,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       wasF.get(f) match {
         case None => rF += f -> typ
         case Some(typ2) =>
-          mcons = mcons :+  Subtype(typ,typ2) :+ Subtype(typ2,typ)
-        //val Fjoin = gen.freshUVar(false)
-        //mcons = Join(Fjoin, Set(typ, typ2)) +: mcons
-        //rF += (f -> Fjoin)
+        //  mcons = mcons :+  Subtype(typ,typ2) :+ Subtype(typ2,typ)
+       val Fjoin = gen.freshUVar(false)
+          mcons = Join(Fjoin, Set(typ, typ2)) +: mcons
+        rF += (f -> Fjoin)
       }
     for ((m, mbody) <- cld2._3)
       wasM.get(m) match {
@@ -404,7 +413,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         //  val Rmeet = gen.freshUVar(false)
           //val Bmeet = gen.freshUVar(false)
           //mcons = Meet(Rmeet, Set(mbody1._1, mbody._1)) +: Meet(Bmeet, Set(mbody1._3, mbody._3)) +: mcons
-          mcons = mcons :+  Subtype(mbody._1, mbody2._1) :+ Subtype(mbody2._1,mbody._1)
+          val Rjoin = gen.freshUVar(false)
+          mcons = Join(Rjoin, Set(mbody._1, mbody2._1)) +: mcons
+          //mcons = mcons :+  Subtype(mbody._1, mbody2._1) :+ Subtype(mbody2._1,mbody._1)
           //mcons = mcons :+  Subtype(mbody._3, mbody2._3) :+ Subtype(mbody2._3,mbody._3)
           var params = mbody2._2
           for (i <- 0 until mbody._2.length){
@@ -419,10 +430,15 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             //    params += p -> Pjoin
 
             }
-          cldm = Map(m ->(mbody2._1, params))
+          cldm = Map(m ->(Rjoin, params))
       }
-    val cld: ClassDecl = (cld1._1, cldf, cldm)
-    mcons = Subtype(cld1._1, cld2._1) +: Subtype(cld2._1, cld1._1) +: mcons
+
+    val Sjoin = gen.freshUVar(false)
+    mcons = Join(Sjoin, Set(cld1._1, cld2._1)) +: mcons
+    //rF += (f -> Fjoin)
+
+    val cld: ClassDecl = (Sjoin, cldf, cldm)
+   // mcons = Subtype(cld1._1, cld2._1) +: Subtype(cld2._1, cld1._1) +: mcons
 
     (mcons, cld)
   }

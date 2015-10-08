@@ -58,37 +58,30 @@ case class CName(x: Symbol) extends Type {
 
   def subtype
   [CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS =
-    other match {
+  if (this == other) cs
+  else other match {
       case CName(x2) =>
-        if (x == x2) cs
-        else if (findM(this, other, cs.extend)) cs
+        if (cs.findM(this, other, cs.extend)) cs
         else this.subtype(other, cs)
-      case UCName(y) =>
-        cs.substitution.hget(y) match {
-          case Some(t) =>
-            if (findM(t, other, cs.extend)) cs
-            else t.subtype(other, cs)
-          case None =>
-            if (findM(this, other, cs.extend)) cs
-            else this.subtype(other, cs)
-        }
+      case v@UCName(_) => v.supertype(other, cs)
+//        cs.substitution.hget(y) match {
+//          case Some(t) =>
+//            if (cs.findM(t, other, cs.extend)) cs
+//            else t.subtype(other, cs)
+//          case None =>
+//            if (cs.findM(this, other, cs.extend)) cs
+//            else this.subtype(other, cs)
+//        }
       case _ => cs.never(Subtype(this, other))
     }
 
-  def findM(t1: Type, t2: Type, extend: Map[Type, Type]): Boolean
-  = extend.get(t1) match {
-    case None => false
-    case Some(u) =>
-      if (u == t2) true
-      else findM(u, t2, extend)
-  }
-
   def extend[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS =
+   // if (existT(this, cs.extend)) cs
+    //else
     other match {
       case CName(x2) =>
         if (x == x2) cs
-        else if (findM(this, other, cs.extend)) cs
-        else this.extend(other, cs)
+        else cs.addExtend(this, other)
       //else  cs//this.subtype(other, cs)
       //   else cs.substitution.hget((CVar[Type](x))) match {
       //   case None => other match {
@@ -96,11 +89,9 @@ case class CName(x: Symbol) extends Type {
       case UCName(y) =>
         cs.substitution.hget(y) match {
           case Some(t) =>
-            if (findM(t, other, cs.extend)) cs
-            else t.extend(other, cs)
+           cs.addExtend(t, other)
           case None =>
-            if (findM(this, other, cs.extend)) cs
-            else this.extend(other, cs)
+             cs.addExtend(this, other )
         }
       case _ => cs.never(Extend(this, other))
     }
@@ -115,6 +106,28 @@ case class Signature(ret: CName, m: Symbol, params: Map[Symbol, Type], bod : Typ
   def freeTVars = Set()
   def normalize = this
   def occurs(m2: CVar[_]) = m == m2
+  def subst(s: CSubst) = this
+  def ||(that: Type) = Some(this)
+  def &&(that: Type) = Some(that)
+  def <(that: Type) = that == Top
+
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
+  = other match {
+    case _ => cs.never(Subtype(this, other))
+  }
+  def extend[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
+  = other match {
+    case _ => cs.never(Extend(this, other))
+  }
+}
+
+case class TC(t1 : Type, t2 : Type) extends Type{
+  val isGround = true
+  val tclass = this.t1
+  val tsuper = this.t2
+  def freeTVars = Set()
+  def normalize = this
+  def occurs(x: CVar[_]) =false
   def subst(s: CSubst) = this
   def ||(that: Type) = Some(this)
   def &&(that: Type) = Some(that)
