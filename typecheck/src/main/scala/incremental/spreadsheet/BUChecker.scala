@@ -61,7 +61,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     // worksheets
     case Worksheet =>
-      val positions = e.lits.asInstanceOf[Seq[(Int, String)]]
+      val positions = e.lits.asInstanceOf[Seq[BatchSpec]]
       val (ts, reqss, _) = e.kids.seq.map(_.typ).unzip3
 
       val (mcons, mreqs) = mergeReqMaps(reqss)
@@ -104,6 +104,23 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
 
       (TWorksheet(types), restReqs, mcons ++ satcons)
+
+      // TODO: need dynamic dependency instrumentation (rather than static, AST-induced dependencies)
+
+    case Batch =>
+      var ts = Seq[Type]()
+      var mcons = Seq[EqConstraint]()
+      var mreqs: Reqs = Map()
+
+      for (i <- 0 until e.kids.seq.size) {
+        val (t, reqs, _) = e.kids(i)
+        ts = ts :+ t
+        val (mc, mr) = mergeReqMaps(mreqs, reqs)
+        mreqs = mr
+        mcons = mcons ++ mc
+      }
+
+      (TBatch(ts), mreqs, mcons)
 
     // cells
     case Empty =>

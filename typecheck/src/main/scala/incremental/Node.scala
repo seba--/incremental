@@ -153,6 +153,8 @@ object Node {
   def many(litType: Class[_ <: Any], kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, litType, kidType, true)
   def many1(kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, null, kidType, false)
   def many1(litType: Class[_ <: Any], kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, litType, kidType, false)
+  def manyl(litTypes: Seq[Class[_ <: Any]], kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitsTypesSyntax(k, litTypes, kidType, true)
+  def manyl1(litTypes: Seq[Class[_ <: Any]], kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitsTypesSyntax(k, litTypes, kidType, false)
   implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 
@@ -211,6 +213,27 @@ object SyntaxChecking {
       for (i <- 0 until lits.size)
         if (!litType.isInstance(lits(i)))
           error(s"Expected literal of ${litType} at position $i but found ${lits(i)} of ${lits(i).getClass}")
+    }
+  }
+
+  case class ManyKidTypesLitsTypesSyntax[K <: NodeKind](k: NodeKind, litTypes: Seq[Class[_]], kidType: Class[K], emptyAllowed: Boolean) extends SyntaxChecker(k) {
+    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
+      if (!emptyAllowed && kids.size == 0)
+        error(s"Expected at least one kid")
+
+      if (lits.size != kids.size)
+        error(s"Expected same number of literals and kids")
+
+      for (i <- 0 until kids.size)
+        if (!kidType.isInstance(kids(i).kind))
+          error(s"Expected kid of ${kidType} at position $i but found ${kids(i)} of ${kids(i).kind.getClass}")
+
+      if (lits.size != litTypes.size)
+        error(s"Expected ${litTypes.size} literals but found ${lits.size} literals")
+
+      for (i <- 0 until lits.size)
+        if (!litTypes(i).isInstance(lits(i)))
+          error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
     }
   }
 

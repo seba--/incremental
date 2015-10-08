@@ -26,6 +26,16 @@ case class TWorksheet(rows: Map[Int, Map[String, Type]]) extends Type {
   def subst(s: CSubst) = TWorksheet(rows mapValues(_.mapValues(_.subst(s))))
 }
 
+case class TBatch(ts: Seq[Type]) extends Type {
+  def occurs(x: CVar[_]) = false
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TBatch(ts2) => ???
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+  def subst(s: CSubst) = TBatch(ts map (_.subst(s)))
+}
+
 case class UVar(x: CVar[Type]) extends Type {
   def occurs(x2: CVar[_]) = x == x2
   def subst(s: CSubst):Type = s.hgetOrElse(x, this)
