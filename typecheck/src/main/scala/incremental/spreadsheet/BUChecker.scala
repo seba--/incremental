@@ -63,11 +63,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case Worksheet =>
       val positions = e.lits.asInstanceOf[Seq[(Int, String)]]
       val (ts, reqss, _) = e.kids.seq.map(_.typ).unzip3
+
       val (mcons, mreqs) = mergeReqMaps(reqss)
 
       // TODO saturate cells of this worksheet
 
       var types = Map[Int, Map[String, Type]]()
+
       for (i <- 0 until positions.size) {
         val (irow, icol) = positions(i)
         val t = ts(i)
@@ -79,8 +81,29 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         types += (irow -> newrow)
       }
 
+      var restReqs = Map[Int, Map[String, Type]]()
+      var satcons = Seq[EqConstraint]()
 
-      (TWorksheet(types), mreqs, mcons)
+      for ((irow, reqRow) <- mreqs) {
+        val row = types.getOrElse(irow, Map())
+        if (row.isEmpty)
+          restReqs += irow -> reqRow
+        else {
+          val rest = reqRow.filter { ct =>
+            val (icol, reqT) = ct
+            row.get(icol) match {
+              case None => true
+              case Some(t) =>
+                satcons = satcons :+ EqConstraint(reqT, t)
+                false
+            }
+          }
+          if (rest.nonEmpty)
+            restReqs += irow -> rest
+        }
+      }
+
+      (TWorksheet(types), restReqs, mcons ++ satcons)
 
     // cells
     case Empty =>
