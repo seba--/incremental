@@ -1,10 +1,9 @@
 package incremental.pcf.with_subtyping
 
-import constraints.Statistics
 import constraints.subtype._
 import incremental.{Node_, Util}
 import incremental.Node._
-import incremental.pcf.{Num, Add, Mul, App, Fix, If0, Var}
+import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
 
 /**
  * Created by oliver on 27.11.14.
@@ -20,7 +19,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
-    Util.timed(localState -> Statistics.typecheckTime) {
+    val (res, ctime) = Util.timed(
       try {
         val (t, sol_) = typecheckRec(root, Map())
         val sol = sol_.tryFinalize
@@ -31,7 +30,9 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
       }
-    }
+    )
+    localState.stats.typecheckTime += ctime
+    res
   }
 
   def typecheckRec(e: Node_[Result], ctx: TCtx): Result = {

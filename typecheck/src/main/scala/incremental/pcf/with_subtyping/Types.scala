@@ -54,15 +54,8 @@ class TBase(val directSupertypes: Set[Type]) extends Type {
     if (this == other || supertypes.contains(other))
       cs
     else other match {
-      case v@UCName(_) => v.supertype(this, cs)
+      case v@UVar(_) => v.supertype(this, cs)
       case _ => cs.never(Subtype(this, other))
-    }
-  def extend[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
-    if (this == other || supertypes.contains(other))
-      cs
-    else other match {
-      case v@UCName(_) => v.supertype(this, cs)
-      case _ => cs.never(Extend(this, other))
     }
 }
 
@@ -102,13 +95,7 @@ case class TFun(t1: Type, t2: Type) extends Type {
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case Top => cs
     case TFun(u1, u2) => t2.subtype(u2, u1.subtype(t1, cs))
-    case v@UCName(_) => v.supertype(this, cs)
-    case _ => cs.never(Subtype(this, other))
-  }
-  def extend[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
-    case Top => cs
-    case TFun(u1, u2) => t2.extend(u2, u1.subtype(t1, cs))
-    case v@UCName(_) => v.supertype(this, cs)
+    case v@UVar(_) => v.supertype(this, cs)
     case _ => cs.never(Subtype(this, other))
   }
 }

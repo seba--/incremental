@@ -1,10 +1,9 @@
 package incremental.pcf.with_subtyping
 
-import constraints.Statistics
 import constraints.subtype._
 import incremental.Node.Node
 import incremental.{Util, Node_}
-import incremental.pcf.{Num, Add, Mul, App, Fix, If0, Var}
+import incremental.pcf.{Num, Add, Mul, Abs, App, Fix, If0, Var}
 
 /**
  * Created by oliver on 20.11.14.
@@ -22,7 +21,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
-    Util.timed(localState -> Statistics.typecheckTime) {
+    val (res, ctime) = Util.timed {
       root.visitUninitialized { e =>
         val (t, reqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
@@ -43,6 +42,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       else
         Left(t)
     }
+    localState.stats.typecheckTime += ctime
+    res
   }
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
@@ -96,10 +97,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
 
-  def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
-    Util.timed(localState -> Statistics.mergeReqsTime) {
+  def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) = {
+    val (res, time) = Util.timed {
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
+    localState.stats.mergeReqsTime += time
+    res
+  }
 
   private def _mergeReqMaps(was: (Seq[Constraint], Reqs), newReqs: Reqs) = {
     val wasReqs = was._2
