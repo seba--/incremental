@@ -1,25 +1,25 @@
 package constraints.subtype.impl
 
-import constraints.subtype.CSubst.CSubst
 import constraints.{Statistics, CVar, subtype}
 import constraints.subtype._
+import constraints.subtype.CSubst.CSubst
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
 
-object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
-  def freshConstraintSystem = new SolveContinuousSubstCS(Map(), defaultBounds, Seq())
-  def solved(s: CSubst) = new SolveContinuousSubstCS(s, defaultBounds, Seq())
+object SolveContinuously extends ConstraintSystemFactory[SolveContinuouslyCS] {
+  def freshConstraintSystem = new SolveContinuouslyCS(Map(), defaultBounds, Seq())
+  def solved(s: CSubst) = new SolveContinuouslyCS(s, defaultBounds, Seq())
   def notyet(c: Constraint) = freshConstraintSystem addNewConstraint (c)
-  def never(c: Constraint) = new SolveContinuousSubstCS(Map(), defaultBounds, Seq(c))
+  def never(c: Constraint) = new SolveContinuouslyCS(Map(), defaultBounds, Seq(c))
 }
 
-case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
+case class SolveContinuouslyCS(substitution: CSubst, bounds: Map[CVar[Type], (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuouslyCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
-  def state = SolveContinuousSubst.state.value
-
+  def state = SolveContinuously.state.value
+  
   def notyet = {
     var cons = Seq[Constraint]()
     for ((x, (l, u)) <- bounds) {
@@ -30,9 +30,9 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
     cons
   }
 
-  def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, never :+ c)
+  def never(c: Constraint) = SolveContinuouslyCS(substitution, bounds, never :+ c)
 
-  def mergeSubsystem(that: SolveContinuousSubstCS) = {
+  def mergeSubsystem(that: SolveContinuouslyCS) = {
     val msubst = substitution ++ that.substitution
     var mbounds = bounds
     var mnever = never ++ that.never
@@ -49,7 +49,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       mbounds = mbounds + (tv -> merged)
     }
 
-    SolveContinuousSubstCS(msubst, mbounds, mnever)
+    SolveContinuouslyCS(msubst, mbounds, mnever)
   }
 
   def addNewConstraint(c: Constraint) = {
@@ -60,7 +60,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
-    state += Statistics.constraintCount -> cons.size
+    state += Statistics.constraintCount  -> cons.size
     Util.timed(state -> Statistics.constraintSolveTime) {
       cons.foldLeft(this)((cs, c) => c.solve(cs)).trySolve
     }
@@ -76,7 +76,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
         case x => x
       }
 
-      SolveContinuousSubstCS(substitution, finalbounds, never).saturateSolution
+      SolveContinuouslyCS(substitution, finalbounds, never).saturateSolution
     }
 
 
@@ -96,7 +96,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
 
   private def withSubstitutedBounds = {
     val (newbounds, newnever) = substitutedBounds(substitution)
-    SolveContinuousSubstCS(substitution, newbounds, never ++ newnever)
+    SolveContinuouslyCS(substitution, newbounds, never ++ newnever)
   }
 
   def trySolve = saturateSolution
@@ -108,7 +108,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       val subst = substitution ++ sol
       val (newbounds, newnever) = current.substitutedBounds(sol)
 
-      var temp = SolveContinuousSubstCS(subst, SolveContinuousSubst.defaultBounds, Seq())
+      var temp = SolveContinuouslyCS(subst, SolveContinuously.defaultBounds, Seq())
 
       for ((tv, (lb, ub)) <- newbounds) {
         val t = subst.hgetOrElse(tv, UVar(tv))
@@ -118,7 +118,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
           temp = t.subtype(tpe, temp)
       }
 
-      current = SolveContinuousSubstCS(temp.substitution, temp.bounds, current.never ++ newnever ++ temp.never)
+      current = SolveContinuouslyCS(temp.substitution, temp.bounds, current.never ++ newnever ++ temp.never)
       sol = current.solveOnce
     }
     current
@@ -154,7 +154,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       else
         never :+ subtype.Join(UVar(v), error)
     val newbounds = bounds + (v -> (newLower, upper))
-    val cs = SolveContinuousSubstCS(substitution, newbounds, newnever)
+    val cs = SolveContinuouslyCS(substitution, newbounds, newnever)
 
     subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs)
   }
@@ -170,18 +170,19 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       else
         never :+ subtype.Meet(UVar(v), error)
     val newbounds = bounds + (v -> (lower, newUpper))
-    val cs = SolveContinuousSubstCS(substitution, newbounds, newnever)
+    val cs = SolveContinuouslyCS(substitution, newbounds, newnever)
 
     subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs)
   }
 
 
-  def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t.subst(substitution)
+  def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t
 
   def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]
     (it: C, f: U=>CT)
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
-  = it.map(u => (u, f(u).subst(substitution)))
+  = it
 
-  def propagate = SolveContinuousSubstCS(Map(), bounds, never)
+  def propagate = this
+
 }

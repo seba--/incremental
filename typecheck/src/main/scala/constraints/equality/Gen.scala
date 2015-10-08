@@ -1,17 +1,16 @@
 package constraints.equality
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import constraints.{CVar, GenBase}
-import scala.collection.JavaConversions.mapAsScalaMap
+
 
 class Gen extends GenBase {
-  private var _next = 0
+  private val _next = new AtomicInteger()
 
   @inline
-  def next(): Int = {
-    val n = _next
-    _next += 1
-    n
-  }
+  def next(): Int = _next.incrementAndGet()
+
 
   def freshSymbol[T](prefix: String): CVar[T] =
     CVar(Symbol(prefix + next()))

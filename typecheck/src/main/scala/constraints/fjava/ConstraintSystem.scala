@@ -1,7 +1,7 @@
-package constraints.subtype
+package constraints.fjava
 
-import constraints.CVar
-import constraints.subtype.CSubst.CSubst
+import constraints.fjava.CSubst.CSubst
+
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   extends constraints.ConstraintSystem[Gen, Constraint, CS] {
@@ -10,8 +10,10 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def notyet: Seq[Constraint]
   def never: Seq[Constraint]
 
-  def addUpperBound(v: CVar[Type], t: Type): CS
-  def addLowerBound(v: CVar[Type], t: Type): CS
+  def addUpperBound(t1: Type, t2: Type): CS
+  def addLowerBound(t1: Type, t2: Type): CS
+  def extendz(t1: Type, t2: Type): CS
+  def solved(s: CSubst): CS
   def never(c: Constraint): CS
 
   def unsolved = notyet ++ never

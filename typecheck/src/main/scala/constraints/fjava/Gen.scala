@@ -1,8 +1,9 @@
-package constraints.subtype
+package constraints.fjava
 
 import java.util.concurrent.atomic.AtomicInteger
 
 import constraints.{CVar, GenBase}
+import incremental.fjava.UCName
 
 class Gen extends GenBase {
   private var _pos: Set[CVar[_]] = Set()
@@ -23,15 +24,15 @@ class Gen extends GenBase {
   def freshSymbol[T](prefix: String): CVar[T] =
     CVar(Symbol(prefix + next()))
 
-  def freshUVar(positive: Boolean): UVar = {
-    val v = UVar(freshSymbol("x$"))
+  def freshUCName(positive: Boolean): UCName = {
+    val v = UCName(freshSymbol("x$"))
     if (positive) _pos += v.x
     else _neg += v.x
     v
   }
 
-  def freshBiVar(): UVar = {
-    val res = freshUVar(true)
+  def freshBiVar(): UCName = {
+    val res = freshUCName(true)
     _neg += res.x
     res
   }

@@ -1,20 +1,22 @@
-package constraints.subtype.impl
+package constraints.fjava.impl
 
-import constraints.subtype.CSubst.CSubst
-import constraints.{Statistics, CVar, subtype}
-import constraints.subtype._
+
+import constraints.{subtype, Statistics}
+import constraints.fjava.CSubst.CSubst
+import incremental.fjava.CName
+import constraints.fjava._
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
 
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
-  def freshConstraintSystem = new SolveContinuousSubstCS(Map(), defaultBounds, Seq())
-  def solved(s: CSubst) = new SolveContinuousSubstCS(s, defaultBounds, Seq())
+  def freshConstraintSystem = new SolveContinuousSubstCS(Map(), Map(), Seq(), Map())
+  def solved(s: CSubst) = new SolveContinuousSubstCS(s, Map(), Seq(), Map())
   def notyet(c: Constraint) = freshConstraintSystem addNewConstraint (c)
-  def never(c: Constraint) = new SolveContinuousSubstCS(Map(), defaultBounds, Seq(c))
+  def never(c: Constraint) = new SolveContinuousSubstCS(Map(), Map(), Seq(c), Map())
 }
 
-case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], (LBound, UBound)], never: Seq[Constraint]) extends ConstraintSystem[SolveContinuousSubstCS] {
+case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Type]], never: Seq[Constraint], extend: Map[Type, Type]) extends ConstraintSystem[SolveContinuousSubstCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
@@ -22,18 +24,17 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
 
   def notyet = {
     var cons = Seq[Constraint]()
-    for ((x, (l, u)) <- bounds) {
-      val join = subtype.Join(UVar(x), l.nonground ++ l.ground.toSet)
-      val meet = subtype.Meet(UVar(x), u.nonground ++ u.ground.toSet)
-      cons = cons :+ join :+ meet
+    for ((t, tbnds) <- bounds; bound <- tbnds) {
+      cons = cons :+ Subtype(t, bound)
     }
     cons
   }
 
-  def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, never :+ c)
+  def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, never :+ c, extend)
 
   def mergeSubsystem(that: SolveContinuousSubstCS) = {
     val msubst = substitution ++ that.substitution
+    /*val mextend = extend ++ that.extend
     var mbounds = bounds
     var mnever = never ++ that.never
 
@@ -42,14 +43,15 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       val (newL, errorl) = l2 merge l1
       val (newU, erroru) = u2 merge u1
       if(errorl.nonEmpty)
-        mnever = mnever :+ subtype.Join(UVar(tv), errorl)
+        mnever = mnever :+ subtype.Join(UCName(tv), errorl)
       if(erroru.nonEmpty)
-        mnever = mnever :+ subtype.Meet(UVar(tv), erroru)
+        mnever = mnever :+ subtype.Meet(UCName(tv), erroru)
       val merged = (newL, newU)
       mbounds = mbounds + (tv -> merged)
     }
 
-    SolveContinuousSubstCS(msubst, mbounds, mnever)
+    SolveContinuousSubstCS(msubst, mbounds, mnever, mextend)*/
+    ??? //TODO
   }
 
   def addNewConstraint(c: Constraint) = {
@@ -68,27 +70,28 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
 
   def tryFinalize =
     Util.timed(state -> Statistics.finalizeTime) {
-      //set upper bounds of negative vars to Top if still undetermined and solve
-      val finalbounds = bounds.map {
-        case (tv, (lower, upper)) if gen.isNegative(tv) && !upper.isGround =>
+      //set upper bounds of vars to Object if still undetermined and solve
+     /* val finalbounds = bounds.map {
+        case (tv, ) if gen.isNegative(tv) && !upper.isGround =>
           val (newUpper, _) = upper.add(subtype.Top)
           (tv, (lower, newUpper))
         case x => x
       }
 
-      SolveContinuousSubstCS(substitution, finalbounds, never).saturateSolution
+      SolveContinuousSubstCS(substitution, finalbounds, never, extend).saturateSolution*/
+      ???
     }
 
 
-  private def substitutedBounds(s: CSubst) = {
+ /* private def substitutedBounds(s: CSubst) = {
     var newnever = Seq[Constraint]()
     val newbounds: Map[CVar[Type], (LBound,UBound)] = for ((tv, (lb, ub)) <- bounds) yield {
       val (newLb, errorl) = lb.subst(s)
       val (newUb, erroru) = ub.subst(s)
       if(errorl.nonEmpty)
-        newnever  = newnever  :+ subtype.Join(UVar(tv).subst(s), errorl)
+        newnever  = newnever  :+ subtype.Join(UCName(tv).subst(s), errorl)
       if(erroru.nonEmpty)
-        newnever  = newnever  :+ subtype.Meet(UVar(tv).subst(s), erroru)
+        newnever  = newnever  :+ subtype.Meet(UCName(tv).subst(s), erroru)
       (tv -> (newLb, newUb))
     }
     (newbounds, newnever)
@@ -96,7 +99,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
 
   private def withSubstitutedBounds = {
     val (newbounds, newnever) = substitutedBounds(substitution)
-    SolveContinuousSubstCS(substitution, newbounds, never ++ newnever)
+    SolveContinuousSubstCS(substitution, newbounds, never ++ newnever, extend)
   }
 
   def trySolve = saturateSolution
@@ -108,17 +111,17 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       val subst = substitution ++ sol
       val (newbounds, newnever) = current.substitutedBounds(sol)
 
-      var temp = SolveContinuousSubstCS(subst, SolveContinuousSubst.defaultBounds, Seq())
+      var temp = SolveContinuousSubstCS(subst, SolveContinuousSubst.defaultBounds, Seq(), extend)
 
       for ((tv, (lb, ub)) <- newbounds) {
-        val t = subst.hgetOrElse(tv, UVar(tv))
+        val t = subst.hgetOrElse(tv, UCName(tv))
         for(tpe <- lb.ground.toSet ++ lb.nonground)
           temp = tpe.subtype(t, temp)
         for(tpe <- ub.ground.toSet ++ ub.nonground)
           temp = t.subtype(tpe, temp)
       }
 
-      current = SolveContinuousSubstCS(temp.substitution, temp.bounds, current.never ++ newnever ++ temp.never)
+      current = SolveContinuousSubstCS(temp.substitution, temp.bounds, current.never ++ newnever ++ temp.never, extend ++ temp.extend)
       sol = current.solveOnce
     }
     current
@@ -141,40 +144,61 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
       }
     }
     sol
+  }*/
+
+  def addLowerBound(t1: Type, t2: Type) = addUpperBound(t2, t1)
+
+  def addExtend(t1 : Type, t2:Type) = {
+    if (t1 == t2) never(Extend(t1, t2))
+    else {
+      t1 match {
+        case CName('Object) =>
+          this.never(Extend(t1, t2))
+        case _ =>
+          extend.get(t1) match {
+            case None =>
+              extendMap(t1, t2)
+            case Some(t3) =>
+              Equal(t2, t3).solve(this)
+         }
+      }
+    }
   }
 
-  def addLowerBound(v: CVar[Type], t: Type) = {
-    val (lower, upper) = bounds(v)
-    val (newLower, error) = lower.add(t)
-    val changed = if (newLower.isGround) newLower.ground.get else t
+  private def extendMap(t1: Type, t2: Type) =
+    SolveContinuousSubstCS(this.substitution, this.bounds, this.never, this.extend + (t1 -> t2))
 
-    val newnever =
-      if (error.isEmpty)
-        never
-      else
-        never :+ subtype.Join(UVar(v), error)
-    val newbounds = bounds + (v -> (newLower, upper))
-    val cs = SolveContinuousSubstCS(substitution, newbounds, newnever)
+  def findM(t1 : Type, t2 : Type, extend: Map[Type, Type]): Boolean = {
+    (t1, t2) match {
+      case (_, CName('Object)) => true
+      case (CName('Object), _) => false
+      case _ =>  extend.get(t1) match {
+        case None => false
+        case Some(u) =>
+          if (u == t2) true
+          else findM(u, t2, extend)
 
-    subtype.Meet(changed, upper.nonground ++ upper.ground.toSet).solve(cs)
+      }
+    }
   }
 
-  def addUpperBound(v: CVar[Type], t: Type) = {
-    val (lower, upper) = bounds(v)
-    val (newUpper, error) = upper.add(t)
-    val changed = if (newUpper.isGround) newUpper.ground.get else t
+  def addUpperBound(t1: Type, t2: Type) =
+    if (t1 == t2)
+      this
+    else (t1, t2) match {
+      case (CName('Object), UCName(x)) =>
+        Equal(t1, t2).solve(this)
+      case (CName('Object), CName(n)) if n != 'Object =>
+        this.never(Subtype(t1, t2))
+      case _  =>
+        extendBound(t1, t2)
+    }
 
-    val newnever =
-      if (error.isEmpty)
-        never
-      else
-        never :+ subtype.Meet(UVar(v), error)
-    val newbounds = bounds + (v -> (lower, newUpper))
-    val cs = SolveContinuousSubstCS(substitution, newbounds, newnever)
 
-    subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs)
+  private def extendBound(t1: Type, t2: Type) = {
+    val t1bnds = bounds.getOrElse(t1, Set[Type]())
+    SolveContinuousSubstCS(this.substitution, bounds + (t1 -> (t1bnds + t2)), this.never, this.extend)
   }
-
 
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t.subst(substitution)
 
@@ -183,5 +207,5 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
   = it.map(u => (u, f(u).subst(substitution)))
 
-  def propagate = SolveContinuousSubstCS(Map(), bounds, never)
+  def propagate = SolveContinuousSubstCS(Map(), bounds, never, extend)
 }

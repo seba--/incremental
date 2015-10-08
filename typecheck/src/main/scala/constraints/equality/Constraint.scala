@@ -12,9 +12,3 @@ case class EqConstraint(expected: Type, actual: Type) extends Constraint {
   def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = solve(cs)
   def subst(s: CSubst) = EqConstraint(expected.subst(s), actual.subst(s))
 }
-
-case class NotEqConstraint(expected: Type, actual: Type) extends Constraint {
-  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS =  cs.never(EqConstraint(expected, actual))  // actual.unify(actual, cs)
-  def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = solve(cs)
-  def subst(s: CSubst) = EqConstraint(expected.subst(s), actual.subst(s))
-}

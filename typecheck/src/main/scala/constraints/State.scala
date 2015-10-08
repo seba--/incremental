@@ -1,11 +1,8 @@
 package constraints
 
-import java.util
-
 import constraints.Statistics.Statistics
 import incremental.Util
 
-import scala.collection.mutable
 
 case class State[G <: GenBase](gen: G) {
   private val _stats = Array.fill(Statistics.maxId)(0.0)
