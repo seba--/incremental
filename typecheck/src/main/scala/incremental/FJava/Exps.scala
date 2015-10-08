@@ -1,4 +1,4 @@
-package incremental.FJava
+package incremental.fjava
 
 import constraints.equality.Type
 import incremental.{NodeKind, SyntaxChecking}

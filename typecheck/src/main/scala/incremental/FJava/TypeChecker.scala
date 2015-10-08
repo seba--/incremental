@@ -1,7 +1,7 @@
-package incremental.FJava
+package incremental.fjava
 
 import constraints.CVar
-import constraints.subtype._
+import constraints.fjava._
 import incremental.MyBuilder
 import incremental.systemf.UVar
 

@@ -1,7 +1,7 @@
-package incremental.FJava
+package incremental.fjava
 
 import constraints.{CVar, Statistics}
-import constraints.subtype._
+import constraints.fjava._
 import incremental.{Node_, Util}
 import incremental.Node._
 
@@ -60,7 +60,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
         val cs = subcs addNewConstraints cons
        val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-        //  e.typ = (cs applyPartialSolution t, reqs2, creqs, sig, cs.propagate)
         var creqs2: CReqs = Map()
 //        var param = List[Object]()
 //        var typ = Seq[Type]()
@@ -210,7 +209,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var sparam = params.toMap
       var sig = Signature( retT, m, sparam, e0)
       var cCreqs = creqs
-    cons = Subtype(e0, retT) +: cons
+      cons = Subtype(e0, retT) +: cons
 
       for ((x, xC) <- params) {
         reqs.get(x) match {

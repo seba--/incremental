@@ -1,8 +1,8 @@
-package incremental.FJava
+package incremental.fjava
 
 import constraints.CVar
-import constraints.subtype.impl._
-import constraints.subtype._
+import constraints.fjava.impl._
+import constraints.fjava._
 import incremental.Node._
 import incremental.{ Node_, Util}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}

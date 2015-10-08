@@ -3,7 +3,7 @@ package constraints.fjava.impl
 
 import constraints.{subtype, Statistics}
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.CName
+import incremental.fjava.{UCName, CName}
 import constraints.fjava._
 import incremental.Util
 
@@ -12,7 +12,7 @@ import scala.collection.generic.CanBuildFrom
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
   def freshConstraintSystem = new SolveContinuousSubstCS(Map(), Map(), Seq(), Map())
   def solved(s: CSubst) = new SolveContinuousSubstCS(s, Map(), Seq(), Map())
-  def notyet(c: Constraint) = freshConstraintSystem addNewConstraint (c)
+  def notyet(c: Constraint) = freshConstraintSystem.addNewConstraint(c)
   def never(c: Constraint) = new SolveContinuousSubstCS(Map(), Map(), Seq(c), Map())
 }
 
@@ -82,6 +82,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       ???
     }
 
+   def trySolve: SolveContinuousSubstCS = ???
 
  /* private def substitutedBounds(s: CSubst) = {
     var newnever = Seq[Constraint]()
@@ -148,7 +149,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   def addLowerBound(t1: Type, t2: Type) = addUpperBound(t2, t1)
 
-  def addExtend(t1 : Type, t2:Type) = {
+  def extendz(t1 : Type, t2:Type) = {
     if (t1 == t2) never(Extend(t1, t2))
     else {
       t1 match {
@@ -208,4 +209,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   = it.map(u => (u, f(u).subst(substitution)))
 
   def propagate = SolveContinuousSubstCS(Map(), bounds, never, extend)
+
+
+  def solved(s: CSubst): SolveContinuousSubstCS = ???
 }
