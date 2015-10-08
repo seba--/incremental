@@ -1,8 +1,11 @@
 package incremental.java
 
+import constraints.Statistics
 import constraints.javacons._
-import incremental.MyBuilder
+import incremental.{Util, Node_, MyBuilder}
 import incremental.java.syntax.{UVar, Type}
+import incremental.java.JavaCheck._
+import incremental.Node.Node
 
 import scala.collection.generic.CanBuildFrom
 
@@ -25,4 +28,42 @@ abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeC
 
 trait TypeCheckerFactory[CS <: ConstraintSystem[CS]] {
   def makeChecker: TypeChecker[CS]
+}
+
+abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
+  import csFactory._
+
+  type TError = String
+  type Result = (CheckRes, VReqs, CReqs, CS)
+
+  def typecheckImpl(e: Node): Either[Type, TError] = {
+    val root = e.withType[Result]
+
+    Util.timed(localState -> Statistics.typecheckTime) {
+      root.visitUninitialized { e =>
+        typecheckRec(e)
+        true
+      }
+
+      val (tRes, vReqs, cReqs, sol_) = root.typ
+      val sol = sol_.tryFinalize
+      // TODO: val t: Type, but tRes is CheckRes
+
+      if(vReqs.nonEmpty)
+        Right(s"Unresolved variable requirements $vReqs, type $tRes")
+      else if (!sol.isSolved)
+        Right(s"Unresolved constraints")
+      else
+        ??? //Left(t)
+    }
+  }
+
+  def typecheckRec(e: Node_[Result]): Unit = {
+    // TODO: res must be StepResult, kids are Result?
+    val res@(t, vReqs, cReqs, cons) = e.kind.check(e.lits, e.kids.seq)
+    val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
+    val cs = subcs addNewConstraints cons
+
+    e.typ = (t, vReqs, cReqs, cs) // TODO: apply (partial) solution (mgu)
+  }
 }

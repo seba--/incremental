@@ -16,12 +16,9 @@ object JavaCheck {
   case class StmType(t: Type) extends CheckRes
   case class ExprType(t: Type) extends CheckRes
 
-  //type CS <: ConstraintSystem[CS]
-
   type VReqs = Map[Symbol, Type]
   type CReqs = Seq[Any] // TODO: find suitable type for class requirements
 
-  //type Result = (CheckRes, VReqs, CReqs, CS)
   type StepResult = (CheckRes, VReqs, CReqs, Seq[Constraint])
   type Kid = Node_[StepResult]
 
