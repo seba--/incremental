@@ -3,11 +3,28 @@ package incremental.spreadsheet
 import constraints.equality.CSubst
 import constraints.equality.CSubst.CSubst
 import constraints.CVar
-import constraints.equality.{ConstraintSystem, ConstraintSystemFactory, EqConstraint, Type}
+import constraints.equality.{ConstraintSystem, EqConstraint, Type}
 
-/**
- * Created by seba on 13/11/14.
- */
+
+case class TSpreadsheet(sheets: Map[String, Type]) extends Type {
+  def occurs(x: CVar[_]) = false
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TSpreadsheet(sheets2) => ???
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+  def subst(s: CSubst) = TSpreadsheet(sheets mapValues( _.subst(s)))
+}
+
+case class TWorksheet(rows: Map[Int, Map[String, Type]]) extends Type {
+  def occurs(x: CVar[_]) = false
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TWorksheet(rows2) => ???
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+  def subst(s: CSubst) = TWorksheet(rows mapValues(_.mapValues(_.subst(s))))
+}
 
 case class UVar(x: CVar[Type]) extends Type {
   def occurs(x2: CVar[_]) = x == x2

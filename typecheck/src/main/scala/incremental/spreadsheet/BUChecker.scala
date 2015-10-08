@@ -9,7 +9,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
 
   type TError = String
-  type Reqs = Map[String, Map[Int, Type]]
+
+  // TODO: SheetName -> (RowNum -> (ColName -> Type))
+  // RowNum -> (ColName -> Type)
+  type Reqs = Map[Int, Map[String, Type]]
 
   type StepResult = (Type, Reqs, Seq[Constraint])
   type Result = (Type, Reqs, CS)
@@ -46,7 +49,97 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
-    case _ => ???
+    // worksheets
+    case Spreadsheet =>
+      val sheets = e.lits.asInstanceOf[Seq[String]]
+      val (ts, reqss, _) = e.kids.seq.map(_.typ).unzip3
+      val (mcons, mreqs) = mergeReqMaps(reqss)
+
+      // TODO cross-saturate cells from different worksheets
+
+      (TSpreadsheet(sheets.zip(ts).toMap), mreqs, mcons)
+
+    // worksheets
+    case Worksheet =>
+      val positions = e.lits.asInstanceOf[Seq[(Int, String)]]
+      val (ts, reqss, _) = e.kids.seq.map(_.typ).unzip3
+      val (mcons, mreqs) = mergeReqMaps(reqss)
+
+      // TODO saturate cells of this worksheet
+
+      var types = Map[Int, Map[String, Type]]()
+      for (i <- 0 until positions.size) {
+        val (irow, icol) = positions(i)
+        val t = ts(i)
+        val row = types.get(irow) match {
+          case None => Map[String, Type]()
+          case Some(row) => row
+        }
+        val newrow = row + (icol -> t)
+        types += (irow -> newrow)
+      }
+
+
+      (TWorksheet(types), mreqs, mcons)
+
+    // cells
+    case Empty =>
+      (TEmpty, Map(), Seq())
+
+    case CInt =>
+      (TInt, Map(), Seq())
+
+    case CString =>
+      (TString, Map(), Seq())
+
+    case CFormula =>
+      val (t, reqs, _) = e.typ
+      (t, reqs, Seq())
+
+    // formulas
+    case Ref =>
+      val (t, reqs, _) = e.kids(0).typ
+      (t, reqs, Seq())
+
+    case Range =>
+      // TODO: Need to require something for a range of celss
+      ???
+
+    case Sum =>
+      val (t, reqs, _) = e.kids(0).typ
+      var cons = Seq(EqConstraint(TInt, t))
+      var reqss = Seq(reqs)
+
+      for (i <- 1 until e.kids.seq.size) {
+        val (ti, reqsi, _) = e.kids(i).typ
+        cons = cons :+ EqConstraint(t, ti)
+        reqss = reqss :+ reqsi
+      }
+
+      val (mcons, mreqs) = mergeReqMaps(reqss)
+
+      (TInt, mreqs, cons ++ mcons)
+
+    case Counta =>
+      var reqss = e.kids.seq.map(_.typ._2)
+      val (mcons, mreqs) = mergeReqMaps(reqss)
+      (TInt, mreqs, mcons)
+
+    // cell references
+    case CellRef =>
+      val row = e.lits(0).asInstanceOf[Int]
+      val col = e.lits(1).asInstanceOf[String]
+      val U = freshUVar()
+      (U, Map(row -> Map(col -> U)), Seq())
+
+    case SheetCellRef =>
+      val sheet = e.lits(0).asInstanceOf[String]
+      val row = e.lits(1).asInstanceOf[Int]
+      val col = e.lits(2).asInstanceOf[String]
+      val U = freshUVar()
+      // TODO: (U, Map(sheet -> Map(row -> Map(col -> U)), Seq()))
+      ???
+
   }
 
 

@@ -149,8 +149,10 @@ object Node {
   val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)
   def simple(kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
   def simple(litTypes: Seq[Class[_ <: Any]], kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
-  def many(kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, null, kidType)
-  def many(litType: Class[_ <: Any], kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, litType, kidType)
+  def many(kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, null, kidType, true)
+  def many(litType: Class[_ <: Any], kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, litType, kidType, true)
+  def many1(kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, null, kidType, false)
+  def many1(litType: Class[_ <: Any], kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, litType, kidType, false)
   implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 
@@ -191,8 +193,11 @@ object SyntaxChecking {
     }
   }
 
-  case class ManyKidTypesLitTypesSyntax[L <: Any, K <: NodeKind](k: NodeKind, litType: Class[L], kidType: Class[K]) extends SyntaxChecker(k) {
+  case class ManyKidTypesLitTypesSyntax[L <: Any, K <: NodeKind](k: NodeKind, litType: Class[L], kidType: Class[K], emptyAllowed: Boolean) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
+      if (!emptyAllowed && kids.size == 0)
+        error(s"Expected at least one kid")
+
       if (litType == null && lits.size != 0)
         error(s"Expected no literals but found $lits")
 
