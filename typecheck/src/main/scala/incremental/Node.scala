@@ -148,7 +148,9 @@ object Node {
   
   val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)
   def simple(kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
-  def simple(litTypes: Seq[Class[_]], kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
+  def simple(litTypes: Seq[Class[_ <: Any]], kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
+  def many(kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, null, kidType)
+  def many(litType: Class[_ <: Any], kidType: Class[_ <: NodeKind]) = (k: NodeKind) => new SyntaxChecking.ManyKidTypesLitTypesSyntax(k, litType, kidType)
   implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
 }
 
@@ -171,7 +173,7 @@ object SyntaxChecking {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) = {}
   }
 
-  case class KidTypesLitTypesSyntax(k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[_ <: NodeKind]]) extends SyntaxChecker(k) {
+  case class KidTypesLitTypesSyntax(k: NodeKind, litTypes: Seq[Class[_ <: Any]], kidTypes: Seq[Class[_ <: NodeKind]]) extends SyntaxChecker(k) {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
       if (kids.size != kidTypes.size)
         error(s"Expected ${kidTypes.size} subexpressions but found ${kids.size} subexpressions")
@@ -186,6 +188,24 @@ object SyntaxChecking {
       for (i <- 0 until lits.size)
         if (!litTypes(i).isInstance(lits(i)))
           error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
+    }
+  }
+
+  case class ManyKidTypesLitTypesSyntax[L <: Any, K <: NodeKind](k: NodeKind, litType: Class[L], kidType: Class[K]) extends SyntaxChecker(k) {
+    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
+      if (litType == null && lits.size != 0)
+        error(s"Expected no literals but found $lits")
+
+      if (lits.size != kids.size)
+        error(s"Expected same number of literals and kids")
+
+      for (i <- 0 until kids.size)
+        if (!kidType.isInstance(kids(i).kind))
+          error(s"Expected kid of ${kidType} at position $i but found ${kids(i)} of ${kids(i).kind.getClass}")
+
+      for (i <- 0 until lits.size)
+        if (!litType.isInstance(lits(i)))
+          error(s"Expected literal of ${litType} at position $i but found ${lits(i)} of ${lits(i).getClass}")
     }
   }
 
