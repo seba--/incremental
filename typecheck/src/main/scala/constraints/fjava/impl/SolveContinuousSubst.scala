@@ -33,9 +33,29 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, never :+ c, extend)
 
   def mergeSubsystem(that: SolveContinuousSubstCS) = {
-    val msubst = substitution ++ that.substitution
-    val mextend = extend ++ that.extend
-    var mbounds = bounds ++ that.bounds
+    var msubst = substitution ++ that.substitution
+    var mextend = extend
+    for ((c, s) <- that.extend) {
+      extend.get(s) match {
+        case None => mextend = mextend + (c -> s)
+        case Some(s2) =>
+          if (s == s2) mextend = mextend
+          else{
+          (s, s2) match {
+            case (CName(x), _) => mextend = mextend
+            case (_, CName(x)) => mextend = mextend -c + (c -> s2)
+          }
+          }
+      }
+    }
+    var mbounds = bounds
+    for ((t, s) <- that.bounds){
+      bounds.get(t) match {
+        case None => mbounds = mbounds + (t -> s)
+        case Some(s2) =>
+          mbounds = mbounds - t + (t -> (s ++ s2))
+      }
+    }
     var mnever = never ++ that.never
 
     /*var mbounds = bounds
@@ -149,6 +169,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     }
     sol
   }*/
+
 
   def addLowerBound(t1: Type, t2: Type) = addUpperBound(t2, t1)
 
