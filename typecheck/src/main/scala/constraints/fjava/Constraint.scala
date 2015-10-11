@@ -14,3 +14,7 @@ case class Subtype(lower: Type, upper: Type) extends Constraint {
 case class Equal(expected: Type, actual: Type) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = expected.subtype(actual, actual.subtype(expected, cs))
 }
+
+case class NotEqual(expected: Type, actual: Type) extends Constraint {
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.never(Equal(expected, actual))
+}

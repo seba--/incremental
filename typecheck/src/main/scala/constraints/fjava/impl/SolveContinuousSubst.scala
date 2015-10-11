@@ -1,7 +1,7 @@
 package constraints.fjava.impl
 
 
-import constraints.{subtype, Statistics}
+import constraints.Statistics
 import constraints.fjava.CSubst.CSubst
 import incremental.fjava.{UCName, CName}
 import constraints.fjava._
@@ -34,8 +34,11 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   def mergeSubsystem(that: SolveContinuousSubstCS) = {
     val msubst = substitution ++ that.substitution
-    /*val mextend = extend ++ that.extend
-    var mbounds = bounds
+    val mextend = extend ++ that.extend
+    var mbounds = bounds ++ that.bounds
+    var mnever = never ++ that.never
+
+    /*var mbounds = bounds
     var mnever = never ++ that.never
 
     for((tv, (l1, u1)) <- that.bounds) {
@@ -49,9 +52,9 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       val merged = (newL, newU)
       mbounds = mbounds + (tv -> merged)
     }
+*/
+    SolveContinuousSubstCS(msubst, mbounds, mnever, mextend)
 
-    SolveContinuousSubstCS(msubst, mbounds, mnever, mextend)*/
-    ??? //TODO
   }
 
   def addNewConstraint(c: Constraint) = {
@@ -77,16 +80,16 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
           (tv, (lower, newUpper))
         case x => x
       }
+*/
+      SolveContinuousSubstCS(substitution, bounds, never, extend)
 
-      SolveContinuousSubstCS(substitution, finalbounds, never, extend).saturateSolution*/
-      ???
     }
 
    def trySolve: SolveContinuousSubstCS = ???
 
- /* private def substitutedBounds(s: CSubst) = {
+ private def substitutedBounds(s: CSubst) = {
     var newnever = Seq[Constraint]()
-    val newbounds: Map[CVar[Type], (LBound,UBound)] = for ((tv, (lb, ub)) <- bounds) yield {
+ /*   val newbounds: Map[CVar[Type], (LBound,UBound)] = for ((tv, (lb, ub)) <- bounds) yield {
       val (newLb, errorl) = lb.subst(s)
       val (newUb, erroru) = ub.subst(s)
       if(errorl.nonEmpty)
@@ -95,10 +98,10 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
         newnever  = newnever  :+ subtype.Meet(UCName(tv).subst(s), erroru)
       (tv -> (newLb, newUb))
     }
-    (newbounds, newnever)
+    (newbounds, newnever) */
   }
 
-  private def withSubstitutedBounds = {
+  /*private def withSubstitutedBounds = {
     val (newbounds, newnever) = substitutedBounds(substitution)
     SolveContinuousSubstCS(substitution, newbounds, never ++ newnever, extend)
   }

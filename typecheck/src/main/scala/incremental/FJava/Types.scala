@@ -42,19 +42,12 @@ case class UCName(x: CVar[Type]) extends Type {
 
 case class CName(x: Symbol) extends Type {
   val isGround = true
-
   def freeTVars = Set()
-
   def normalize = this
-
   def occurs(x2: CVar[_]) = x == x2
-
   def subst(cs: CSubst) = this
-
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
-
   def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
-
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
     case CName(`x`) => cs
     case CName(_) => cs.never(Equal(this, other))
@@ -62,8 +55,35 @@ case class CName(x: Symbol) extends Type {
   }
 }
 
-case object ProgramOK
-case class MethodOK(in: Type)
+case object ProgramOK extends  Type
+{
+  val isGround = true
+  def freeTVars = Set()
+  def normalize = this
+  def occurs(x2: CVar[_]) = false
+  def subst(cs: CSubst) = this
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
+  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
+}
+case class MethodOK(in: Type) extends Type {
+  val isGround = true
+
+  def freeTVars = Set()
+
+  def normalize = this
+
+  def occurs(x2: CVar[_]) = false
+
+  def subst(cs: CSubst) = this
+
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
+
+  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
+
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
+}
+
 case class Signature(meth: Symbol, parameters: ListMap[Symbol, Type], returnType: Type)
 
 

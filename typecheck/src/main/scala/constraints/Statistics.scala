@@ -10,6 +10,7 @@ object Statistics extends Enumeration {
   val constraintSolveTime = Value
   val mergeSolutionTime = Value
   val mergeReqsTime = Value
+  val mergeCReqsTime = Value
   val finalizeTime = Value
   val typecheckTime = Value
 }
