@@ -34,6 +34,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   def mergeSubsystem(that: SolveContinuousSubstCS) = {
     var msubst = substitution ++ that.substitution
+    var mnever = never ++ that.never
     var mextend = extend
     for ((c, s) <- that.extend) {
       extend.get(s) match {
@@ -42,8 +43,13 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
           if (s == s2) mextend = mextend
           else{
           (s, s2) match {
-            case (CName(x), _) => mextend = mextend
-            case (_, CName(x)) => mextend = mextend -c + (c -> s2)
+            case (UCName(x),_) =>
+              mextend = mextend
+              Equal(s,s2).solve(this)
+            case (_,UCName(x)) =>
+              mextend = mextend
+              Equal(s,s2).solve(this)
+            case _ => mnever = mnever :+ NotEqual(s,s2)
           }
           }
       }
@@ -56,23 +62,6 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
           mbounds = mbounds - t + (t -> (s ++ s2))
       }
     }
-    var mnever = never ++ that.never
-
-    /*var mbounds = bounds
-    var mnever = never ++ that.never
-
-    for((tv, (l1, u1)) <- that.bounds) {
-      val (l2, u2) = mbounds(tv)
-      val (newL, errorl) = l2 merge l1
-      val (newU, erroru) = u2 merge u1
-      if(errorl.nonEmpty)
-        mnever = mnever :+ subtype.Join(UCName(tv), errorl)
-      if(erroru.nonEmpty)
-        mnever = mnever :+ subtype.Meet(UCName(tv), erroru)
-      val merged = (newL, newU)
-      mbounds = mbounds + (tv -> merged)
-    }
-*/
     SolveContinuousSubstCS(msubst, mbounds, mnever, mextend)
 
   }
