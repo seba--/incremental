@@ -37,6 +37,8 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     }
 
 
+
+
   val Title = ClassDec(
     Seq(CName('Title), CName('Object),
       Seq()), // no fields

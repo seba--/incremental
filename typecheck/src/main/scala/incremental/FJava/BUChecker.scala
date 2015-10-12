@@ -203,7 +203,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var restReqs = reqs
       var cons = Seq[Constraint]()
       val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
-
+     val p = params.toMap
+      val sig = Signature(m, p, retT)
       var cCreqs = creqs
       cons = Subtype(e0, retT) +: cons
       val Uc = freshCName()
@@ -226,7 +227,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
            restReqs = restReqs - 'this
        }
 
-      (MethodOK(Uc), Map(), cCreqs, cons )
+      (sig, Map(), cCreqs, cons )
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
       val sup = e.lits(1).asInstanceOf[CName]

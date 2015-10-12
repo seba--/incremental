@@ -11,7 +11,6 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def never: Seq[Constraint]
 
   def addUpperBound(t1: Type, t2: Type): CS
-  def addLowerBound(t1: Type, t2: Type): CS
   def extendz(t1: Type, t2: Type): CS
   def solved(s: CSubst): CS
   def never(c: Constraint): CS
