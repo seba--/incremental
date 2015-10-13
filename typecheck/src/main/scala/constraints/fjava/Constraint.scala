@@ -30,3 +30,15 @@ case class NotEqual(expected: Type, actual: Type) extends Constraint {
 
   override def subst(s: CSubst): Constraint = NotEqual(expected.subst(s), actual.subst(s))
 }
+
+case class Never(c: Constraint) extends Constraint {
+  def subst(s: CSubst) = c.subst(s)
+
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.never(this)
+}
+
+case class AllEqual(expected: List[Type], actual: List[Type]) extends Constraint {
+  def subst(s: CSubst) = AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
+
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.never(this)
+}
