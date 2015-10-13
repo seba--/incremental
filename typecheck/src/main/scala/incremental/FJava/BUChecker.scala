@@ -6,6 +6,8 @@ import constraints.fjava.impl
 import incremental.{NodeKind, Node_, Util}
 import incremental.Node._
 
+import scala.collection.immutable.ListMap
+
 /**
  * Created by lirakuci on 3/2/15.
  */
@@ -14,13 +16,7 @@ import incremental.Node._
 case class FieldName(x: Symbol)
 case class Param(x: Symbol)
 
-
-abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
-
-  import csFactory._
-
-  type TError = String
-
+object TypeDefs {
   type Methods = Map[Symbol, (Type, List[Type])]
 
   type Fields = Map[Symbol, Type]
@@ -32,25 +28,66 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type CReqs = Map[Type, ClassDecl]
 
   type StepResult = (Type, Reqs, CReqs, Seq[Constraint])
+
+  case class Ctor(params: ListMap[Symbol, CName], superCall: List[Symbol], fieldDefs: ListMap[Symbol, Symbol])
+  case class ClassDef(name: CName, superClass: CName, fields: Fields, methods: Methods, ctor: Ctor)
+  case class MethodDef(name: Symbol, params: ListMap[Symbol, CName], returnType: CName, body: Node_[Any])
+
+  type Program = List[ClassDef]
+}
+
+
+
+
+abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
+
+  import csFactory._
+  import TypeDefs._
+  type TError = String
+
   type Result = (Type, Reqs, CReqs, CS)
+
+  def typeCheckProgram(p: Program): (ProgramOK, CS) = ???
+
+  def typeCheckClassDef(c: ClassDef): (ClassOK, CReqs, CS) = ???
+
+  def typeCheckMethod(method: MethodDef): (MethodOK, CReqs, CS) = {
+    val MethodDef(name, params, returnType, body) = method
+    val e = body.withType[Result]
+    typeCheckExp(e)
+    val (e0, reqs, creqs, cs) = e.kids(0).typ
+    var restReqs = reqs
+    var cons = Seq[Constraint]()
+    var cCreqs = creqs
+    cons = Subtype(e0, returnType) +: cons
+    val Uc = freshCName()
+    val Ud = freshCName()
+    cons = Extend(Uc, Ud) +: cons
+    for ((x, xC) <- params) {
+      reqs.get(x) match {
+        case None => restReqs = restReqs
+        case Some(typ) =>
+          restReqs = restReqs - x
+          cons = Subtype(xC, typ) +: cons
+      }
+    }
+    restReqs.get('this) match {
+      case None => restReqs = restReqs
+      case Some(typ) =>
+        cons = Equal(Uc, typ) +: cons // Subtype(Uc, typ)
+        restReqs = restReqs - 'this
+    }
+    (MethodOK(Uc), cCreqs, cs.addNewConstraints(cons))
+  }
+
+
+
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
     Util.timed(localState -> Statistics.typecheckTime) {
-      root.visitUninitialized { e =>
-        val (t, reqs, creqs, cons) = typecheckStep(e)
-        val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
-        val cs = subcs addNewConstraints cons
-        val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-        var creqs2 = creqs
-        for ((t, cld) <- creqs) {
-          val c = t.subst(cs.substitution)
-          creqs2 = creqs2 - t + (c -> cld)
-        }
-        e.typ = (cs applyPartialSolution t, reqs2, creqs2, cs.propagate)
-        true
-      }
+      typeCheckExp(root)
 
       val (t_, reqs, creqs, cs_) = root.typ
       val cs = cs_.tryFinalize
@@ -64,6 +101,22 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         Right(s"Unresolved constraints ${cs.unsolved}, type $t")
       else
         Left(t)
+    }
+  }
+
+  private def typeCheckExp(root: Node_[(Type, Reqs, CReqs, CS)]): Boolean = {
+    root.visitUninitialized { e =>
+      val (t, reqs, creqs, cons) = typecheckStep(e)
+      val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
+      val cs = subcs addNewConstraints cons
+      val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
+      var creqs2 = creqs
+      for ((t, cld) <- creqs) {
+        val c = t.subst(cs.substitution)
+        creqs2 = creqs2 - t + (c -> cld)
+      }
+      e.typ = (cs applyPartialSolution t, reqs2, creqs2, cs.propagate)
+      true
     }
   }
 
@@ -226,12 +279,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var restCreq = Seq[CReqs]()
       var cons = Seq[Constraint]()
       for (i <- 0 until e.kids.seq.size) {
+    //    val (c0, reqs, creqs, _) = e.kids.seq(i).typ
         val c = e.kids(i).lits(0).asInstanceOf[CName]
         val sup = e.kids(i).lits(1).asInstanceOf[CName]
         val fields = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
         var methods = Map[Symbol, (Type, List[Type])]()
         for (j <- 0 until e.kids(i).kids.seq.size) {
           val (c0, reqs, creqs, _)= e.kids(i).kids.seq(j).typ
+          restCreq = restCreq :+ creqs
           cons = cons :+ Equal(c, c0.asInstanceOf[MethodOK].in)
           val retT = e.kids(i).kids(j).lits(0).asInstanceOf[CName]
           val m = e.kids(i).kids(j).lits(1).asInstanceOf[Symbol]
@@ -240,17 +295,16 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           for((t, p) <- params.toMap)
             par = par :+ p
         methods = methods + (m -> (retT, par))
-          restCreq = restCreq :+ creqs
         }
-        CT =  CT + (c -> (List(sup), fields.toMap, methods))
+        CT =  CT ++ Map(c -> (List(sup), fields.toMap, methods))
       }
        val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
 
       var (mCcons, mcreqs) = mergeCReqMaps(restCreq)
       cons = cons ++ mCcons //++ ctons
 
-    //  val cs = subcs addNewConstraints cons
-     val (ct, ctcons) =  remove(CT, mcreqs, subcs)
+     val cs = subcs addNewConstraints cons
+     val (ct, ctcons) =  remove(CT, mcreqs,cs)
 
       (CName('Object),Map(), mcreqs,  cons ++ ctcons)
   }
@@ -290,6 +344,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case Some(clsT) =>
           if (cld._1.length > 0 && clsT._1.length > 0 )
          cons = cons :+ Equal(cld._1.head, clsT._1.head)
+          stype = List()
           for ((f, typ) <- cld._2){
             clsT._2.get(f) match {
               case None => fields = fields
@@ -348,6 +403,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val wasM = cld1._3
     var mcons = Seq[Constraint]()
     var cldm = wasM
+    var sup = List[Type]()
    // var p = List[Type]()
     for ((f, typ) <- newF){
       wasF.get(f) match {
@@ -369,9 +425,16 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           cldm = cldm
       }
     }
-    if (cld1._1.length > 0 && cld2._1.length > 0)
-    mcons = Equal(cld1._1.head, cld2._1.head) +: mcons
-    val cld: ClassDecl = (cld1._1, rF, cldm)
+    if (cld1._1.length == 0 && cld2._1.length > 0)
+     sup = cld2._1
+    else if (cld1._1.length > 0 && cld2._1.length == 0)
+      sup = cld1._1
+    else if (cld1._1.length > 0 && cld2._1.length > 0) {
+      mcons = Equal(cld1._1.head, cld2._1.head) +: mcons
+      sup = cld1._1
+    }
+    else sup
+    val cld: ClassDecl = (sup , rF, cldm)
     (mcons, cld)
   }
 

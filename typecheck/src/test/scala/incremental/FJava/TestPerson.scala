@@ -66,7 +66,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
         Var('this)), // dummy body, will be overwritten by subclasses
       MethodDec(
         CName('Title), 'title, Seq(),
-        New(CName('Title))) // dummy body, will be overwritten by subclasses  Var(This) ==> check agian the diffference bettwen them
+       New(CName('Title))) // dummy body, will be overwritten by subclasses  Var(This) ==> check agian the diffference bettwen them
     )
   )
   val Professor = ClassDec(
