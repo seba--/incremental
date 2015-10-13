@@ -334,7 +334,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           }
         }
       }
-   // if (methods.isEmpty && fields.isEmpty)
     cr = cr - c
     }
     (cr, cons)
