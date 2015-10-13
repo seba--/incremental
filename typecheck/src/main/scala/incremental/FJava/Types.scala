@@ -55,10 +55,40 @@ case class CName(x: Symbol) extends Type {
   }
 }
 
-case object ProgramOK
+case object ProgramOK extends  Type
+{
+  val isGround = true
+  def freeTVars = Set()
+  def normalize = this
+  def occurs(x2: CVar[_]) = false
+  def subst(cs: CSubst) = this
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
+  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
+}
 
-case object ClassOK
+case object ClassOK extends  Type
+{
+  val isGround = true
+  def freeTVars = Set()
+  def normalize = this
+  def occurs(x2: CVar[_]) = false
+  def subst(cs: CSubst) = this
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
+  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
+}
 
-case class MethodOK(in: Type)
+case class MethodOK(in: Type) extends  Type
+{
+  val isGround = true
+  def freeTVars = Set()
+  def normalize = this
+  def occurs(x2: CVar[_]) = false
+  def subst(cs: CSubst) = this
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
+  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
+}
 
 
