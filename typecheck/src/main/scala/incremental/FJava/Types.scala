@@ -66,25 +66,20 @@ case object ProgramOK extends  Type
   def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
 }
-case class MethodOK(in: Type) extends Type {
+
+case object ClassOK extends  Type
+{
   val isGround = true
-
   def freeTVars = Set()
-
   def normalize = this
-
   def occurs(x2: CVar[_]) = false
-
   def subst(cs: CSubst) = this
-
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
-
   def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
-
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
 }
 
-case class Signature(meth: Symbol, parameters: Map[Symbol, Type], returnType: Type) extends Type {
+case class MethodOK(in: Type) extends Type {
   val isGround = true
 
   def freeTVars = Set()

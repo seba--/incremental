@@ -15,6 +15,8 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def solved(s: CSubst): CS
   def never(c: Constraint): CS
 
+  def isSubtype(t1 : Type, t2 : Type): Boolean
+
   def unsolved = notyet ++ never
   def isSolved = notyet.isEmpty && never.isEmpty
   def solvable = !never.isEmpty

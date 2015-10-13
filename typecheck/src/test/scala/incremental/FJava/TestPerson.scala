@@ -100,7 +100,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     )
   )
 
-  typecheckTest("Title ok", Title)(CName('Title))
+  typecheckTest("Title ok", Title)(ClassOK)
   typecheckTestError("NoTitle ok", NoTitle)
   typecheckTestError("ProfTitle ok", ProfTitle)
 
