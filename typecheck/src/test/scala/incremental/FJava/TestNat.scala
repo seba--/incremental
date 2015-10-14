@@ -87,6 +87,11 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
         New(CName('Succ), Invk('plus, Fields('x, Var('this)), Var('other)))) // plus(Succ(x), other) = Succ(plus(x, other))
     )
   )
+ /* MethodDec(
+    CName('Nat), 'plus, Seq('x -> CName('Succ), 'other -> CName('Nat)),
+    Invk('plus, New(CName('Succ)),Fields('x, Var('this)), Var('other))) // plus(Succ(x), other) = Succ(plus(x, other))
+  ) /// was wrong before the rtest detected by the contraint solver  !
+  )*/
   // Succ refers to Nat and should fail to check
   typecheckTestError("Succ ok", Succ)
 

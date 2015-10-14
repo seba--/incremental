@@ -71,6 +71,11 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
         case CName('Object) =>
           this.never(Extend(t1, t2))
         case _ =>
+        /*  bounds.get(t1) match {
+            case None => bounds
+            case Some(ts) =>
+              removeBound(t1, t2, ts)
+          }*/
           extend.get(t1) match {
             case None =>
               extendMap(t1, t2)
@@ -83,6 +88,12 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   private def extendMap(t1: Type, t2: Type) =
     SolveContinuousSubstCS(this.substitution, this.bounds, this.never, this.extend + (t1 -> t2))
+
+  /*private def removeBound(t1: Type ,t2 : Type, ts : Set[Type]) = {
+    var lt = ts
+    if (ts.contains(t2) && ts.size == 1)
+      SolveContinuousSubstCS(this.substitution, this.bounds - t1, this.never, this.extend + (t1 -> t2))
+  }*/
 
   def isSubtype(t1 : Type, t2 : Type): Boolean = {
     (t1, t2) match {
@@ -133,7 +144,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
 
   def solved(s: CSubst): SolveContinuousSubstCS = {
-    val init = SolveContinuousSubstCS(this.substitution ++ s, Map(), this.never.map(_.subst(s)), Map())
+    val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this.never.map(_.subst(s)), Map())
     val cs = this.extend.foldLeft(init) { case (cs, (t, tsuper)) =>
       val t2 = t.subst(s)
       val tsuper2 = tsuper.subst(s)
@@ -141,6 +152,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
         Equal(tsuper, cs.extend(t2)).solve(cs)
       else cs.extendz(t2, tsuper2)
     }
+    println(s)
     val extendedCS = bounds.foldLeft(cs) { case (cs, (t,ts)) =>
       ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}
     }

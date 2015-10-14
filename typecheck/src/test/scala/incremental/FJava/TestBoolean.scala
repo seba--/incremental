@@ -59,7 +59,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         CName('Bool), 'not, Seq(),
         New(CName('False))),
       MethodDec(
-        CName('Bool), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
+        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
         Var('then))
     )
   )
@@ -71,7 +71,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         CName('Bool), 'not, Seq(),
         New(CName('True))),
       MethodDec(
-        CName('Bool), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
+        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)), //was bool, found the erroe by hte cons solver :)
         Var('else))
     )
   )
