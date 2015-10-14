@@ -10,7 +10,8 @@ import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/10/15.
  */
-case class Ctor(params: ListMap[Symbol, Type], superCall: List[Symbol], fieldDefs: ListMap[Symbol, Symbol])
+
+case object Ctor extends NodeKind(_ => CtorSyntax)
 
 case object ClassDec extends NodeKind(_ => ClassSyntax)
 case object FieldDec extends NodeKind(_ => FieldSyntax)
@@ -67,8 +68,8 @@ object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
     if (!(lits(1).isInstanceOf[CName]))
       error(s"Expected Super type CName, but got ${lits(0)}")
 
-    if (lits.size > 2 && !(lits(2).isInstanceOf[Ctor]))
-      error(s"Expected Ctor spec, but got ${lits(2)}")
+   // if (lits.size > 2) //&& !(lits(2).isInstanceOf[Node_[CtorDec]]))
+   //   error(s"Expected Ctor spec, but got ${lits(2)}")
     //TODO syntax check Ctor
 
     for (i <- 2 until lits.size - 2 by 2) {
@@ -145,3 +146,8 @@ object ThisSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
   }
 }
 
+object CtorSyntax extends SyntaxChecking.SyntaxChecker(Ctor){
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+   // TODO add syntax for  ctor
+  }
+}

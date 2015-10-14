@@ -91,7 +91,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
   typecheckTestError("Succ ok", Succ)
 
   // Taking all classes into consideration, checking should succeed
-  typecheckTest("{Nat, Zero, Succ} ok", ProgramM(Nat, Zero, Succ))(ProgramOK)
+  typecheckTest("{Nat, Zero, Succ} ok", ProgramM(Nat, Zero, Succ))(CName('Object))
 
 
 }

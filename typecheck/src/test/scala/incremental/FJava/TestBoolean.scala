@@ -81,7 +81,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
   typecheckTestError("False ok", False)
 
   // Taking all classes into consideration, checking should succeed
-  typecheckTest("{Boolean, True, False} ok", ProgramM(Bool, True, False))(ProgramOK)
+  typecheckTest("{Boolean, True, False} ok", ProgramM(Bool, True, False))(CName('Object))
 
 
 }

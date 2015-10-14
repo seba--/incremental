@@ -58,8 +58,8 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   val Person = ClassDec(
     Seq(CName('Person), CName('Object),
       Seq(
-        'name -> 'Object,
-        'address -> 'Object)),
+        'name -> CName('Object),
+        'address -> CName('Object))),
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
@@ -71,7 +71,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   )
   val Professor = ClassDec(
     Seq(CName('Professor), CName('Person),
-      Seq('age -> 'Object)), // no fields
+      Seq('age -> CName('Object))), // no fields
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
@@ -83,7 +83,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   )
   val Student = ClassDec(
     Seq(CName('Student), CName('Person),
-      Seq('age -> 'Object)), // no fields
+      Seq('age -> CName('Object))), // no fields
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
