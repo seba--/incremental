@@ -59,7 +59,23 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   def tryFinalize =
     Util.timed(state -> Statistics.finalizeTime) {
-      this
+      var newBounds = Map[Type, Set[Type]]()
+      var lt = Set[Type]()
+      for ((t, ts) <- bounds){
+        lt = ts
+        if (extend.contains(t)){
+          ts.foreach { f =>
+            if(isSubtype(t,f))
+              lt = lt - f
+            else lt
+          }
+        }
+        if (lt.isEmpty) newBounds = newBounds
+        else newBounds = newBounds + (t -> lt)
+
+      }
+      SolveContinuousSubstCS(this.substitution, newBounds, this.never, this.extend )
+
     }
 
    def trySolve: SolveContinuousSubstCS = this

@@ -56,11 +56,11 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
 
   val Zero = ClassDec(
     Seq(CName('Zero), CName('Nat),
-      Seq()), // no fields
+      Seq(('kot, CName('KOt)))), // no fields
     Seq(
       MethodDec(
         CName('Nat), 'succ, Seq(),
-        New(CName('Succ), Var('this))),
+        New(CName('Succ), Fields('x,Var('this)))),
       MethodDec(
         CName('Nat), 'pred, Seq(),
         Var('this)), // pred of Zero is Zero
@@ -74,14 +74,14 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
 
   val Succ = ClassDec(
     Seq(CName('Succ), CName('Nat),
-      Seq('x -> CName('Nat))), // x is the predecessor of this nat
+      Seq(('x -> CName('Nat)))), // x is the predecessor of this nat
     Seq(
       MethodDec(
         CName('Nat), 'succ, Seq(),
         New(CName('Succ), Var('this))),
       MethodDec(
         CName('Nat), 'pred, Seq(),
-        Fields('x, Var('this))), // pred of Zero is Zero
+        Fields('x, New(CName('Succ)))), // pred of Zero is Zero
       MethodDec(
         CName('Nat), 'plus, Seq('other -> CName('Nat)),
         New(CName('Succ), Invk('plus, Fields('x, Var('this)), Var('other)))) // plus(Succ(x), other) = Succ(plus(x, other))
