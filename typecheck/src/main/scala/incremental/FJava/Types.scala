@@ -10,6 +10,9 @@ import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/10/15.
  */
+
+
+
 case class UCName(x: CVar[Type]) extends Type {
   val isGround = false
   def occurs(x2: CVar[_]) = x == x2

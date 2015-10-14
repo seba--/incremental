@@ -4,6 +4,7 @@ import constraints.{CTermBase, CVar}
 import constraints.fjava.CSubst.CSubst
 
 //Type class for types with groundness test
+
 trait Type extends CTerm[Type] {
 
   def occurs(x: CVar[_]): Boolean

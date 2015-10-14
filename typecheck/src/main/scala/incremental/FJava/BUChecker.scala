@@ -40,6 +40,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type TError = String
 
+  type Prg = String
+
   type Result = (Type, Reqs, CReqs, CS)
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
@@ -182,7 +184,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (t, reqs, creqs, _) = e.kids(0).typ //subsol
       val U = freshCName()
       val (cons, mcreqs) = addFieldReq(creqs, t, f, U)
-      println(s"filed $f has type $U, $mcreqs")
       (U, reqs, mcreqs, cons) //subsol
 
     case Invk =>
@@ -200,7 +201,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
        cons = Equal(ti, Ui) +: cons //or should be subtype
        creqss = creqss :+ subcreqs
        param = param :+ Ui
-        println(s"param is $ti")
       }
 
       val (mcons, mreqs) = mergeReqMaps(reqss)
@@ -271,7 +271,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case None => restReqs = restReqs
         case Some(typ) =>
           cons = Equal(typ, Uc) +: cons // Subtype(Uc, typ)
-          println(Equal(typ,Uc))
           restReqs = restReqs - 'this
        }
       (MethodOK(Uc), restReqs, cCreqs, cons )
@@ -324,7 +323,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       cons = cons ++ mCcons
       val cs = subcs addNewConstraints cons
       val (cr, ctcons)=  remove(mcreqs, cls, cs)
-      (CName('Object),Map(),cr, cons ++ ctcons)
+
+      (CName('Object), Map(), cr, cons ++ ctcons)
   }
 
   private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
