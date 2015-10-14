@@ -424,8 +424,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     var styp : Option[Type] = cld1.superType
     (cld1.superType, cld2.superType) match {
       case (None, None) => styp
-      case (_, Some(_)) => styp = cld2.superType
-      case (Some(_), _) => styp
+      case (None, Some(_)) => styp = cld2.superType
+      case (Some(_), None) => styp
       case (Some(t1), Some(t2)) => mcons = mcons :+ Equal(t1, t2)
     }
     (mcons, ClassDecl(styp, cld1.ctorParams, rF, cldm))
