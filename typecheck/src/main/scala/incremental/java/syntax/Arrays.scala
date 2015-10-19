@@ -11,4 +11,4 @@ import incremental.Node._
 
 
 trait NT_ArrayInit extends NT_VarInit
-case object ArrayInit extends NodeKind_TMP[StepResult](noLits andAlso unsafeAllKids(classOf[NT_VarInit])) with NT_ArrayInit
+case object ArrayInit extends NodeKind_TMP[Result](noLits andAlso unsafeAllKids(classOf[NT_VarInit])) with NT_ArrayInit

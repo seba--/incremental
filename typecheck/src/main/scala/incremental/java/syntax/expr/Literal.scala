@@ -31,7 +31,7 @@ case object Lit extends Expr(simple(Seq(classOf[Literal]))){
   def typeOfInt(s: String): Type = if (s.endsWith("l") || s.endsWith("L")) TLong() else TInt()
   def typeOfFloat(s: String): Type = if (s.endsWith("f") || s.endsWith("F")) TFloat() else TDouble()
 
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = lits(0) match {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = lits(0) match {
     case Deci(s)     => (ExprType(typeOfInt(s)), emptyVReqs, emptyCReqs, emptyCons)
     case Hexa(s)     => (ExprType(typeOfInt(s)), emptyVReqs, emptyCReqs, emptyCons)
     case Octa(s)     => (ExprType(typeOfInt(s)), emptyVReqs, emptyCReqs, emptyCons)
@@ -47,11 +47,11 @@ case object Lit extends Expr(simple(Seq(classOf[Literal]))){
 
 // this reference
 case object This extends Expr(simple()){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val X = freshUVar()
     (ExprType(X), Map('this -> X), emptyCReqs, emptyCons)
   }
 }
 case object QThis extends Expr(simple(Seq(classOf[TypeName]))){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }

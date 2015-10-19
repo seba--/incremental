@@ -32,7 +32,7 @@ case class PackageOrTypeNameExt(ext: PackageOrTypeName, id: String) extends Pack
 
 trait NT_ExprName
 case object ExprName extends Expr(simple(Seq(classOf[String])) orElse simple(Seq(classOf[AmbName], classOf[String]))) with NT_ExprName{
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }
 
 trait Id extends NT_VarDecId

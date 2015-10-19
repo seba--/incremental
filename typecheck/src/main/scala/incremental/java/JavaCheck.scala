@@ -9,6 +9,8 @@ import incremental.Node_
  * Created by qwert on 25.08.15.
  */
 
+trait JavaContext extends incremental.Context[Constraint]
+
 object JavaCheck {
   trait CheckRes
   case object ClassOk extends CheckRes
@@ -19,8 +21,8 @@ object JavaCheck {
   type VReqs = Map[Symbol, Type]
   type CReqs = Seq[Any] // TODO: find suitable type for class requirements
 
-  type StepResult = (CheckRes, VReqs, CReqs, Seq[Constraint])
-  type Kid = Node_[StepResult]
+  type Result = (CheckRes, VReqs, CReqs)
+  type Kid = Node_[_, Result] // TODO: ConstraintSystem instead of _?
 
   val emptyCReqs : CReqs = Seq()
   val emptyVReqs : VReqs = Map()

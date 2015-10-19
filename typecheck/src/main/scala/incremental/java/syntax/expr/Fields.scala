@@ -14,11 +14,11 @@ import incremental.java.syntax.expr.Expr._
 // Field Access
 abstract class FieldAccess(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Expr(syntaxcheck)
 case object Field extends FieldAccess(simple(Seq(classOf[String]), cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }
 case object SuperField extends FieldAccess(simple(Seq(classOf[String]))){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }
 case object QSuperField extends FieldAccess(simple(Seq(classOf[TypeName], classOf[String]))){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }

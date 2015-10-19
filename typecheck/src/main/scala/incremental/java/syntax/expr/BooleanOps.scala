@@ -13,7 +13,7 @@ import incremental.java.syntax.expr.Expr._
 
 // Comparison Operators
 case object Gt extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -28,7 +28,7 @@ case object Gt extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object GtEq extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -43,7 +43,7 @@ case object GtEq extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object Lt extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -58,7 +58,7 @@ case object Lt extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object LtEq extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -73,7 +73,7 @@ case object LtEq extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object Eq extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -85,7 +85,7 @@ case object Eq extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object NotEq extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -99,7 +99,7 @@ case object NotEq extends Expr(simple(cExpr, cExpr)){
 
 // Logical Operators
 case object Not extends Expr(simple(cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
 
     val tIsBool = Equality(TBoolean(), t)
@@ -108,7 +108,7 @@ case object Not extends Expr(simple(cExpr)){
   }
 }
 case object LazyAnd extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -122,7 +122,7 @@ case object LazyAnd extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object LazyOr extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -138,7 +138,7 @@ case object LazyOr extends Expr(simple(cExpr, cExpr)){
 
 // Conditional Operator (Expr ? Expr : Expr)
 case object Cond extends Expr(simple(cExpr, cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
     val (ExprType(t3), vReqs3, cReqs3, cons3) = kids(2).typ

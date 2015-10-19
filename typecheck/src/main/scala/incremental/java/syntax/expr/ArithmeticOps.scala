@@ -12,7 +12,7 @@ import incremental.java.syntax.expr.Expr._
 
 // Arithmetic Operators
 case object Plus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr))){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = kids.size match {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = kids.size match {
     case 1 => {
       val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
 
@@ -43,7 +43,7 @@ case object Plus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr))){
   }
 }
 case object Minus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr))){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = kids.size match {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = kids.size match {
     case 1 => {
       val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
 
@@ -74,7 +74,7 @@ case object Minus extends Expr(simple(cExpr, cExpr) orElse (simple(cExpr))){
   }
 }
 case object Mul extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -93,7 +93,7 @@ case object Mul extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object Div extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -112,7 +112,7 @@ case object Div extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object Remain extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -131,7 +131,7 @@ case object Remain extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object PreIncr extends Expr(simple(cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
 
     val X = freshUVar()
@@ -144,7 +144,7 @@ case object PreIncr extends Expr(simple(cExpr)){
   }
 }
 case object PostIncr extends Expr(simple(cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
 
     val X = freshUVar()
@@ -157,7 +157,7 @@ case object PostIncr extends Expr(simple(cExpr)){
   }
 }
 case object PreDecr extends Expr(simple(cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
 
     val X = freshUVar()
@@ -170,7 +170,7 @@ case object PreDecr extends Expr(simple(cExpr)){
   }
 }
 case object PostDecr extends Expr(simple(cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
 
     val X = freshUVar()
@@ -183,7 +183,7 @@ case object PostDecr extends Expr(simple(cExpr)){
   }
 }
 case object LeftShift extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -197,7 +197,7 @@ case object LeftShift extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object RightShift extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -211,7 +211,7 @@ case object RightShift extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object URightShift extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -227,7 +227,7 @@ case object URightShift extends Expr(simple(cExpr, cExpr)){
 
 // Bitwise Operators
 case object Complement extends Expr(simple(cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t), vReqs, cReqs, cons) = kids(0).typ
 
     val tIsIntegral = OneOf(t, integralTypes)
@@ -236,7 +236,7 @@ case object Complement extends Expr(simple(cExpr)){
   }
 }
 case object And extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -255,7 +255,7 @@ case object And extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object Or extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 
@@ -274,7 +274,7 @@ case object Or extends Expr(simple(cExpr, cExpr)){
   }
 }
 case object ExcOr extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = {
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = {
     val (ExprType(t1), vReqs1, cReqs1, cons1) = kids(0).typ
     val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(1).typ
 

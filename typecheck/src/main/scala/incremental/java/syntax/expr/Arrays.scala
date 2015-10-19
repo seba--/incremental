@@ -13,19 +13,19 @@ import incremental.java.syntax.expr.Expr._
 
 // Array Access
 case object ArrayAccess extends Expr(simple(cExpr, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }
 
 // Array Creation
 case object NewArray extends Expr(_ => ArrayCreationSyntax){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }
 
 trait ArrayBaseType{} // extends PrimType with TypeName{}
 case class UnboundWld(t: TypeName) extends ArrayBaseType
 
-abstract class Dimension(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[StepResult](syntaxcheck){
-  def check(lits: Seq[Any], kids: Seq[Kid]): StepResult = ???
+abstract class Dimension(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[Result](syntaxcheck){
+  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }
 case object Dim extends Dimension(simple())
 case object DimExpr extends Dimension(simple(cExpr))
