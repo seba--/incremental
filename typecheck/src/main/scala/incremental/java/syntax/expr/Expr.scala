@@ -23,7 +23,7 @@ case object CastPrim extends Expr(simple(Seq(classOf[PrimType]), cExpr)){
   def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = {
     //val t1: PrimType = lits(0)
     val t1 = lits(0).asInstanceOf[PrimType]
-    val (ExprType(t2), vReqs2, cReqs2, cons2) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2) = kids(0).typ
 
     val t1IsNumerical = OneOf(t1, numTypes)
     val t2IsNumerical = OneOf(t2, numTypes)

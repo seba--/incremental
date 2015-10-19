@@ -4,7 +4,7 @@ import constraints.javacons._
 import incremental.Node._
 import incremental.java.JavaCheck._
 import incremental.java.syntax._
-import incremental.{NodeKind, SyntaxChecking}
+import incremental.{Context, NodeKind, SyntaxChecking}
 import incremental.java.syntax.expr.Expr._
 
 /**
@@ -13,11 +13,11 @@ import incremental.java.syntax.expr.Expr._
 
 // Method Invocation
 case object Invoke extends Expr(_ => MethodInvokationSyntax){
-  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???
 }
 
-abstract class MethodSpec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[Result](syntaxcheck){
-  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ??? // TODO: move to case objects und impl
+abstract class MethodSpec(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[Constraint, Result](syntaxcheck){
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ??? // TODO: move to case objects und impl
 }
 case object Method extends MethodSpec(simple(Seq(classOf[MethodName])) orElse simple(Seq(classOf[String]), cExpr) orElse simple(Seq(classOf[TypeArgs], classOf[String]), cExpr))
 case object SuperMethod extends MethodSpec(simple(Seq(classOf[String])) orElse simple(Seq(classOf[TypeArgs], classOf[String])))

@@ -1,7 +1,7 @@
 package incremental
 
 import Node._
-import constraints.Constraint
+import constraints.{Constraint, ConstraintSystem}
 
 abstract class NodeKind[C <: Constraint[_, _], T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
   def unapplySeq(e: Node_[_, _]): Option[Seq[Node_[_, _]]] =

@@ -7,7 +7,7 @@ import constraints.Constraint
  */
 
 trait Context[C <: Constraint[_, _]] {
-  var cs = Seq[C]
+  var cs: Seq[C] = Seq()
 
   def addConstraints(cons: C*) = cons :+ cs
 }

@@ -1,9 +1,10 @@
 package incremental.java.syntax
 
+import constraints.javacons.Constraint
 import incremental.Node._
 import incremental.java.JavaCheck._
 import incremental.java.syntax.expr.Expr
-import incremental.{NodeKind, SyntaxChecking}
+import incremental.{Context, NodeKind, SyntaxChecking}
 import incremental.java.syntax.JavaSyntaxChecker._
 
 /**
@@ -11,8 +12,8 @@ import incremental.java.syntax.JavaSyntaxChecker._
  */
 
 
-abstract class Stm(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[Result](syntaxcheck) with NT_BlockStm{
-  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
+abstract class Stm(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[Constraint, Result](syntaxcheck) with NT_BlockStm{
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???
 }
 object Stm {
   val cStm = classOf[Stm]

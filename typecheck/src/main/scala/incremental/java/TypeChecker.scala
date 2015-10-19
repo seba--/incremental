@@ -34,7 +34,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
 
   type TError = String
-  type Result = (CheckRes, VReqs, CReqs, CS)
+  //type Result = (CheckRes, VReqs, CReqs, CS)
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
@@ -45,7 +45,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         true
       }
 
-      val (tRes, vReqs, cReqs, sol_) = root.typ
+      val (tRes, vReqs, cReqs) = root.typ
+      val sol_ = root.cs
       val sol = sol_.tryFinalize
       // TODO: val t: Type, but tRes is CheckRes
 
@@ -58,12 +59,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def typecheckRec(e: Node_[Result]): Unit = {
+  def typecheckRec(e: Node_[CS, Result]): Unit = {
     // TODO: res must be StepResult, kids are Result?
-    val res@(t, vReqs, cReqs, cons) = e.kind.check(e.lits, e.kids.seq)
+    val res@(t, vReqs, cReqs) = e.kind.check(e.lits, e.kids.seq)
     val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
-    val cs = subcs addNewConstraints cons
+    val cs = ??? //subcs addNewConstraints cons
 
-    e.typ = (t, vReqs, cReqs, cs) // TODO: apply (partial) solution (mgu)
+    e.set(cs, (t, vReqs, cReqs)) // TODO: apply (partial) solution (mgu)
   }
 }

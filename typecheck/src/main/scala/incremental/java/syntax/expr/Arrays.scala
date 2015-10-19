@@ -24,7 +24,7 @@ case object NewArray extends Expr(_ => ArrayCreationSyntax){
 trait ArrayBaseType{} // extends PrimType with TypeName{}
 case class UnboundWld(t: TypeName) extends ArrayBaseType
 
-abstract class Dimension(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[Result](syntaxcheck){
+abstract class Dimension(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[Constraint, Result](syntaxcheck){
   def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
 }
 case object Dim extends Dimension(simple())
