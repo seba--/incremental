@@ -62,18 +62,23 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       var newBounds = Map[Type, Set[Type]]()
       var lt = Set[Type]()
       for ((t, ts) <- this.bounds){
-        lt = ts
-        if (extend.contains(t)){
-          ts.foreach { f =>
-            if(isSubtype(t,f))
-              lt = lt - f
-            else lt
+        if (t.isInstanceOf[UCName]) newBounds = newBounds
+        else {
+          lt = ts
+          if (extend.contains(t)) {
+            ts.foreach { f =>
+              if (isSubtype(t, f))
+                lt = lt - f
+              else if (f.isInstanceOf[UCName]) lt = lt - f
+              else lt
+            }
           }
+          if (lt.isEmpty) newBounds = newBounds
+          else newBounds = newBounds + (t -> lt)
         }
-        if (lt.isEmpty) newBounds = newBounds
-        else newBounds = newBounds + (t -> lt)
 
       }
+
       SolveContinuousSubstCS(this.substitution, newBounds, this.never, this.extend )
 
     }
@@ -159,6 +164,9 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     val extendedCS = bounds.foldLeft(cs) { case (cs, (t,ts)) =>
       ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}
     }
+    println(s"$substitution")
+    println(s"$cs")
+
     extendedCS
   }
 }

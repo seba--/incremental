@@ -89,7 +89,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         fields.get(f) match {
           case None =>
             (Seq(), creqs + (t -> ClassDecl(sup, ctor, fields + (f -> U), methods)))
-
           case Some(t2) =>
             (Seq(Equal(t2, U)), creqs)
         }
@@ -198,7 +197,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (ti, subreqs, subcreqs, _) = e.kids(i).typ
         val Ui = freshCName()
        reqss = reqss :+ subreqs
-       cons = Equal(ti, Ui) +: cons //or should be subtype
+       cons = Subtype(ti, Ui) +: cons //or should be subtype
        creqss = creqss :+ subcreqs
        param = param :+ Ui
       }
@@ -222,7 +221,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         ctor = Ui :: ctor
         reqss = reqss :+ subreqs
         creqss = creqss :+ subcreqs
-       cons = Equal(ti, Ui) +: cons //or should be subtype
+       cons = Extend(ti, Ui) +: cons //or should be subtype
       }
       ctor = ctor.reverse
       val (mcons, mreqs) = mergeReqMaps(reqss)

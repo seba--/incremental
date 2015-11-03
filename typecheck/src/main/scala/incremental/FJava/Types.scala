@@ -79,7 +79,7 @@ case object ClassOK extends  Type
   def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
   def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
-  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = this.unify(other, cs)
 }
 
 case class MethodOK(in: UCName) extends  Type
