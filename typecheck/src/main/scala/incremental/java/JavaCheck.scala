@@ -22,7 +22,7 @@ object JavaCheck {
   type CReqs = Seq[Any] // TODO: find suitable type for class requirements
 
   type Result = (CheckRes, VReqs, CReqs)
-  type Kid = Node_[_, Result] // TODO: ConstraintSystem instead of _?
+  type Kid = Node_[_, Result] // TODO: ConstraintSystem instead of _: how? ConstraintSystem takes type parameters
 
   val emptyCReqs : CReqs = Seq()
   val emptyVReqs : VReqs = Map()

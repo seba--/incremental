@@ -39,6 +39,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
+
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
         typecheckRec(e)
@@ -61,7 +62,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def typecheckRec(e: Node_[CS, Result]): Unit = {
     // TODO: res must be StepResult, kids are Result?
-    val res@(t, vReqs, cReqs) = e.kind.check(e.lits, e.kids.seq)
+    val res@(t, vReqs, cReqs) = e.kind.check(e.lits, e.kids.seq, JavaContext)
     val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
     val cs = ??? //subcs addNewConstraints cons
 

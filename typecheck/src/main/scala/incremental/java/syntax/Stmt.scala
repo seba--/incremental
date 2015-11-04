@@ -35,10 +35,10 @@ trait NT_SwitchGroup
 trait NT_SwitchLabel
 
 case object Switch extends Stm(simple(cExpr, SwitchBlock.getClass))
-case object SwitchBlock extends NodeKind_TMP[Result](noLits andAlso unsafeAllKids(classOf[NT_SwitchGroup], classOf[NT_SwitchLabel])) with NT_SwitchBlock
-case object SwitchGroup extends NodeKind_TMP[Result](noLits andAlso nonEmptyKids andAlso unsafeAllKids(classOf[NT_SwitchLabel], classOf[NT_BlockStm])) with NT_SwitchGroup
-case object Case extends NodeKind_TMP[Result](simple(cExpr)) with NT_SwitchLabel
-case object Default extends NodeKind_TMP[Result](simple()) with NT_SwitchLabel
+case object SwitchBlock extends NodeKind_TMP[Constraint, Result](noLits andAlso unsafeAllKids(classOf[NT_SwitchGroup], classOf[NT_SwitchLabel])) with NT_SwitchBlock
+case object SwitchGroup extends NodeKind_TMP[Constraint, Result](noLits andAlso nonEmptyKids andAlso unsafeAllKids(classOf[NT_SwitchLabel], classOf[NT_BlockStm])) with NT_SwitchGroup
+case object Case extends NodeKind_TMP[Constraint, Result](simple(cExpr)) with NT_SwitchLabel
+case object Default extends NodeKind_TMP[Constraint, Result](simple()) with NT_SwitchLabel
 
 // Loops
 case object While extends Stm(simple(cExpr, cStm))
@@ -60,18 +60,18 @@ trait NT_CatchClause
 
 case object Try extends Stm((noLits andAlso nonEmptyKids andAlso uFollowedByKids(classOf[NT_Block], classOf[NT_CatchClause])) orElse
                             (noLits andAlso uFollowedByKids(Seq(classOf[NT_Block], classOf[NT_Block]), classOf[NT_CatchClause])))
-case object Catch extends NodeKind_TMP[Result](simple(classOf[FormalParam], Block.getClass)) with NT_CatchClause
+case object Catch extends NodeKind_TMP[Constraint, Result](simple(classOf[FormalParam], Block.getClass)) with NT_CatchClause
 
 // Blocks
 trait NT_BlockStm
 trait NT_Block extends NT_MethodBody
 
 case object Block extends Stm(noLits andAlso unsafeAllKids(classOf[NT_BlockStm])) with NT_Block
-case object ClassDecStm extends NodeKind_TMP[Result](noLits andAlso unsafeKids(Seq())) with NT_BlockStm // TODO: classOf[NT_ClassDec] in kids
+case object ClassDecStm extends NodeKind_TMP[Constraint, Result](noLits andAlso unsafeKids(Seq())) with NT_BlockStm // TODO: classOf[NT_ClassDec] in kids
 
 // LocalVariableDeclarations
 trait NT_LocalVarDecStm extends NT_BlockStm
 trait NT_LocalVarDec
 
-case object LocalVarDecStm extends NodeKind_TMP[Result](simple(LocalVarDec.getClass)) with NT_LocalVarDecStm
-case object LocalVarDec extends NodeKind_TMP[Result](litsFollowedBy(classOf[VarMod], classOf[Type]) andAlso unsafeAllKids(classOf[NT_Anno], classOf[NT_VarDec]) andAlso nonEmptyKids) with NT_LocalVarDec
+case object LocalVarDecStm extends NodeKind_TMP[Constraint, Result](simple(LocalVarDec.getClass)) with NT_LocalVarDecStm
+case object LocalVarDec extends NodeKind_TMP[Constraint, Result](litsFollowedBy(classOf[VarMod], classOf[Type]) andAlso unsafeAllKids(classOf[NT_Anno], classOf[NT_VarDec]) andAlso nonEmptyKids) with NT_LocalVarDec

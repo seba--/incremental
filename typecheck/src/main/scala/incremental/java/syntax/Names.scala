@@ -1,5 +1,7 @@
 package incremental.java.syntax
 
+import constraints.javacons.Constraint
+import incremental.Context
 import incremental.Node._
 import incremental.java.JavaCheck._
 import incremental.java.syntax.expr.{ArrayBaseType, Expr}
@@ -32,7 +34,7 @@ case class PackageOrTypeNameExt(ext: PackageOrTypeName, id: String) extends Pack
 
 trait NT_ExprName
 case object ExprName extends Expr(simple(Seq(classOf[String])) orElse simple(Seq(classOf[AmbName], classOf[String]))) with NT_ExprName{
-  def check(lits: Seq[Any], kids: Seq[Kid]): Result = ???
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???
 }
 
 trait Id extends NT_VarDecId
