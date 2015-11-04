@@ -36,7 +36,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type TError = String
   //type Result = (CheckRes, VReqs, CReqs, CS)
 
-  def typecheckImpl(e: Node): Either[Type, TError] = {
+  def typecheckImpl(e: Node): Either[CheckRes, TError] = { // TODO: CheckRes -> Type ?
     val root = e.withTypes[CS, Result]
 
 
@@ -56,7 +56,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       else if (!sol.isSolved)
         Right(s"Unresolved constraints")
       else
-        ??? //Left(t)
+        Left(tRes)
     }
   }
 
