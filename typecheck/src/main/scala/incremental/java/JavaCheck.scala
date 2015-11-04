@@ -9,7 +9,7 @@ import incremental.Node_
  * Created by qwert on 25.08.15.
  */
 
-trait JavaContext extends incremental.Context[Constraint]
+class JavaContext extends incremental.Context[Constraint]
 
 object JavaCheck {
   trait CheckRes
