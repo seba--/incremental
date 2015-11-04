@@ -14,6 +14,7 @@ import scala.collection.immutable.ListMap
 
 case class FieldName(x: Symbol)
 case class Param(x: Symbol)
+case class Ctor(params: ListMap[Symbol, CName], superCall: List[Symbol], fieldDefs: ListMap[Symbol, Symbol])
 
 abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
@@ -34,7 +35,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type StepResult = (Type, Reqs, CReqs, Seq[Constraint])
 
-  case class Ctor(params: ListMap[Symbol, CName], superCall: List[Symbol], fieldDefs: ListMap[Symbol, Symbol])
+
   case class ClassDef(name: CName, superClass: CName, fields: Fields, methods: Methods, ctor: Ctor)
   case class MethodDef(name: Symbol, params: ListMap[Symbol, CName], returnType: CName, body: Node_[Any])
 
@@ -117,22 +118,28 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def addCtorReq(creqs: CReqs, t: Type, params: List[Type]): (Seq[Constraint], CReqs) = {
-    creqs.get(t) match {
-      case None =>
-        val res: CReqs = creqs + (t -> ClassDecl(None, Some(params), Map(), Map()))
-        (Seq(), res)
-      case Some(ClassDecl(sup, ctor, fields, methods)) =>
-        ctor match {
-          case None =>
-            (Seq(), creqs + (t -> ClassDecl(sup, Some(params), fields, methods)))
-          case Some(params2) =>
-            if (params.length == params2.length) {
-              val cons = (params zip params2).map(p => Equal(p._1, p._2))
-              (cons, creqs)
-            }
-            else
-              (Seq(Never(AllEqual(params, params2))), creqs)
-        }
+    var res = creqs
+    if (t == CName('Object)) {
+      (Seq(), creqs)
+    }
+    else {
+      creqs.get(t) match {
+        case None =>
+          res = creqs + (t -> ClassDecl(None, Some(params), Map(), Map()))
+          (Seq(), res)
+        case Some(ClassDecl(sup, ctor, fields, methods)) =>
+          ctor match {
+            case None =>
+              (Seq(), res + (t -> ClassDecl(sup, Some(params), fields, methods)))
+            case Some(params2) =>
+              if (params.length == params2.length) {
+                val cons = (params zip params2).map(p => Equal(p._1, p._2))
+                (cons, res)
+              }
+              else
+                (Seq(Never(AllEqual(params, params2))), res)
+          }
+      }
     }
   }
 
@@ -227,7 +234,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mcons, mreqs) = mergeReqMaps(reqss)
       val (cCons, creqs) = mergeCReqMaps(creqss)
 
-      val (mcCons, mcreqs) = mergeCReqMaps(creqs,Map(c -> ClassDecl(None, None, Map(), Map())))
+      val (mcCons, mcreqs) = addCtorReq(creqs, c, ctor)
+     //val (mcCons, mcreqs) = mergeCReqMaps(creqs,Map(c -> ClassDecl(None, None, Map(), Map())))
       (c, mreqs, mcreqs, mcons ++ cCons ++ cons++ mcCons)
 
     case DCast =>
@@ -276,7 +284,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[Type]
       val sup = e.lits(1).asInstanceOf[Type]
-      val fields = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]].toMap
+      val Ctor(params, superCall, fieldDefs) = e.lits(2).asInstanceOf[Ctor]
+      val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
       var restCreq = Seq[CReqs]()
       var cons = Seq[Constraint]()
       var restReqs = Seq[Reqs]()
@@ -292,25 +301,29 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
       val (conss, cr) = mergeCReqMaps(restCreq)
       val (rcons, req) = mergeReqMaps(restReqs)
-      cons = cons ++ conss  :+ Extend(c, sup)
+      cons = cons ++ conss :+ Extend(c, sup)
       val (mcons3, cr3) = addSupertypeReq(cr, c, sup) //cr2
       val (mcons4, cres) = fields.foldLeft((mcons3, cr3)) {case ((mcns, creqs), (field, tpe)) =>
-       val (mconsfold, creqsfold) = addFieldReq(creqs, c, field, tpe)
+        val (mconsfold, creqsfold) = addFieldReq(creqs, c, field, tpe)
       (mcns ++ mconsfold, creqsfold)
      }
+      val lst = Ctor(params, superCall, fieldDefs).params.valuesIterator.toList
+      val ( consC,cresC) = addCtorReq(cres, c, lst)
+      val ( consD, cresD) = addCtorReq(cresC, sup, lst.dropRight(Ctor(params, superCall, fieldDefs).fieldDefs.size))
+
+      cons = cons ++ mcons4 ++ consC ++ consD
 
       val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
       val cs = subcs addNewConstraints cons
-      val (cReqs, cconss) =  remove(cres, List(c), cs)
+      val (cReqs, cconss) =  remove(cresD, List(c), cs)
 
-      cons = cconss ++ cons ++ mcons4
-      (c, req, cReqs, cons)
+
+      (c, req, cReqs, cons ++ cconss)
 
     case ProgramM =>
       var restCreq = Seq[CReqs]()
       var cons = Seq[Constraint]()
       var cls = List[Type]()
-      var kskkssk =
       for (i <- 0 until e.kids.seq.size) {
         val (c, _, cres, _) = e.kids(i).withType[StepResult].typ
         restCreq = cres +: restCreq
@@ -357,6 +370,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case Some(cld) =>
             var stype = cld.superType
             var fields = cld.fields
+          val ctor = cld.ctorParams // TODO check again the usage of CTor when we remove
             var methods = cld.methods
             for ((d, cldD) <- creq) {
               if (cs.isSubtype(cls(i), d)) {
@@ -395,12 +409,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   private val cinit: (Seq[Constraint], CReqs) = (Seq(), Map())
 
   def mergeCCld(cld1: ClassDecl, cld2: ClassDecl): (Seq[Constraint], ClassDecl) = {
+    var ctor : Option[List[Type]] = cld1.ctorParams
     val newF = cld2.fields
     val wasF = cld1.fields
     var rF = wasF
     val wasM = cld1.methods
     var mcons = Seq[Constraint]()
     var cldm = wasM
+      (cld1.ctorParams, cld2.ctorParams) match {
+        case (None, None) => ctor
+        case (None, Some(_)) => ctor = cld2.ctorParams
+        case (Some(_), None) => ctor
+       case (Some(t1), Some(t2)) => ctor
+         if (t1.size == t2.size) mcons = mcons :+ AllEqual(t1, t2)
+          else mcons = mcons :+ Never(AllEqual(t1, t2))
+      }
     for ((f, typ) <- newF){
       wasF.get(f) match {
         case None => rF += (f -> typ)
@@ -413,10 +436,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case None => cldm += (m -> mbody) // mdoby = return type + list of parameters
         case Some(mbody2) =>
           mcons = mcons :+ Equal(mbody2._1, mbody._1)
-          if (mbody._2.length == mbody2._2.length) {
-            for (i <- 0 until mbody._2.length)
-              mcons = mcons :+ Equal(mbody._2(i), mbody2._2(i))
-          }
+          if (mbody._2.length == mbody2._2.length)
+            mcons = mcons :+ AllEqual(mbody._2, mbody2._2)
           else mcons = mcons :+ Never(AllEqual(mbody._2, mbody2._2))
       }
     }
@@ -427,7 +448,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       case (Some(_), None) => styp
       case (Some(t1), Some(t2)) => mcons = mcons :+ Equal(t1, t2)
     }
-    (mcons, ClassDecl(styp, cld1.ctorParams, rF, cldm))
+    (mcons, ClassDecl(styp, ctor, rF, cldm))
   }
 
 

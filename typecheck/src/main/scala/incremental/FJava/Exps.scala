@@ -11,7 +11,8 @@ import scala.collection.immutable.ListMap
  * Created by lirakuci on 3/10/15.
  */
 
-case object Ctor extends NodeKind(_ => CtorSyntax)
+case object CtorDec extends NodeKind(_ => CtorSyntax)
+//case object Ctor extends NodeKind(_ => CtorSyntax)
 
 case object ClassDec extends NodeKind(_ => ClassSyntax)
 case object FieldDec extends NodeKind(_ => FieldSyntax)
@@ -66,13 +67,14 @@ object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
       error(s"Expected Class type CName, but got ${lits(0)}")
 
     if (!(lits(1).isInstanceOf[CName]))
-      error(s"Expected Super type CName, but got ${lits(0)}")
+      error(s"Expected Super type CName, but got ${lits(1)}")
 
-   // if (lits.size > 2) //&& !(lits(2).isInstanceOf[Node_[CtorDec]]))
-   //   error(s"Expected Ctor spec, but got ${lits(2)}")
+    //if ((lits.size > 3) && !(lits(2) == CtorDec))
+   // if  (!(lits(2) == CtorDec))
+     // error(s"Expected Ctor spec, but got ${lits(2)}")
     //TODO syntax check Ctor
 
-    for (i <- 2 until lits.size - 2 by 2) {
+    for (i <- 3 until lits.size - 3 by 2) {
       val name = lits(i)
       if (i + 1 >= lits.size)
         error(s"Field $name misses annotated type")
@@ -146,8 +148,15 @@ object ThisSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
   }
 }
 
-object CtorSyntax extends SyntaxChecking.SyntaxChecker(Ctor){
+object CtorSyntax extends SyntaxChecking.SyntaxChecker(CtorDec){
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-   // TODO add syntax for  ctor
+   /* if (kids.nonEmpty)
+      error(s"Expected no kids but got $kids")
+
+    for (i <- 0 until lits.size) {
+      val typ = lits(i)
+      if (!typ.isInstanceOf[Type])
+        error(s"Expected field type of type Type but got $typ")
+    } */
   }
 }

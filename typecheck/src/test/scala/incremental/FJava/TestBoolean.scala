@@ -6,6 +6,8 @@ import constraints.fjava.impl._
 import incremental.Node._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
+import scala.collection.immutable.ListMap
+
 /**
  * Created by lirakuci on 3/29/15.
  */
@@ -38,7 +40,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
 
 
   val Bool = ClassDec(
-    Seq(CName('Bool), CName('Object),
+    Seq(CName('Bool), CName('Object), Ctor(ListMap(), List(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -52,7 +54,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
   typecheckTest("Bool ok", Bool)(CName('Bool))
 
   val True = ClassDec(
-    Seq(CName('True), CName('Bool),
+    Seq(CName('True), CName('Bool), Ctor(ListMap(), List(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -64,7 +66,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
     )
   )
   val False = ClassDec(
-    Seq(CName('False), CName('Bool),
+    Seq(CName('False), CName('Bool),Ctor(ListMap(), List(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
