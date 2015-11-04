@@ -37,7 +37,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   //type Result = (CheckRes, VReqs, CReqs, CS)
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
-    val root = e.withType[Result]
+    val root = e.withTypes[CS, Result]
 
 
     Util.timed(localState -> Statistics.typecheckTime) {
