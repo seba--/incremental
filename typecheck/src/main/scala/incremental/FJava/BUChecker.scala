@@ -228,7 +228,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         ctor = Ui :: ctor
         reqss = reqss :+ subreqs
         creqss = creqss :+ subcreqs
-       cons = Extend(ti, Ui) +: cons //or should be subtype
+       cons = Subtype(ti, Ui) +: cons //or should be subtype
       }
       ctor = ctor.reverse
       val (mcons, mreqs) = mergeReqMaps(reqss)
@@ -338,7 +338,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       (CName('Object), Map(), cr, cons ++ ctcons)
   }
-
   private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
 
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
@@ -446,7 +445,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       case (None, None) => styp
       case (None, Some(_)) => styp = cld2.superType
       case (Some(_), None) => styp
-      case (Some(t1), Some(t2)) => mcons = mcons :+ Equal(t1, t2)
+      case (Some(t1), Some(t2)) => styp
+        mcons = mcons :+ Equal(t1, t2)
     }
     (mcons, ClassDecl(styp, ctor, rF, cldm))
   }

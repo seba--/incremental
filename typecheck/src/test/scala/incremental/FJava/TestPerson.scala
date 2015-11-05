@@ -5,6 +5,8 @@ import constraints.fjava.impl._
 import incremental.Node._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
+import scala.collection.immutable.ListMap
+
 /**
  * Created by lirakuci on 3/29/15.
  */
@@ -40,23 +42,24 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
 
 
   val Title = ClassDec(
-    Seq(CName('Title), CName('Object),
+    Seq(CName('Title), CName('Object), Ctor(ListMap(), List(), ListMap()),
       Seq()), // no fields
     Seq() // no methods
   )
   val NoTitle = ClassDec(
-    Seq(CName('NoTitle), CName('Title),
+    Seq(CName('NoTitle), CName('Title),  Ctor(ListMap(), List(), ListMap()),
       Seq()), // no fields
     Seq() // no methods
   )
   val ProfTitle = ClassDec(
-    Seq(CName('ProfTitle), CName('Title),
+    Seq(CName('ProfTitle), CName('Title), Ctor(ListMap(), List(), ListMap()),
       Seq()), // no fields
     Seq() // no methods
   )
 
   val Person = ClassDec(
-    Seq(CName('Person), CName('Object),
+    Seq(CName('Person), CName('Object),  Ctor(ListMap('name -> CName('Object),
+      'address -> CName('Object)), List(), ListMap('name -> 'name, 'address -> 'address)),
       Seq(
         'name -> CName('Object),
         'address -> CName('Object))),
@@ -70,7 +73,8 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     )
   )
   val Professor = ClassDec(
-    Seq(CName('Professor), CName('Person),
+    Seq(CName('Professor), CName('Person), Ctor(ListMap('name -> CName('Object),
+      'address -> CName('Object), 'age -> CName('Object)), List('name, 'address), ListMap('age->'age)),
       Seq('age -> CName('Object))), // no fields
     Seq(
       MethodDec(
@@ -82,7 +86,8 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     )
   )
   val Student = ClassDec(
-    Seq(CName('Student), CName('Person),
+    Seq(CName('Student), CName('Person), Ctor(ListMap('name -> CName('Object),
+      'address -> CName('Object), 'age -> CName('Object)), List('name, 'address), ListMap('age->'age)),
       Seq('age -> CName('Object))), // no fields
     Seq(
       MethodDec(
