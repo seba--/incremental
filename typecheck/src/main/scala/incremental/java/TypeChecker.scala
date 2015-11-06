@@ -61,9 +61,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def typecheckRec(e: Node_[Constraint, CS, Result]): Unit = {
-    val res@(t, vReqs, cReqs) = e.kind.check(e.lits, e.kids.seq, new JavaContext)
-   // val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4) // TODO: cs not part of Result anymore, but part of Node
-    val cs = ??? //subcs addNewConstraints cons
+    val ctx = new JavaContext
+    val res@(t, vReqs, cReqs) = e.kind.check(e.lits, e.kids.seq, ctx)
+    val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, subnode) => cs mergeSubsystem subnode.cs)
+    val cs = subcs addNewConstraints ctx.getConstraints
 
     e.set(cs, (t, vReqs, cReqs)) // TODO: apply (partial) solution (mgu)
   }
