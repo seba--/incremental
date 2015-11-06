@@ -3,26 +3,26 @@ package incremental
 import Node._
 import constraints.{Constraint, ConstraintSystem}
 
-abstract class NodeKind[C <: Constraint[_, _], T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
-  def unapplySeq(e: Node_[_, _]): Option[Seq[Node_[_, _]]] =
+abstract class NodeKind[C, T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
+  def unapplySeq(e: Node_[C, _, T]): Option[Seq[Node_[C, _, T]]] =
     if (e.kind == this)
       Some(e.kids.seq)
     else
       None
 
   //def check(lits: Seq[Any], kids: Seq[Node_[_, T]]): T
-  def check(lits: Seq[Any], kids: Seq[Node_[_, T]], context: Context[C]): T
+  def check(lits: Seq[Any], kids: Seq[Node_[C, _, T]], context: Context[C]): T
 }
 
-class Node_[CS, T](val kind: NodeKind[_, _], val lits: Seq[Lit], kidsArg: Seq[Node_[CS, T]]) extends Serializable {
+class Node_[C, CS, T](val kind: NodeKind[C, T], val lits: Seq[Lit], kidsArg: Seq[Node_[C, CS, T]]) extends Serializable {
   kind.syntaxcheck(kind).check(lits, kidsArg)
 
-  protected def maxHeight(seq: Seq[Node_[CS, T]]): Int = {
+  protected def maxHeight(seq: Seq[Node_[C, CS, T]]): Int = {
     val incr = if (seq.isEmpty) 0 else 1
     seq.foldLeft(0){ case (i, n) => i.max(n._height) } + incr
   }
 
-  protected def sumSize(seq: Seq[Node_[CS, T]]): Int = {
+  protected def sumSize(seq: Seq[Node_[C, CS, T]]): Int = {
     seq.foldLeft(1){ case (s, n) => s + n.size }
   }
 
@@ -49,13 +49,13 @@ class Node_[CS, T](val kind: NodeKind[_, _], val lits: Seq[Lit], kidsArg: Seq[No
     _kids foreach (_.invalidate)
   }
 
-  private val _kids: Array[Node_[CS, T]] = Array(kidsArg:_*)
+  private val _kids: Array[Node_[C, CS, T]] = Array(kidsArg:_*)
   private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
 
   object kids {
     def apply(i: Int) = _kids(i)
-    def update[CS1, U](i: Int, e: Node_[CS1, U]): Unit = {
-      val ee = e.asInstanceOf[Node_[CS, T]]
+    def update[C1, CS1, U](i: Int, e: Node_[C1, CS1, U]): Unit = {
+      val ee = e.asInstanceOf[Node_[C, CS, T]]
       if (ee._valid)
         _valid = false
       else
@@ -64,26 +64,26 @@ class Node_[CS, T](val kind: NodeKind[_, _], val lits: Seq[Lit], kidsArg: Seq[No
       _height = maxHeight(_kids)
       _size = sumSize(_kids)
     }
-    def seq: Seq[Node_[CS, T]] = _kids
+    def seq: Seq[Node_[C, CS, T]] = _kids
   }
 
   def typs(i: Int) = _kids(i)._typ
 
-  def withType[T] = this.asInstanceOf[Node_[_, T]]
-  def withTypes[CS, T] = this.asInstanceOf[Node_[CS, T]]
+  def withType[T] = this.asInstanceOf[Node_[_, _, T]]
+  def withTypes[C, CS, T] = this.asInstanceOf[Node_[C, CS, T]]
 
   def markKidTypeAvailable(pos: Int) =
     availableKidTypes = availableKidTypes.updated(pos, true)
 
   def allKidTypesAvailable = availableKidTypes.foldLeft(true)(_&&_)
 
-  def uninitialized: Seq[Node_[CS, T]] = {
-    val buf = collection.mutable.ArrayBuffer[Node_[CS, T]]()
+  def uninitialized: Seq[Node_[C, CS, T]] = {
+    val buf = collection.mutable.ArrayBuffer[Node_[C, CS, T]]()
     uninitialized(buf)
     buf
   }
 
-  def uninitialized(buf: collection.mutable.ArrayBuffer[Node_[CS, T]]): Unit = {
+  def uninitialized(buf: collection.mutable.ArrayBuffer[Node_[C, CS, T]]): Unit = {
     val oldsize = buf.size
     _kids foreach (_.uninitialized(buf))
     val hasSubchange = oldsize == buf.size
@@ -91,7 +91,7 @@ class Node_[CS, T](val kind: NodeKind[_, _], val lits: Seq[Lit], kidsArg: Seq[No
       buf += this
   }
 
-  def visitUninitialized(f: Node_[CS, T] => Boolean): Boolean = {
+  def visitUninitialized(f: Node_[C, CS, T] => Boolean): Boolean = {
     val hasSubchange = _kids.foldLeft(false)((changed, k) =>  k.visitUninitialized(f) || changed)
     if (!valid || hasSubchange)
       f(this)
@@ -99,7 +99,7 @@ class Node_[CS, T](val kind: NodeKind[_, _], val lits: Seq[Lit], kidsArg: Seq[No
       false
   }
 
-  def visitUninitialized2(f: Node_[CS, T] => (T, Boolean)): Boolean = {
+  def visitUninitialized2(f: Node_[C, CS, T] => (T, Boolean)): Boolean = {
     val hasSubchange = _kids.foldLeft(false)((changed, k) =>  k.visitUninitialized2(f) || changed)
     if (!valid || hasSubchange) {
       val (t, doContinue) = f(this)
@@ -111,7 +111,7 @@ class Node_[CS, T](val kind: NodeKind[_, _], val lits: Seq[Lit], kidsArg: Seq[No
       false
   }
 
-  def visitInvalid(f: Node_[CS, T] => Boolean): Boolean = {
+  def visitInvalid(f: Node_[C, CS, T] => Boolean): Boolean = {
     var hasSubchange = false
     for(k <- _kids if !k.valid) {
       hasSubchange = k.visitInvalid(f)  || hasSubchange
@@ -122,7 +122,7 @@ class Node_[CS, T](val kind: NodeKind[_, _], val lits: Seq[Lit], kidsArg: Seq[No
       false
   }
 
-  def visitUpto(depth: Int)(f: Node_[CS, T] => Boolean): Boolean = {
+  def visitUpto(depth: Int)(f: Node_[C, CS, T] => Boolean): Boolean = {
     if (depth > 0) {
       val hasSubchange = _kids.foldLeft(false){ (changed, k) => k.visitUpto(depth - 1)(f) || changed }
       if (!valid || hasSubchange)
@@ -144,16 +144,16 @@ class Node_[CS, T](val kind: NodeKind[_, _], val lits: Seq[Lit], kidsArg: Seq[No
 
 object Node {
   type Lit = Any
-  type Node = Node_[Any, Any]
+  type Node = Node_[Any, Any, Any]
 
   import scala.language.implicitConversions
-  implicit def kindExpression(k: NodeKind[_, _]) = new KindExpression(k)
-  class KindExpression(k: NodeKind[_, _]) {
-    def apply(): Node = new Node_[Any, Any](k, Seq(), Seq())
-    def apply(l: Lit, sub: Node*): Node = new Node_[Any, Any](k, scala.Seq(l), Seq(sub:_*))
-    def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any, Any](k, scala.Seq(l1, l2), Seq(sub:_*))
-    def apply(e: Node, sub: Node*): Node = new Node_[Any, Any](k, scala.Seq(), e +: Seq(sub:_*))
-    def apply(lits: Seq[Lit], sub: Seq[Node]): Node = new Node_[Any, Any](k, lits, sub)
+  implicit def kindExpression(k: NodeKind[Any, Any]) = new KindExpression(k)
+  class KindExpression(k: NodeKind[Any, Any]) {
+    def apply(): Node = new Node_[Any, Any, Any](k, Seq(), Seq())
+    def apply(l: Lit, sub: Node*): Node = new Node_[Any, Any, Any](k, scala.Seq(l), Seq(sub:_*))
+    def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any, Any, Any](k, scala.Seq(l1, l2), Seq(sub:_*))
+    def apply(e: Node, sub: Node*): Node = new Node_[Any, Any, Any](k, scala.Seq(), e +: Seq(sub:_*))
+    def apply(lits: Seq[Lit], sub: Seq[Node]): Node = new Node_[Any, Any, Any](k, lits, sub)
   }
   
   val ignore = (k: NodeKind[_, _]) => new SyntaxChecking.IgnoreSyntax(k)
@@ -170,7 +170,7 @@ object SyntaxChecking {
       override def getMessage(): String = s"Syntax error in $k node: $msg"
     }
     def error(msg: String) = throw new SyntaxError(k, msg)
-    def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]])
+    def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]])
   }
 
   class SyntaxCheckOps(f: NodeKind[_, _] => SyntaxChecker) {
@@ -179,11 +179,11 @@ object SyntaxChecking {
   }
 
   class IgnoreSyntax(k: NodeKind[_, _]) extends SyntaxChecker(k) {
-    def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]) = {}
+    def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]) = {}
   }
 
   case class KidTypesLitTypesSyntax(k: NodeKind[_, _], litTypes: Seq[Class[_]], kidTypes: Seq[Class[_ <: NodeKind[_, _]]]) extends SyntaxChecker(k) {
-    def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]) {
+    def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]) {
       if (kids.size != kidTypes.size)
         error(s"Expected ${kidTypes.size} subexpressions but found ${kids.size} subexpressions")
 
@@ -201,7 +201,7 @@ object SyntaxChecking {
   }
 
   case class AlternativeSyntax(k: NodeKind[_, _], f: NodeKind[_, _] => SyntaxChecker, g: NodeKind[_, _] => SyntaxChecker) extends SyntaxChecker(k) {
-    def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+    def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
       try {
         f(k).check(lits, kids)
       } catch {
@@ -215,7 +215,7 @@ object SyntaxChecking {
   }
 
   case class ConjunctiveSyntax(k: NodeKind[_, _], f: NodeKind[_, _] => SyntaxChecker, g: NodeKind[_, _] => SyntaxChecker) extends SyntaxChecker(k) {
-    def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+    def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
       try {
         f(k).check(lits, kids)
       } catch {
