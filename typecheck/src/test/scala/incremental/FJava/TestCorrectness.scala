@@ -25,7 +25,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val typ = ev.withType[checker.Result].typ._1
       val req = ev.withType[checker.Result].typ._2
       val creq = ev.withType[checker.Result].typ._3
-      val cons = ev.withType[checker.Result].typ._4
+      val cons = ev.withType[checker.Result].typ._5
       assert(actual.isLeft, s"Type = $typ, Reqs = $req, CReqs = $creq, Constraint = $cons")
 
       val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
