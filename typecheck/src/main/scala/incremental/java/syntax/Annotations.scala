@@ -16,7 +16,7 @@ trait NT_ElemValPair
 
 // TODO: remove this, just for intermediate purpose (compilation)
 abstract class NodeKind_TMP[C, T](syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[C, T](syntaxcheck){
-  def check(lits: Seq[Any], kids: Seq[Node_[_, T]], context: Context[C]): T = ???
+  def check(lits: Seq[Any], kids: Seq[Node_[C, _, T]], context: Context[C]): T = ???
 }
 
 case object Anno extends NodeKind_TMP[Constraint, Result](lits(Seq(classOf[TypeName])) andAlso unsafeAllKids(classOf[NT_ElemValPair])) with NT_Anno

@@ -25,7 +25,7 @@ import JavaSyntaxChecker.firstIndexOf
 }*/
 
 object ArrayCreationSyntax extends SyntaxChecking.SyntaxChecker(NewArray){
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]) {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]) {
     if(lits.size != 1)
       error(s"Just one literal allowed, but found ${lits.size}")
 
@@ -66,7 +66,7 @@ object ArrayCreationSyntax extends SyntaxChecking.SyntaxChecker(NewArray){
 }
 
 object BlockSyntax extends SyntaxChecking.SyntaxChecker(Block){
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     // stm syntax andAlso nolits syntax
     if(kids.exists(!_.kind.isInstanceOf[Stm]))
       error(s"All kids must be of kind Stm, but found ${kids.filter(!_.kind.isInstanceOf[Stm])}")
@@ -77,7 +77,7 @@ object BlockSyntax extends SyntaxChecking.SyntaxChecker(Block){
 }
 
 object FieldDecSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     // TODO
   }
 }
@@ -120,7 +120,7 @@ object ArrayVarDecInitSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
 }*/
 
 case class FormalParamSyntax(k: NodeKind[_, _]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(!k.isInstanceOf[NT_FormalParam])
       error(s"FormalParamSyntax is just applicable to FormalParam, but was applied to ${k.getClass}")
 
@@ -138,7 +138,7 @@ case class FormalParamSyntax(k: NodeKind[_, _]) extends SyntaxChecking.SyntaxChe
 }
 
 object MethodInvokationSyntax extends SyntaxChecking.SyntaxChecker(Invoke) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.nonEmpty)
       error(s"No literals allowed, but found ${lits.size}")
 
@@ -172,7 +172,7 @@ object DeprMethodDecHeadSyntax extends SyntaxChecking.SyntaxChecker(DeprMethodDe
 }*/
 
 object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMethodDec) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
   // ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Throws? ";"
     // TODO: refactor: typeParamsPos and resultTypePos are statically known from syntax (because FormalParam is kid and not lit)
     if(lits.size < 2)
@@ -241,7 +241,7 @@ object AbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AbstractMeth
 }
 
 object DeprAbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(DeprAbstractMethodDec) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
   // ( Anno | AbstractMethodMod )* TypeParams? ResultType Id "(" {FormalParam ","}* ")" Dim+ Throws? ";"
     // lits
     // TODO: AbstractMethodMod* TypeParams? ResultType Id Dim+ Throws? ";"
@@ -278,7 +278,7 @@ object DeprAbstractMethodDecSyntax extends SyntaxChecking.SyntaxChecker(DeprAbst
 }*/
 
 object AnnoDecSyntax extends SyntaxChecking.SyntaxChecker(AnnoDec) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.nonEmpty)
       error(s"No literals allowed, but found ${lits.size}")
 
@@ -294,13 +294,13 @@ object AnnoDecSyntax extends SyntaxChecking.SyntaxChecker(AnnoDec) {
 }
 
 object AnnoDecHeadSyntax extends SyntaxChecking.SyntaxChecker(AnnoDecHead) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     //
   }
 }
 
 object AnnoMethodDecSyntax extends SyntaxChecking.SyntaxChecker(AnnoMethodDec) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.size < 2)
       error(s"At least two literals must exist, but found ${lits.size}")
     if(lits.dropRight(2).exists(!_.isInstanceOf[AbstractMethodMod]))
@@ -372,7 +372,7 @@ case class StmKindsSyntax(k: NodeKind) extends SyntaxChecking.SyntaxChecker(k) {
 }*/
 
 case class ExprOrStmKindsSyntax(k: NodeKind[_, _]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     for(kid <- kids)
       if(!classOf[Expr].isInstance(kid.kind) || !classOf[Stm].isInstance(kid.kind))
         error(s"All kids must be of kind Stm or Expr, but found ${kid.kind.getClass}")
@@ -380,21 +380,21 @@ case class ExprOrStmKindsSyntax(k: NodeKind[_, _]) extends SyntaxChecking.Syntax
 }
 
 case class NoKidsSyntax(k: NodeKind[_, _]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.nonEmpty)
       error(s"No kids allowed, but found ${kids.size}")
   }
 }
 
 case class NonEmptyKidsSyntax(k: NodeKind[_, _]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.isEmpty)
       error(s"Kids must not be empty")
   }
 }
 
 case class KidsSyntax(k: NodeKind[_, _], kidTypes: Seq[Class[_ <: NodeKind[_, _]]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.size != kidTypes.size)
       error(s"Expected ${kidTypes.size} kids but found ${kids.size} kids")
 
@@ -405,7 +405,7 @@ case class KidsSyntax(k: NodeKind[_, _], kidTypes: Seq[Class[_ <: NodeKind[_, _]
 }
 
 case class KidsSequenceSyntax(k: NodeKind[_, _], kidsType: Class[_ <: NodeKind[_, _]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     for(kid <- kids)
       if(!kidsType.isInstance(kid.kind))
         error(s"All kids must be of kind $kidsType, but found ${kid.kind.getClass}")
@@ -413,7 +413,7 @@ case class KidsSequenceSyntax(k: NodeKind[_, _], kidsType: Class[_ <: NodeKind[_
 }
 
 case class UnsafeKidsSyntax(k: NodeKind[_, _], kidTypes: Seq[Class[_]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.size != kidTypes.size)
       error(s"Expected ${kidTypes.size} kids but found ${kids.size} kids")
 
@@ -424,7 +424,7 @@ case class UnsafeKidsSyntax(k: NodeKind[_, _], kidTypes: Seq[Class[_]]) extends 
 }
 
 case class UnsafeKidsSequenceSyntax(k: NodeKind[_, _], kidsType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     for(kid <- kids)
       if(!kidsType.isInstance(kid.kind))
         error(s"All kids must be of kind $kidsType, but found ${kid.kind.getClass}")
@@ -432,21 +432,21 @@ case class UnsafeKidsSequenceSyntax(k: NodeKind[_, _], kidsType: Class[_]) exten
 }
 
 case class NoLitsSyntax(k: NodeKind[_, _]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.nonEmpty)
       error(s"No literals allowed, but found ${lits.size}")
   }
 }
 
 case class NonEmptyLitsSyntax(k: NodeKind[_, _]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.isEmpty)
       error(s"Literals must not be empty")
   }
 }
 
 case class LitsSyntax(k: NodeKind[_, _], litTypes: Seq[Class[_]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.size != litTypes.size)
       error(s"Expected ${litTypes.size} literals but found ${lits.size} literals")
 
@@ -457,7 +457,7 @@ case class LitsSyntax(k: NodeKind[_, _], litTypes: Seq[Class[_]]) extends Syntax
 }
 
 case class LitsSequenceSyntax(k: NodeKind[_, _], litsType: Class[_])extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     for(lit <- lits)
       if(!litsType.isInstance(lit))
         error(s"All lits must be of kind $litsType, but found ${lit.getClass}")
@@ -465,7 +465,7 @@ case class LitsSequenceSyntax(k: NodeKind[_, _], litsType: Class[_])extends Synt
 }
 
 case class KidsFollowedByKidSyntax(k: NodeKind[_, _], headsType: Class[_ <: NodeKind[_, _]], lastType: Class[_ <: NodeKind[_, _]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.isEmpty)
       error(s"At least one kid needed")
 
@@ -479,7 +479,7 @@ case class KidsFollowedByKidSyntax(k: NodeKind[_, _], headsType: Class[_ <: Node
 }
 
 case class KidFollowedByKidsSyntax(k: NodeKind[_, _], firstType: Class[_ <: NodeKind[_, _]], tailType: Class[_ <: NodeKind[_, _]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.isEmpty)
       error(s"At least one kid needed")
 
@@ -493,7 +493,7 @@ case class KidFollowedByKidsSyntax(k: NodeKind[_, _], firstType: Class[_ <: Node
 }
 
 case class UnsafeKidsFollowedByKidSyntax(k: NodeKind[_, _], headsType: Class[_], lastType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.isEmpty)
       error(s"At least one kid needed")
 
@@ -507,7 +507,7 @@ case class UnsafeKidsFollowedByKidSyntax(k: NodeKind[_, _], headsType: Class[_],
 }
 
 case class UnsafeKidsFollowedByKidSequenceSyntax(k: NodeKind[_, _], headsType: Class[_], kidTypes: Seq[Class[_]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.size < kidTypes.size)
       error(s"Expected at least ${kidTypes.size} kids but found ${kids.size} kids")
 
@@ -522,7 +522,7 @@ case class UnsafeKidsFollowedByKidSequenceSyntax(k: NodeKind[_, _], headsType: C
 }
 
 case class UnsafeKidFollowedByKidsSyntax(k: NodeKind[_, _], firstType: Class[_], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.isEmpty)
       error(s"At least one kid needed")
 
@@ -536,7 +536,7 @@ case class UnsafeKidFollowedByKidsSyntax(k: NodeKind[_, _], firstType: Class[_],
 }
 
 case class UnsafeKidSequenceFollowedByKidsSyntax(k: NodeKind[_, _], kidTypes: Seq[Class[_]], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(kids.size < kidTypes.size)
       error(s"Expected at least ${kidTypes.size} kids but found ${kids.size} kids")
 
@@ -551,7 +551,7 @@ case class UnsafeKidSequenceFollowedByKidsSyntax(k: NodeKind[_, _], kidTypes: Se
 }
 
 case class DoubleSequenceKidsSyntax(k: NodeKind[_, _], firstType: Class[_ <: NodeKind[_, _]], secondType: Class[_ <: NodeKind[_, _]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     val splitPos = firstIndexOf(kids.map(k => k.kind), secondType)
 
     for(kid <- kids.slice(0, splitPos))
@@ -565,7 +565,7 @@ case class DoubleSequenceKidsSyntax(k: NodeKind[_, _], firstType: Class[_ <: Nod
 }
 
 case class UnsafeDoubleSequenceKidsSyntax(k: NodeKind[_, _], firstType: Class[_], secondType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     val splitPos = firstIndexOf(kids.map(k => k.kind), secondType)
 
     for(kid <- kids.slice(0, splitPos))
@@ -579,7 +579,7 @@ case class UnsafeDoubleSequenceKidsSyntax(k: NodeKind[_, _], firstType: Class[_]
 }
 
 case class LitsFollowedByLitSyntax(k: NodeKind[_, _], headsType: Class[_], lastType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.isEmpty)
       error(s"At least one literal needed")
 
@@ -593,7 +593,7 @@ case class LitsFollowedByLitSyntax(k: NodeKind[_, _], headsType: Class[_], lastT
 }
 
 case class LitsFollowedByLitSequenceSyntax(k: NodeKind[_, _], headsType: Class[_], litTypes: Seq[Class[_]]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.size < litTypes.size)
       error(s"Expected at least ${litTypes.size} literals but found ${lits.size} literals")
 
@@ -608,7 +608,7 @@ case class LitsFollowedByLitSequenceSyntax(k: NodeKind[_, _], headsType: Class[_
 }
 
 case class LitFollowedByLitsSyntax(k: NodeKind[_, _], firstType: Class[_], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.isEmpty)
       error(s"At least one literal needed")
 
@@ -622,7 +622,7 @@ case class LitFollowedByLitsSyntax(k: NodeKind[_, _], firstType: Class[_], tailT
 }
 
 case class LitSequenceFollowedByLitsSyntax(k: NodeKind[_, _], litTypes: Seq[Class[_]], tailType: Class[_]) extends SyntaxChecking.SyntaxChecker(k) {
-  def check[CS, T](lits: Seq[Lit], kids: Seq[Node_[CS, T]]): Unit = {
+  def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     if(lits.size < litTypes.size)
       error(s"Expected at least ${litTypes.size} literals but found ${lits.size} literals")
 
