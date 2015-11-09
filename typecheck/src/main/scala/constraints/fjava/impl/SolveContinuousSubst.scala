@@ -1,13 +1,12 @@
 package constraints.fjava.impl
 
 
-import constraints.Statistics
+import constraints.{CTermBase, CVar, Statistics}
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{UCName, CName}
+import incremental.fjava.{CR, UCName, CName}
 import constraints.fjava._
 import incremental.Util
 
-import scala.annotation.tailrec
 import scala.collection.generic.CanBuildFrom
 
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
@@ -33,11 +32,18 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, never :+ c, extend)
 
-  def mergeSubsystem(that: SolveContinuousSubstCS) = {
+  def mergeSubsystem(that: SolveContinuousSubstCS, req : CR) = {
     var msubst = substitution ++ that.substitution
+   var ex  = Map[Type, Type]()
+     for((c, cld) <- req.cr){
+      cld.extendc match {
+        case None =>  ex
+        case Some(t) => ex = ex + (c -> t)
+      }
+    }
     var mnever = never ++ that.never
     val init = SolveContinuousSubstCS(msubst, this.bounds, mnever, this.extend)
-    val extendedCS = that.extend.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
+    val extendedCS = ex.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
     that.bounds.foldLeft(extendedCS) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
     }

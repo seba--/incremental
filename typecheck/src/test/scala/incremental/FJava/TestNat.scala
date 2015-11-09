@@ -23,7 +23,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
       val typ = ev.withType[checker.Result].typ._1
       val req = ev.withType[checker.Result].typ._2
       val creq = ev.withType[checker.Result].typ._3
-      val cons = ev.withType[checker.Result].typ._5
+      val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, s"Expected $expected but got Type = $typ, Reqs = $req, CReqs = $creq, Constraint = $cons")
 
       val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {

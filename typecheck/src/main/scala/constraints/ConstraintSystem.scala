@@ -1,6 +1,7 @@
 package constraints
 
 import CSubst.CSubst
+import incremental.fjava.CR
 import scala.collection.generic.CanBuildFrom
 
 trait ConstraintSystem[G <: GenBase, C, CS] {
@@ -9,7 +10,7 @@ trait ConstraintSystem[G <: GenBase, C, CS] {
 
   def substitution: CSubst[C]
   def isSolved: Boolean
-  def mergeSubsystem(that: CS): CS
+  def mergeSubsystem(that: CS, creq : CR): CS
   def addNewConstraint (that: C): CS
   def addNewConstraints(cons: Iterable[C]): CS
   def applyPartialSolution[CT <: CTerm[G, C, CT]](t: CT): CT
