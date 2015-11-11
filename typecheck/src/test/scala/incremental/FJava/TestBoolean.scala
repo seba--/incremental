@@ -51,7 +51,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         New(CName('Bool))) // dummy body, will be overwritten by subclasses
     )
   )
-  typecheckTest("Bool ok", Bool)(CName('Bool))
+  typecheckTest("Bool ok", ProgramM(Bool))(CName('Object))
 
   val True = ClassDec(
     Seq(CName('True), CName('Bool), Ctor(ListMap(), List(), ListMap()),

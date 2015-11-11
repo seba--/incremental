@@ -79,7 +79,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
-        Fields('age, Var('this))),
+        FieldAcc('age, Var('this))),
       MethodDec(
         CName('ProfTitle), 'title, Seq(),
         New(CName('ProfTitle)))
@@ -92,20 +92,20 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
-        Fields('age, Var('this))),
+        FieldAcc('age, Var('this))),
       MethodDec(
         CName('NoTitle), 'title, Seq(),
         New(CName('NoTitle))),
       MethodDec(
         CName('Professor), 'promote, Seq(),
         New(CName('Professor), // copy name, address, and age
-          Fields('name, Var('this)),
-          Fields('address, Var('this)),
-          Fields('age, Var('this))))
+          FieldAcc('name, Var('this)),
+          FieldAcc('address, Var('this)),
+          FieldAcc('age, Var('this))))
     )
   )
 
-  typecheckTest("Title ok", Title)(CName('Title))
+  typecheckTest("Title ok", ProgramM(Title))(CName('Object))
   typecheckTestError("NoTitle ok", NoTitle)
   typecheckTestError("ProfTitle ok", ProfTitle)
 

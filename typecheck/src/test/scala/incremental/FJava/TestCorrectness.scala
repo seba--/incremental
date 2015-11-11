@@ -40,7 +40,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     }
 
 
-  typecheckTestError("e0.f : C ", Fields('f, Var('e0))) //(UCName(CVar('C)))
+  typecheckTestError("e0.f : C ", FieldAcc('f, Var('e0))) //(UCName(CVar('C)))
   typecheckTestError("new C(x):C", New(Seq(CName('c)), Seq(Var('x)))) //(CName('c))
   typecheckTestError("e0.m() : void", Invk(Seq('m), Seq(Var('e0)))) //(UCName(CVar('void)))
   typecheckTestError("e0.m(e) : Double", Invk(Seq('m), Seq(Var('e0), Var('e))))//(UCName(CVar('Double)))
@@ -56,7 +56,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestFJ("new Object()", New(CName('Object)))(CName('Object)) //created object class with empty fields and methods, Object is the encoded Bottom Type
   typecheckTestError("new Pair(fst : First, snd : Second)", New(Seq(CName('Pair)), Seq(Var('First), Var('Second))))//(CName('Pair)) // see again why eq constraint does not work
 
-  typecheckTestError(" (new Pair(first)).first : Int", Fields('f, New(CName('Pair), Var('f)))) //(UCName(CVar('Int)))
+  typecheckTestError(" (new Pair(first)).first : Int", FieldAcc('f, New(CName('Pair), Var('f)))) //(UCName(CVar('Int)))
 
 
   typecheckTestError("'void m(x, y) ", MethodDec(Seq(CName('void), 'm, Seq(('x, UCName(CVar('x))), ('y, UCName(CVar('y))))),
@@ -95,17 +95,17 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Seq(Invk(Seq('getX), Seq(New(CName('Number)), Var('x))))))//(CName('Number))
 
   typecheckTestError("Int getX(x: Int) {(new Number(x).x : Int in Number}", MethodDec(Seq(CName('Int), 'getX, Seq()),
-    Seq(Fields('x, New(CName('Number), Var('x))))))//(CName('Number))
+    Seq(FieldAcc('x, New(CName('Number), Var('x))))))//(CName('Number))
 
   typecheckTestError("Int getX(x: Int) {(new Number(x,y).x : Int in Number}", MethodDec(Seq(CName('Int), 'getX, Seq()),
-    Seq(Fields('x, New(CName('Number), Var('x), Var('y))))))//(ßCName('Number))
+    Seq(FieldAcc('x, New(CName('Number), Var('x), Var('y))))))//(ßCName('Number))
   // /typecheckTestError("Int getXY(x,y) {return Int} in Number", Method(CName('Number), CName('Int), 'getXY, Seq('x, 'y),Var('e0)))
 
 
-  typecheckTestError("e0.x + e0.x : TNum", Add(Fields('f, Num(1)), Fields('f, Num(1))))//(TNum)
-  typecheckTestError("e0.x + e0.x : C", Add(Fields('f, Num(1)), Fields('f, Num(1))))//(CName('C))
-  typecheckTestError("New Pair(new A(), new B()).snd", Fields('snd, New(Seq(CName('Pair)), Seq((New(CName('A))), (New(CName('B)))))))//(CName('B))
-  typecheckTestError("New Pair(new A(), 'snd).snd", Fields('snd, New(Seq(CName('Pair)), Seq((New(CName('A))), Var('snd)))))//(CName('B))
+  typecheckTestError("e0.x + e0.x : TNum", Add(FieldAcc('f, Num(1)), FieldAcc('f, Num(1))))//(TNum)
+  typecheckTestError("e0.x + e0.x : C", Add(FieldAcc('f, Num(1)), FieldAcc('f, Num(1))))//(CName('C))
+  typecheckTestError("New Pair(new A(), new B()).snd", FieldAcc('snd, New(Seq(CName('Pair)), Seq((New(CName('A))), (New(CName('B)))))))//(CName('B))
+  typecheckTestError("New Pair(new A(), 'snd).snd", FieldAcc('snd, New(Seq(CName('Pair)), Seq((New(CName('A))), Var('snd)))))//(CName('B))
 
   typecheckTestError("e0.m(x) + e0.m(x)", Add(Invk(Seq('m), Seq(Var('e0), Var('x))), Invk(Seq('m), Seq(Var('e0), Var('x)))))//(TNum)
   typecheckTestError("x + x", Add(Var('x), Var('x)))
@@ -118,47 +118,47 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Seq(MethodDec(Seq(CName('TNum), 'getX, Seq(('x, CName('Int)))), Seq(Num(0))))))(CName('Pair))
   typecheckTestError(" Pair String First, Double getX(First : Double){ return (New Pair).First} ", ClassDec(Seq(CName('Pair), CName('Object),
     Ctor(ListMap('First -> CName('String)), List(), ListMap('First -> 'First)), Seq(('First, CName('String)))),
-    Seq(MethodDec(Seq(CName('Double), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Var('First))))))))//(CName('Pair))
+    Seq(MethodDec(Seq(CName('Double), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Var('First))))))))//(CName('Pair))
 
 
   typecheckTestFJ(" ========>>>> Pair Double First, Double getX(){ return (New Pair(Num(1))).First}  ", ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('First -> CName('TNum)), List(), ListMap('First -> 'First)),
     Seq(('First, CName('TNum)))),
-    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(1))))))))(CName('Pair)) // look again at the combination of these examples
+    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Num(1))))))))(CName('Pair)) // look again at the combination of these examples
 
   typecheckTestFJ("Pair Tnum First, Tnum Second, TNum getX() {return (New Pair(Num(1), Num(2)).First)}", ClassDec(Seq(CName('Pair), CName('Object),
     Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
-    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(1), Num(2))))))))(CName('Pair))
+    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Num(1), Num(2))))))))(CName('Pair))
 
   typecheckTestError("Pair TNum first, TNum second, String getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair), CName('Object),
     Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
-  Seq(MethodDec(Seq(CName('TString), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(0), Num(1))))))))
+  Seq(MethodDec(Seq(CName('TString), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Num(0), Num(1))))))))
 
   typecheckTestError("Pair TNum first, string second, TNum getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair), CName('Object),
     Ctor(ListMap('First -> CName('TNum), 'Second -> CName('String)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
-    Seq(MethodDec(Seq(CName('TString), 'getX, Seq()), Seq(Fields('First, New(CName('Pair), Num(0), Num(1))))))))
+    Seq(MethodDec(Seq(CName('TString), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Num(0), Num(1))))))))
 
   typecheckTestFJ("Pair Int First, Int Second, Int add() { return (New Pair).add(first, second) }", ClassDec(Seq(CName('Pair), CName('Object),
     Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('Pair), Num(1), Num(2))), Fields('Second, New(CName('Pair), Num(1), Num(2)))))))))(CName('Pair))
+    Seq(Add(FieldAcc('First, New(CName('Pair), Num(1), Num(2))), FieldAcc('Second, New(CName('Pair), Num(1), Num(2)))))))))(CName('Pair))
 
   typecheckTestError("Pair Int First, Int Second, String addField() { return add(first Int, second Int) }", ClassDec(Seq(CName('TNum), CName('Object),
     Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('String), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('Pair), Num(0))), Fields('Second, New(CName('Pair), Num(1)))))))))//(CName('TNum))
+    Seq(Add(FieldAcc('First, New(CName('Pair), Num(0))), FieldAcc('Second, New(CName('Pair), Num(1)))))))))//(CName('TNum))
 
   typecheckTestError("Pair String First, Int Second, Int addField() { return add(first, second) }", ClassDec(Seq(CName('TNum), CName('Object),
     Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('String)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('Pair), Num(0))), Fields('Second, New(CName('Pair), Num(1))))))))) //(CName('TNum))
+    Seq(Add(FieldAcc('First, New(CName('Pair), Num(0))), FieldAcc('Second, New(CName('Pair), Num(1))))))))) //(CName('TNum))
 
   typecheckTestError("Pair Int First, Int Second, Int addField() { return add(first : String, second : TNum) }", ClassDec(Seq(CName('TNum), CName('Object),
     Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
-    Seq(Add(Fields('First, New(CName('Pair), Str('a))), Fields('Second, New(CName('Pair), Num(0)))))))))//(CName('TNum))
+    Seq(Add(FieldAcc('First, New(CName('Pair), Str('a))), FieldAcc('Second, New(CName('Pair), Num(0)))))))))//(CName('TNum))
 
   typecheckTestFJ("Class C, Int foo(){return 1+1}} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))))))(CName('C))

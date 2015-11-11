@@ -3,7 +3,7 @@ package constraints.fjava.impl
 
 import constraints.{CTermBase, CVar, Statistics}
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{CR, UCName, CName}
+import incremental.fjava.{ExtendD, CR, UCName, CName}
 import constraints.fjava._
 import incremental.Util
 
@@ -12,6 +12,7 @@ import scala.collection.generic.CanBuildFrom
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
   def freshConstraintSystem = new SolveContinuousSubstCS(Map(), Map(), Seq(), Map())
   def solved(s: CSubst) = new SolveContinuousSubstCS(s, Map(), Seq(), Map())
+  def solvedFJ(s: CSubst, ext : ExtendD) = new SolveContinuousSubstCS(s, Map(), Seq(), ext.ext)
   def notyet(c: Constraint) = freshConstraintSystem.addNewConstraint(c)
   def never(c: Constraint) = new SolveContinuousSubstCS(Map(), Map(), Seq(c), Map())
 }
@@ -32,19 +33,23 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, never :+ c, extend)
 
-  def mergeSubsystem(that: SolveContinuousSubstCS, req : CR) = {
+  def mergeSubsystem(that: SolveContinuousSubstCS) = {
     var msubst = substitution ++ that.substitution
-   var ex  = Map[Type, Type]()
-     for((c, cld) <- req.cr){
-      cld.extendc match {
-        case None =>  ex
-        case Some(t) => ex = ex + (c -> t)
-      }
-    }
     var mnever = never ++ that.never
     val init = SolveContinuousSubstCS(msubst, this.bounds, mnever, this.extend)
-    val extendedCS = ex.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
+    val extendedCS = that.extend.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
     that.bounds.foldLeft(extendedCS) { case (cs, (t, ts)) =>
+      ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
+    }
+  }
+
+
+  def mergeFJavaSubsystem(that: SolveContinuousSubstCS, req : ExtendD) = {
+    var msubst = substitution ++ that.substitution
+    var mnever = never ++ that.never
+    val mextend = req.ext
+    val init = SolveContinuousSubstCS(msubst, this.bounds, mnever, req.ext)
+    that.bounds.foldLeft(init) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
     }
   }
@@ -68,20 +73,20 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       var newBounds = Map[Type, Set[Type]]()
       var lt = Set[Type]()
       for ((t, ts) <- this.bounds){
-        if (t.isInstanceOf[UCName]) newBounds = newBounds
-        else {
+      //  if (t.isInstanceOf[UCName]) newBounds = newBounds
+       // else {
           lt = ts
           if (extend.contains(t)) {
             ts.foreach { f =>
               if (isSubtype(t, f))
                 lt = lt - f
-              else if (f.isInstanceOf[UCName]) lt = lt - f
+            //  else if (f.isInstanceOf[UCName]) lt = lt - f
               else lt
             }
           }
           if (lt.isEmpty) newBounds = newBounds
           else newBounds = newBounds + (t -> lt)
-        }
+      //  }
 
       }
 
@@ -89,14 +94,14 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
     }
 
-   def trySolve: SolveContinuousSubstCS = this
+  def trySolve: SolveContinuousSubstCS = this
 
   def extendz(t1 : Type, t2:Type) = {
-    if (t1 == t2) never(Extend(t1, t2))
+    if (t1 == t2) never(Subtype(t1, t2))
     else {
       t1 match {
         case CName('Object) =>
-          this.never(Extend(t1, t2))
+          this.never(Subtype(t1, t2))
         case _ =>
           extend.get(t1) match {
             case None =>
@@ -159,19 +164,31 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   def propagate = SolveContinuousSubstCS(Map(), bounds, never, extend)
 
   def solved(s: CSubst): SolveContinuousSubstCS = {
-    val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this.never.map(_.subst(s)), Map())
+    val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this.never.map(_.subst(s)), this.extend)
     val cs = this.extend.foldLeft(init) { case (cs, (t, tsuper)) =>
       val t2 = t.subst(s)
       val tsuper2 = tsuper.subst(s)
       if (cs.extend.contains(t2))
         Equal(tsuper, cs.extend(t2)).solve(cs)
-      else cs.extendz(t2, tsuper2)
+      else cs
     }
     val extendedCS = bounds.foldLeft(cs) { case (cs, (t,ts)) =>
       ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}
     }
-    println(s"$substitution")
-    println(s"$cs")
+    extendedCS
+  }
+  def solvedFJ(s: CSubst, ext : ExtendD): SolveContinuousSubstCS = {
+    val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this.never.map(_.subst(s)), ext.ext)
+    val cs = ext.ext.foldLeft(init) { case (cs, (t, tsuper)) =>
+      val t2 = t.subst(s)
+      val tsuper2 = tsuper.subst(s)
+      if (cs.extend.contains(t2))
+        Equal(tsuper, cs.extend(t2)).solve(cs)
+      else cs
+    }
+    val extendedCS = bounds.foldLeft(init) { case (cs, (t,ts)) =>
+      ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}
+    }
 
     extendedCS
   }

@@ -1,10 +1,13 @@
 package constraints.fjava
 
 import constraints.fjava.CSubst.CSubst
+import incremental.fjava.{ExtendD, ClassDec, CR}
 
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   extends constraints.ConstraintSystem[Gen, Constraint, CS] {
+
+  def mergeFJavaSubsystem(that: CS, creq : ExtendD): CS
 
   def substitution: CSubst
   def notyet: Seq[Constraint]
@@ -13,6 +16,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def addUpperBound(t1: Type, t2: Type): CS
   def extendz(t1: Type, t2: Type): CS
   def solved(s: CSubst): CS
+  def solvedFJ( s: CSubst, ext : ExtendD) : CS
   def never(c: Constraint): CS
 
   def isSubtype(t1 : Type, t2 : Type): Boolean

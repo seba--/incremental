@@ -51,10 +51,10 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
         Var('this)), // dummy body, will be overwritten by subclasses
       MethodDec(
         CName('Nat), 'plus, Seq('other -> CName('Nat)),
-        Var('this)) // dummy body, will be overwritten by subclasses
+        Var('this )) // dummy body, will be overwritten by subclasses
     )
   )
-  typecheckTest("Nat ok", Nat)(CName('Nat))
+  typecheckTest("Nat ok", ProgramM(Nat))(CName('Object))
 
   val Zero = ClassDec(
     Seq(CName('Zero), CName('Nat),  Ctor(ListMap(), List(), ListMap()),
@@ -62,7 +62,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
     Seq(
       MethodDec(
         CName('Nat), 'succ, Seq(),
-        New(CName('Succ), Fields('x,Var('this)))),
+        New(CName('Succ), FieldAcc('x,New(CName('Nat))))),
       MethodDec(
         CName('Nat), 'pred, Seq(),
         Var('this)), // pred of Zero is Zero
@@ -83,10 +83,10 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
         New(CName('Succ), Var('this))),
       MethodDec(
         CName('Nat), 'pred, Seq(),
-        Fields('x, New(CName('Succ), Var('this)))), // pred of Zero is Zero
+        FieldAcc('x, New(CName('Succ), Var('this)))), // pred of Zero is Zero
       MethodDec(
         CName('Nat), 'plus, Seq('other -> CName('Nat)),
-        New(CName('Succ), Invk('plus, Fields('x, Var('this)), Var('other)))) // plus(Succ(x), other) = Succ(plus(x, other))
+        New(CName('Succ), Invk('plus, FieldAcc('x, Var('this)), Var('other)))) // plus(Succ(x), other) = Succ(plus(x, other))
     )
   )
  /* MethodDec(

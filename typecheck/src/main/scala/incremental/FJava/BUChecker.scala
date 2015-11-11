@@ -16,12 +16,13 @@ import scala.collection.immutable.ListMap
 case class FieldName(x: Symbol)
 case class Param(x: Symbol)
 case class Ctor(params: ListMap[Symbol, CName], superCall: List[Symbol], fieldDefs: ListMap[Symbol, Symbol])
-case class ExtendD(ext : Map[Type, Type])
-case class Fld(fld: Map[Symbol, Type])
-case class M(m : Map[Symbol, (Type, List[Type])])
+case class Fields(fld: Map[Symbol, Type])
+case class Methods(m : Map[Symbol, (Type, List[Type])])
 
-case class ClassReq(extendc: Option[Type], ctorParams: Option[List[Type]], fields: Fld, methods: M, cmethods : M) {
-  def subst(s: CSubst) = ClassReq(extendc.map(_.subst(s)), ctorParams.map(_.map(_.subst(s))), Fld(fields.fld.mapValues(_.subst(s))), M(methods.m.mapValues {case (ret, args) => (ret.subst(s), args.map(_.subst(s)))}), M(cmethods.m.mapValues {case (ret, args) => (ret.subst(s), args.map(_.subst(s)))}))
+case class ExtendD( ext : Map[Type,Type])
+
+case class ClassReq(extendc: Option[Type], ctorParams: Option[List[Type]], fields: Fields, methods: Methods, cmethods : Methods) {
+  def subst(s: CSubst) = ClassReq(extendc.map(_.subst(s)).map(_.subst(s)), ctorParams.map(_.map(_.subst(s))), Fields(fields.fld.mapValues(_.subst(s)).mapValues(_.subst(s))), Methods(methods.m.mapValues {case (ret, args) => (ret.subst(s).subst(s), args.map(_.subst(s)).map(_.subst(s)))}), Methods(cmethods.m.mapValues {case (ret, args) => (ret.subst(s), args.map(_.subst(s)))}))
 }//(supertype, Fields, Methods)
 
 case class CR(cr : Map[Type, ClassReq])
@@ -45,12 +46,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type StepResult = (Type, Reqs, CR, Seq[Constraint])
 
-  case class ClassDef(name: CName, superClass: CName, fields: Fields, methods: Methods, ctor: Ctor)
-  case class MethodDef(name: Symbol, params: ListMap[Symbol, CName], returnType: CName, body: Node_[Any])
+ // case class ClassDef(name: CName, superClass: CName, fields: Fields, methods: Methods, ctor: Ctor)
+ // case class MethodDef(name: Symbol, params: ListMap[Symbol, CName], returnType: CName, body: Node_[Any])
 
   type TError = String
 
   type Prg = String
+
+  var extD = Map[Type, Type]()
 
   type Result = (Type, Reqs, CR, CS)
   var s = Map[Type,Type]()
@@ -68,31 +71,25 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
         val (t, reqs, creqs, cons) = typecheckStep(e)
-        var cr = Map[Type, ClassReq]()
+        var cr = CR(Map[Type, ClassReq]())
         for (i <- 0 until e.kids.seq.size){
           val (t, req, creq, _) = e.kids(i).typ
-              cr = cr ++ creq.cr
+              cr = CR(cr.cr ++ creq.cr)
         }
-        val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem (res.typ._4, cr1))
+        val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ExtendD(extD)))
         val cs = subcs addNewConstraints cons
         val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-        var creqs2: CReqs = Map()
+        var creqs2 = CR(Map())
         for ((ts, decl) <- creqs.cr) {
           val decl2 = decl.subst(cs.substitution)
         //  val c = finalT(ts, cs)
          // val (mcons, cres) = mergeCReqMaps(creqs2,Map(c -> decl2))
           //creqs2 = cres
-          val c = ts.subst(cs.substitution)
-          if (c == CName) {
-          val (mcons, cres) = mergeCReqMaps(creqs2,Map(c -> decl2))
-            creqs2 = cres }
-          else {
-            val c2 = c.subst(cs.substitution)
-            val (mcons, cres) = mergeCReqMaps(creqs2,Map(c2 -> decl2))
-            creqs2 = cres
+          val c = ts.subst(cs.substitution).subst(cs.substitution).subst(cs.substitution).subst(cs.substitution)
+                creqs2 = CR(creqs2.cr + (c -> decl2))
           }
-        }
-        e.typ = (cs applyPartialSolution t, reqs2, CR(creqs2), cs.propagate)
+
+        e.typ = (cs applyPartialSolution t, reqs2, creqs2, cs.propagate)
         true
       }
 
@@ -116,44 +113,44 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     //  return (Seq()) TODO shouldn't class reqs be constraints?
     creqs.cr.get(t) match {
       case None =>
-        val res: CR = CR(creqs.cr + (t -> ClassReq(None, None, Map(f -> U), Map(), Map())))
+        val res: CR = CR(creqs.cr + (t -> ClassReq(None, None, Fields(Map(f -> U)), Methods(Map()), Methods(Map()))))
         (Seq(), res)
       case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
-        fields.get(f) match {
+        fields.fld.get(f) match {
           case None =>
-            (Seq(), creqs + (t -> ClassReq(sup, ctor, fields + (f -> U), methods, cmethods)))
+            (Seq(), CR(creqs.cr + (t -> ClassReq(sup, ctor, Fields(fields.fld + (f -> U)), methods, cmethods))))
           case Some(t2) =>
             (Seq(Equal(t2, U)), creqs)
         }
     }
   }
 
-  def addFieldDec(creqs: CReqs, t: Type, f: Symbol, U: Type): (Seq[Constraint], CReqs) = {
+  def addFieldDec(creqs: CR, t: Type, f: Symbol, U: Type): (Seq[Constraint], CR) = {
     //if (t == CName('Object))
     //  return (Seq()) TODO shouldn't class reqs be constraints?
-    creqs.get(t) match {
+    creqs.cr.get(t) match {
       case None =>
         (Seq(), creqs)
       case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
-        fields.get(f) match {
+        fields.fld.get(f) match {
           case None =>
             (Seq(), creqs)
           case Some(t2) =>
-            val fnew = fields - f
-            (Seq(Equal(t2, U)), creqs - t+ (t -> ClassReq(sup, ctor, fnew, methods, cmethods)))
+            val fnew = Fields(fields.fld - f)
+            (Seq(Equal(t2, U)), CR(creqs.cr + (t -> ClassReq(sup, ctor, fnew, methods, cmethods))))
         }
     }
   }
 
-  def addMethodReq(creqs: CReqs, t: Type, m: Symbol, args: List[Type], ret: Type): (Seq[Constraint], CReqs) = {
-    creqs.get(t) match {
+  def addMethodReq(creqs: CR, t: Type, m: Symbol, args: List[Type], ret: Type): (Seq[Constraint], CR) = {
+    creqs.cr.get(t) match {
       case None =>
-        val res: CReqs = creqs + (t -> ClassReq(None, None, Map(), Map(m ->(ret, args)), Map()))
+        val res: CR = CR(creqs.cr + (t -> ClassReq(None, None, Fields(Map()), Methods(Map(m ->(ret, args))), Methods(Map()))))
         (Seq(), res)
       case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
-        methods.get(m) match {
+        methods.m.get(m) match {
           case None =>
-            (Seq(), creqs + (t -> ClassReq(sup, ctor, fields, methods + (m ->(ret, args)), cmethods)))
+            (Seq(), CR(creqs.cr + (t -> ClassReq(sup, ctor, fields, Methods(methods.m + (m ->(ret, args))), cmethods))))
 
           case Some((ret2, args2)) =>
             if (args.length == args2.length) {
@@ -166,20 +163,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def addCMethodReq(creqs: CReqs, t: Type, m: Symbol, args: List[Type], ret: Type): (Seq[Constraint], CReqs) = {
+  def addCMethodReq(creqs: CR, t: Type, m: Symbol, args: List[Type], ret: Type): (Seq[Constraint], CR) = {
     var res = creqs
     if (t == CName('Object)) {
       (Seq(), creqs)
     }
     else {
-      creqs.get(t) match {
+      creqs.cr.get(t) match {
         case None =>
-          val res: CReqs = creqs + (t -> ClassReq(None, None, Map(), Map(), Map(m ->(ret, args))))
+          val res: CR = CR(creqs.cr - t + (t -> ClassReq(None, None, Fields(Map()), Methods(Map()), Methods(Map(m ->(ret, args))))))
           (Seq(), res)
         case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
-          cmethods.get(m) match {
+          cmethods.m.get(m) match {
             case None =>
-              (Seq(), creqs + (t -> ClassReq(sup, ctor, fields, methods, cmethods + (m ->(ret, args)))))
+              (Seq(), CR(creqs.cr + (t -> ClassReq(sup, ctor, fields, methods, Methods(cmethods.m + (m ->(ret, args)))))))
 
             case Some((ret2, args2)) =>
               if (args.length == args2.length) {
@@ -193,19 +190,19 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def addMethodDec(creqs: CReqs, t: Type, m: Symbol, args: List[Type], ret: Type): (Seq[Constraint], CReqs) = {
-    creqs.get(t) match {
+  def addMethodDec(creqs: CR, t: Type, m: Symbol, args: List[Type], ret: Type): (Seq[Constraint], CR) = {
+    creqs.cr.get(t) match {
       case None =>
         (Seq(), creqs)
       case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
-        methods.get(m) match {
+        methods.m.get(m) match {
           case None =>
             (Seq(), creqs)
           case Some((ret2, args2)) =>
             if (args.length == args2.length) {
               val cons = Equal(ret2, ret) +: (args2 zip args).map(p => Equal(p._1, p._2))
-              val mnew = methods - m
-              (cons, creqs - t + (t -> ClassReq(sup, ctor, fields, mnew, cmethods)))
+              val mnew = methods.m - m
+              (cons, CR(creqs.cr - t + (t -> ClassReq(sup, ctor, fields, Methods(mnew), cmethods))))
             }
             else
               (Seq(Equal(ret, ret2), Never(AllEqual(args, args2))), creqs)
@@ -214,20 +211,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
 
-  def addCtorReq(creqs: CReqs, t: Type, params: List[Type]): (Seq[Constraint], CReqs) = {
+  def addCtorReq(creqs: CR, t: Type, params: List[Type]): (Seq[Constraint], CR) = {
     var res = creqs
     if (t == CName('Object)) {
       (Seq(), creqs)
     }
     else {
-      creqs.get(t) match {
+      creqs.cr.get(t) match {
         case None =>
-          res = creqs + (t -> ClassReq(None, Some(params), Map(), Map(), Map()))
+          res = CR(creqs.cr + (t -> ClassReq(None, Some(params), Fields(Map()), Methods(Map()), Methods(Map()))))
           (Seq(), res)
         case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
           ctor match {
             case None =>
-              (Seq(), res + (t -> ClassReq(sup, Some(params), fields, methods, cmethods)))
+              (Seq(), CR(res.cr + (t -> ClassReq(sup, Some(params), fields, methods, cmethods))))
             case Some(params2) =>
               if (params.length == params2.length) {
                 val cons = (params zip params2).map(p => Equal(p._1, p._2))
@@ -240,21 +237,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def addSupertypeReq(creqs: CReqs, t: Type, tsuper: Type): (Seq[Constraint], CReqs) = {
+  def addSupertypeReq(creqs: CR, t: Type, tsuper: Type): (Seq[Constraint], CR) = {
     var res = creqs
     if (tsuper == CName('Object)) {
       (Seq(), creqs)
     }
     else {
-      res = res + (tsuper -> ClassReq(None, None, Map(), Map(), Map()))
-      creqs.get(t) match {
+      res = CR(res.cr + (tsuper -> ClassReq(None, None, Fields(Map()), Methods(Map()), Methods(Map()))))
+      creqs.cr.get(t) match {
         case None =>
-          res = res + (t -> ClassReq(Some(tsuper), None, Map(), Map(), Map()))
+          res = CR(res.cr + (t -> ClassReq(Some(tsuper), None, Fields(Map()), Methods(Map()), Methods(Map()))))
           (Seq(), res)
         case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
           sup match {
             case None =>
-              (Seq(), res + (t -> ClassReq(Some(tsuper), ctor, fields, methods, cmethods)))
+              (Seq(), CR(res.cr + (t -> ClassReq(Some(tsuper), ctor, fields, methods, cmethods))))
             case Some(t2) =>
               (Seq(Equal(tsuper, t2)),res)
           }
@@ -265,9 +262,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
 
     case Num =>
-      (CName('TNum), Map(), Map(),Seq())
+      (CName('TNum), Map(), CR(Map()),Seq())
     case Str =>
-      (CName('TString), Map(), Map(), Seq())
+      (CName('TString), Map(),CR(Map()), Seq())
 
     case op if op == Add || op == Mul =>
       val (t1, reqs1, creqs1, _) = e.kids(0).typ
@@ -283,9 +280,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshCName()
-      (X, Map(x -> X), Map(), Seq()) // Map(X -> cld), needed at some examples
+      (X, Map(x -> X), CR(Map()), Seq()) // Map(X -> cld), needed at some examples
 
-    case Fields =>
+    case FieldAcc =>
       val f = e.lits(0).asInstanceOf[Symbol] //symbol
       val (t, reqs, creqs, _) = e.kids(0).typ //subsol
       val U = freshCName()
@@ -299,13 +296,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val U = freshCName()
       var cons = Seq[Constraint]()
       var reqss: Seq[Reqs] = Seq(reqs0)
-      var creqss: Seq[CReqs] = Seq(creqs0)
+      var creqss: Seq[CR] = Seq(creqs0)
       var param = List[Type]()
       for (i <- 1 until e.kids.seq.size) {
         val (ti, subreqs, subcreqs, _) = e.kids(i).typ
         val Ui = freshCName()
        reqss = reqss :+ subreqs
-       cons = Subtype(ti, Ui) +: cons //or should be subtype
+       cons = cons :+ Subtype(ti, Ui) //or should be subtype
        creqss = creqss :+ subcreqs
        param = param :+ Ui
       }
@@ -314,50 +311,45 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (cCons, creqs) = mergeCReqMaps(creqss)
       val (mcCons, mcreqs) = addMethodReq(creqs, te, m, param, U)
 
-      (U, mreqs, mcreqs, mcons ++ cCons ++ mcCons ++ cons)
+      (U, mreqs, mcreqs, cons ++ mcons ++ cCons ++ mcCons )
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
       val U = freshCName()
       var reqss = Seq[Reqs]()
-      var creqss = Seq[CReqs]()
+      var creqss = Seq[CR]()
       var cons = Seq[Constraint]()
       var ctor: List[Type] = Nil
       for (i <- 0 until e.kids.seq.size) {
         val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
         val Ui = freshCName()
-        ctor = Ui :: ctor
+        ctor = ctor :+ Ui
         reqss = reqss :+ subreqs
         creqss = creqss :+ subcreqs
-       cons = Subtype(ti, Ui) +: cons //or should be subtype
+       cons =  cons :+ Subtype(ti, Ui)//or should be subtype
       }
-      ctor = ctor.reverse
       val (mcons, mreqs) = mergeReqMaps(reqss)
       val (cCons, creqs) = mergeCReqMaps(creqss)
 
       val (mcCons, mcreqs) = addCtorReq(creqs, c, ctor)
-
-      (c, mreqs, mcreqs, mcons ++ cCons ++ cons++ mcCons)
+      (c, mreqs, mcreqs, cons ++ mcons ++ cCons ++ mcCons)
 
     case DCast =>
       val (t, reqs, creqs, _) = e.kids(0).typ
       val c = e.lits(0).asInstanceOf[CName]
 
-     // val bcreqs : BCReqs = (None, ClassDecl(None, None, Map(), Map()), false)
       (c, reqs, creqs, Seq((NotEqual(t, c))))
 
     case UCast =>
       val c = e.lits(0).asInstanceOf[CName]
       val (t, reqs, creqs,_) = e.kids(0).typ
 
-     // val bcreqs : BCReqs = (None, ClassDecl(None, None, Map(), Map()), false)
       (c, reqs, creqs, Seq(Subtype(t, c)))
 
     case SCast =>
       val c = e.lits(0).asInstanceOf[CName]
       val (t, reqs, creqs, _) = e.kids(0).typ
 
-    //  val bcreqs : BCReqs = (None, ClassDecl(None, None, Map(), Map()), false)
       (t, reqs, creqs, Seq())
 
     case MethodDec =>
@@ -367,86 +359,174 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
       var restReqs = reqs
       var cons = Seq[Constraint]()
-      var cCreqs = creqs
-      cons = Subtype(e0, retT) +: cons
+   //   var cCreqs = creqs
       val Uc = freshCName()
       val Ud = freshCName()
-      cons = Extend(Uc, Ud) +: cons
+      cons = cons :+ Subtype(e0, retT) :+ Subtype(Uc, Ud)
+
       for ((x, xC) <- params) {
         reqs.get(x) match {
           case None => restReqs = restReqs
           case Some(typ) =>
             restReqs = restReqs - x
-            cons = Equal(typ, xC) +: cons
+            cons = Equal(xC, typ) +: cons
         }
       }
-     val (ccons, cres)= addCMethodReq(cCreqs, Ud, m, params.toMap.valuesIterator.toList, retT)
-
-     restReqs.get('this) match {
+//     val (ccons, cres)= addCMethodReq(cCreqs, Ud, m, params.toMap.valuesIterator.toList, retT)
+      val (ccons, cres) = mergeCReqMaps(creqs, CR(Map(Uc -> ClassReq(Some(Ud), None, Fields(Map()), Methods(Map()), Methods(Map())))))
+      restReqs.get('this) match {
         case None => restReqs = restReqs
         case Some(typ) =>
           cons = Equal(typ, Uc) +: cons // Subtype(Uc, typ)
           restReqs = restReqs - 'this
        }
-      cons= cons ++ ccons
-      (MethodOK(Uc), restReqs, cres, cons )
+      cons= cons ++ ccons ++ cccons
+      (MethodOK(Uc), restReqs, ccres, cons )
+
     case ClassDec =>
-      val c = e.lits(0).asInstanceOf[Type]
-      val sup = e.lits(1).asInstanceOf[Type]
+      val c = e.lits(0).asInstanceOf[CName]
+      val sup = e.lits(1).asInstanceOf[CName]
       val Ctor(params, superCall, fieldDefs) = e.lits(2).asInstanceOf[Ctor]
       val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
-      var restCreq = Seq[CReqs]()
+      var restCreq = Seq[CR]()
       var cons = Seq[Constraint]()
       var restReqs = Seq[Reqs]()
       for (i <- 0 until e.kids.seq.size) {
         val (t, req, creq, _) = e.kids(i).typ
         restReqs = restReqs :+ req
-        val retT = e.kids(i).lits(0).asInstanceOf[CName]
-        val m = e.kids(i).lits(1).asInstanceOf[Symbol]
-        val params = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]].unzip._2.toList
-        val (mcons, cr) = addMethodDec(creq, c, m, params, retT)
-        restCreq = cr +: restCreq
-        cons = cons ++ mcons :+ Equal(t.asInstanceOf[MethodOK].in, c)
+        restCreq = restCreq :+ creq
+        cons = cons :+ Equal(c,t.asInstanceOf[MethodOK].in)
       }
       val (conss, cr) = mergeCReqMaps(restCreq)
       val (rcons, req) = mergeReqMaps(restReqs)
-      cons = cons ++ conss :+ Extend(c, sup)
-      val (mcons3, cr3) = addSupertypeReq(cr, c, sup) //cr2
-      val (mcons4, cres) = fields.foldLeft((mcons3, cr3)) {case ((mcns, creqs), (field, tpe)) =>
-        val (mconsfold, creqsfold) = addFieldDec(creqs, c, field, tpe)
-      (mcns ++ mconsfold, creqsfold)
-     }
+
+      cons = cons ++ conss ++ rcons// :+ Subtype(c, sup)
+      val (mconsD, crD) = addSupertypeReq(cr, c, sup)
       val lst = Ctor(params, superCall, fieldDefs).params.valuesIterator.toList
-      val ( consC,cresC) = addCtorReq(cres, c, lst)
-      val ( consD, cresD) = addCtorReq(cresC, sup, lst.dropRight(Ctor(params, superCall, fieldDefs).fieldDefs.size))
+      val ( consC,cresC) = addCtorReq(cr, c, lst)
+      val ( consD, cres) = addCtorReq(cresC, sup, lst.dropRight(Ctor(params, superCall, fieldDefs).fieldDefs.size))
 
-      cons = cons ++ mcons4 ++ consC ++ consD
+     cons = cons ++ mconsD ++ consC
+   //   println(s"classs reqs $crD")
 
-      val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
-      val cs = subcs addNewConstraints cons
-      val cresCon = removeCondReq(cresD)
-      val (cReqs, cconss) =  remove(cresCon, List(c), cs)
-      cons = cons ++ cconss
-      (c, req, cReqs, cons)
+      (c, req, cres, cons)
+
 
     case ProgramM =>
-      var restCreq = Seq[CReqs]()
-      var cons = Seq[Constraint]()
-      var cls = List[Type]()
-      for (i <- 0 until e.kids.seq.size) {
-        val (c, _, cres,  _) = e.kids(i).withType[StepResult].typ
-        restCreq = cres +: restCreq
-        cls = cls :+ c
+
+      def applyFinal(t : Type , s : CSubst) : Type ={
+        if (t == CName) t
+        else applyFinal(t.subst(s), s)
       }
 
-      val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
-      var (mCcons, mcreqs) = mergeCReqMaps(restCreq)
-      cons = cons ++ mCcons
-      val cs = subcs addNewConstraints cons
-      val cres = removeCondReq(mcreqs)
-      val (cr, ctcons)=  remove(cres, cls, cs)
 
-      (CName('Object), Map(), cr, cons ++ ctcons)
+      var CT = Map[Type,(Type,  List[Type], Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
+      var restCreq = Seq[CR]()
+      var resC = CR(Map())
+      var resCC = CR(Map())
+      var ext = ExtendD(Map())
+      var cons = Seq[Constraint]()
+      for (i <- 0 until e.kids.seq.size) {
+        val c = e.kids(i).lits(0).asInstanceOf[CName]
+        val sup = e.kids(i).lits(1).asInstanceOf[CName]
+        val Ctor(params, superCall, fieldDefs) = e.kids(i).lits(2).asInstanceOf[Ctor]
+        val fields = e.kids(i).lits(3).asInstanceOf[Seq[(Symbol, Type)]]
+        var methods = Map[Symbol, (Type, List[Type])]()
+        for (j <- 0 until e.kids(i).kids.seq.size) {
+          val (c0, reqs, creqs, _)= e.kids(i).kids.seq(j).typ
+          cons = cons :+ Equal(c, c0.asInstanceOf[MethodOK].in)
+          val retT = e.kids(i).kids(j).lits(0).asInstanceOf[CName]
+          val m = e.kids(i).kids(j).lits(1).asInstanceOf[Symbol]
+          val params = e.kids(i).kids(j).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
+          var par = List[Type]()
+          for((t, p) <- params.toMap)
+            par = par :+ p
+          methods = methods + (m -> (retT, par))
+          restCreq = restCreq :+ creqs
+
+        }
+        var (mCcons, mcreqs) = mergeCReqMaps(restCreq)
+
+        resC = mcreqs
+        CT =  CT + (c -> (sup,  Ctor(params, superCall, fieldDefs).params.valuesIterator.toList, fields.toMap, methods))
+        val (consD, crD) = addSupertypeReq(mcreqs, c, sup)
+        cons = cons ++  mCcons ++ consD
+
+        val (kot, kotc) = resC.cr.foldLeft((cons, resC)){case ((mcns, creqs), (ts, dec)) =>
+          val (mconsfold, creqsfold) = addSupertypeReq(creqs, c, sup)
+          (mcns ++ mconsfold, creqsfold)
+        }
+        resC = kotc
+        ext = ExtendD(ext.ext + (c -> sup))
+      }
+
+      extD = ext.ext
+
+      val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ext))
+
+     // cons = cons ++ mCcons
+      val cs = subcs addNewConstraints cons
+
+   //   val cres = removeCondReq(resC)
+
+      val (prv, prvC) = resC.cr.foldLeft((cons, resC)){case ((mcns, creqs), (ts, dec)) =>
+        val (mconsfold, creqsfold) = mergeCReqMaps(creqs, CR(Map(ts.subst(cs.substitution).subst(cs.substitution).subst(cs.substitution) -> dec.subst(cs.substitution).subst(cs.substitution))))
+        (mcns ++ mconsfold, creqsfold)
+      }
+
+    /*  for ((ts, decl) <- resC.cr) {
+        val decl2 = decl.subst(cs.substitution)
+        //  val c = finalT(ts, cs)
+        // val (mcons, cres) = mergeCReqMaps(creqs2,Map(c -> decl2))
+        //creqs2 = cres
+        val c = ts.subst(cs.substitution)
+
+        println(s"REQQQQQQQQ $resC")
+
+        val (mcons, cres) = mergeCReqMaps(resCC,CR(Map(c -> decl2)))
+        //resC= CR(cres.cr - ts)
+resCC = cres
+        println(s"Extend at cons $mcons")
+cons = cons ++ mcons
+        // resC = CR(resC.cr - ts + (c -> decl2))
+      /*  if (c == CName) {
+          val (mcons, cres) = mergeCReqMaps(resC,CR(Map(c -> decl2)))
+          resC = cres }
+        else {
+          val c2 = c.subst(cs.substitution)
+          val (mcons, cres) = mergeCReqMaps(resC,CR(Map(c2 -> decl2)))
+          resC = cres
+        }*/
+      }*/
+
+      println(s"smtheods are $prvC")
+
+      cons = cons ++ prv
+
+      val (cr, ctcons)=  remove(CT, prvC, cs addNewConstraints(cons))
+      cons = cons ++ ctcons
+
+      val  cs1 = cs addNewConstraints(cons)
+      cs1.solvedFJ(cs1.substitution, ext)
+
+
+      val (prv2, prvC2) = cr.cr.foldLeft((cons, resC)){case ((mcns, creqs), (ts, dec)) =>
+        val (mconsfold, creqsfold) = mergeCReqMaps(creqs, CR(Map(ts.subst(cs1.substitution).subst(cs1.substitution).subst(cs1.substitution) -> dec.subst(cs1.substitution).subst(cs1.substitution))))
+        (mcns ++ mconsfold, creqsfold)
+      }
+
+      val (cr2, ctcons2)=  remove(CT, prvC2, cs1 addNewConstraints(cons ++ prv2))
+      cons = cons ++ ctcons2
+
+      val  cs2 = cs1 addNewConstraints(cons)
+      cs2.solvedFJ(cs2.substitution, ext)
+
+      println(s"constrains are VCCCCCC $cons")
+      println(s"Constraint after remove $cs2")
+
+      println(s"REEEEESSSSS $prvC2")
+
+      (CName('Object), Map(),cr2, cons)
   }
   private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
 
@@ -470,78 +550,122 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     (mcons, mreqs)
   }
 
-  private def remove( creq : CReqs, cls : List[Type], cs :CS) : (CReqs,Seq[Constraint]) = {
+  private def remove(CT : Map[Type, (Type, List[Type],  Map[Symbol, Type], Map[Symbol, (Type, List[Type])])], creq : CR, cs :CS) : (CR, Seq[Constraint]) = {
     var cr = creq
     var cons = Seq[Constraint]()
-    for (i <- 0 until cls.length) {
-      creq.get(cls(i)) match {
-        case None => creq
-        case Some(cld) =>
-            var stype = cld.extendc
-            var fields = cld.fields
-          val ctor = cld.ctorParams // TODO check again the usage of CTor when we remove
-            var methods = cld.methods
-            for ((d, cldD) <- creq) {
-              if (cs.isSubtype(cls(i), d)) {
-                for ((f, typ) <- fields) {
-                  cldD.fields.get(f) match {
-                    case None => fields = fields
-                    case Some(typ2) =>
-                      fields = fields - f
-                      cons = cons :+ Equal(typ2, typ)
-                  }
-                }
-                for ((m, rt) <- methods) {
-                  cldD.methods.get(m) match {
-                    case None => methods = methods
-                    case Some(rt2) =>
-                      cons = cons :+ Equal(rt2._1, rt._1)
-                      for (i <- 0 until rt._2.length)
-                        cons = cons :+ Equal(rt2._2(i), rt._2(i))
-                      methods = methods - m
-                  }
-                }
-              }
-            }
-          if (fields.isEmpty && methods.isEmpty && cld.cmethods.isEmpty)
-          cr = cr - cls(i)
+    var ct = CT
+    for ((c, cld) <- creq.cr) {
+      var stype = cld.extendc
+      stype match {
+        case None => stype
+        case Some(t) =>
+
+      }
+      var ctor = cld.ctorParams
+      var fields = cld.fields
+      var methods = cld.methods
+      var cmethods = cld.cmethods
+      CT.get(c) match {
+        case None => cr
+        case Some(clsT) =>
+          cld.extendc match {
+            case None => stype
+            case Some(t) =>
+              cons = cons :+ Equal(clsT._1, t)
+
           }
-     for ((c, cld) <- cr){
+          cld.ctorParams match {
+            case None => ctor
+            case Some(lt) =>  cons = cons :+ AllEqual(clsT._2, lt)
+          }
+
+          for ((f, typ) <- cld.fields.fld) {
+            clsT._3.get(f) match {
+              case None => fields = fields
+              case Some(typ2) =>
+                cons = cons :+ Equal(typ2, typ)
+                fields = Fields(fields.fld - f)
+            }
+          }
+          for ((m, rt) <- cld.methods.m) {
+            clsT._4.get(m) match {
+              case None => methods = methods
+              case Some(rt2) =>
+                cons = cons :+ Equal(rt._1, rt2._1)
+                cons = cons :+ AllEqual(rt._2, rt2._2)
+                methods = Methods(methods.m - m)
+            }
+          }
+          for ((m, rt) <- cld.cmethods.m) {
+            clsT._4.get(m) match {
+              case None => cmethods = Methods(cmethods.m - m)
+              case Some(rt2) =>
+                cons = cons :+ Equal(rt2._1, rt._1)
+                cons = cons :+ AllEqual(rt._2, rt2._2)
+                cmethods = Methods(cmethods.m - m)
+            }
+          }
+      }
+      for ((d, cldD) <- CT) {
+        if (cs.isSubtype(c, d)) {
+          for ((f, typ) <- fields.fld) {
+            cldD._3.get(f) match {
+              case None => fields = fields
+              case Some(typ2) =>
+                fields = Fields(fields.fld - f)
+                cons = cons :+ Equal(typ, typ2)
+            }
+          }
+          for ((m, rt) <- methods.m) {
+            cldD._4.get(m) match {
+              case None => methods = methods
+              case Some(rt2) =>
+                cons = cons :+ Equal(rt._1, rt2._1)
+                cons = cons :+ AllEqual(rt._2, rt2._2)
+                methods = Methods(methods.m - m)
+            }
+          }
+        }
+      }
+      if (fields.fld.isEmpty && methods.m.isEmpty && CT.exists( _._1 == c)) // &&cld.cmethods.m.isEmpty
+        cr = CR(cr.cr - c)
+    }
+     for ((c, cld) <- cr.cr){
         if (c.isInstanceOf[UCName]) {
-          cr = cr - c
+          cr = CR(cr.cr - c)
         }
         else cr
       }
-    }
+
   (cr,cons)
   }
 
- def removeCondReq(creq : CReqs) : CReqs = {
+ /*def removeCondReq(creq : CR) : CR = {
    var cres = creq
-   var cldm = Map[Symbol, (Type, List[Type])]()
-   var cldCm = Map[Symbol, (Type, List[Type])]()
-   for ((c, cld) <- creq) {
-     if (c == CName('Object)) cres = cres - c
+   var cldm = Methods(Map[Symbol, (Type, List[Type])]())
+   var cldCm = Methods(Map[Symbol, (Type, List[Type])]())
+   for ((c, cld) <- creq.cr) {
+     if (c == CName('Object)) cres = CR(cres.cr - c)
      else {
        cldCm = cld.cmethods
        cldm = cld.methods
-       for ((m, dec) <- cld.cmethods) {
-         cld.methods.get(m) match {
-           case None => cldCm = cldCm - m
+       for ((m, dec) <- cld.cmethods.m) {
+         cld.methods.m.get(m) match {
+           case None => cldCm = Methods(cldCm.m - m)
            case Some(dec2) =>
-             cldm += (m -> (dec._1, dec._2))
+             cldm = Methods(cldm.m + (m -> (dec._1, dec._2)))
            //  cons = cons +: Equal(dec._1, dec2._1) ++ AllEqual(dec._2, dec2._2) TODO Not sure if constrains should be added or not. OR just replace the signature
-             cldCm = cldCm - m
+             cldCm = Methods(cldCm.m - m)
          }
        }
-       cres += (c -> ClassReq(cld.extendc,cld.ctorParams, cld.fields, cldm, cldCm))
+       cres = CR(cres.cr + (c -> ClassReq(cld.extendc,cld.ctorParams, cld.fields, cldm, cldCm)))
 
      }
    }
    cres
- }
+ }*/
 
-  private val cinit: (Seq[Constraint], CReqs) = (Seq(), Map())
+  private val cinit: (Seq[Constraint], CR) = (Seq(), CR(Map()))
 
   def mergeCCld(cld1: ClassReq, cld2: ClassReq): (Seq[Constraint], ClassReq) = {
     var ctor : Option[List[Type]] = cld1.ctorParams
@@ -560,16 +684,16 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
          if (t1.size == t2.size) mcons = mcons :+ AllEqual(t1, t2)
           else mcons = mcons :+ Never(AllEqual(t1, t2))
       }
-    for ((f, typ) <- newF){
-      wasF.get(f) match {
-        case None => rF += (f -> typ)
+    for ((f, typ) <- newF.fld){
+      wasF.fld.get(f) match {
+        case None => rF = Fields(rF.fld + (f -> typ))
         case Some(typ2) =>
           mcons = mcons :+ Equal(typ2, typ)
       }
     }
-    for ((m, mbody) <- cld2.methods) {
-      wasM.get(m) match {
-        case None => cldm += (m -> mbody) // mdoby = return type + list of parameters
+    for ((m, mbody) <- cld2.methods.m) {
+      wasM.m.get(m) match {
+        case None => cldm = Methods(cldm.m + (m -> mbody)) // mdoby = return type + list of parameters
         case Some(mbody2) =>
           mcons = mcons :+ Equal(mbody2._1, mbody._1)
           if (mbody._2.length == mbody2._2.length)
@@ -577,9 +701,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           else mcons = mcons :+ Never(AllEqual(mbody._2, mbody2._2))
       }
     }
-    for ((m, mbody) <- cld2.cmethods) {
-      cld1.cmethods.get(m) match {
-        case None => cldmc += (m -> mbody) // mdoby = return type + list of parameters
+    for ((m, mbody) <- cld2.cmethods.m) {
+      cld1.cmethods.m.get(m) match {
+        case None => cldmc = Methods(cldmc.m + (m -> mbody))// mdoby = return type + list of parameters
         case Some(mbody2) =>
           mcons = mcons :+ Equal(mbody2._1, mbody._1)
           if (mbody._2.length == mbody2._2.length)
@@ -594,26 +718,28 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       case (Some(_), None) => styp
       case (Some(t1), Some(t2)) => styp
         mcons = mcons :+ Equal(t1, t2)
+
+
     }
     (mcons, ClassReq(styp, ctor, rF, cldm, cldmc))
   }
 
 
-  def mergeCReqMaps(creq: CReqs, creqs: CReqs*): (Seq[Constraint], CReqs) = mergeCReqMaps(creq +: creqs)
+  def mergeCReqMaps(creq: CR, creqs: CR*): (Seq[Constraint], CR) = mergeCReqMaps(creq +: creqs)
 
-  def mergeCReqMaps(creqs: Seq[CReqs]): (Seq[Constraint], CReqs) =
+  def mergeCReqMaps(creqs: Seq[CR]): (Seq[Constraint], CR) =
     Util.timed(localState -> Statistics.mergeCReqsTime) {
-      creqs.foldLeft[(Seq[Constraint], CReqs)](cinit)(_mergeCReqMaps)
+      creqs.foldLeft[(Seq[Constraint], CR)](cinit)(_mergeCReqMaps)
     }
 
-  private def _mergeCReqMaps(was: (Seq[Constraint], CReqs), newCReqs: CReqs) = {
+  private def _mergeCReqMaps(was: (Seq[Constraint], CR), newCReqs: CR) = {
     val wasCReqs = was._2
     var mcons = was._1
     var mcreqs = wasCReqs
-    for ((t, cld2) <- newCReqs)
-      wasCReqs.get(t) match {
-        case None => mcreqs += (t -> cld2)
-        case Some(cld1) => mcreqs = mcreqs + (t -> mergeCCld(cld1, cld2)._2)
+    for ((t, cld2) <- newCReqs.cr)
+      wasCReqs.cr.get(t) match {
+        case None => mcreqs = CR(mcreqs.cr + (t -> cld2))
+        case Some(cld1) => mcreqs = CR(mcreqs.cr + (t -> mergeCCld(cld1, cld2)._2))
           mcons = mergeCCld(cld1, cld2)._1 ++ mcons
       }
     (mcons, mcreqs)
