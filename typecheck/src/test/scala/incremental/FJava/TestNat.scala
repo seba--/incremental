@@ -62,7 +62,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
     Seq(
       MethodDec(
         CName('Nat), 'succ, Seq(),
-        New(CName('Succ), FieldAcc('x,New(CName('Nat))))),
+        Var('this)),
       MethodDec(
         CName('Nat), 'pred, Seq(),
         Var('this)), // pred of Zero is Zero

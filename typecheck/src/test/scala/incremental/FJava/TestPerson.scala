@@ -61,8 +61,8 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     Seq(CName('Person), CName('Object),  Ctor(ListMap('name -> CName('Object),
       'address -> CName('Object)), List(), ListMap('name -> 'name, 'address -> 'address)),
       Seq(
-        'name -> CName('Object),
-        'address -> CName('Object))),
+        ('name -> CName('Object)),
+        ('address -> CName('Object)))),
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
@@ -75,7 +75,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   val Professor = ClassDec(
     Seq(CName('Professor), CName('Person), Ctor(ListMap('name -> CName('Object),
       'address -> CName('Object), 'age -> CName('Object)), List('name, 'address), ListMap('age->'age)),
-      Seq('age -> CName('Object))), // no fields
+      Seq(('age -> CName('Object)))), // no fields
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
@@ -88,7 +88,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   val Student = ClassDec(
     Seq(CName('Student), CName('Person), Ctor(ListMap('name -> CName('Object),
       'address -> CName('Object), 'age -> CName('Object)), List('name, 'address), ListMap('age->'age)),
-      Seq('age -> CName('Object))), // no fields
+      Seq(('age -> CName('Object)))), // no fields
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
@@ -105,7 +105,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     )
   )
 
-  typecheckTest("Title ok", ProgramM(Title))(CName('Object))
+  typecheckTest("Title ok", Title)(CName('Title))
   typecheckTestError("NoTitle ok", NoTitle)
   typecheckTestError("ProfTitle ok", ProfTitle)
 

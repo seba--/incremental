@@ -130,6 +130,17 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     }
   }
 
+ /* def finalSubs(t1 : CVar[Type], t2 : Type): Type = {
+     substitution.toMap.get(t1) match {
+        case None => t2
+        case Some(u) =>
+          if () == t2) t2
+          else finalSubs(u, t2)
+
+      }
+    }
+  }*/
+
   def prefixMatch(prefix: List[Type], list: List[Type]): Boolean =
     prefix.length <= list.length && prefix.zip(list).forall {case (t1, t2) => t1 == t2}
 
@@ -189,7 +200,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     val extendedCS = bounds.foldLeft(init) { case (cs, (t,ts)) =>
       ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}
     }
-
+    println(s"CONSTRIANT SOLVERRRR $extendedCS")
     extendedCS
   }
 }

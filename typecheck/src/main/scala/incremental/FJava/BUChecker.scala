@@ -55,6 +55,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   var extD = Map[Type, Type]()
 
+  var CTable = Map[Type,(Type,  Ctor, Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
+
   type Result = (Type, Reqs, CR, CS)
   var s = Map[Type,Type]()
   val extt = ExtendD(s)
@@ -70,6 +72,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
+        var conss = Seq[Constraint]()
         val (t, reqs, creqs, cons) = typecheckStep(e)
         var cr = CR(Map[Type, ClassReq]())
         for (i <- 0 until e.kids.seq.size){
@@ -80,29 +83,43 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val cs = subcs addNewConstraints cons
         val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
         var creqs2 = CR(Map())
+        conss = conss ++ cons
         for ((ts, decl) <- creqs.cr) {
           val decl2 = decl.subst(cs.substitution)
         //  val c = finalT(ts, cs)
          // val (mcons, cres) = mergeCReqMaps(creqs2,Map(c -> decl2))
           //creqs2 = cres
           val c = ts.subst(cs.substitution).subst(cs.substitution).subst(cs.substitution).subst(cs.substitution)
-                creqs2 = CR(creqs2.cr + (c -> decl2))
+               val (ccons, cres) = mergeCReqMaps(creqs2, CR(Map(c -> decl2)))
+                    creqs2 =cres
+          conss = conss ++ ccons
           }
 
-        e.typ = (cs applyPartialSolution t, reqs2, creqs2, cs.propagate)
+
+
+        val cs1 = cs addNewConstraints(conss)
+
+      //  println(s"Constrains STEPPPP are $conss")
+
+        //println(s"Requiremetns STEPPPPP are $creqs2")
+
+        e.typ = (cs1 applyPartialSolution t, reqs2, creqs2, cs1.propagate)
         true
       }
 
       val (t_, reqs, creqs, cs_) = root.typ
-      val cs = cs_.tryFinalize
-      val t = t_.subst(cs.substitution)
+   //   val cs = cs_.tryFinalize
+      val t = t_.subst(cs_.substitution)
 
+    //  val (creq3, cons3) = remove(CTable, creqs)
+      //val cs1 = cs_.addNewConstraints(cons3)
+     // cs1.solvedFJ(cs1.substitution, ExtendD(extD))
       if (!reqs.isEmpty)
-        Right(s"Unresolved variable requirements $reqs, type $t, unres ${cs.unsolved}")
+        Right(s"Unresolved variable requirements $reqs, type $t, unres ${cs_.unsolved}")
       else if (!creqs.cr.isEmpty)
-        Right(s"Unresolved type-variable requirements $creqs, type $t, unres ${cs.unsolved}")
-      else if (!cs.isSolved)
-        Right(s"Unresolved constraints ${cs.unsolved}, type $t")
+        Right(s"Unresolved type-variable requirements $creqs, type $t, unres ${cs_.unsolved}")
+      else if (!cs_.isSolved)
+        Right(s"Unresolved constraints ${cs_.unsolved}, type $t")
       else
         Left(t)
     }
@@ -244,7 +261,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
     else {
       res = CR(res.cr + (tsuper -> ClassReq(None, None, Fields(Map()), Methods(Map()), Methods(Map()))))
-      creqs.cr.get(t) match {
+     /* creqs.cr.get(t) match {
         case None =>
           res = CR(res.cr + (t -> ClassReq(Some(tsuper), None, Fields(Map()), Methods(Map()), Methods(Map()))))
           (Seq(), res)
@@ -255,7 +272,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             case Some(t2) =>
               (Seq(Equal(tsuper, t2)),res)
           }
-      }
+      }*/
+      (Seq(), res)
     }
   }
 
@@ -287,6 +305,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (t, reqs, creqs, _) = e.kids(0).typ //subsol
       val U = freshCName()
       val (cons, mcreqs) = addFieldReq(creqs, t, f, U)
+      println(s"Resquirentrssss in THISSSSSSSSSSSSSSSSSSSSSS $reqs")
 
       (U, reqs, mcreqs, cons) //subsol
 
@@ -306,12 +325,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
        creqss = creqss :+ subcreqs
        param = param :+ Ui
       }
-
       val (mcons, mreqs) = mergeReqMaps(reqss)
       val (cCons, creqs) = mergeCReqMaps(creqss)
       val (mcCons, mcreqs) = addMethodReq(creqs, te, m, param, U)
 
-      (U, mreqs, mcreqs, cons ++ mcons ++ cCons ++ mcCons )
+      cons= cons ++ mcons ++ cCons ++ mcCons
+
+      (U, mreqs, mcreqs, cons )
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
@@ -329,10 +349,15 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
        cons =  cons :+ Subtype(ti, Ui)//or should be subtype
       }
       val (mcons, mreqs) = mergeReqMaps(reqss)
+
       val (cCons, creqs) = mergeCReqMaps(creqss)
 
       val (mcCons, mcreqs) = addCtorReq(creqs, c, ctor)
-      (c, mreqs, mcreqs, cons ++ mcons ++ cCons ++ mcCons)
+
+      cons = cons ++ mcons ++ cCons ++ mcCons
+      println(s"NEWWWW CONSSSSS $mreqs")
+
+      (c, mreqs, mcreqs, cons)
 
     case DCast =>
       val (t, reqs, creqs, _) = e.kids(0).typ
@@ -354,15 +379,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case MethodDec =>
       val (e0, reqs, creqs, _) = e.kids(0).typ
+      println(s"MEthoddddddd in THISSSSSSSSSSSSSSSSSSSSSS $reqs")
+
       val retT = e.lits(0).asInstanceOf[CName]
       val m = e.lits(1).asInstanceOf[Symbol]
       val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
       var restReqs = reqs
+      var cres = creqs
       var cons = Seq[Constraint]()
    //   var cCreqs = creqs
       val Uc = freshCName()
       val Ud = freshCName()
-      cons = cons :+ Subtype(e0, retT) :+ Subtype(Uc, Ud)
+      cons = cons :+ Subtype(e0, retT)
 
       for ((x, xC) <- params) {
         reqs.get(x) match {
@@ -370,20 +398,30 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           case Some(typ) =>
             restReqs = restReqs - x
             cons = Equal(xC, typ) +: cons
+
         }
       }
-//     val (ccons, cres)= addCMethodReq(cCreqs, Ud, m, params.toMap.valuesIterator.toList, retT)
-      val (ccons, cres) = mergeCReqMaps(creqs, CR(Map(Uc -> ClassReq(Some(Ud), None, Fields(Map()), Methods(Map()), Methods(Map())))))
+
+      //     val (ccons, cres)= addCMethodReq(cCreqs, Ud, m, params.toMap.valuesIterator.toList, retT)
+       cres = CR(cres.cr + (Uc -> ClassReq(Some(Ud), None, Fields(Map()), Methods(Map()), Methods(Map()))))
       restReqs.get('this) match {
         case None => restReqs = restReqs
         case Some(typ) =>
           cons = Equal(typ, Uc) +: cons // Subtype(Uc, typ)
+
+
           restReqs = restReqs - 'this
        }
-      cons= cons ++ ccons ++ cccons
-      (MethodOK(Uc), restReqs, ccres, cons )
+      //cons= cons ++ ccons //++ cccons
+      println(s"Constrains in method are $cons")
+
+    //  println(s"Requiremetns in method are $req")
+
+
+      (MethodOK(Uc), restReqs, cres, cons )
 
     case ClassDec =>
+      var CT = Map[Type,(Type,  Ctor, Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
       val c = e.lits(0).asInstanceOf[CName]
       val sup = e.lits(1).asInstanceOf[CName]
       val Ctor(params, superCall, fieldDefs) = e.lits(2).asInstanceOf[Ctor]
@@ -391,50 +429,61 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var restCreq = Seq[CR]()
       var cons = Seq[Constraint]()
       var restReqs = Seq[Reqs]()
+      var methods = Map[Symbol, (Type, List[Type])]()
       for (i <- 0 until e.kids.seq.size) {
-        val (t, req, creq, _) = e.kids(i).typ
+        val (t, req, creq, cs) = e.kids(i).typ
+
         restReqs = restReqs :+ req
         restCreq = restCreq :+ creq
-        cons = cons :+ Equal(c,t.asInstanceOf[MethodOK].in)
+        cons = cons :+ Equal(c, t.asInstanceOf[MethodOK].in)
+        val retT = e.kids(i).lits(0).asInstanceOf[CName]
+        val m = e.kids(i).lits(1).asInstanceOf[Symbol]
+        val params = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
+        var par = List[Type]()
+        for((t, p) <- params.toMap)
+          par = par :+ p
+        methods = methods + (m -> (retT, par))
       }
       val (conss, cr) = mergeCReqMaps(restCreq)
       val (rcons, req) = mergeReqMaps(restReqs)
 
+      CT =  CT + (c -> (sup,  Ctor(params, superCall, fieldDefs), fields.toMap, methods))
       cons = cons ++ conss ++ rcons// :+ Subtype(c, sup)
-      val (mconsD, crD) = addSupertypeReq(cr, c, sup)
-      val lst = Ctor(params, superCall, fieldDefs).params.valuesIterator.toList
-      val ( consC,cresC) = addCtorReq(cr, c, lst)
-      val ( consD, cres) = addCtorReq(cresC, sup, lst.dropRight(Ctor(params, superCall, fieldDefs).fieldDefs.size))
+     val (mconsD, crD) = addSupertypeReq(cr, c, sup)
+     // val lst = Ctor(params, superCall, fieldDefs).params.valuesIterator.toList
+     // val ( consC,cresC) = addCtorReq(cr, c, lst)
+     // val ( consD, cres) = addCtorReq(cresC, sup, lst.dropRight(Ctor(params, superCall, fieldDefs).fieldDefs.size))
 
-     cons = cons ++ mconsD ++ consC
-   //   println(s"classs reqs $crD")
+    cons = cons ++ mconsD// ++ consC
 
-      (c, req, cres, cons)
+    println(s"classs reqs $crD")
+    println(s"classs CONSSSS $cons")
+
+       val (creq2, cons2) = remove( CT, crD)
+
+      println(s"Class tacle $CT")
+
+      cons = cons ++ cons2
+
+      (c, req, creq2, cons )
 
 
     case ProgramM =>
-
-      def applyFinal(t : Type , s : CSubst) : Type ={
-        if (t == CName) t
-        else applyFinal(t.subst(s), s)
-      }
-
-
-      var CT = Map[Type,(Type,  List[Type], Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
+      var CT = Map[Type,(Type,  Ctor, Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
       var restCreq = Seq[CR]()
-      var resC = CR(Map())
-      var resCC = CR(Map())
+      var cres = Seq[CR]()
       var ext = ExtendD(Map())
       var cons = Seq[Constraint]()
       for (i <- 0 until e.kids.seq.size) {
+        val (ct, _, creqs, ccons) = e.kids(i).typ
         val c = e.kids(i).lits(0).asInstanceOf[CName]
         val sup = e.kids(i).lits(1).asInstanceOf[CName]
         val Ctor(params, superCall, fieldDefs) = e.kids(i).lits(2).asInstanceOf[Ctor]
         val fields = e.kids(i).lits(3).asInstanceOf[Seq[(Symbol, Type)]]
         var methods = Map[Symbol, (Type, List[Type])]()
         for (j <- 0 until e.kids(i).kids.seq.size) {
-          val (c0, reqs, creqs, _)= e.kids(i).kids.seq(j).typ
-          cons = cons :+ Equal(c, c0.asInstanceOf[MethodOK].in)
+          val (c0, res, creqs, cs)= e.kids(i).kids.seq(j).typ
+          cons = Equal(c, c0.asInstanceOf[MethodOK].in) +: cons
           val retT = e.kids(i).kids(j).lits(0).asInstanceOf[CName]
           val m = e.kids(i).kids(j).lits(1).asInstanceOf[Symbol]
           val params = e.kids(i).kids(j).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
@@ -442,91 +491,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           for((t, p) <- params.toMap)
             par = par :+ p
           methods = methods + (m -> (retT, par))
-          restCreq = restCreq :+ creqs
-
         }
-        var (mCcons, mcreqs) = mergeCReqMaps(restCreq)
-
-        resC = mcreqs
-        CT =  CT + (c -> (sup,  Ctor(params, superCall, fieldDefs).params.valuesIterator.toList, fields.toMap, methods))
-        val (consD, crD) = addSupertypeReq(mcreqs, c, sup)
-        cons = cons ++  mCcons ++ consD
-
-        val (kot, kotc) = resC.cr.foldLeft((cons, resC)){case ((mcns, creqs), (ts, dec)) =>
-          val (mconsfold, creqsfold) = addSupertypeReq(creqs, c, sup)
-          (mcns ++ mconsfold, creqsfold)
-        }
-        resC = kotc
+        CT =  CT + (c -> (sup,  Ctor(params, superCall, fieldDefs), fields.toMap, methods))
         ext = ExtendD(ext.ext + (c -> sup))
+        cres = cres :+ creqs
       }
-
       extD = ext.ext
+      val (mcons, mcreqs) = mergeCReqMaps(cres)
+      cons = cons ++ mcons
 
-      val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ext))
+      val (cr, ccons)=  remove(CT, mcreqs )
+      cons = cons ++ ccons
 
-     // cons = cons ++ mCcons
-      val cs = subcs addNewConstraints cons
+      CTable = CT
 
-   //   val cres = removeCondReq(resC)
-
-      val (prv, prvC) = resC.cr.foldLeft((cons, resC)){case ((mcns, creqs), (ts, dec)) =>
-        val (mconsfold, creqsfold) = mergeCReqMaps(creqs, CR(Map(ts.subst(cs.substitution).subst(cs.substitution).subst(cs.substitution) -> dec.subst(cs.substitution).subst(cs.substitution))))
-        (mcns ++ mconsfold, creqsfold)
-      }
-
-    /*  for ((ts, decl) <- resC.cr) {
-        val decl2 = decl.subst(cs.substitution)
-        //  val c = finalT(ts, cs)
-        // val (mcons, cres) = mergeCReqMaps(creqs2,Map(c -> decl2))
-        //creqs2 = cres
-        val c = ts.subst(cs.substitution)
-
-        println(s"REQQQQQQQQ $resC")
-
-        val (mcons, cres) = mergeCReqMaps(resCC,CR(Map(c -> decl2)))
-        //resC= CR(cres.cr - ts)
-resCC = cres
-        println(s"Extend at cons $mcons")
-cons = cons ++ mcons
-        // resC = CR(resC.cr - ts + (c -> decl2))
-      /*  if (c == CName) {
-          val (mcons, cres) = mergeCReqMaps(resC,CR(Map(c -> decl2)))
-          resC = cres }
-        else {
-          val c2 = c.subst(cs.substitution)
-          val (mcons, cres) = mergeCReqMaps(resC,CR(Map(c2 -> decl2)))
-          resC = cres
-        }*/
-      }*/
-
-      println(s"smtheods are $prvC")
-
-      cons = cons ++ prv
-
-      val (cr, ctcons)=  remove(CT, prvC, cs addNewConstraints(cons))
-      cons = cons ++ ctcons
-
-      val  cs1 = cs addNewConstraints(cons)
-      cs1.solvedFJ(cs1.substitution, ext)
-
-
-      val (prv2, prvC2) = cr.cr.foldLeft((cons, resC)){case ((mcns, creqs), (ts, dec)) =>
-        val (mconsfold, creqsfold) = mergeCReqMaps(creqs, CR(Map(ts.subst(cs1.substitution).subst(cs1.substitution).subst(cs1.substitution) -> dec.subst(cs1.substitution).subst(cs1.substitution))))
-        (mcns ++ mconsfold, creqsfold)
-      }
-
-      val (cr2, ctcons2)=  remove(CT, prvC2, cs1 addNewConstraints(cons ++ prv2))
-      cons = cons ++ ctcons2
-
-      val  cs2 = cs1 addNewConstraints(cons)
-      cs2.solvedFJ(cs2.substitution, ext)
-
-      println(s"constrains are VCCCCCC $cons")
-      println(s"Constraint after remove $cs2")
-
-      println(s"REEEEESSSSS $prvC2")
-
-      (CName('Object), Map(),cr2, cons)
+      (CName('Object), Map(),cr, cons)
   }
   private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
 
@@ -545,22 +524,19 @@ cons = cons ++ mcons
       wasReqs.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-         mcons = mcons :+ Equal(r1, r2)
+          mreqs += x -> r2
+         mcons =  Equal(r1, r2) +: mcons
       }
     (mcons, mreqs)
   }
 
-  private def remove(CT : Map[Type, (Type, List[Type],  Map[Symbol, Type], Map[Symbol, (Type, List[Type])])], creq : CR, cs :CS) : (CR, Seq[Constraint]) = {
+ private def remove(CT : Map[Type, (Type, Ctor,  Map[Symbol, Type], Map[Symbol, (Type, List[Type])])], creq : CR) : (CR, Seq[Constraint]) = {
+   var fieldD = Map[Symbol, Type]()
     var cr = creq
     var cons = Seq[Constraint]()
     var ct = CT
     for ((c, cld) <- creq.cr) {
       var stype = cld.extendc
-      stype match {
-        case None => stype
-        case Some(t) =>
-
-      }
       var ctor = cld.ctorParams
       var fields = cld.fields
       var methods = cld.methods
@@ -571,19 +547,29 @@ cons = cons ++ mcons
           cld.extendc match {
             case None => stype
             case Some(t) =>
-              cons = cons :+ Equal(clsT._1, t)
+              cons =  Equal(clsT._1, t) +: cons
 
           }
+          fieldD = clsT._2.params.dropRight(clsT._2.fieldDefs.size)
           cld.ctorParams match {
             case None => ctor
-            case Some(lt) =>  cons = cons :+ AllEqual(clsT._2, lt)
+            case Some(lt) =>
+              for (i <- 0 until lt.size){
+                cons = Equal(clsT._2.params.valuesIterator.toList(i),lt(i)) +: cons }
           }
-
+          for ((f, typ) <- cld.fields.fld) {
+            fieldD.get(f) match {
+              case None => fields = fields
+              case Some(typ2) =>
+                cons = Equal(typ2, typ) +: cons
+                fields = Fields(fields.fld - f)
+            }
+          }
           for ((f, typ) <- cld.fields.fld) {
             clsT._3.get(f) match {
               case None => fields = fields
               case Some(typ2) =>
-                cons = cons :+ Equal(typ2, typ)
+                cons = Equal(typ2, typ) +: cons
                 fields = Fields(fields.fld - f)
             }
           }
@@ -591,8 +577,9 @@ cons = cons ++ mcons
             clsT._4.get(m) match {
               case None => methods = methods
               case Some(rt2) =>
-                cons = cons :+ Equal(rt._1, rt2._1)
-                cons = cons :+ AllEqual(rt._2, rt2._2)
+                cons = Equal(rt2._1, rt._1) +: cons
+                for (i <- 0 until rt._2.size){
+                cons = Equal(rt2._2(i), rt._2(i)) +: cons }
                 methods = Methods(methods.m - m)
             }
           }
@@ -600,13 +587,14 @@ cons = cons ++ mcons
             clsT._4.get(m) match {
               case None => cmethods = Methods(cmethods.m - m)
               case Some(rt2) =>
-                cons = cons :+ Equal(rt2._1, rt._1)
-                cons = cons :+ AllEqual(rt._2, rt2._2)
+                cons =  Equal(rt2._1, rt._1) +: cons
+                for (i <- 0 until rt._2.size){
+                  cons = Equal(rt2._2(i), rt._2(i)) +: cons }
                 cmethods = Methods(cmethods.m - m)
             }
           }
       }
-      for ((d, cldD) <- CT) {
+    /*  for ((d, cldD) <- CT) {
         if (cs.isSubtype(c, d)) {
           for ((f, typ) <- fields.fld) {
             cldD._3.get(f) match {
@@ -626,16 +614,16 @@ cons = cons ++ mcons
             }
           }
         }
-      }
+      }*/
       if (fields.fld.isEmpty && methods.m.isEmpty && CT.exists( _._1 == c)) // &&cld.cmethods.m.isEmpty
         cr = CR(cr.cr - c)
     }
-     for ((c, cld) <- cr.cr){
+   /*  for ((c, cld) <- cr.cr){
         if (c.isInstanceOf[UCName]) {
           cr = CR(cr.cr - c)
         }
         else cr
-      }
+      }*/
 
   (cr,cons)
   }
@@ -681,34 +669,52 @@ cons = cons ++ mcons
         case (None, Some(_)) => ctor = cld2.ctorParams
         case (Some(_), None) => ctor
        case (Some(t1), Some(t2)) => ctor
-         if (t1.size == t2.size) mcons = mcons :+ AllEqual(t1, t2)
-          else mcons = mcons :+ Never(AllEqual(t1, t2))
+         if (t1.size == t2.size) {
+           for (i <- 0 until t1.size) {
+           mcons =  Equal(t1(i), t2(i)) +:  mcons }
+         }
+          else {
+           for (i <- 0 until t1.size) {
+             mcons = mcons :+ Never(Equal(t1(i), t2(i)))}}
       }
     for ((f, typ) <- newF.fld){
       wasF.fld.get(f) match {
         case None => rF = Fields(rF.fld + (f -> typ))
         case Some(typ2) =>
-          mcons = mcons :+ Equal(typ2, typ)
+          rF = Fields(rF.fld + (f -> typ))
+          mcons =  Equal(typ2, typ) +: mcons
       }
     }
     for ((m, mbody) <- cld2.methods.m) {
       wasM.m.get(m) match {
         case None => cldm = Methods(cldm.m + (m -> mbody)) // mdoby = return type + list of parameters
         case Some(mbody2) =>
-          mcons = mcons :+ Equal(mbody2._1, mbody._1)
+          mcons = Equal( mbody2._1, mbody._1) +: mcons
           if (mbody._2.length == mbody2._2.length)
-            mcons = mcons :+ AllEqual(mbody._2, mbody2._2)
-          else mcons = mcons :+ Never(AllEqual(mbody._2, mbody2._2))
+            for (i <- 0 until mbody._2.length) {
+              mcons = Equal(mbody2._2(i), mbody._2(i)) +: mcons}
+          else {
+            for (i <- 0 until mbody._2.size) {
+              mcons =  Equal(mbody2._2(i), mbody._2(i)) +: mcons}
+          }
+          cldm = Methods(cldm.m + (m -> mbody))
       }
     }
     for ((m, mbody) <- cld2.cmethods.m) {
       cld1.cmethods.m.get(m) match {
-        case None => cldmc = Methods(cldmc.m + (m -> mbody))// mdoby = return type + list of parameters
+        case None => cldmc = Methods(cldmc.m + (m -> mbody)) // mdoby = return type + list of parameters
         case Some(mbody2) =>
-          mcons = mcons :+ Equal(mbody2._1, mbody._1)
+          mcons =  Equal(mbody2._1, mbody._1) +: mcons
           if (mbody._2.length == mbody2._2.length)
-            mcons = mcons :+ AllEqual(mbody._2, mbody2._2)
-          else mcons = mcons :+ Never(AllEqual(mbody._2, mbody2._2))
+            for (i <- 0 until mbody._2.length) {
+              mcons =  Equal(mbody2._2(i), mbody._2(i)) +: mcons
+            }
+          else {
+            for (i <- 0 until mbody._2.size) {
+              mcons =  Equal(mbody2._2(i), mbody._2(i)) +: mcons
+            }
+          }
+          cldmc = Methods(cldmc.m + (m -> mbody))
       }
     }
     var styp : Option[Type] = cld1.extendc
@@ -717,7 +723,7 @@ cons = cons ++ mcons
       case (None, Some(_)) => styp = cld2.extendc
       case (Some(_), None) => styp
       case (Some(t1), Some(t2)) => styp
-        mcons = mcons :+ Equal(t1, t2)
+        mcons = Equal(t1, t2) +: mcons
 
 
     }
