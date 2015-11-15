@@ -200,7 +200,6 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     val extendedCS = bounds.foldLeft(init) { case (cs, (t,ts)) =>
       ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}
     }
-    println(s"CONSTRIANT SOLVERRRR $extendedCS")
     extendedCS
   }
 }
