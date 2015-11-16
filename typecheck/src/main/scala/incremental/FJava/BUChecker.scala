@@ -127,20 +127,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   def addMethodReq(creqs: CR, t: Type, m: Symbol, args: List[Type], ret: Type): (Seq[Constraint], CR) = {
     creqs.cr.get(t) match {
       case None =>
-        val res: CR = CR(creqs.cr + (t -> ClassReq(None, None, Fields(Map()), Methods(Map(m ->(ret, args))), Methods(Map()))))
-        (Seq(), res)
+        (Seq(), CR(creqs.cr + (t -> ClassReq(methods = Methods(Map(m ->(ret, args)))))))
       case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
         methods.m.get(m) match {
           case None =>
-            (Seq(), CR(creqs.cr + (t -> ClassReq(sup, ctor, fields, Methods(methods.m + (m ->(ret, args))), cmethods))))
-
+            (Seq(), CR(creqs.cr + (t -> ClassReq(sup, ctor, fields, Methods(methods.m + (m -> (ret, args))), cmethods))))
           case Some((ret2, args2)) =>
-            if (args.length == args2.length) {
-              val cons = Equal(ret2, ret) +: (args2 zip args).map(p => Equal(p._1, p._2))
-              (cons, creqs)
-            }
-            else
-              (Seq(Equal(ret, ret2), Never(AllEqual(args, args2))), creqs)
+            (Seq(Equal(ret2, ret), AllEqual(args2, args)), creqs)
         }
     }
   }
@@ -265,25 +258,26 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val m = e.lits(0).asInstanceOf[Symbol]
       val (te, reqs0, creqs0,  _) = e.kids(0).typ
       val U = freshCName()
+
       var cons = Seq[Constraint]()
       var reqss: Seq[Reqs] = Seq(reqs0)
       var creqss: Seq[CR] = Seq(creqs0)
       var param = List[Type]()
+
       for (i <- 1 until e.kids.seq.size) {
         val (ti, subreqs, subcreqs, _) = e.kids(i).typ
         val Ui = freshCName()
-        reqss = reqss :+ subreqs
-        cons = cons :+ Subtype(ti, Ui) //or should be subtype
-        creqss = creqss :+ subcreqs
         param = param :+ Ui
+        cons = cons :+ Subtype(ti, Ui)
+        reqss = reqss :+ subreqs
+        creqss = creqss :+ subcreqs
       }
+
       val (mcons, mreqs) = mergeReqMaps(reqss)
       val (cCons, creqs) = mergeCReqMaps(creqss)
       val (mcCons, mcreqs) = addMethodReq(creqs, te, m, param, U)
 
-      cons= mcons ++ cCons ++ mcCons ++ cons
-
-      (U, mreqs, mcreqs, cons )
+      (U, mreqs, mcreqs, mcons ++ cCons ++ mcCons ++ cons)
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]

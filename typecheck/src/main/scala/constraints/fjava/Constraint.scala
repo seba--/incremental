@@ -41,9 +41,12 @@ case class AllEqual(expected: List[Type], actual: List[Type]) extends Constraint
   def subst(s: CSubst) = AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
 
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
+    if (expected.size != actual.size)
+      cs.never(this)
+
     var cons = Seq[Constraint]()
     for (i <- 0 until expected.size)
-    cons = cons :+  Equal(expected(i), (actual(i)))
+      cons = cons :+  Equal(expected(i), (actual(i)))
 
     cs.addNewConstraints(cons)
   }
