@@ -7,11 +7,7 @@ import incremental.{Node_, SyntaxChecking}
 
 import scala.collection.immutable.ListMap
 
-/**
- * Created by lirakuci on 3/10/15.
- */
 
-case object CtorDec extends NodeKind(_ => CtorSyntax)
 //case object Ctor extends NodeKind(_ => CtorSyntax)
 
 case object ClassDec extends NodeKind(_ => ClassSyntax)
@@ -148,15 +144,4 @@ object ThisSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
   }
 }
 
-object CtorSyntax extends SyntaxChecking.SyntaxChecker(CtorDec){
-  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-   /* if (kids.nonEmpty)
-      error(s"Expected no kids but got $kids")
 
-    for (i <- 0 until lits.size) {
-      val typ = lits(i)
-      if (!typ.isInstanceOf[Type])
-        error(s"Expected field type of type Type but got $typ")
-    } */
-  }
-}
