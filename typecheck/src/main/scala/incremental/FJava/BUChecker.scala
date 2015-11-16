@@ -359,8 +359,7 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
 
         }
       }
-
-     // val (ccons, cres)= addCMethodReq(cres, Ud, m, params.toMap.valuesIterator.toList, retT)
+      
        cres = CR(cres.cr + (Uc -> ClassReq(Some(Ud), None, Fields(Map()), Methods(Map()), Methods(Map()))) + (Ud -> ClassReq(None, None, Fields(Map()), Methods(Map()), Methods(Map(m -> (retT, params.toMap.valuesIterator.toList))))))
       restReqs.get('this) match {
         case None => restReqs = restReqs
@@ -368,8 +367,6 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
           cons = Equal(typ, Uc) +: cons // Subtype(Uc, typ)
           restReqs = restReqs - 'this
        }
-
-      println(s"SUPER TyPE UD $Ud")
 
       (MethodOK(Uc), restReqs, cres, cons )
 
