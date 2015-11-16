@@ -1,11 +1,11 @@
 package incremental.fjava
 
-import constraints.equality.EqConstraint
+import constraints.Statistics
 import constraints.fjava.CSubst.CSubst
-import constraints.{CVar, Statistics}
 import constraints.fjava._
-import incremental.{NodeKind, Node_, Util}
 import incremental.Node._
+import incremental.{Node_, Util}
+
 import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/2/15.
@@ -20,7 +20,7 @@ case class Methods(m : Map[Symbol, (Type, List[Type])])
 
 case class ExtendD( ext : Map[Type,Type])
 
-case class ClassReq(extendc: Option[Type], ctorParams: Option[List[Type]], fields: Fields, methods: Methods, cmethods : Methods) {
+case class ClassReq(extendc: Option[Type] = None, ctorParams: Option[List[Type]] = None, fields: Fields = Fields(Map()), methods: Methods = Methods(Map()), cmethods : Methods = Methods(Map())) {
   def subst(s: CSubst) = ClassReq(extendc.map(_.subst(s)).map(_.subst(s)), ctorParams.map(_.map(_.subst(s))), Fields(fields.fld.mapValues(_.subst(s)).mapValues(_.subst(s))), Methods(methods.m.mapValues {case (ret, args) => (ret.subst(s).subst(s), args.map(_.subst(s)).map(_.subst(s)))}), Methods(cmethods.m.mapValues {case (ret, args) => (ret.subst(s), args.map(_.subst(s)))}))
 }//(supertype, Fields, Methods)
 
@@ -94,12 +94,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def addFieldReq(creqs: CR, t: Type, f: Symbol, U: Type): (Seq[Constraint], CR) = {
-    //if (t == CName('Object))
-    //  return (Seq()) TODO shouldn't class reqs be constraints?
     creqs.cr.get(t) match {
       case None =>
-        val res: CR = CR(creqs.cr + (t -> ClassReq(None, None, Fields(Map(f -> U)), Methods(Map()), Methods(Map()))))
-        (Seq(), res)
+        (Seq(), CR(creqs.cr + (t -> ClassReq(fields = Fields(Map(f -> U))))))
       case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
         fields.fld.get(f) match {
           case None =>
@@ -237,8 +234,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case Num =>
       (CName('TNum), Map(), CR(Map()),Seq())
+
     case Str =>
-      (CName('TString), Map(),CR(Map()), Seq())
+      (CName('TString), Map(), CR(Map()), Seq())
 
     case op if op == Add || op == Mul =>
       val (t1, reqs1, creqs1, _) = e.kids(0).typ
@@ -258,10 +256,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case FieldAcc =>
       val f = e.lits(0).asInstanceOf[Symbol] //symbol
-    val (t, reqs, creqs, _) = e.kids(0).typ //subsol
-    val U = freshCName()
+      val (t, reqs, creqs, _) = e.kids(0).typ //subsol
+      val U = freshCName()
       val (cons, mcreqs) = addFieldReq(creqs, t, f, U)
-      (U, reqs, mcreqs, cons) //subsol
+      (U, reqs, mcreqs, cons)
 
     case Invk =>
       val m = e.lits(0).asInstanceOf[Symbol]
