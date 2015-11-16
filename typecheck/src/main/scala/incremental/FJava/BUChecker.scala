@@ -349,7 +349,6 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
       val Uc = freshCName()
       val Ud = freshCName()
       cons = cons :+ Subtype(e0, retT)
-
       for ((x, xC) <- params) {
         reqs.get(x) match {
           case None => restReqs = restReqs
@@ -359,8 +358,7 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
 
         }
       }
-      
-       cres = CR(cres.cr + (Uc -> ClassReq(Some(Ud), None, Fields(Map()), Methods(Map()), Methods(Map()))) + (Ud -> ClassReq(None, None, Fields(Map()), Methods(Map()), Methods(Map(m -> (retT, params.toMap.valuesIterator.toList))))))
+      cres = CR(cres.cr + (Uc -> ClassReq(Some(Ud), None, Fields(Map()), Methods(Map()), Methods(Map()))) + (Ud -> ClassReq(None, None, Fields(Map()), Methods(Map()), Methods(Map(m -> (retT, params.toMap.valuesIterator.toList))))))
       restReqs.get('this) match {
         case None => restReqs = restReqs
         case Some(typ) =>
@@ -382,10 +380,9 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
       var methods = Map[Symbol, (Type, List[Type])]()
       for (i <- 0 until e.kids.seq.size) {
         val (t, req, creq, cs) = e.kids(i).typ
-
         restReqs = restReqs :+ req
         restCreq = restCreq :+ creq
-       cons =  Equal(c, t.asInstanceOf[MethodOK].in) +: cons
+        cons =  Equal(c, t.asInstanceOf[MethodOK].in) +: cons
         val retT = e.kids(i).lits(0).asInstanceOf[CName]
         val m = e.kids(i).lits(1).asInstanceOf[Symbol]
         val params = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
@@ -399,9 +396,9 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
       extD = Map(c -> sup)
       CT =  CT + (c -> (sup,  Ctor(params, superCall, fieldDefs), fields.toMap, methods))
       cons = conss ++ rcons ++ cons
-     val (mconsD, crD) = addSupertypeReq(cr, c, sup)
+      val (mconsD, crD) = addSupertypeReq(cr, c, sup)
       val (creq2, cons2) = remove( CT, crD)
-      cons = mconsD ++ cons2 ++ cons
+      cons = cons2 ++ cons
       (c, req, creq2, cons)
 
 
@@ -409,6 +406,7 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
       var CT = Map[Type,(Type,  Ctor, Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
       var restCreq = Seq[CR]()
       var cres = Seq[CR]()
+      var cress = Seq[CR]()
       var cresss = Seq[CR]()
       var cr = CR(Map())
       var ext = ExtendD(Map())
@@ -421,7 +419,7 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
         val fields = e.kids(i).lits(3).asInstanceOf[Seq[(Symbol, Type)]]
         var methods = Map[Symbol, (Type, List[Type])]()
         for (j <- 0 until e.kids(i).kids.seq.size) {
-          val (c0, res, creqs, cs)= e.kids(i).kids.seq(j).typ
+          val (c0, res, mcreqs, cs)= e.kids(i).kids.seq(j).typ
           cons = Equal(c, c0.asInstanceOf[MethodOK].in) +: cons
           val retT = e.kids(i).kids(j).lits(0).asInstanceOf[CName]
           val m = e.kids(i).kids(j).lits(1).asInstanceOf[Symbol]
@@ -430,10 +428,18 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
           for((t, p) <- params.toMap)
             par = par :+ p
           methods = methods + (m -> (retT, par))
+        //  val (mc, mcr) = addCMethodReq(mcreqs, ct, m, params.toMap.valuesIterator.toList, retT)
+          //cress = cress :+ mcr
+
+//          cons = cons ++ mc
         }
         CT =  CT + (c -> (sup,  Ctor(params, superCall, fieldDefs), fields.toMap, methods))
         ext = ExtendD(ext.ext + (c -> sup))
-        cres = cres :+ creqs
+
+     //   val (kot, kotc) = mergeCReqMaps(cress)
+       // cons = cons ++ kot
+       // val (kot1, kotc1) = mergeCReqMaps(kotc, creqs)
+        cres = cres :+ creqs//kotc1
       }
       for(i <- 0 until cres.size)
         {
@@ -536,15 +542,15 @@ val cs1 = cs_.addNewConstraints(ccons).tryFinalize
             clsT._4.get(m) match {
               case None => cmethods = Methods(cmethods.m - m)
               case Some(rt2) =>
-               // cons =  Equal(rt2._1, rt._1) +: cons
-               // for (i <- 0 until rt._2.size){
-                 // cons = Equal(rt2._2(i), rt._2(i)) +: cons }
+                cons =  Subtype(rt2._1, rt._1) +: cons
+                for (i <- 0 until rt._2.size){
+                  cons = Equal(rt._2(i), rt2._2(i)) +: cons }
                 cmethods = Methods(cmethods.m - m)
             }
           }
       }
 
-      if (fields.fld.isEmpty && methods.m.isEmpty && CT.exists( _._1 == c) )//&& cld.cmethods.m.isEmpty)
+      if (fields.fld.isEmpty && methods.m.isEmpty && CT.exists( _._1 == c) ) //&& cld.cmethods.m.isEmpty)
         cr = CR(cr.cr - c)
     } }
 
