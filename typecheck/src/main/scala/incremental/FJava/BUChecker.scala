@@ -24,9 +24,8 @@ case class ExtendD( ext : Map[Type,Type])
 
 case class ClassReq(extendc: Option[Type] = None, ctorParams: Option[List[Type]] = None, fields: Fields = Fields(Map()), methods: Methods = Methods(Map()), cmethods : Methods = Methods(Map())) {
   def subst(s: CSubst) = ClassReq(extendc.map(_.subst(s)).map(_.subst(s)), ctorParams.map(_.map(_.subst(s))), Fields(fields.fld.mapValues(_.subst(s)).mapValues(_.subst(s))), Methods(methods.m.mapValues {case (ret, args) => (ret.subst(s).subst(s), args.map(_.subst(s)).map(_.subst(s)))}), Methods(cmethods.m.mapValues {case (ret, args) => (ret.subst(s), args.map(_.subst(s)))}))
-}//(supertype, Fields, Methods)
-
-case class CR(cr : Map[Type, ClassReq])
+  def isEmpty = extendc.isEmpty && ctorParams.isEmpty && fields.fld.isEmpty && methods.m.isEmpty && cmethods.m.isEmpty
+}
 
 case class CSig(extendc: Type,  ctor: Ctor, fields: Map[Symbol, Type], methods: Map[Symbol, (Type, List[Type])])
 
@@ -50,50 +49,65 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type Result = (Type, Reqs, CR, CS)
 
+  case class CR(cr : Map[Type, ClassReq]) {
+    def subst(s: CSubst): (CR, Seq[Constraint]) = {
+      var creqs = Map[Type, ClassReq]()
+      var cons = Seq[Constraint]()
+      for ((t, creq) <- cr) {
+        val t2 = t.subst(s)
+        val creq2 = creq.subst(s)
+        creqs.get(t2) match {
+          case None =>
+            creqs = creqs + (t2 -> creq2)
+          case Some(creqOther) =>
+            val (newcons, mcreq) = mergeCCld(creqOther, creq2)
+            creqs = creqs + (t2 -> mcreq)
+            cons = cons ++ newcons
+        }
+      }
+
+      (CR(creqs), cons)
+    }
+  }
+
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
-        var conss = Seq[Constraint]()
         val (t, reqs, creqs, cons) = typecheckStep(e)
         var cr = CR(Map[Type, ClassReq]())
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ExtendD(extD)))
         val cs = subcs addNewConstraints cons
         val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-        var creqs2 = CR(Map())
-        conss = conss ++ cons
-        for ((ts, decl) <- creqs.cr) {
-          val decl2 = decl.subst(cs.substitution)
-          val c = ts.subst(cs.substitution)
-          val (ccons, cres) = mergeCReqMaps(creqs2, CR(Map(c -> decl2)))
-          creqs2 =cres
-          conss = conss ++ ccons
-        }
-        val cs1 = cs addNewConstraints(conss)
+        val (creqs2, newcons) = creqs.subst(cs.substitution)
+        val cs1 = cs addNewConstraints(cons ++ newcons)
 
         e.typ = (cs1 applyPartialSolution t, reqs2, creqs2, cs1.propagate)
         true
       }
 
-      val (t_, reqs, creqs, cs_) = root.typ
-      val t = t_.subst(cs_.substitution)
-      val (cres,ccons) = remove(CTable, creqs)
-      val cs1 = cs_.addNewConstraints(ccons).tryFinalize
-      var  cr = cres
-      for((c, cld) <- cr.cr){
-        if (c.isInstanceOf[UCName]) cr = CR(cr.cr -  c)
-      }
+      val (tRoot, reqsRoot, creqsRoot, csRoot) = root.typ
+      val (creqsNoObject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsRoot)
 
-      if (!reqs.isEmpty)
-        Right(s"Unresolved variable requirements $reqs, type $t, unres ${cs1.unsolved}")
-      else if (!cr.cr.isEmpty)
-        Right(s"Unresolved type-variable requirements $creqs, type $t, unres ${cs1.unsolved}")
-      else if (!cs1.isSolved)
+      val csFinal = csRoot.addNewConstraints(ccons).tryFinalize
+      val finalSubst = csFinal.substitution
+      val tFinal = tRoot.subst(finalSubst)
+      val reqsFinal = reqsRoot mapValues (_.subst(finalSubst))
+      val (creqsFinal, newcons) = creqsNoObject.subst(finalSubst)
 
-        Right(s"Unresolved constraints ${cs1.unsolved}, type $t")
+      // TODO don't store finalized values
+      root.typ = (tFinal, reqsFinal, creqsFinal, csFinal)
+
+      if (!reqsFinal.isEmpty)
+        Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${csFinal.unsolved}")
+      else if (!creqsFinal.cr.isEmpty)
+        Right(s"Unresolved type-variable requirements $creqsRoot, type $tFinal, unres ${csFinal.unsolved}")
+      else if (!csFinal.isSolved)
+
+        Right(s"Unresolved constraints ${csFinal.unsolved}, type $tFinal")
       else
-        Left(t)
+        Left(tFinal)
     }
   }
 
@@ -431,72 +445,126 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     (mcons, mreqs)
   }
 
-  private def remove(CT : Map[Type, CSig], creq : CR) : (CR, Seq[Constraint]) = {
+  private def remove(CT : Map[Type, CSig], creqs : CR) : (CR, Seq[Constraint]) = {
+    val creqsCr = creqs.cr
+    var cr = creqsCr
+    var cons = Seq[Constraint]()
+
+    for ((c, CSig(sup, ctor, fields, methods)) <- CT)
+      creqsCr.get(c) match {
+        case None =>
+        case Some(ClassReq(rsup, rctor, rfields, rmethods, rcmethods)) =>
+          var restReq = ClassReq()
+
+          rsup match {
+            case None =>
+            case Some(rsupT) =>
+              if (sup == null)
+                restReq = restReq.copy(extendc = Some(rsupT))
+              else
+                cons = cons :+ Equal(sup, rsupT)
+          }
+
+          rctor match {
+            case None =>
+            case Some(ts) =>
+              cons = cons :+ AllEqual(ctor.params.values.toList, ts)
+          }
+
+          for ((f, t) <- rfields.fld)
+            fields.get(f) match {
+              case None =>
+                restReq = restReq.copy(fields = Fields(restReq.fields.fld + (f -> t)))
+              case Some(ct) =>
+                cons = cons :+ Equal(ct, t)
+            }
+
+          for ((m, (rt, ts)) <- rmethods.m)
+            methods.get(m) match {
+              case None =>
+                restReq = restReq.copy(methods = Methods(restReq.methods.m + (m -> (rt, ts))))
+              case Some((crt, cts)) =>
+                cons = cons :+ Equal(crt, rt) :+ AllEqual(cts, ts)
+            }
+
+          for ((m, (rt, ts)) <- rcmethods.m)
+            methods.get(m) match {
+              case None =>
+                // delete requirement
+                // TODO need to check overriding for inheritance distance > 2. Example: A extends B, B extends C, and A.m overrides C.m, but B.m is undefined
+              case Some((crt, cts)) =>
+                cons = cons :+ Equal(crt, rt) :+ AllEqual(cts, ts)
+            }
+
+          if (restReq.isEmpty)
+            cr = cr - c
+          else
+            cr = cr.updated(c, restReq)
+      }
+
+    (CR(cr), cons)
+  }
+
+  private def removeOLD(CT : Map[Type, CSig], creq : CR) : (CR, Seq[Constraint]) = {
     var fieldD = Map[Symbol, Type]()
     var cr = creq
     var cons = Seq[Constraint]()
-    var ct = CT
     for ((c, cld) <- creq.cr) {
-      if (c == CName('Object)) {
-        cr = CR(cr.cr - c)
-      }
-      else {
-        var stype = cld.extendc
-        var ctor = cld.ctorParams
-        var fields = cld.fields
-        var methods = cld.methods
-        var cmethods = cld.cmethods
-        CT.get(c) match {
-          case None => cr
-          case Some(csig) =>
-            cld.extendc match {
-              case None =>
-              case Some(t) =>
-                cons = Equal(csig.extendc, t)  +: cons
+      var stype = cld.extendc
+      var ctor = cld.ctorParams
+      var fields = cld.fields
+      var methods = cld.methods
+      var cmethods = cld.cmethods
+      CT.get(c) match {
+        case None => cr
+        case Some(csig) =>
+          cld.extendc match {
+            case None =>
+            case Some(t) =>
+              cons = Equal(csig.extendc, t)  +: cons
 
-            }
-            fieldD = csig.ctor.params.dropRight(csig.ctor.fieldDefs.size)
-            cld.ctorParams match {
+          }
+          fieldD = csig.ctor.params.dropRight(csig.ctor.fieldDefs.size)
+          cld.ctorParams match {
+            case None =>
+            case Some(lt) =>
+              for (i <- 0 until lt.size){
+                cons = Equal(csig.ctor.params.valuesIterator.toList(i),lt(i)) +: cons }
+          }
+          for ((f, typ) <- cld.fields.fld) {
+            fieldD.get(f) match {
               case None =>
-              case Some(lt) =>
-                for (i <- 0 until lt.size){
-                  cons = Equal(csig.ctor.params.valuesIterator.toList(i),lt(i)) +: cons }
+              case Some(typ2) =>
+                cons = Equal(typ2, typ) +: cons
+                fields = Fields(fields.fld - f)
             }
-            for ((f, typ) <- cld.fields.fld) {
-              fieldD.get(f) match {
-                case None => fields = fields
-                case Some(typ2) =>
-                  cons = Equal(typ2, typ) +: cons
-                  fields = Fields(fields.fld - f)
-              }
+          }
+          for ((f, typ) <- cld.fields.fld) {
+            csig.fields.get(f) match {
+              case None => fields = fields
+              case Some(typ2) =>
+                cons = Equal(typ2, typ) +: cons
+                fields = Fields(fields.fld - f)
             }
-            for ((f, typ) <- cld.fields.fld) {
-              csig.fields.get(f) match {
-                case None => fields = fields
-                case Some(typ2) =>
-                  cons = Equal(typ2, typ) +: cons
-                  fields = Fields(fields.fld - f)
-              }
+          }
+          for ((m, (rt, argTs)) <- cld.methods.m) {
+            csig.methods.get(m) match {
+              case None => methods = methods
+              case Some((rt2, argTs2)) =>
+                cons = Equal(rt2, rt) +: AllEqual(argTs2, argTs) +: cons
+                methods = Methods(methods.m - m)
             }
-            for ((m, (rt, argTs)) <- cld.methods.m) {
-              csig.methods.get(m) match {
-                case None => methods = methods
-                case Some((rt2, argTs2)) =>
-                  cons = Equal(rt2, rt) +: AllEqual(argTs2, argTs) +: cons
-                  methods = Methods(methods.m - m)
-              }
+          }
+          for ((m, rt) <- cld.cmethods.m) {
+            csig.methods.get(m) match {
+              case None => cmethods = Methods(cmethods.m - m)
+              case Some(rt2) =>
+                cons =  Subtype(rt2._1, rt._1) +: cons
+                for (i <- 0 until rt._2.size){
+                  cons = Equal(rt._2(i), rt2._2(i)) +: cons }
+                cmethods = Methods(cmethods.m - m)
             }
-            for ((m, rt) <- cld.cmethods.m) {
-              csig.methods.get(m) match {
-                case None => cmethods = Methods(cmethods.m - m)
-                case Some(rt2) =>
-                  cons =  Subtype(rt2._1, rt._1) +: cons
-                  for (i <- 0 until rt._2.size){
-                    cons = Equal(rt._2(i), rt2._2(i)) +: cons }
-                  cmethods = Methods(cmethods.m - m)
-              }
-            }
-        }
+          }
 
         if (fields.fld.isEmpty && methods.m.isEmpty && CT.exists( _._1 == c) ) //&& cld.cmethods.m.isEmpty)
           cr = CR(cr.cr - c)

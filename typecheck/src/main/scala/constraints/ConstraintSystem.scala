@@ -1,7 +1,6 @@
 package constraints
 
 import CSubst.CSubst
-import incremental.fjava.CR
 import scala.collection.generic.CanBuildFrom
 
 trait ConstraintSystem[G <: GenBase, C, CS] {

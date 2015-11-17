@@ -48,7 +48,9 @@ object InvkSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
 
 object NewSyntax extends SyntaxChecking.SyntaxChecker(New) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    if ((lits.size > 1) && (!(lits(0).isInstanceOf[CName])))
+    if (lits.size != 1)
+      error(s"Wrong number of literals. Expected one literal (class name), got $lits")
+    if (!lits(0).isInstanceOf[CName])
       error(s"Class name should be a CName, but found ${(!(lits(0).isInstanceOf[CName]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")

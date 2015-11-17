@@ -20,6 +20,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   def typecheckTestFJ(desc: String, e: => Node)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
       val ev = e
+      if (desc == "Pair Int First, Int Second, Int add() { return (New Pair).add(first, second) }")
+        print()
       val actual = checker.typecheck(ev)
 
       val typ = ev.withType[checker.Result].typ._1
@@ -151,7 +153,7 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
     Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
     Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
-    Seq(Add(FieldAcc('First, New(CName('Pair), Seq(Num(1), Num(2)))), FieldAcc('Second, New(CName('Pair), Seq( Num(1), Num(2)))))))))
+    Seq(Add(FieldAcc('First, New(CName('Pair), Num(1), Num(2))), FieldAcc('Second, New(CName('Pair), Num(1), Num(2))))))))
   typecheckTestFJ("Pair Int First, Int Second, Int add() { return (New Pair).add(first, second) }", ProgramM(Pair) )(ProgramOK)
 
   typecheckTestError("Pair Int First, Int Second, String addField() { return add(first Int, second Int) }", ClassDec(Seq(CName('TNum), CName('Object),
@@ -236,10 +238,6 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
 
   typecheckTestFJ("Class C, Tnum foo(x int, y int){return x+y}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('x), Var('y))))))))(ProgramOK)
-
-
-  typecheckTestFJ("  WRONG   Class C, Tnum foo(x int, y int){return z+z}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
-    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('z), Var('z))))))))(ProgramOK)
 
   typecheckTestError("Class C, Tnum foo(x int, y int){return z+z}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('z), Var('z))))))))

@@ -1,7 +1,7 @@
 package constraints.fjava
 
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{ExtendD, ClassDec, CR}
+import incremental.fjava.ExtendD
 
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
@@ -26,5 +26,5 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def solvable = !never.isEmpty
   def isSolvable: Boolean = never.isEmpty
 
-  def tryFinalize: ConstraintSystem[_]
+  def tryFinalize: CS
 }

@@ -3,7 +3,7 @@ package constraints.fjava.impl
 
 import constraints.{CTermBase, CVar, Statistics}
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{ExtendD, CR, UCName, CName}
+import incremental.fjava.{ExtendD, UCName, CName}
 import constraints.fjava._
 import incremental.Util
 
