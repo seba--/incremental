@@ -101,12 +101,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val tFinal = tRoot.subst(csFinal.substitution)
       val reqsFinal = reqsRoot mapValues (_.subst(csFinal.substitution))
 
+      val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsFinal)
       // TODO don't store finalized values
-      root.typ = (tFinal, reqsFinal, creqsFinal, csFinal)
+      root.typ = (tFinal, reqsFinal, creqsNoO, csFinal.addNewConstraints(cconsO))
 
       if (!reqsFinal.isEmpty)
         Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${csFinal.unsolved}")
-      else if (!creqsFinal.cr.isEmpty)
+      else if (!creqsNoO.cr.isEmpty)
         Right(s"Unresolved type-variable requirements $creqsRoot, type $tFinal, unres ${csFinal.unsolved}")
       else if (!csFinal.isSolved)
 
