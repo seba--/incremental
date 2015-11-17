@@ -298,8 +298,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (c, mreqs, mcreqs, mcons ++ cCons ++ mcCons ++ cons)
 
     case UCast =>
-      val c = e.lits(0).asInstanceOf[CName]
       val (t, reqs, creqs,_) = e.kids(0).typ
+      val c = e.lits(0).asInstanceOf[CName]
 
       (c, reqs, creqs, Seq(Subtype(t, c)))
 
@@ -310,10 +310,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (c, reqs, creqs, Seq(Subtype(c, t), NotEqual(c, t)))
 
     case SCast =>
-      val c = e.lits(0).asInstanceOf[CName]
       val (t, reqs, creqs, _) = e.kids(0).typ
+      val c = e.lits(0).asInstanceOf[CName]
 
-      (t, reqs, creqs, Seq())
+      (t, reqs, creqs, Seq(NotSubtype(c, t), NotSubtype(t, c), StupidCastWarning(t, c)))
 
     case MethodDec =>
       val (e0, reqs, creqs, _) = e.kids(0).typ
@@ -321,6 +321,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val retT = e.lits(0).asInstanceOf[CName]
       val m = e.lits(1).asInstanceOf[Symbol]
       val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
+
       var restReqs = reqs
       var cres = creqs
       var cons = Seq[Constraint]()

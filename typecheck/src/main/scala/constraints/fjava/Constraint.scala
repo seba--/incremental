@@ -19,6 +19,12 @@ case class Subtype(lower: Type, upper: Type) extends Constraint {
   override def subst(s: CSubst): Constraint = Subtype(lower.subst(s), upper.subst(s))
 }
 
+case class NotSubtype(lower: Type, upper: Type) extends Constraint {
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = cs.never(this)
+
+  override def subst(s: CSubst): Constraint = NotSubtype(lower.subst(s), upper.subst(s))
+}
+
 case class Equal(expected: Type, actual: Type) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = expected.unify(actual, cs)
 
@@ -52,3 +58,8 @@ case class AllEqual(expected: List[Type], actual: List[Type]) extends Constraint
   }
 }
 
+case class StupidCastWarning(was: Type, castTo: Type) extends Constraint {
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = cs.never(this)
+
+  override def subst(s: CSubst): Constraint = StupidCastWarning(was.subst(s), castTo.subst(s))
+}
