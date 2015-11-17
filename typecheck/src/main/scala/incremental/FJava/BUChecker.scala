@@ -403,7 +403,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         var methods = Map[Symbol, (Type, List[Type])]()
         for (j <- 0 until e.kids(i).kids.seq.size) {
           val (c0, res, mcreqs, cs)= e.kids(i).kids.seq(j).typ
-          cons = Equal(c, c0.asInstanceOf[MethodOK].in) +: cons
           val retT = e.kids(i).kids(j).lits(0).asInstanceOf[CName]
           val m = e.kids(i).kids(j).lits(1).asInstanceOf[Symbol]
           val params = e.kids(i).kids(j).lits(2).asInstanceOf[Seq[(Symbol, Type)]]

@@ -64,9 +64,9 @@ case object ProgramOK extends  Type
   def normalize = this
   def occurs(x2: CVar[_]) = false
   def subst(cs: CSubst) = this
-  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
-  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
-  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = ???
+  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = ???
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = if (other == this) cs else cs.never(Equal(this, other))
 }
 
 case object ClassOK extends  Type
@@ -92,5 +92,3 @@ case class MethodOK(in: UCName) extends  Type
   def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
 }
-
-

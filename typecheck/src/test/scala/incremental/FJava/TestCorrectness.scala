@@ -35,6 +35,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   def typecheckTestError(desc: String, e: => Node) =
     test(s"$classdesc: Type check $desc") {
+      if (desc == "Class C, Tnum foo(x TNum){return 1+1}, TNum bar(){return foo();} ")
+        print()
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
     }
@@ -232,6 +234,11 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
     Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(New(CName('C)), Str('a), Num(2))))))))
 
 
+  typecheckTestFJ("Class C, Tnum foo(x int, y int){return x+y}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
+    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('x), Var('y))))))))(ProgramOK)
+
+  typecheckTestError("Class C, Tnum foo(x int, y int){return z+z}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
+    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('z), Var('z))))))))
 }
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEndFJava", new BUCheckerFactory(SolveContinuousSubst))
