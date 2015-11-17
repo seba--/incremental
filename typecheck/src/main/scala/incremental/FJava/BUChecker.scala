@@ -96,7 +96,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (creqsNoObject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsRoot)
 
       val csRootFinal = csRoot.addNewConstraints(ccons).tryFinalize
-      val (creqsFinal, csFinal) = creqsNoObject.subst(csRootFinal, isFinal = false)
+      val (creqsFinal, csFinal) = creqsNoObject.subst(csRootFinal, isFinal = true)
 
       val tFinal = tRoot.subst(csFinal.substitution)
       val reqsFinal = reqsRoot mapValues (_.subst(csFinal.substitution))
@@ -415,7 +415,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (creqsFinal, csFinal) = mcreqs.subst(csRootFinal, isFinal = false)
 
       val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsFinal)
-      // TODO don't store finalized values
       val (creqsF, consF) = remove(CTable, creqsNoO)
 
       (ProgramOK, mreqs, creqsF, cons ++ cconsO ++ consF)
