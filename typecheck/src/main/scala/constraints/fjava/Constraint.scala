@@ -52,7 +52,7 @@ case class AllEqual(expected: List[Type], actual: List[Type]) extends Constraint
     else {
       var cons = Seq[Constraint]()
       for (i <- 0 until expected.size)
-        cons = cons :+ Equal(expected(i), (actual(i)))
+        cons = cons :+ Equal(expected(i), actual(i))
 
       cs.addNewConstraints(cons)
     }

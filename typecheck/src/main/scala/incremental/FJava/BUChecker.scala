@@ -219,7 +219,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
       val (mcCons, mCreqs) = mergeCReqMaps(creqs1, creqs2)
 
-      (CName('TNum), mreqs, mCreqs, mcons :+ lcons :+ rcons)
+      (CName('TNum), mreqs, mCreqs, mcons ++ mcCons :+ lcons :+ rcons)
 
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
