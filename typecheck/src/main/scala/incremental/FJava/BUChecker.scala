@@ -54,7 +54,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         var conss = Seq[Constraint]()
         val (t, reqs, creqs, cons) = typecheckStep(e)
         var cr = CR(Map[Type, ClassReq]())
-        val  subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ExtendD(extD)))
+        val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ExtendD(extD)))
         val cs = subcs addNewConstraints cons
         val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
         var creqs2 = CR(Map())
@@ -347,20 +347,24 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (MethodOK(Uc), restReqs, creqs2, cons ++ extendCons ++ condCons)
 
     case ClassDec =>
-      var CT = Map[Type,(Type,  Ctor, Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
       val c = e.lits(0).asInstanceOf[CName]
       val sup = e.lits(1).asInstanceOf[CName]
-      val Ctor(params, superCall, fieldDefs) = e.lits(2).asInstanceOf[Ctor]
+      val ctor = e.lits(2).asInstanceOf[Ctor]
       val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
-      var restCreq = Seq[CR]()
+
+      var CT = Map[Type,(Type,  Ctor, Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
+
       var cons = Seq[Constraint]()
-      var restReqs = Seq[Reqs]()
+      var reqss = Seq[Reqs]()
+      var creqss = Seq[CR]()
       var methods = Map[Symbol, (Type, List[Type])]()
+
       for (i <- 0 until e.kids.seq.size) {
-        val (t, req, creq, cs) = e.kids(i).typ
-        restReqs = restReqs :+ req
-        restCreq = restCreq :+ creq
-        cons =  Equal(c, t.asInstanceOf[MethodOK].in) +: cons
+        val (t, req, creq, _) = e.kids(i).typ
+        reqss = reqss :+ req
+        creqss = creqss :+ creq
+        cons =  cons :+ Equal(c, t.asInstanceOf[MethodOK].in) // TODO this should be a class requirement `currentClass`
+
         val retT = e.kids(i).lits(0).asInstanceOf[CName]
         val m = e.kids(i).lits(1).asInstanceOf[Symbol]
         val params = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
@@ -369,19 +373,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           par = par :+ p
         methods = methods + (m -> (retT, par))
       }
-      val (conss, cr) = mergeCReqMaps(restCreq)
-      val (rcons, req) = mergeReqMaps(restReqs)
+
+      val (mccons, cr) = mergeCReqMaps(creqss)
+      val (mrcons, req) = mergeReqMaps(reqss)
       extD = Map(c -> sup)
-      CT =  CT + (c -> (sup,  Ctor(params, superCall, fieldDefs), fields.toMap, methods))
-      cons = conss ++ rcons ++ cons
+      CT =  CT + (c -> (sup,  ctor, fields.toMap, methods))
       val (mconsD, crD) = addSupertypeReq(cr, c, sup)
       val (creq2, cons2) = remove( CT, crD)
-      cons = cons2 ++ cons
-      (c, req, creq2, cons)
+
+      (c, req, creq2, cons ++ mccons ++ mrcons ++ mconsD ++ cons2)
 
 
     case ProgramM =>
       var CT = Map[Type,(Type,  Ctor, Map[Symbol, Type], Map[Symbol, (Type, List[Type])])]()
+
       var restCreq = Seq[CR]()
       var cres = Seq[CR]()
       var cress = Seq[CR]()
@@ -390,7 +395,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var ext = ExtendD(Map())
       var cons = Seq[Constraint]()
       for (i <- 0 until e.kids.seq.size) {
-        val (ct, _, creqs, ccons) = e.kids(i).typ
+        val (ct, reqs, creqs, _) = e.kids(i).typ
         val c = e.kids(i).lits(0).asInstanceOf[CName]
         val sup = e.kids(i).lits(1).asInstanceOf[CName]
         val Ctor(params, superCall, fieldDefs) = e.kids(i).lits(2).asInstanceOf[Ctor]
@@ -501,18 +506,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
                   fields = Fields(fields.fld - f)
               }
             }
-            for ((m, rt) <- cld.methods.m) {
+            for ((m, (rt, argTs)) <- cld.methods.m) {
               clsT._4.get(m) match {
                 case None => methods = methods
-                case Some(rt2) =>
-                  cons = Equal(rt2._1, rt._1) +: cons
-                  if(rt2._2.length == rt._2.length) {
-                    for (i <- 0 until rt._2.size) {
-                      cons = Equal(rt2._2(i), rt._2(i)) +: cons
-                    }
-                  }
-                  else
-                    cons = cons :+ Never(Equal(CName('String), CName('TNum)))
+                case Some((rt2, argTs2)) =>
+                  cons = Equal(rt2, rt) +: AllEqual(argTs2, argTs) +: cons
                   methods = Methods(methods.m - m)
               }
             }

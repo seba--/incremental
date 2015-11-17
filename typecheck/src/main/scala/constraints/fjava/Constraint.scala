@@ -49,12 +49,13 @@ case class AllEqual(expected: List[Type], actual: List[Type]) extends Constraint
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
     if (expected.size != actual.size)
       cs.never(this)
+    else {
+      var cons = Seq[Constraint]()
+      for (i <- 0 until expected.size)
+        cons = cons :+ Equal(expected(i), (actual(i)))
 
-    var cons = Seq[Constraint]()
-    for (i <- 0 until expected.size)
-      cons = cons :+  Equal(expected(i), (actual(i)))
-
-    cs.addNewConstraints(cons)
+      cs.addNewConstraints(cons)
+    }
   }
 }
 
