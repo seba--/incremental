@@ -96,24 +96,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (creqsNoObject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsRoot)
 
       val csRootFinal = csRoot.addNewConstraints(ccons).tryFinalize
-      val (creqsFinal, csFinal) = creqsNoObject.subst(csRootFinal, isFinal = true)
+      val (creqsFinal, csFinal) = creqsNoObject.subst(csRootFinal, isFinal = false)
 
       val tFinal = tRoot.subst(csFinal.substitution)
       val reqsFinal = reqsRoot mapValues (_.subst(csFinal.substitution))
 
-      val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsFinal)
       // TODO don't store finalized values
-      val (creqsF, consF) = remove(CTable, creqsNoO)
-      val cs = csFinal.addNewConstraints(cconsO ++ consF).tryFinalize
-      root.typ = (tFinal, reqsFinal, creqsF, csFinal)
+      root.typ = (tFinal, reqsFinal, creqsFinal, csFinal)
 
       if (!reqsFinal.isEmpty)
-        Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${cs.unsolved}")
-      else if (!creqsF.cr.isEmpty)
-        Right(s"Unresolved type-variable requirements $creqsRoot, type $tFinal, unres ${cs.unsolved}")
-      else if (!cs.isSolved)
+        Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${csFinal.unsolved}")
+      else if (!creqsFinal.cr.isEmpty)
+        Right(s"Unresolved type-variable requirements $creqsRoot, type $tFinal, unres ${csFinal.unsolved}")
+      else if (!csFinal.isSolved)
 
-        Right(s"Unresolved constraints ${cs.unsolved}, type $tFinal")
+        Right(s"Unresolved constraints ${csFinal.unsolved}, type $tFinal")
       else
         Left(tFinal)
     }
@@ -411,7 +408,17 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mcons, mcreqs) = mergeCReqMaps(restCreqss)
       val (mrcons, mreqs) = mergeReqMaps(reqss)
 
-      (ProgramOK, mreqs, mcreqs, cons ++ mcons ++ mrcons)
+      val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ExtendD(extD)))
+      val cs = subcs addNewConstraints cons
+
+      val csRootFinal = cs.addNewConstraints(cons ++ mcons ++ mrcons).tryFinalize
+      val (creqsFinal, csFinal) = mcreqs.subst(csRootFinal, isFinal = false)
+
+      val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsFinal)
+      // TODO don't store finalized values
+      val (creqsF, consF) = remove(CTable, creqsNoO)
+
+      (ProgramOK, mreqs, creqsF, cons ++ cconsO ++ consF)
 
   }
 
@@ -480,12 +487,23 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             case Some(ts) =>
               cons = cons :+ AllEqual(ctor.params.values.toList, ts)
           }
-
+          val fieldD = ctor.params.dropRight(ctor.fieldDefs.size)
+          var rF = rfields
+          for ((f, t) <- rfields.fld) {
+            fieldD.get(f) match {
+              case None =>
+                rF
+              case Some(typ2) =>
+                rF = Fields(rF.fld - f)
+                cons = cons :+ Equal(typ2, t)
+            }
+          }
           for ((f, t) <- rfields.fld)
             fields.get(f) match {
               case None =>
-                restReq = restReq.copy(fields = Fields(restReq.fields.fld + (f -> t)))
+                rF//restReq = restReq.copy(fields = Fields(restReq.fields.fld + (f -> t)))
               case Some(ct) =>
+                rF = Fields(rF.fld - f)
                 cons = cons :+ Equal(ct, t)
             }
 
@@ -505,7 +523,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
               case Some((crt, cts)) =>
                 cons = cons :+ Equal(crt, rt) :+ AllEqual(cts, ts)
             }
-
+          restReq = restReq.copy(fields = rF)
           if (restReq.isEmpty)
             cr = cr - c
           else
