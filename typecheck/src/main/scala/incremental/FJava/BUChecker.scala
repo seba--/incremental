@@ -194,19 +194,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     else {
       creqs.cr.get(t) match {
         case None =>
-          res = CR(creqs.cr + (t -> ClassReq(None, Some(params), Fields(Map()), Methods(Map()), Methods(Map()))))
-          (Seq(), res)
+          (Seq(), CR(creqs.cr + (t -> ClassReq(ctorParams = Some(params)))))
         case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
           ctor match {
             case None =>
-              (Seq(), CR(res.cr + (t -> ClassReq(sup, Some(params), fields, methods, cmethods))))
+              (Seq(), CR(creqs.cr + (t -> ClassReq(sup, Some(params), fields, methods, cmethods))))
             case Some(params2) =>
-              if (params.length == params2.length) {
-                val cons = (params zip params2).map(p => Equal(p._1, p._2))
-                (cons, res)
-              }
-              else
-                (Seq(Never(AllEqual(params, params2))), res)
+              (Seq(AllEqual(params, params2)), creqs)
           }
       }
     }
@@ -282,26 +276,26 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
       val U = freshCName()
+
+      var cons = Seq[Constraint]()
       var reqss = Seq[Reqs]()
       var creqss = Seq[CR]()
-      var cons = Seq[Constraint]()
       var ctor: List[Type] = Nil
+
       for (i <- 0 until e.kids.seq.size) {
         val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
         val Ui = freshCName()
-        ctor = Ui +: ctor
+        ctor = ctor :+ Ui
+        cons =  cons :+ Subtype(ti, Ui)
         reqss = reqss :+ subreqs
         creqss = creqss :+ subcreqs
-        cons =  cons :+ Subtype(ti, Ui)//or should be subtype
       }
-      ctor= ctor.reverse
+
       val (mcons, mreqs) = mergeReqMaps(reqss)
       val (cCons, creqs) = mergeCReqMaps(creqss)
       val (mcCons, mcreqs) = addCtorReq(creqs, c, ctor)
 
-      cons = mcons ++ cCons ++ mcCons ++ cons
-
-      (c, mreqs, mcreqs, cons)
+      (c, mreqs, mcreqs, mcons ++ cCons ++ mcCons ++ cons)
 
     case DCast =>
       val (t, reqs, creqs, _) = e.kids(0).typ
