@@ -14,7 +14,9 @@ import scala.collection.immutable.ListMap
 
 case class FieldName(x: Symbol)
 case class Param(x: Symbol)
-case class Ctor(params: ListMap[Symbol, CName], superCall: List[Symbol], fieldDefs: ListMap[Symbol, Symbol])
+case class Ctor(params: ListMap[Symbol, CName], superCall: List[Symbol], fieldDefs: ListMap[Symbol, Symbol]) {
+  def supCtorParams: List[Type] = params.values.take(superCall.size).toList
+}
 case class Fields(fld: Map[Symbol, Type])
 case class Methods(m : Map[Symbol, (Type, List[Type])])
 
@@ -109,23 +111,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def addFieldDec(creqs: CR, t: Type, f: Symbol, U: Type): (Seq[Constraint], CR) = {
-    //if (t == CName('Object))
-    //  return (Seq()) TODO shouldn't class reqs be constraints?
-    creqs.cr.get(t) match {
-      case None =>
-        (Seq(), creqs)
-      case Some(ClassReq(sup, ctor, fields, methods, cmethods)) =>
-        fields.fld.get(f) match {
-          case None =>
-            (Seq(), creqs)
-          case Some(t2) =>
-            val fnew = Fields(fields.fld - f)
-            (Seq(Equal(t2, U)), CR(creqs.cr + (t -> ClassReq(sup, ctor, fnew, methods, cmethods))))
-        }
-    }
-  }
-
   def addMethodReq(creqs: CR, t: Type, m: Symbol, args: List[Type], ret: Type): (Seq[Constraint], CR) = {
     creqs.cr.get(t) match {
       case None =>
@@ -187,17 +172,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             (Seq(AllEqual(params, params2)), creqs)
         }
     }
-  }
-
-  def addSupertypeReq(creqs: CR, t: Type, tsuper: Type): (Seq[Constraint], CR) = {
-    var res = creqs
-    if (tsuper == CName('Object)) {
-      (Seq(), creqs)
-    }
-    else {
-      res = CR(res.cr + (tsuper -> ClassReq(None, None, Fields(Map()), Methods(Map()), Methods(Map()))))
-    }
-    (Seq(), res)
   }
 
   def addExtendsReq(creqs: CR, t: Type, tsuper: Type): (Seq[Constraint], CR) = {
@@ -380,7 +354,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mrcons, req) = mergeReqMaps(reqss)
       extD = Map(c -> sup)
       CT =  CT + (c -> CSig(sup,  ctor, fields.toMap, methods))
-      val (mconsD, crD) = addSupertypeReq(cr, c, sup)
+
+      val (mconsD, crD) = addCtorReq(cr, sup, ctor.supCtorParams)
       val (creq2, cons2) = remove(CT, crD)
 
       (c, req, creq2, cons ++ mccons ++ mrcons ++ mconsD ++ cons2)
@@ -462,8 +437,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     var cons = Seq[Constraint]()
     var ct = CT
     for ((c, cld) <- creq.cr) {
-      if (c == CName('Object))
+      if (c == CName('Object)) {
         cr = CR(cr.cr - c)
+      }
       else {
         var stype = cld.extendc
         var ctor = cld.ctorParams
