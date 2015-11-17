@@ -52,8 +52,8 @@ case class CName(x: Symbol) extends Type {
   def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
     case CName(`x`) => cs
-    case CName(_) => cs.never(Equal(this, other))
     case UCName(_) => other.unify(this, cs)
+    case _ => cs.never(Equal(this, other))
   }
 }
 

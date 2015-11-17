@@ -110,16 +110,16 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   typecheckTestError("ProfTitle ok", ProfTitle)
 
   typecheckTestError("Person ok", Person)
-  typecheckTest("{Title, Person} ok", ProgramM(Title, Person))(CName('Object))
+  typecheckTest("{Title, Person} ok", ProgramM(Title, Person))(ProgramOK)
   typecheckTestError("Professor ok", Professor)
   typecheckTestError("Student ok", Student)
 
   typecheckTestError("{ProfTitle, Professor} ok", ProgramM(ProfTitle, Professor)) // misses superclass Person
   typecheckTestError("{ProfTitle, Professor, Person} ok", ProgramM(ProfTitle, Professor, Person)) // misses Title in Person.title()
-  typecheckTest("{ProfTitle, Professor, Person, Title} ok", ProgramM(ProfTitle, Professor, Person, Title))(CName('Object))
+  typecheckTest("{ProfTitle, Professor, Person, Title} ok", ProgramM(ProfTitle, Professor, Person, Title))(ProgramOK)
 
   typecheckTestError("{ProfTitle, Professor, Person, Title, Student} ok", ProgramM(ProfTitle, Professor, Person, Title, Student)) // misses NoTitle
-  typecheckTest("{ProfTitle, Professor, Person, Title, Student, NoTitle} ok", ProgramM(ProfTitle, Professor, Person, Title, Student, NoTitle))(CName('Object))
+  typecheckTest("{ProfTitle, Professor, Person, Title, Student, NoTitle} ok", ProgramM(ProfTitle, Professor, Person, Title, Student, NoTitle))(ProgramOK)
 }
 
 class TestBUSolveEndPerson extends TestPerson("BUSolveEnd", new BUCheckerFactory(SolveContinuousSubst))
