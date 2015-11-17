@@ -117,8 +117,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CName('Int)), List(), ListMap('Pair -> 'Pair)), Seq(('First, CName('Int)))), Seq())
   typecheckTestFJ(" Pair Int First ",ProgramM(Fst))(ProgramOK)
 
-  typecheckTestFJ(" Pair Int First, Int {(new Number(x)).getX(x): Int} ", ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('First -> CName('Int)), List(), ListMap('First -> 'First)), Seq(('First, CName('Int)))),
-    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq(('x, CName('Int)))), Seq(Num(0))))))(CName('Pair))
+  val GetX = ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('First -> CName('Int)), List(), ListMap('First -> 'First)), Seq(('First, CName('Int)))),
+    Seq(MethodDec(Seq(CName('TNum), 'getX, Seq(('x, CName('Int)))), Seq(Num(0)))))
+  typecheckTestFJ(" Pair Int First, Int {(new Number(x)).getX(x): Int} ", ProgramM(GetX))(ProgramOK)
   typecheckTestError(" Pair String First, Double getX(First : Double){ return (New Pair).First} ", ClassDec(Seq(CName('Pair), CName('Object),
     Ctor(ListMap('First -> CName('String)), List(), ListMap('First -> 'First)), Seq(('First, CName('String)))),
     Seq(MethodDec(Seq(CName('Double), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Var('First))))))))//(CName('Pair))

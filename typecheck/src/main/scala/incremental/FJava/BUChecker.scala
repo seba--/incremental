@@ -103,15 +103,17 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsFinal)
       // TODO don't store finalized values
-      root.typ = (tFinal, reqsFinal, creqsNoO, csFinal.addNewConstraints(cconsO))
+      val (creqsF, consF) = remove(CTable, creqsNoO)
+      val cs = csFinal.addNewConstraints(cconsO ++ consF).tryFinalize
+      root.typ = (tFinal, reqsFinal, creqsF, csFinal)
 
       if (!reqsFinal.isEmpty)
-        Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${csFinal.unsolved}")
-      else if (!creqsNoO.cr.isEmpty)
-        Right(s"Unresolved type-variable requirements $creqsRoot, type $tFinal, unres ${csFinal.unsolved}")
-      else if (!csFinal.isSolved)
+        Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${cs.unsolved}")
+      else if (!creqsF.cr.isEmpty)
+        Right(s"Unresolved type-variable requirements $creqsRoot, type $tFinal, unres ${cs.unsolved}")
+      else if (!cs.isSolved)
 
-        Right(s"Unresolved constraints ${csFinal.unsolved}, type $tFinal")
+        Right(s"Unresolved constraints ${cs.unsolved}, type $tFinal")
       else
         Left(tFinal)
     }
@@ -317,8 +319,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val Ud = freshCName() // current super class
 
       var restReqs = bodyReqs
-      var cons = Seq[Constraint](Subtype(bodyT, retT))
+      var cons = Seq[Constraint]()
 
+      cons = Subtype(bodyT, retT) +: cons
       // remove params from body requirements
       for ((x, xC) <- params) {
         bodyReqs.get(x) match {
@@ -418,6 +421,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val sup = e.lits(1).asInstanceOf[CName]
     val ctor = e.lits(2).asInstanceOf[Ctor]
     val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
+    extD = extD + (name -> sup)
     val methods = e.kids.seq.map { em =>
       val retT = em.lits(0).asInstanceOf[CName]
       val m = em.lits(1).asInstanceOf[Symbol]

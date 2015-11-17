@@ -44,11 +44,11 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
       Seq()), // no fields
     Seq(
       MethodDec(
-        CName('Bool), 'not, Seq(),
+        CName('Object), 'not, Seq(),
         New(CName('Bool))), // dummy body, will be overwritten by subclasses
       MethodDec(
-        CName('Bool), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
-        New(CName('Bool))) // dummy body, will be overwritten by subclasses
+        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
+        New(CName('Object))) // dummy body, will be overwritten by subclasses
     )
   )
   typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
@@ -58,7 +58,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
       Seq()), // no fields
     Seq(
       MethodDec(
-        CName('Bool), 'not, Seq(),
+        CName('Object), 'not, Seq(),
         New(CName('False))),
       MethodDec(
         CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
@@ -70,7 +70,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
       Seq()), // no fields
     Seq(
       MethodDec(
-        CName('Bool), 'not, Seq(),
+        CName('Object), 'not, Seq(),
         New(CName('True))),
       MethodDec(
         CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)), //was bool, found the erroe by hte cons solver :)

@@ -81,7 +81,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
         CName('Object), 'age, Seq(),
         FieldAcc('age, Var('this))),
       MethodDec(
-        CName('ProfTitle), 'title, Seq(),
+        CName('Title), 'title, Seq(),
         New(CName('ProfTitle)))
     )
   )
@@ -94,7 +94,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
         CName('Object), 'age, Seq(),
         FieldAcc('age, Var('this))),
       MethodDec(
-        CName('NoTitle), 'title, Seq(),
+        CName('Title), 'title, Seq(),
         New(CName('NoTitle))),
       MethodDec(
         CName('Professor), 'promote, Seq(),
