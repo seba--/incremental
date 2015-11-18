@@ -381,7 +381,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (t, req, creq, _) = e.kids(i).typ
         reqss = reqss :+ req
         creqss = creqss :+ creq
-       // cons =  cons :+ Equal(c, t.asInstanceOf[MethodOK].in) // TODO this should be a class requirement `currentClass`
+
+
         val retT = e.kids(i).lits(0).asInstanceOf[CName]
         val m = e.kids(i).lits(1).asInstanceOf[Symbol]
         val params = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
@@ -395,17 +396,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mrcons, req) = mergeReqMaps(reqss)
 
       CT =  CT + (c -> CSig(sup,  ctor, fields.toMap, methods))
-      var restReq = Map[Type,  ClassReq]()
+      // cons =  cons :+ Equal(c, t.asInstanceOf[MethodOK].in)  TODO this should be a class requirement `currentClass`
+      var currReq = Map[Type,  ClassReq]()
       for ((t, cdec) <- cr.cr) {
         cdec.currentC match {
-          case None => restReq = restReq + (t -> cdec)
+          case None => currReq = currReq + (t -> cdec)
           case Some(currT) =>
-            restReq = restReq + (t -> cdec.copy(currentC = Some(c)))
+            currReq = currReq + (t -> cdec.copy(currentC = Some(c)))
             cons = cons :+ Equal(c, currT)
         }
       }
 
-      val (mconsD, crD) = addCtorReq(CR(restReq), sup, ctor.supCtorParams)
+      val (mconsD, crD) = addCtorReq(CR(currReq), sup, ctor.supCtorParams)
       val (creq2, cons2) = remove(CT, crD)
 
       ((c, req, creq2, cons ++ mccons ++ mrcons ++ mconsD ++ cons2), CT)
