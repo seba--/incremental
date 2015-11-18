@@ -1,9 +1,11 @@
 package constraints.fjava.impl
 
 
+import java.security.CodeSigner
+
 import constraints.{CTermBase, CVar, Statistics}
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{ExtendD, UCName, CName}
+import incremental.fjava.{CSig, UCName, CName}
 import constraints.fjava._
 import incremental.Util
 
@@ -12,7 +14,6 @@ import scala.collection.generic.CanBuildFrom
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
   def freshConstraintSystem = new SolveContinuousSubstCS(Map(), Map(), Seq(), Map())
   def solved(s: CSubst) = new SolveContinuousSubstCS(s, Map(), Seq(), Map())
-  def solvedFJ(s: CSubst, ext : ExtendD) = new SolveContinuousSubstCS(s, Map(), Seq(), ext.ext)
   def notyet(c: Constraint) = freshConstraintSystem.addNewConstraint(c)
   def never(c: Constraint) = new SolveContinuousSubstCS(Map(), Map(), Seq(c), Map())
 }
@@ -44,11 +45,13 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   }
 
 
-  def mergeFJavaSubsystem(that: SolveContinuousSubstCS, req : ExtendD) = {
+  def mergeFJavaSubsystem(that: SolveContinuousSubstCS, CT : Map[Type, CSig]) = {
     var msubst = substitution ++ that.substitution
     var mnever = never ++ that.never
-    val mextend = req.ext
-    val init = SolveContinuousSubstCS(msubst, this.bounds, mnever, req.ext)
+    var ext = Map[Type, Type]()
+    for ((c, cld) <- CT) ext = ext + (c -> cld.extendc)
+    val mextend = ext
+    val init = SolveContinuousSubstCS(msubst, this.bounds, mnever, ext)
     that.bounds.foldLeft(init) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
     }
@@ -188,18 +191,5 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     }
     extendedCS
   }
-  def solvedFJ(s: CSubst, ext : ExtendD): SolveContinuousSubstCS = {
-    val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this.never.map(_.subst(s)), ext.ext)
-    val cs = ext.ext.foldLeft(init) { case (cs, (t, tsuper)) =>
-      val t2 = t.subst(s)
-      val tsuper2 = tsuper.subst(s)
-      if (cs.extend.contains(t2))
-        Equal(tsuper, cs.extend(t2)).solve(cs)
-      else cs
-    }
-    val extendedCS = bounds.foldLeft(init) { case (cs, (t,ts)) =>
-      ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}
-    }
-    extendedCS
-  }
+
 }
