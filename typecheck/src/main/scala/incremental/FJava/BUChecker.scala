@@ -550,7 +550,7 @@ cres
 
           for ((m, (rt, ts)) <- rcmethods.m)
             methods.get(m) match {
-              case None =>
+              case None => // super types of c
                 cons = findMethodDef(findSuperTypes(c, extD), CT, (m, rt, ts))
                 // delete requirement
                 // TODO need to check overriding for inheritance distance > 2. Example: A extends B, B extends C, and A.m overrides C.m, but B.m is undefined
