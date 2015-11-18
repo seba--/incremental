@@ -81,7 +81,7 @@ case object ClassOK extends  Type
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = this.unify(other, cs)
 }
 
-case class MethodOK(in: UCName) extends  Type
+case object MethodOK extends  Type
 {
   val isGround = true
   def freeTVars = Set()

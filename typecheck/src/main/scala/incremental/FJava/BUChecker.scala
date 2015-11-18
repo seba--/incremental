@@ -362,7 +362,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (condCons, creqs2) = addCMethodReq(creqs1, Ud, m, params.unzip._2.toList, retT)
       val (currCons, creqs3) = addCurrentCReq(creqs2, Uc)
 
-      ((MethodOK(Uc), restReqs, creqs3, cons ++ extendCons ++ condCons ++ currCons), Map())
+      ((MethodOK, restReqs, creqs3, cons ++ extendCons ++ condCons ++ currCons), Map())
 
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
