@@ -172,7 +172,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
   = it.map(u => (u, f(u).subst(substitution)))
 
-  def propagate = this//SolveContinuousSubstCS(Map(), bounds, never, extend)
+  def propagate = this///SolveContinuousSubstCS(Map(), bounds, never, extend)
 
   def solved(s: CSubst): SolveContinuousSubstCS = {
     val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this.never.map(_.subst(s)), this.extend)
