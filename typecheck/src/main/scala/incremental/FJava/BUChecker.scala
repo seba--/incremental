@@ -31,8 +31,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   import csFactory._
 
- // var CTable = Map[Type, CSig]()
-
   type Reqs = Map[Symbol, Type]
 
   type CReqs = Map[Type, ClassReq]
@@ -100,23 +98,22 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
       val (tRoot, reqsRoot, creqsRoot, csRoot) = root.typ
       val CTable = typecheckStep(root)._2
-      //val (creqsNoObject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsRoot)
 
       val csRootFinal = csRoot.tryFinalize
-      val (creqsFinal, csF) = creqsRoot.subst(csRootFinal, isFinal = true)
+      val (creqsPreFinal, csPreFinal) = creqsRoot.subst(csRootFinal, isFinal = true)
 
-      val tFinal = tRoot.subst(csF.substitution)
-      val reqsFinal = reqsRoot mapValues (_.subst(csF.substitution))
+      val tFinal = tRoot.subst(csPreFinal.substitution)
+      val reqsFinal = reqsRoot mapValues (_.subst(csPreFinal.substitution))
 
-      val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())),  creqsFinal)
-      val (creqF, csFinal) = removeF(CTable, creqsNoO, csF)
+      val (creqsNoOBject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())),  creqsPreFinal)
+      val (creqFinal, csFinal) = removeF(CTable, creqsNoOBject, csPreFinal)
 
       // TODO don't store finalized values
-      root.typ = (tFinal, reqsFinal, creqF, csFinal.addNewConstraints(cconsO))
+      root.typ = (tFinal, reqsFinal, creqFinal, csFinal.addNewConstraints(ccons))
 
       if (!reqsFinal.isEmpty)
         Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${csFinal.unsolved}")
-      else if (!creqF.cr.isEmpty)
+      else if (!creqFinal.cr.isEmpty)
         Right(s"Unresolved type-variable requirements $creqsRoot, type $tFinal, unres ${csFinal.unsolved}")
       else if (!csFinal.isSolved)
 
