@@ -531,7 +531,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           for ((m, (rt, ts)) <- rcmethods.m)
             methods.get(m) match {
               case None => // super types of c
-               cons = findMethodDef(findSuperTypes(c, CT), CT, (m, rt, ts))
+               cons = findCMethodDef(c, CT, (m, rt, ts))
                 // delete requirement
                 // TODO need to check overriding for inheritance distance > 2. Example: A extends B, B extends C, and A.m overrides C.m, but B.m is undefined
               case Some((crt, cts)) =>
@@ -541,7 +541,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             cr = cr - c
           else
             cr = cr.updated(c, restReq)
-
       }
 
     (CR(cr), cons)
@@ -560,20 +559,23 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def findMethodDef(lst : List[Type], CT : Map[Type, CSig], method : (Symbol, Type, List[Type])) : Seq[Constraint] = {
+  def findCMethodDef(c : Type, CT : Map[Type, CSig], method : (Symbol, Type, List[Type])) : Seq[Constraint] = {
     var cons = Seq[Constraint]()
-    val newLst = lst
-    for (i <- 0 until lst.length){
-      CT.get(lst(i)) match {
+    val newLst = findSuperTypes(c, CT)
+    var i = 0
+    var bool = false
+    while (bool && i < newLst.length) {
+      CT.get(newLst(i)) match {
         case None => cons
+          i = i + 1
         case Some(CSig(sup, ctor, fields, methods)) =>
           methods.get(method._1) match {
             case None => cons
+              i = i + 1
             case Some((crt, cts)) =>
               cons = cons :+ Equal(crt, method._2) :+ AllEqual(cts, method._3)
-
+              bool = true
           }
-
       }
     }
     cons
@@ -656,10 +658,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         Some(t2)
     }
 
-
     (mcons, ClassReq(currT, styp, ctor, rF, cldm, cldmc))
   }
-
 
   def mergeCReqMaps(creq: CR, creqs: CR*): (Seq[Constraint], CR) = mergeCReqMaps(creq +: creqs)
 
