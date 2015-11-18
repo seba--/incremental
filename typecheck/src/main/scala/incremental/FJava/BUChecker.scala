@@ -100,10 +100,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
       val (tRoot, reqsRoot, creqsRoot, csRoot) = root.typ
       val CTable = typecheckStep(root)._2
-      val (creqsNoObject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsRoot)
+      //val (creqsNoObject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsRoot)
 
-      val csRootFinal = csRoot.addNewConstraints(ccons).tryFinalize
-      val (creqsFinal, csF) = creqsNoObject.subst(csRootFinal, isFinal = true)
+      val csRootFinal = csRoot.tryFinalize
+      val (creqsFinal, csF) = creqsRoot.subst(csRootFinal, isFinal = true)
 
       val tFinal = tRoot.subst(csF.substitution)
       val reqsFinal = reqsRoot mapValues (_.subst(csF.substitution))
