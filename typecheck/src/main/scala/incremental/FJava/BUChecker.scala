@@ -43,10 +43,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type Prg = String
 
-  var extD = Map[Type, Type]()
-
-  var CTable = Map[Type, CSig]()
-
   type Result = (Type, Reqs, CR, CS)
 
   case class CR(cr : Map[Type, ClassReq]) {
@@ -83,7 +79,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       root.visitUninitialized { e =>
         val (t, reqs, creqs, cons) = typecheckStep(e)
         var cr = CR(Map[Type, ClassReq]())
-        val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ExtendD(extD)))
+        var subcs = freshConstraintSystem
+        if (e.kind == ProgramM)
+          subcs
+        else subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem (res.typ._4))
         val cs = subcs addNewConstraints cons
         val (creqs2, cs1) = creqs.subst(cs)
         val reqs2 = cs1.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
@@ -372,7 +371,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mccons, cr) = mergeCReqMaps(creqss)
       val (mrcons, req) = mergeReqMaps(reqss)
-      extD = Map(c -> sup)
+
       CT =  CT + (c -> CSig(sup,  ctor, fields.toMap, methods))
 
       val (mconsD, crD) = addCtorReq(cr, sup, ctor.supCtorParams)
@@ -395,7 +394,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val csig = extractClassSignature(e.kids(i))
         CT =  CT + csig
       }
-      CTable = CT // TODO why?
 
       var cons = Seq[Constraint]()
       // satisfy requirements based on class table
@@ -408,16 +406,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mcons, mcreqs) = mergeCReqMaps(restCreqss)
       val (mrcons, mreqs) = mergeReqMaps(reqss)
 
+      var extD = Map[Type, Type]()
+      for ((c, csig) <- CT) extD = extD + (c -> csig.extendc)
       val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, ExtendD(extD)))
       val cs = subcs addNewConstraints cons
 
       val csRootFinal = cs.addNewConstraints(cons ++ mcons ++ mrcons).tryFinalize
       val (creqsFinal, csFinal) = mcreqs.subst(csRootFinal, isFinal = true)
 
-      val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsFinal)
-      val (creqsF, consF) = remove(CTable, creqsNoO)
+     // val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsFinal)
+      val (creqsF, consF) = remove(CT, creqsFinal)
 
-      (ProgramOK, mreqs, creqsF, cons ++ cconsO ++ consF)
+      (ProgramOK, mreqs, creqsF, cons ++ consF)
 
   }
 
@@ -427,7 +427,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val sup = e.lits(1).asInstanceOf[CName]
     val ctor = e.lits(2).asInstanceOf[Ctor]
     val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
-    extD = extD + (name -> sup)
     val methods = e.kids.seq.map { em =>
       val retT = em.lits(0).asInstanceOf[CName]
       val m = em.lits(1).asInstanceOf[Symbol]
