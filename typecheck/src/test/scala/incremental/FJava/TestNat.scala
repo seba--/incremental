@@ -54,7 +54,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
         Var('this )) // dummy body, will be overwritten by subclasses
     )
   )
-  typecheckTest("Nat ok", ProgramM(Nat))(ProgramOK)
+ // typecheckTest("Nat ok", ProgramM(Nat))(ProgramOK)
 
   val Zero = ClassDec(
     Seq(CName('Zero), CName('Nat),  Ctor(ListMap(), List(), ListMap()),
@@ -95,7 +95,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
   ) /// was wrong before the rtest detected by the contraint solver  !
   )*/
   // Succ refers to Nat and should fail to check
-  typecheckTestError("Succ ok", Succ)
+ // typecheckTestError("Succ ok", Succ)
 
   // Taking all classes into consideration, checking should succeed
   typecheckTest("{Nat, Zero, Succ} ok", ProgramM(Nat, Zero, Succ))(ProgramOK)

@@ -31,6 +31,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   import csFactory._
 
+ // var CTable = Map[Type, CSig]()
+
   type Reqs = Map[Symbol, Type]
 
   type CReqs = Map[Type, ClassReq]
@@ -42,7 +44,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type Prg = String
 
   type Result = (Type, Reqs, CR, CS)
-
   case class CR(cr : Map[Type, ClassReq]) {
     def subst(cs: CS, isFinal: Boolean = false): (CR, CS) = {
       val s = cs.substitution
@@ -70,6 +71,17 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
+  def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS) : (CR, CS) = {
+    var cr = creqs
+    var csF = cs
+    val (cres, ccons) = cr.subst(csF)
+    val (crF, cF) = remove(ct, cres)
+    csF = ccons.addNewConstraints(cF)
+    if (cr.cr.size == crF.cr.size) { cr = crF
+      (crF, csF)}
+    else removeF(ct, crF, csF)
+  }
+
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
@@ -86,22 +98,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         e.typ = (cs1 applyPartialSolution t, reqs2, creqs2, cs1.propagate)
         true
       }
-
       val (tRoot, reqsRoot, creqsRoot, csRoot) = root.typ
       val CTable = typecheckStep(root)._2
       val (creqsNoObject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsRoot)
 
       val csRootFinal = csRoot.addNewConstraints(ccons).tryFinalize
-      val (creqsFinal, csFinal) = creqsNoObject.subst(csRootFinal, isFinal = true)
+      val (creqsFinal, csF) = creqsNoObject.subst(csRootFinal, isFinal = true)
 
-      val tFinal = tRoot.subst(csFinal.substitution)
-      val reqsFinal = reqsRoot mapValues (_.subst(csFinal.substitution))
+      val tFinal = tRoot.subst(csF.substitution)
+      val reqsFinal = reqsRoot mapValues (_.subst(csF.substitution))
 
       val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())),  creqsFinal)
-      val (creqF, consF) = remove(CTable, creqsNoO)
+      val (creqF, csFinal) = removeF(CTable, creqsNoO, csF)
 
       // TODO don't store finalized values
-      root.typ = (tFinal, reqsFinal, creqF, csFinal.addNewConstraints(consF ++ cconsO))
+      root.typ = (tFinal, reqsFinal, creqF, csFinal.addNewConstraints(cconsO))
 
       if (!reqsFinal.isEmpty)
         Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${csFinal.unsolved}")
