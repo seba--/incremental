@@ -414,7 +414,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val csRootFinal = cs.addNewConstraints(cons ++ mcons ++ mrcons).tryFinalize
       val (creqsFinal, csFinal) = mcreqs.subst(csRootFinal, isFinal = true)
 
-     // val (creqsNoO, cconsO) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsFinal)
       val (creqsF, consF) = remove(CT, creqsFinal)
 
       (ProgramOK, mreqs, creqsF, cons ++ consF)
