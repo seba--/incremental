@@ -362,7 +362,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (condCons, creqs2) = addCMethodReq(creqs1, Ud, m, params.unzip._2.toList, retT)
       val (currCons, creqs3) = addCurrentCReq(creqs2, Uc)
 
-      println(creqs3)
       ((MethodOK(Uc), restReqs, creqs3, cons ++ extendCons ++ condCons ++ currCons), Map())
 
     case ClassDec =>
@@ -383,7 +382,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         reqss = reqss :+ req
         creqss = creqss :+ creq
        // cons =  cons :+ Equal(c, t.asInstanceOf[MethodOK].in) // TODO this should be a class requirement `currentClass`
-
         val retT = e.kids(i).lits(0).asInstanceOf[CName]
         val m = e.kids(i).lits(1).asInstanceOf[Symbol]
         val params = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
@@ -395,7 +393,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mccons, cr) = mergeCReqMaps(creqss)
       val (mrcons, req) = mergeReqMaps(reqss)
-      println(creqss)
 
       CT =  CT + (c -> CSig(sup,  ctor, fields.toMap, methods))
       var restReq = Map[Type,  ClassReq]()
@@ -539,7 +536,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           for ((m, (rt, ts)) <- rcmethods.m)
             methods.get(m) match {
               case None => // super types of c
-               cons = findCMethodDef(c, CT, (m, rt, ts))
+               cons = cons ++ findCMethodDef(c, CT, (m, rt, ts))
                 // delete requirement
                 // TODO need to check overriding for inheritance distance > 2. Example: A extends B, B extends C, and A.m overrides C.m, but B.m is undefined
               case Some((crt, cts)) =>
