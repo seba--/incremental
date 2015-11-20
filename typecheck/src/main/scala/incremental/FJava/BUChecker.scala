@@ -72,12 +72,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS, cons : Seq[Constraint]) : (CR, Seq[Constraint]) = {
     var consF = cons
-    val (cres, ccons) = creqs.subst(cs, isFinal = true)
+    val (cres, ccons) = creqs.subst(cs)
     val (crF, cF) = remove(ct, cres)
     consF = consF ++ cF
     val csF = ccons.addNewConstraints(cF)
     if (creqs.cr.size == crF.cr.size) {
-      (crF, cons)}
+      (crF, consF)}
     else removeF(ct, crF, csF, consF)
   }
 
@@ -379,8 +379,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (t, req, creq, _) = e.kids(i).typ
         reqss = reqss :+ req
         creqss = creqss :+ creq
-
-
         val retT = e.kids(i).lits(0).asInstanceOf[CName]
         val m = e.kids(i).lits(1).asInstanceOf[Symbol]
         val params = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
@@ -423,25 +421,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val csig = extractClassSignature(e.kids(i))
         CT =  CT + csig
         cs = cs.mergeSubsystem(csReq)
-        println(csReq)
       }
 
-      var cons = Seq[Constraint]()
-      // satisfy requirements based on class table
-      val restCreqss = creqss map { creqs =>
-        val (restCreqs, ccons) = remove(CT, creqs)
-        cons = cons ++ ccons
-        restCreqs
-      }
-
-      val (mcons, mcreqs) = mergeCReqMaps(restCreqss)
+      val (mcons, mcreqs) = mergeCReqMaps(creqss)
       val (mrcons, mreqs) = mergeReqMaps(reqss)
-
-      cs = cs.addNewConstraints(cons ++ mcons ++ mrcons)
-
-      val (creqF, consF) = removeF(CT, mcreqs, cs, cons)
-      //val csFinal =  csF.tryFinalize
-
+      val (creqF, consF) = removeF(CT, mcreqs, cs, mcons ++ mrcons)
 
       (ProgramOK, mreqs, creqF, consF, CT)
 
