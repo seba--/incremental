@@ -360,9 +360,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (extendCons, creqs1) = addExtendsReq(bodyCreqs, Uc, Ud)
       val (condCons, creqs2) = addCMethodReq(creqs1, Ud, m, params.unzip._2.toList, retT)
-      val (currCons, creqs3) = addCurrentCReq(creqs2, Uc)
+      val (currCons, reqs) = mergeReqMaps(restReqs, Map('current -> Uc))
 
-      ((MethodOK, restReqs, creqs3, cons ++ extendCons ++ condCons ++ currCons), Map())
+      ((MethodOK, reqs, creqs2, cons ++ extendCons ++ condCons ++ currCons), Map())
 
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
@@ -395,22 +395,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mccons, cr) = mergeCReqMaps(creqss)
       val (mrcons, req) = mergeReqMaps(reqss)
 
-      CT =  CT + (c -> CSig(sup,  ctor, fields.toMap, methods))
+      CT = Map(c -> CSig(sup,  ctor, fields.toMap, methods))
       // cons =  cons :+ Equal(c, t.asInstanceOf[MethodOK].in)  TODO this should be a class requirement `currentClass`
-      var currReq = Map[Type,  ClassReq]()
-      for ((t, cdec) <- cr.cr) {
-        cdec.currentC match {
-          case None => currReq = currReq + (t -> cdec)
-          case Some(currT) =>
-            currReq = currReq + (t -> cdec.copy(currentC = Some(c)))
-            cons = cons :+ Equal(c, currT)
-        }
+      var restReqs = req
+      req.get('current) match {
+        case None =>
+        case Some(typ) =>
+          restReqs = restReqs - 'current
+          cons = cons :+ Equal(typ, c)
       }
 
-      val (mconsD, crD) = addCtorReq(CR(currReq), sup, ctor.supCtorParams)
+      val (mconsD, crD) = addCtorReq(cr, sup, ctor.supCtorParams)
       val (creq2, cons2) = remove(CT, crD)
 
-      ((c, req, creq2, cons ++ mccons ++ mrcons ++ mconsD ++ cons2), CT)
+      ((c, restReqs, creq2, cons ++ mccons ++ mrcons ++ mconsD ++ cons2), CT)
 
 
     case ProgramM =>
