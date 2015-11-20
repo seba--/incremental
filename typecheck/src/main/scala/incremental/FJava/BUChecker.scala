@@ -70,14 +70,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS, cons : Seq[Constraint]) : (CR, CS, Seq[Constraint]) = {
+  def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS, cons : Seq[Constraint]) : (CR, Seq[Constraint]) = {
     var consF = cons
     val (cres, ccons) = creqs.subst(cs, isFinal = true)
     val (crF, cF) = remove(ct, cres)
     consF = consF ++ cF
     val csF = ccons.addNewConstraints(cF)
     if (creqs.cr.size == crF.cr.size) {
-      (crF, csF, cons)}
+      (crF, cons)}
     else removeF(ct, crF, csF, consF)
   }
 
@@ -87,7 +87,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
         val (t, reqs, creqs, cons, classT) = typecheckStep(e)
-       // val CTable = typecheckStep(e)._2
+
         var cr = CR(Map[Type, ClassReq]())
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, classT))
         val cs = subcs addNewConstraints cons
@@ -105,7 +105,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val tFinal = tRoot.subst(csFinal.substitution)
       val reqsFinal = reqsRoot mapValues (_.subst(csFinal.substitution))
-      //val (creqFinal, csFinal) = removeF(CTable, creqsNoObject, csPreFinal)
 
       // TODO don't store finalized values
       root.typ = (tFinal, reqsFinal, creqsFinal, csFinal)
@@ -435,18 +434,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         restCreqs
       }
 
-     //  cs = cs.mergeFJavaSubsystem(cs, CT)
-
-      println(cs)
-
       val (mcons, mcreqs) = mergeCReqMaps(restCreqss)
       val (mrcons, mreqs) = mergeReqMaps(reqss)
-      cs = cs.addNewConstraints(cons ++ mcons ++ mrcons).tryFinalize
-println(cs)
-      println(s"BEFORE remove $mcreqs")
-      val (creqF, csF, consF) = removeF(CT, mcreqs, cs, cons ++ mcons ++ mrcons)
-    val csFinal =  csF.tryFinalize
-      println(s"AFTERR remove $consF")
+
+      cs = cs.addNewConstraints(cons ++ mcons ++ mrcons)
+
+      val (creqF, consF) = removeF(CT, mcreqs, cs, cons)
+      //val csFinal =  csF.tryFinalize
+
 
       (ProgramOK, mreqs, creqF, consF, CT)
 
