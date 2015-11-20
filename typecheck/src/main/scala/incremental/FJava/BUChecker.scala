@@ -76,7 +76,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
         val (t, reqs, creqs, cons, classT) = typecheckStep(e)
-
         var cr = CR(Map[Type, ClassReq]())
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, classT))
         val cs = subcs addNewConstraints cons
@@ -237,7 +236,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshCName()
-      (X, Map(x -> X), CR(Map()), Seq(), Map()) // Map(X -> cld), needed at some examples
+      (X, Map(x -> X), CR(Map()), Seq(), Map())
 
     case FieldAcc =>
       val f = e.lits(0).asInstanceOf[Symbol] //symbol
@@ -347,8 +346,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (extendCons, creqs1) = addExtendsReq(bodyCreqs, Uc, Ud)
       val (condCons, creqs2) = addCMethodReq(creqs1, Ud, m, params.unzip._2.toList, retT)
+      //add requirement for current class
       val (currCons, reqs) = mergeReqMaps(restReqs, Map('current -> Uc))
-
       (MethodOK, reqs, creqs2, cons ++ extendCons ++ condCons ++ currCons, Map())
 
     case ClassDec =>
@@ -395,7 +394,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       (c, restReqs, creq2, cons ++ mccons ++ mrcons ++ mconsD ++ cons2, CT)
 
-
     case ProgramM =>
 
       var reqss = Seq[Reqs]()
@@ -414,6 +412,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mcons, mcreqs) = mergeCReqMaps(creqss)
       val (mrcons, mreqs) = mergeReqMaps(reqss)
+      //remove class requirements 
       val (creqF, consF) = removeF(CT, mcreqs, cs, mcons ++ mrcons)
 
       (ProgramOK, mreqs, creqF, consF, CT)
