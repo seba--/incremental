@@ -70,17 +70,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS, cons : Seq[Constraint]) : (CR, Seq[Constraint]) = {
-    var consF = cons
-    val (cres, ccons) = creqs.subst(cs)
-    val (crF, cF) = remove(ct, cres)
-    consF = consF ++ cF
-    val csF = ccons.addNewConstraints(cF)
-    if (creqs.cr.size == crF.cr.size) {
-      (crF, consF)}
-    else removeF(ct, crF, csF, consF)
-  }
-
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
@@ -539,6 +528,17 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
 
     (CR(cr), cons)
+  }
+
+  def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS, cons : Seq[Constraint]) : (CR, Seq[Constraint]) = {
+    var consF = cons
+    val (cres, ccons) = creqs.subst(cs)
+    val (crF, cF) = remove(ct, cres)
+    consF = consF ++ cF
+    val csF = ccons.addNewConstraints(cF)
+    if (creqs.cr.size == crF.cr.size) {
+      (crF, consF)}
+    else removeF(ct, crF, csF, consF)
   }
 
   def findSuperTypes(c : Type, CT : Map[Type, CSig]) : List[Type] = {
