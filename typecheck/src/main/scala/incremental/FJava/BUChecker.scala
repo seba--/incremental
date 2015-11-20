@@ -70,13 +70,15 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS) : (CR, CS) = {
+  def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS, cons : Seq[Constraint]) : (CR, CS, Seq[Constraint]) = {
+    var consF = cons
     val (cres, ccons) = creqs.subst(cs, isFinal = true)
     val (crF, cF) = remove(ct, cres)
+    consF = consF ++ cF
     val csF = ccons.addNewConstraints(cF)
     if (creqs.cr.size == crF.cr.size) {
-      (crF, csF)}
-    else removeF(ct, crF, csF)
+      (crF, csF, cons)}
+    else removeF(ct, crF, csF, consF)
   }
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
@@ -439,14 +441,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mcons, mcreqs) = mergeCReqMaps(restCreqss)
       val (mrcons, mreqs) = mergeReqMaps(reqss)
-      val csFinal = cs.addNewConstraints(cons ++ mcons ++ mrcons).tryFinalize
-println(csFinal)
+      cs = cs.addNewConstraints(cons ++ mcons ++ mrcons).tryFinalize
+println(cs)
       println(s"BEFORE remove $mcreqs")
-      val (creqF, csF) = removeF(CT, mcreqs, csFinal)
-     cs =  csF.tryFinalize
-      println(s"AFTERR remove $creqF")
+      val (creqF, csF, consF) = removeF(CT, mcreqs, cs, cons ++ mcons ++ mrcons)
+    val csFinal =  csF.tryFinalize
+      println(s"AFTERR remove $consF")
 
-      (ProgramOK, mreqs, creqF, cons ++ mcons ++ mrcons, CT)
+      (ProgramOK, mreqs, creqF, consF, CT)
 
   }
 

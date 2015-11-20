@@ -142,6 +142,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     }
 
 
+
   private def extendBound(t1: Type, t2: Type) = {
     val t1bnds = bounds.getOrElse(t1, Set[Type]())
     SolveContinuousSubstCS(this.substitution, bounds + (t1 -> (t1bnds + t2)), this.never, this.extend)
