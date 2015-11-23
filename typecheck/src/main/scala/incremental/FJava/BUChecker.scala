@@ -43,6 +43,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type Result = (Type, Reqs, CR, CS)
 
+  val CURRENT_CLASS = '$current
+
   case class CR(cr : Map[Type, ClassReq]) {
     def subst(cs: CS, isFinal: Boolean = false): (CR, CS) = {
       val s = cs.substitution
@@ -346,9 +348,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (extendCons, creqs1) = addExtendsReq(bodyCreqs, Uc, Ud)
       val (condCons, creqs2) = addCMethodReq(creqs1, Ud, m, params.unzip._2.toList, retT)
+
       //add requirement for current class
-      val (currCons, reqs) = mergeReqMaps(restReqs, Map('current -> Uc))
-      (MethodOK, reqs, creqs2, cons ++ extendCons ++ condCons ++ currCons, Map())
+      val reqs = restReqs + (CURRENT_CLASS -> Uc)
+
+      (MethodOK, reqs, creqs2, cons ++ extendCons ++ condCons, Map())
 
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
@@ -358,7 +362,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       var CT = Map[Type, CSig]()
 
-      var cons = Seq[Constraint]()
       var reqss = Seq[Reqs]()
       var creqss = Seq[CR]()
       var methods = Map[Symbol, (Type, List[Type])]()
@@ -380,19 +383,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mrcons, req) = mergeReqMaps(reqss)
 
       CT = Map(c -> CSig(sup,  ctor, fields.toMap, methods))
-      // cons =  cons :+ Equal(c, t.asInstanceOf[MethodOK].in)  TODO this should be a class requirement `currentClass`
-      var restReqs = req
-      req.get('current) match {
-        case None =>
+
+      val currentCons = req.get(CURRENT_CLASS) match {
+        case None => Seq()
         case Some(typ) =>
-          restReqs = restReqs - 'current
-          cons = cons :+ Equal(typ, c)
+          Seq(Equal(typ, c))
       }
+      val restReq = req - CURRENT_CLASS
 
       val (mconsD, crD) = addCtorReq(cr, sup, ctor.supCtorParams)
       val (creq2, cons2) = remove(CT, crD)
 
-      (c, restReqs, creq2, cons ++ mccons ++ mrcons ++ mconsD ++ cons2, CT)
+      (c, restReq, creq2, mccons ++ mrcons ++ currentCons ++ mconsD ++ cons2, CT)
 
     case ProgramM =>
 
@@ -514,7 +516,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           for ((m, (rt, ts)) <- rcmethods.m)
             methods.get(m) match {
               case None => // super types of c
-               cons = cons ++ findCMethodDef(c, CT, (m, rt, ts))
+                // TODO need produce restReq class requirements for yet unknown superclasses
+                cons = cons ++ findCMethodDef(c, CT, (m, rt, ts))
                 // delete requirement
                 // TODO need to check overriding for inheritance distance > 2. Example: A extends B, B extends C, and A.m overrides C.m, but B.m is undefined
               case Some((crt, cts)) =>
@@ -530,10 +533,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS, cons : Seq[Constraint]) : (CR, Seq[Constraint]) = {
-    var consF = cons
+    // TODO constraints `cons` are never added to the constraint system `cs`
     val (cres, ccons) = creqs.subst(cs)
     val (crF, cF) = remove(ct, cres)
-    consF = consF ++ cF
+    val consF = cons ++ cF
     val csF = ccons.addNewConstraints(cF)
     if (creqs.cr.size == crF.cr.size) {
       (crF, consF)}
@@ -558,6 +561,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val newLst = findSuperTypes(c, CT)
     var i = 0
     var bool = false
+    // TODO bool is always false here, loop will not run even once
     while (bool && i < newLst.length) {
       CT.get(newLst(i)) match {
         case None => cons
