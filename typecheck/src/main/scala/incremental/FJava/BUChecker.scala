@@ -533,35 +533,29 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def removeF(ct : Map[Type, CSig], creqs : CR, cs : CS, cons : Seq[Constraint]) : (CR, Seq[Constraint]) = {
-    // TODO constraints `cons` are never added to the constraint system `cs`
     val (cres, ccons) = creqs.subst(cs)
     val (crF, cF) = remove(ct, cres)
     val consF = cons ++ cF
-    val csF = ccons.addNewConstraints(cF)
+    val csF = ccons.addNewConstraints(consF)
     if (creqs.cr.size == crF.cr.size) {
       (crF, consF)}
     else removeF(ct, crF, csF, consF)
   }
 
   def findSuperTypes(c : Type, CT : Map[Type, CSig]) : List[Type] = {
-    var ext = Map[Type, Type]()
-    for ((c, cld) <- CT)
-      ext = ext + (c -> cld.extendc)
-    var lc = List[Type]()
-    ext.get(c) match {
-      case None => lc
-      case Some(sup) =>
-        lc = lc :+ sup
-        findSuperTypes(sup, CT)
+    CT.get(c) match {
+      case None => List()
+      case Some(csig) =>
+        findSuperTypes(csig.extendc, CT) :+  csig.extendc
     }
   }
 
   def findCMethodDef(c : Type, CT : Map[Type, CSig], method : (Symbol, Type, List[Type])) : Seq[Constraint] = {
     var cons = Seq[Constraint]()
     val newLst = findSuperTypes(c, CT)
+println(newLst)
     var i = 0
-    var bool = false
-    // TODO bool is always false here, loop will not run even once
+    var bool = true
     while (bool && i < newLst.length) {
       CT.get(newLst(i)) match {
         case None => cons
@@ -572,7 +566,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
               i = i + 1
             case Some((crt, cts)) =>
               cons = cons :+ Equal(crt, method._2) :+ AllEqual(cts, method._3)
-              bool = true
+              bool = false
           }
       }
     }

@@ -240,6 +240,19 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
 
   typecheckTestError("Class C, Tnum foo(x int, y int){return z+z}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('z), Var('z))))))))
+
+  val M1 =  ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('Object), 'foo, Seq()), Seq(New(CName('Object))))))
+
+  val M2 =  ClassDec(Seq(CName('C1), CName('C),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq())
+
+  val M3 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('TString), 'foo, Seq()), Seq(Str('a)))))
+
+  typecheckTestFJ("{M1, M2, M3} ok", ProgramM(M1, M2, M3))(ProgramOK)
+
+
 }
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEndFJava", new BUCheckerFactory(SolveContinuousSubst))
