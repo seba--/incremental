@@ -542,18 +542,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     else removeF(ct, crF, csF, consF)
   }
 
-  def findSuperTypes(c : Type, CT : Map[Type, CSig]) : List[Type] = {
+  def findSuperTypes(c : Type, CT : Map[Type, CSig], ls : List[Type]) : List[Type] = {
+    var ext = ls
     CT.get(c) match {
-      case None => List()
+      case None => ext
       case Some(csig) =>
-        findSuperTypes(csig.extendc, CT) :+  csig.extendc
+        ext = ext :+  csig.extendc
+        println(c)
+        findSuperTypes(csig.extendc, CT, ext)
     }
   }
 
   def findCMethodDef(c : Type, CT : Map[Type, CSig], method : (Symbol, Type, List[Type])) : Seq[Constraint] = {
     var cons = Seq[Constraint]()
-    val newLst = findSuperTypes(c, CT)
-println(newLst)
+    val newLst = findSuperTypes(c, CT, List())
+    println(newLst)
     var i = 0
     var bool = true
     while (bool && i < newLst.length) {

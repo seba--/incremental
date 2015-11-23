@@ -242,7 +242,7 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('z), Var('z))))))))
 
   val M1 =  ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('Object), 'foo, Seq()), Seq(New(CName('Object))))))
+    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Num(1)))))
 
   val M2 =  ClassDec(Seq(CName('C1), CName('C),Ctor(ListMap(), List(), ListMap()), Seq()),
     Seq())
@@ -250,8 +250,19 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
   val M3 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TString), 'foo, Seq()), Seq(Str('a)))))
 
-  typecheckTestFJ("{M1, M2, M3} ok", ProgramM(M1, M2, M3))(ProgramOK)
+  val M4 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Num(1)))))
 
+  val M5 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq())
+
+  val M6 =  ClassDec(Seq(CName('C3), CName('C2),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Num(1)))))
+
+  typecheckTestError("{M1, M2, M3} ok", ProgramM(M1, M2, M3))
+  typecheckTestFJ("{M1, M2, M4} ok", ProgramM(M1, M2, M4))(ProgramOK)
+  typecheckTestFJ("{M1, M2, M5, M6} ok", ProgramM(M1, M2, M5, M6))(ProgramOK)
+  typecheckTestError("{M1, M2, M3, M6} ok", ProgramM(M1, M2, M3, M6))
 
 }
 
