@@ -40,8 +40,8 @@ case object Plus extends Expr(simple(cExpr, cExpr) orElse simple(cExpr)){
       val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
       context.addConstraints(widenString, widenEq)
-      context.addConstraints(oneOfCons)
-      context.addConstraints(mCons)
+      context.addConstraintSeq(oneOfCons)
+      context.addConstraintSeq(mCons)
 
       (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))
     }
@@ -76,8 +76,8 @@ case object Minus extends Expr(simple(cExpr, cExpr) orElse simple(cExpr)){
       val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
       context.addConstraints(widen, widenEq)
-      context.addConstraints(oneOfCons)
-      context.addConstraints(mCons)
+      context.addConstraintSeq(oneOfCons)
+      context.addConstraintSeq(mCons)
 
       (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))
     }
@@ -99,8 +99,8 @@ case object Mul extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, widenEq)
-    context.addConstraints(oneOfCons)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(oneOfCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -121,8 +121,8 @@ case object Div extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, widenEq)
-    context.addConstraints(oneOfCons)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(oneOfCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -143,8 +143,8 @@ case object Remain extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, widenEq)
-    context.addConstraints(oneOfCons)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(oneOfCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -220,7 +220,7 @@ case object LeftShift extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(t1InIntegral, t2InIntegral)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(t1), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -236,7 +236,7 @@ case object RightShift extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(t1InIntegral, t2InIntegral)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(t1), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -252,7 +252,7 @@ case object URightShift extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(t1InIntegral, t2InIntegral)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(t1), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -286,8 +286,8 @@ case object And extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, widenEq)
-    context.addConstraints(oneOfCons)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(oneOfCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -308,8 +308,8 @@ case object Or extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, widenEq)
-    context.addConstraints(oneOfCons)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(oneOfCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -330,8 +330,8 @@ case object ExcOr extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, widenEq)
-    context.addConstraints(oneOfCons)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(oneOfCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))
   }

@@ -24,7 +24,7 @@ case object Gt extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, t1inNum, t2inNum)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -41,7 +41,7 @@ case object GtEq extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, t1inNum, t2inNum)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -58,7 +58,7 @@ case object Lt extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, t1inNum, t2inNum)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -75,7 +75,7 @@ case object LtEq extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(widen, t1inNum, t2inNum)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -89,7 +89,7 @@ case object Eq extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraint(widen)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -103,7 +103,7 @@ case object NotEq extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraint(widen)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -132,7 +132,7 @@ case object LazyAnd extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(t1IsBool, t2IsBool)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -148,7 +148,7 @@ case object LazyOr extends Expr(simple(cExpr, cExpr)){
     val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
     context.addConstraints(t1IsBool, t2IsBool)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(TBoolean()), mReqs, mergeCReqs(cReqs1, cReqs2))
   }
@@ -174,7 +174,7 @@ case object Cond extends Expr(simple(cExpr, cExpr, cExpr)){
     val cReqs = mergeCReqs(mergeCReqs(cReqs1, cReqs2), cReqs3) // TODO: expand merge to multiple operands
 
     context.addConstraints(t1IsBool, widen, widenEq, t2isPrimitive, t3isPrimitive, XisNumOps)
-    context.addConstraints(mCons)
+    context.addConstraintSeq(mCons)
 
     (ExprType(X), mReqs, cReqs)
   }

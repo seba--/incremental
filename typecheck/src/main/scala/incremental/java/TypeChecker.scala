@@ -3,7 +3,7 @@ package incremental.java
 import constraints.Statistics
 import constraints.javacons._
 import incremental.{Util, Node_, MyBuilder}
-import incremental.java.syntax.{UVar, Type}
+import incremental.java.syntax.{TBoolean, UVar, Type}
 import incremental.java.JavaCheck._
 import incremental.Node.Node
 
@@ -14,7 +14,7 @@ import scala.collection.generic.CanBuildFrom
  */
 
 abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Gen, Constraint, CS]{
-  type T = Type
+  type T = CheckRes
   type CSFactory <: ConstraintSystemFactory[CS]
   implicit val csFactory: CSFactory
 
@@ -64,7 +64,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val res@(t, vReqs, cReqs) = e.kind.check(e.lits, e.kids.seq, ctx)
     val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, subnode) => cs mergeSubsystem subnode.cs)
     val cs = subcs addNewConstraints ctx.getConstraints
-    val vReqs2 = cs.applyPartialSolutionIt[(Symbol, T), Map[Symbol, T], T](vReqs, p => p._2)
+    //val vReqs2 = cs.applyPartialSolutionIt[(Symbol, T), Map[Symbol, T], T](vReqs, p => p._2)
+    // TODO: bf explizit übergeben
 
     e.set(cs, (t, vReqs, cReqs)) // TODO: apply (partial) solution (mgu) on t (and cReqs?)
   }
