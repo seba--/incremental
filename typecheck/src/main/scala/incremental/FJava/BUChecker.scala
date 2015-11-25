@@ -360,6 +360,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val ctor = e.lits(2).asInstanceOf[Ctor]
       val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
 
+      var cons = Seq[Constraint]()
+      if (fields.size != ctor.fieldDefs.size)
+              cons = cons :+  Equal(CName('TNum), CName('TString))
+
       var CT = Map[Type, CSig]()
 
       var reqss = Seq[Reqs]()
@@ -394,7 +398,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mconsD, crD) = addCtorReq(cr, sup, ctor.supCtorParams)
       val (creq2, cons2) = remove(CT, crD)
 
-      (c, restReq, creq2, mccons ++ mrcons ++ currentCons ++ mconsD ++ cons2, CT)
+      (c, restReq, creq2, mccons ++ mrcons ++ currentCons ++ mconsD ++ cons2 ++ cons, CT)
 
     case ProgramM =>
 
@@ -497,7 +501,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
               case Some(ct) => // subclass fields
                 cons = cons :+ Equal(ct, t)
               case None =>
-                fieldD.get(f) match { //current class fields
+                fieldD.get(f) match {
+                  //current class fields
                   case None =>
                     restReq = restReq.copy(fields = Fields(restReq.fields.fld + (f -> t)))
                   case Some(typ2) =>

@@ -1,5 +1,7 @@
 package incremental.fjava
 
+import java.security.InvalidKeyException
+
 import constraints.CVar
 import constraints.fjava.impl._
 import constraints.fjava._
@@ -263,6 +265,35 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
   typecheckTestFJ("{M1, M2, M4} ok", ProgramM(M1, M2, M4))(ProgramOK)
   typecheckTestFJ("{M1, M2, M5, M6} ok", ProgramM(M1, M2, M5, M6))(ProgramOK)
   typecheckTestError("{M1, M2, M3, M6} ok", ProgramM(M1, M2, M3, M6))
+
+  val MutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
+    MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
+
+  val WMutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
+      MethodDec(Seq(CName('TString), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
+
+  typecheckTestFJ("{C int foo() {this.bar()}, int bar() {this.foo()}} ok", ProgramM(MutualRec))(ProgramOK)
+  typecheckTestError("{C string foo() {this.bar()}, int bar() {this.foo()}}ok", ProgramM(WMutualRec))
+
+  val mcC = ClassDec(Seq(CName('C1), CName('C2),Ctor(ListMap(), List(), ListMap()), Seq()),
+  Seq())
+
+  val mcWC = ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+    Seq())
+
+  typecheckTestFJ("{mcC, mcWC} ok", ProgramM(mcC, mcWC))(ProgramOK)
+
+  val ctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+    Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq())
+
+  val wctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap('First -> CName('TNum)), List(), ListMap('First -> 'First)),
+    Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq())
+
+  typecheckTestFJ("{ctorFC} ok", ProgramM(ctorFC))(ProgramOK)
+  typecheckTestError("{wctorFC} ok", ProgramM(wctorFC))
+
 
 }
 
