@@ -277,13 +277,13 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
   typecheckTestFJ("{C int foo() {this.bar()}, int bar() {this.foo()}} ok", ProgramM(MutualRec))(ProgramOK)
   typecheckTestError("{C string foo() {this.bar()}, int bar() {this.foo()}}ok", ProgramM(WMutualRec))
 
-  val mcC = ClassDec(Seq(CName('C1), CName('C2),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val mutS1 = ClassDec(Seq(CName('C1), CName('C2),Ctor(ListMap(), List(), ListMap()), Seq()),
   Seq())
 
-  val mcWC = ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val mutS2 = ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
     Seq())
 
-  typecheckTestFJ("{mcC, mcWC} ok", ProgramM(mcC, mcWC))(ProgramOK)
+  typecheckTestError("{Mutual Super Types} ok", ProgramM(mutS1, mutS2))
 
   val ctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq())

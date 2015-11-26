@@ -51,6 +51,14 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     var ext = Map[Type, Type]()
     for ((c, cld) <- CT) ext = ext + (c -> cld.extendc)
     val mextend = ext
+    for ((c,d) <- ext) {
+      ext.get(d) match {
+        case None => ext
+        case Some(c1) =>
+          if (c == c1) mnever = mnever :+ NotEqual(c, d)
+          else ext
+      }
+    }
     val init = SolveContinuousSubstCS(msubst, this.bounds, mnever, ext)
     that.bounds.foldLeft(init) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
