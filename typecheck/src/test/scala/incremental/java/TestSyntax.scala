@@ -4,6 +4,7 @@ import incremental.Node._
 import incremental.java.syntax._
 import incremental.java.syntax.expr.Lit
 import incremental.java.syntax.expr._
+import incremental.Node
 
 import scala.Null
 
@@ -25,18 +26,11 @@ class TestSyntax extends FunSuite{
       intercept[IllegalArgumentException] {
         val v = e
       }
-
-      /*try {
-        val v = e
-        fail()
-      } catch {
-        //case err: IllegalArgumentException => err.isInstanceOf[SyntaxError]
-        //case err: SyntaxError => ;
-        case err: IllegalArgumentException => ;
-      }*/
     }
   }
 
+  Node.kindExpression(Lit).apply(Deci, "17")
+/*
   // Literals
   syntaxTest("deci 17", Lit(Deci("17")))
   syntaxTest("hexa 17", Lit(Hexa("0x17")))
@@ -150,4 +144,6 @@ class TestSyntax extends FunSuite{
   syntaxTest("public abstract int foobar() throws Exception;", AbstractMethodDec(Seq(Public(), Abstract(), TInt(), "foobar", ClassType(TypeNameT("Exception"), None)), Seq()))
   syntaxTest("public abstract int foobar(double a, char c) throws Exception;", AbstractMethodDec(Seq(Public(), Abstract(), TInt(), "foobar", ClassType(TypeNameT("Exception"), None)), Seq(Param(TDouble(), ID("a")), Param(TChar(), ID("c")))))
   errornousSyntaxTest("private abstract void foo(int a);", AbstractMethodDec(Seq(Private(), Abstract(), Void(), "foo"), Seq(Param(TInt(), ID("a")))))
+
+  */
 }

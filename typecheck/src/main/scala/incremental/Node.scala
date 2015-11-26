@@ -3,7 +3,7 @@ package incremental
 import Node._
 import constraints.{Constraint, ConstraintSystem}
 
-abstract class NodeKind[C, T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
+abstract class NodeKind[+C, +T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
   def unapplySeq(e: Node_[C, _, T]): Option[Seq[Node_[C, _, T]]] =
     if (e.kind == this)
       Some(e.kids.seq)
