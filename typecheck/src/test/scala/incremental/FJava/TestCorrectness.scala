@@ -294,6 +294,13 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
   typecheckTestFJ("{ctorFC} ok", ProgramM(ctorFC))(ProgramOK)
   typecheckTestError("{wctorFC} ok", ProgramM(wctorFC))
 
+  val A = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap('i -> CName('TNum)), List(), ListMap('i -> 'i)), Seq(('i, CName('TNum)))),
+    Seq(MethodDec(Seq(CName('Object), 'm, Seq(('b, CName('B)))), Seq(New(CName('B), FieldAcc('i, Var('this)))))))
+
+  val B = ClassDec(Seq(CName('B), CName('A),Ctor(ListMap('i -> CName('TNum)), List('i), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('Object), 'm, Seq(('b, CName('B)))), Seq(FieldAcc('i, UCast(CName('A),Var('b)))))))
+
+  typecheckTestFJ("{A, B} ok", ProgramM(A, B))(ProgramOK)
 
 }
 
