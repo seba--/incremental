@@ -347,8 +347,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
 
       var cons = Seq[Constraint]()
-      if (fields.size != ctor.fieldDefs.size)
-              cons = cons :+  Equal(CName('TNum), CName('TString))
+      //TODO check if ctor instantiates all fields super and current class
+      if (fields.size != ctor.fieldDefs.size) cons = cons :+  Equal(CName('TNum), CName('TString))
 
       var CT = Map[Type, CSig]()
 
@@ -380,11 +380,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           Seq(Equal(typ, c))
       }
       val restReq = req - CURRENT_CLASS
-println(ctor.supCtorParams)
       val (mconsD, crD) = addCtorReq(cr, sup, ctor.supCtorParams)
       val (creq2, cons2) = remove(CT, crD)
-
-      println(crD)
 
       (c, restReq, creq2, mccons ++ mrcons ++ currentCons ++ mconsD ++ cons2 ++ cons, CT)
 
@@ -506,7 +503,6 @@ println(ctor.supCtorParams)
                 // TODO need produce restReq class requirements for yet unknown superclasses
                 cons = cons ++ findCMethodDef(c, CT, (m, rt, ts))
                 // delete requirement
-                // TODO need to check overriding for inheritance distance > 2. Example: A extends B, B extends C, and A.m overrides C.m, but B.m is undefined
               case Some((crt, cts)) =>
                 cons = cons :+ Equal(crt, rt) :+ AllEqual(cts, ts)
             }
