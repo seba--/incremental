@@ -15,13 +15,13 @@ import org.scalatest.FunSuite
  * Created by qwert on 19.05.15.
  */
 class TestSyntax extends FunSuite{
-  def syntaxTest(desc: String, e: => Node): Unit = {
+  def syntaxTest[C, T](desc: String, e: => Node[C, T]): Unit = {
     test (s"Syntax: $desc") {
       val v = e
     }
   }
 
-  def errornousSyntaxTest(desc: String, e: => Node): Unit = {
+  def errornousSyntaxTest[C, T](desc: String, e: => Node[C, T]): Unit = {
     test (s"Errornous syntax: $desc") {
       intercept[IllegalArgumentException] {
         val v = e
@@ -29,8 +29,6 @@ class TestSyntax extends FunSuite{
     }
   }
 
-  Node.kindExpression(Lit).apply(Deci, "17")
-/*
   // Literals
   syntaxTest("deci 17", Lit(Deci("17")))
   syntaxTest("hexa 17", Lit(Hexa("0x17")))
@@ -144,6 +142,4 @@ class TestSyntax extends FunSuite{
   syntaxTest("public abstract int foobar() throws Exception;", AbstractMethodDec(Seq(Public(), Abstract(), TInt(), "foobar", ClassType(TypeNameT("Exception"), None)), Seq()))
   syntaxTest("public abstract int foobar(double a, char c) throws Exception;", AbstractMethodDec(Seq(Public(), Abstract(), TInt(), "foobar", ClassType(TypeNameT("Exception"), None)), Seq(Param(TDouble(), ID("a")), Param(TChar(), ID("c")))))
   errornousSyntaxTest("private abstract void foo(int a);", AbstractMethodDec(Seq(Private(), Abstract(), Void(), "foo"), Seq(Param(TInt(), ID("a")))))
-
-  */
 }

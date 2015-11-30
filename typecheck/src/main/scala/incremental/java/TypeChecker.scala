@@ -35,7 +35,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type TError = String
 
-  def typecheckImpl(e: Node): Either[CheckRes, TError] = {
+  def typecheckImpl[C, T](e: Node[C, T]): Either[CheckRes, TError] = {
     val root = e.withTypes[Constraint, CS, Result]
 
 

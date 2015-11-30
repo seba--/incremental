@@ -3,7 +3,7 @@ package incremental
 import Node._
 import constraints.{Constraint, ConstraintSystem}
 
-abstract class NodeKind[+C, +T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
+abstract class NodeKind[C, T](val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
   def unapplySeq(e: Node_[C, _, T]): Option[Seq[Node_[C, _, T]]] =
     if (e.kind == this)
       Some(e.kids.seq)
@@ -144,16 +144,16 @@ class Node_[C, CS, T](val kind: NodeKind[C, T], val lits: Seq[Lit], kidsArg: Seq
 
 object Node {
   type Lit = Any
-  type Node = Node_[Any, Any, Any]
+  type Node[C, T] = Node_[C, Any, T]
 
   import scala.language.implicitConversions
-  implicit def kindExpression(k: NodeKind[Any, Any]) = new KindExpression(k)
-  class KindExpression(k: NodeKind[Any, Any]) {
-    def apply(): Node = new Node_[Any, Any, Any](k, Seq(), Seq())
-    def apply(l: Lit, sub: Node*): Node = new Node_[Any, Any, Any](k, scala.Seq(l), Seq(sub:_*))
-    def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any, Any, Any](k, scala.Seq(l1, l2), Seq(sub:_*))
-    def apply(e: Node, sub: Node*): Node = new Node_[Any, Any, Any](k, scala.Seq(), e +: Seq(sub:_*))
-    def apply(lits: Seq[Lit], sub: Seq[Node]): Node = new Node_[Any, Any, Any](k, lits, sub)
+  implicit def kindExpression[C, T](k: NodeKind[C, T]) = new KindExpression(k)
+  class KindExpression[C, T](k: NodeKind[C, T]) {
+    def apply() = new Node_[C, Any, T](k, Seq(), Seq())
+    def apply(l: Lit, sub: Node[C, T]*) = new Node_[C, Any, T](k, scala.Seq(l), Seq(sub:_*))
+    def apply(l1: Lit, l2: Lit, sub: Node[C, T]*) = new Node_[C, Any, T](k, scala.Seq(l1, l2), Seq(sub:_*))
+    def apply(e: Node[C, T], sub: Node[C, T]*) = new Node_[C, Any, T](k, scala.Seq(), e +: Seq(sub:_*))
+    def apply(lits: Seq[Lit], sub: Seq[Node[C, T]]) = new Node_[C, Any, T](k, lits, sub)
   }
   
   val ignore = (k: NodeKind[_, _]) => new SyntaxChecking.IgnoreSyntax(k)
