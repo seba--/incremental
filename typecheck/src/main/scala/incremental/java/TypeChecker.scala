@@ -35,9 +35,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type TError = String
 
-  def typecheckImpl[C, T](e: Node[C, T]): Either[CheckRes, TError] = {
-    val root = e.withTypes[Constraint, CS, Result]
-
+  def typecheckImpl(e: Node[Constraint, Result]): Either[CheckRes, TError] = {
+    //val root = e.withTypes[Constraint, CS, Result]
+    val root = e.withCS[CS]
 
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>

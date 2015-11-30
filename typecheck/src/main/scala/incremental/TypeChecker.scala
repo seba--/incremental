@@ -17,13 +17,13 @@ abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] ex
   def gen: G = localState.gen
   def freshSymbol[T](prefix: String): CVar[T] = localState.gen.freshSymbol(prefix)
 
-  def typecheck[C, T1](e: Node[C, T1]): Either[T, TError] = {
+  def typecheck(e: Node[C, T1]): Either[T, TError] = {
     localState.resetStats()
     csFactory.state.value = localState
     typecheckImpl(e)
   }
 
-  protected def typecheckImpl[C, T1](e: Node[C, T1]): Either[T, TError]
+  protected def typecheckImpl(e: Node[C, T1]): Either[T, TError]
 }
 
 trait TypeCheckerFactory[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] {

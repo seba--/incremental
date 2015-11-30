@@ -69,8 +69,9 @@ class Node_[C, CS, T](val kind: NodeKind[C, T], val lits: Seq[Lit], kidsArg: Seq
 
   def typs(i: Int) = _kids(i)._typ
 
-  def withType[T] = this.asInstanceOf[Node_[_, _, T]]
-  def withTypes[C, CS, T] = this.asInstanceOf[Node_[C, CS, T]]
+  def withType[T1] = this.asInstanceOf[Node_[C, CS, T1]]
+  def withTypes[C1, CS1, T1] = this.asInstanceOf[Node_[C1, CS1, T1]]
+  def withCS[CS1] = this.asInstanceOf[Node_[C, CS1, T]]
 
   def markKidTypeAvailable(pos: Int) =
     availableKidTypes = availableKidTypes.updated(pos, true)
