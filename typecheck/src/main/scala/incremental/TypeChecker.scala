@@ -9,6 +9,7 @@ import incremental.Node.Node
 abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] extends Serializable {
   type T
   type TError
+  type Res
 
   type CSFactory <: ConstraintSystemFactory[G, C, CS]
   implicit val csFactory: CSFactory
@@ -17,13 +18,13 @@ abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] ex
   def gen: G = localState.gen
   def freshSymbol[T](prefix: String): CVar[T] = localState.gen.freshSymbol(prefix)
 
-  def typecheck(e: Node[C, T1]): Either[T, TError] = {
+  def typecheck(e: Node[C, Res]): Either[T, TError] = {
     localState.resetStats()
     csFactory.state.value = localState
     typecheckImpl(e)
   }
 
-  protected def typecheckImpl(e: Node[C, T1]): Either[T, TError]
+  protected def typecheckImpl(e: Node[C, Res]): Either[T, TError]
 }
 
 trait TypeCheckerFactory[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] {
