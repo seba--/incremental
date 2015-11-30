@@ -4,7 +4,7 @@ name := "typecheck"
 
 version := "1.0"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 parallelExecution in Test := false
 
@@ -24,6 +24,8 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.10"
 
 libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.6"
+
+libraryDependencies += "com.github.scopt" %% "scopt" % "3.3.0"
 
 fork in run := true
 
