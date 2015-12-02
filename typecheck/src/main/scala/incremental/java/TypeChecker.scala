@@ -71,3 +71,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     e.set(cs, (t, vReqs, cReqs)) // TODO: apply (partial) solution (mgu) on t (and cReqs?)
   }
 }
+
+case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new BUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
+}
