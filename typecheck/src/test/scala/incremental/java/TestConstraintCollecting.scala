@@ -30,6 +30,8 @@ class TestConstraintCollecting[CS <: ConstraintSystem[CS]](classdesc: String, ch
   }
 
   genConstraintTest("17", Lit(Deci("17")))(Seq())
+  genConstraintTest("17+4", Plus(Lit(Deci("17")), Lit(Deci("4"))))(Seq())
+  genConstraintTest("!True && (False || !True)", LazyAnd(Not(Lit(Bool(True()))), LazyOr(Lit(Bool(False())), Not(Lit(Bool(True()))))))(Seq())
 }
 
 class TestBUJustCollect extends TestConstraintCollecting("BUJustCollect", new BUCheckerFactory(JustCollect))
