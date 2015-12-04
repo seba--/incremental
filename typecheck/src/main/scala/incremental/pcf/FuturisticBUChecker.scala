@@ -1,9 +1,11 @@
 package incremental.pcf
 
 
+import incremental.pcf.PCFCheck.Result
+
 import scala.language.postfixOps
 import constraints.Statistics
-import constraints.equality.{ConstraintSystemFactory, ConstraintSystem}
+import constraints.equality.{Constraint, ConstraintSystemFactory, ConstraintSystem}
 import scala.concurrent.{ExecutionContext, Await, Promise, Future}
 import scala.concurrent.duration._
 import ExecutionContext.Implicits.global
@@ -15,10 +17,10 @@ import incremental._
  */
 abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker[CS] {
   val clusterParam = 4
-  def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
+  def bottomUpFuture(e: Node_[Constraint, CS, Result]): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
-    def recurse(e: Node_[Result]): (Seq[Future[Any]], Int) = {
+    def recurse(e: Node_[Constraint, CS, Result]): (Seq[Future[Any]], Int) = {
       if (e.size == clusterParam) {
         val f = fut map { _ =>
           e.visitInvalid { e =>
@@ -66,15 +68,16 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
 
 
 
-  override def typecheckImpl(e: Node): Either[T, TError] = {
-    val root = e.withType[Result]
+  override def typecheckImpl(e: Node[Constraint, Result]): Either[T, TError] = {
+    val root = e.withCS[CS]
     val (fut, trigger) = bottomUpFuture(root)
 
     Util.timed(localState -> Statistics.typecheckTime) {
       trigger success ()
       Await.result(fut, 1 minute)
 
-      val (t_, reqs, sol_) = root.typ
+      val (t_, reqs) = root.typ
+      val sol_ = root.cs
       val sol = sol_.tryFinalize
       val t = t_.subst(sol.substitution)
 
@@ -98,10 +101,10 @@ case class FuturisticBUCheckerFactory[CS <: ConstraintSystem[CS]](factory: Const
 abstract class FuturisticHeightBUChecker[CS <: ConstraintSystem[CS]] extends FuturisticBUChecker[CS] {
   override val clusterParam = 4
 
-  override def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
+  override def bottomUpFuture(e: Node_[Constraint, CS, Result]): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
-    def recurse(e: Node_[Result]): (Future[Any], Int) = {
+    def recurse(e: Node_[Constraint, CS, Result]): (Future[Any], Int) = {
       if (e.height == clusterParam) {
         val f = fut map { _ =>
           e.visitInvalid { e =>
@@ -154,10 +157,10 @@ case class FuturisticHeightBUCheckerFactory[CS <: ConstraintSystem[CS]](factory:
 
 abstract class FuturisticHeightListBUChecker[CS <: ConstraintSystem[CS]] extends FuturisticHeightBUChecker[CS] {
 
-  override def bottomUpFuture(e: Node_[Result]): (Future[Any], Promise[Unit]) = {
+  override def bottomUpFuture(e: Node_[Constraint, CS, Result]): (Future[Any], Promise[Unit]) = {
     val trigger: Promise[Unit] = Promise()
     val fut = trigger.future
-    def recurse(e: Node_[Result]): (Seq[Future[Any]], Int) = {
+    def recurse(e: Node_[Constraint, CS, Result]): (Seq[Future[Any]], Int) = {
       if (e.height == clusterParam) {
         val f = fut map { _ =>
           e.visitInvalid { e =>
