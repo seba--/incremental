@@ -23,6 +23,8 @@ class TestConstraintCollecting[CS <: ConstraintSystem[CS]](classdesc: String, ch
 
       println(actual.left.get)
 
+      println(s"ConstraintSystem: ${e.cs}")
+
       //val cons = e.withCS[JustCollectCS].cs.cons
       //println(e.cs.asInstanceOf[JustCollectCS].cons)
       //println(e.withCS[JustCollectCS].cs.getConstraints)

@@ -46,6 +46,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         true
       }
 
+      println(s"rootCS = ${root.cs}")
+
       val (tRes, vReqs, cReqs) = root.typ
       val sol_ = root.cs
       val sol = sol_.tryFinalize
