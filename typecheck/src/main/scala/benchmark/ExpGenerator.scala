@@ -1,8 +1,9 @@
 package benchmark
 
-import constraints.equality.Type
+import constraints.equality.{Constraint, Type}
 import incremental.Node._
 import incremental.NodeKind
+import incremental.pcf.PCFCheck.Result
 
 /**
  * Created by seba on 05/11/14.
@@ -10,16 +11,16 @@ import incremental.NodeKind
 object ExpGenerator {
   trait LeaveMaker {
     def reset()
-    def next(): Node
+    def next(): Node[Constraint, Result]
   }
-  def constantLeaveMaker(c: => Node): LeaveMaker = new LeaveMaker {
-    override def next(): Node = c
+  def constantLeaveMaker(c: => Node[Constraint, Result]): LeaveMaker = new LeaveMaker {
+    override def next(): Node[Constraint, Result] = c
     override def reset(): Unit = {}
   }
-  def stateLeaveMaker[T](stateInit: T, stateUpdate: T => T, treeMaker: T => Node): LeaveMaker = {
+  def stateLeaveMaker[T](stateInit: T, stateUpdate: T => T, treeMaker: T => Node[Constraint, Result]): LeaveMaker = {
     object maker extends LeaveMaker {
       var state: T = stateInit
-      override def next(): Node = {
+      override def next(): Node[Constraint, Result] = {
         val t = treeMaker(state)
         state = stateUpdate(state)
         t
@@ -29,9 +30,9 @@ object ExpGenerator {
     maker
   }
 
-  def makeBinTree(height: Int, kind: NodeKind[_, _], leaveMaker: LeaveMaker, sharing: Boolean = false): Node = {
+  def makeBinTree(height: Int, kind: NodeKind[Constraint, Result], leaveMaker: LeaveMaker, sharing: Boolean = false): Node[Constraint, Result] = {
     val leaveCount = Math.pow(2, height-1).toInt
-    val ts = Array.ofDim[Node](leaveCount)
+    val ts = Array.ofDim[Node[Constraint, Result]](leaveCount)
     leaveMaker.reset()
 
     for (i <- 0 until leaveCount)

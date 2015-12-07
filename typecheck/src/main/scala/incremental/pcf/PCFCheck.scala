@@ -23,9 +23,9 @@ object PCFCheck {
   def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
 
   def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
-    Util.timed(localState -> Statistics.mergeReqsTime) {
+    //Util.timed(localState -> Statistics.mergeReqsTime) { // TODO: no localState at this position
       reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
-    }
+    //}
 
   private def _mergeReqMaps(was: (Seq[Constraint], Reqs), newReqs: Reqs) = {
     val wasReqs = was._2

@@ -17,10 +17,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type Reqs = Map[Symbol, Type]
 
   type Result = (Type, Reqs, CS)
+  type Res = Result
   type StepResult = (Type, Reqs, Seq[Constraint])
 
-  def typecheckImpl(e: Node): Either[Type, TError] = {
-    val root = e.withType[Result]
+  def typecheckImpl(e: Node[Constraint, Result]): Either[Type, TError] = {
+    val root = e.withCS[CS]
 
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
@@ -28,7 +29,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
         val cs = subcs addNewConstraints cons
         val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-        e.typ = (cs applyPartialSolution t, reqs2, cs.propagate)
+        e.set(cs, (cs applyPartialSolution t, reqs2, cs.propagate))
         true
       }
 
@@ -45,7 +46,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
+  def typecheckStep(e: Node_[Constraint, CS, Result]): StepResult = e.kind match {
     case Num =>
       (TInteger, Map(), Seq())
     case op if op == Add || op == Mul =>

@@ -1,5 +1,7 @@
 package benchmark.pcf
 
+import constraints.equality.Constraint
+import incremental.pcf.PCFCheck._
 import incremental.{TypeChecker, TypeCheckerFactory}
 import org.scalameter.DSL
 import org.scalameter.api._
@@ -11,7 +13,7 @@ import incremental.Node._
 abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTest {
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
 
-  def measureCheckers(maxtree: Node, heights: Gen[Int]): Unit = {
+  def measureCheckers(maxtree: Node[Constraint, Result], heights: Gen[Int]): Unit = {
 //    val du = DownUpCheckerFactory.makeChecker
 //    val bu1 = BottomUpSolveEndCheckerFactory.makeChecker
 //    val bu2 = BottomUpSometimesEagerSubstCheckerFactory.makeChecker
@@ -29,7 +31,7 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
     //    measureTwith(s"BottomUpSometimesEagerSubst", (e:(Exp,Int)) => BottomUpSometimesEagerSubstCheckerFactory.makeChecker(e._2).typecheck(e._1))(tupled)
   }
 
-  def measureIncremental(name: String, check: Node => _)(maxtree: Node, heights: Gen[Int]): Unit = {
+  def measureIncremental(name: String, check: Node[Constraint, Result] => _)(maxtree: Node[Constraint, Result], heights: Gen[Int]): Unit = {
     var firstime = true
     measure method (name) in {
       using(heights).
