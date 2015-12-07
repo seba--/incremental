@@ -14,7 +14,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type TCtx = Map[Symbol, Type]
   type TError = String
   type Result = (Type, CS)
-  type Res = Result
+  //type Res = Result
   type StepResult = (Type, Seq[Constraint], Seq[CS])
 
   def typecheckImpl(e: Node[Constraint, Result]): Either[Type, TError] = {

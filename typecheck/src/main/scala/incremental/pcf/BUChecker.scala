@@ -10,7 +10,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
 
   type TError = String
-  type Res = Result
+  type Result = PCFCheck.Result
 
   def typecheckImpl(e: Node[Constraint, Result]): Either[Type, TError] = {
     val root = e.withCS[CS]
