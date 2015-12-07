@@ -3,8 +3,8 @@ package incremental.pcf.with_subtyping
 import constraints.Statistics
 import constraints.subtype._
 import incremental.Node.Node
-import incremental.{Util, Node_}
-import incremental.pcf.{Num, Add, Mul, App, Fix, If0, Var}
+import incremental.{NodeKind, Util, Node_}
+import incremental.pcf._
 
 /**
  * Created by oliver on 20.11.14.
@@ -46,7 +46,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def typecheckStep(e: Node_[Constraint, CS, Result]): StepResult = e.kind match {
+  def typecheckStep(e: Node_[Constraint, CS, Result]): StepResult = e.kind.asInstanceOf[NodeKind[constraints.equality.Constraint, PCFCheck.Result]] match {
     case Num =>
       (TInteger, Map(), Seq())
     case op if op == Add || op == Mul =>
