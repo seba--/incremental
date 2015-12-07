@@ -3,7 +3,7 @@ package incremental.pcf.with_subtyping
 import constraints.subtype._
 import constraints.subtype.impl._
 import incremental.Node._
-import incremental.Util
+import incremental.{Node_, Util}
 import incremental.pcf.PCFCheck.Result
 import incremental.pcf.{Num, Add, Mul, App, Fix, If0, Var}
 
@@ -13,6 +13,8 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
  * Created by oliver on 20.11.14.
  */
 class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  type EqCons = constraints.equality.Constraint
+
   val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
@@ -20,9 +22,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   import scala.language.implicitConversions
   implicit def eqType(t: Type): PartialFunction[Type,Boolean] = {case t2 => t == t2}
 
-  def typecheckTest(desc: String, e: =>Node[Constraint, Result])(expected: Type): Unit =
+  def typecheckTest(desc: String, e: =>Node[EqCons, Result])(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
-      val actual = checker.typecheck(e)
+      val actual = checker.typecheck(e.asInstanceOf[Node[Constraint, Result]])
       assert(actual.isLeft, s"Expected $expected but got $actual")
 
       val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
@@ -35,9 +37,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     def -->:(t2: Type) = TFun(t2, t)
   }
 
-  def typecheckTestError(desc: String, e: =>Node[Constraint, Result]) =
+  def typecheckTestError(desc: String, e: =>Node[EqCons, Result]) =
     test (s"$classdesc: Type check error $desc") {
-      val actual = checker.typecheck(e)
+      val actual = checker.typecheck(e.asInstanceOf[Node[Constraint, Result]])
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 

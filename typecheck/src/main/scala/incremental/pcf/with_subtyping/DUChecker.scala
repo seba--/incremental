@@ -16,10 +16,9 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type TCtx = Map[Symbol, Type]
   type TError = String
   type Result = (Type, CS)
-  type Res = Result
   type StepResult = (Type, Seq[Constraint], Seq[CS])
 
-  def typecheckImpl(e: Node[Constraint, Result]): Either[Type, TError] = {
+  def typecheckImpl(e: Node[Constraint, Res]): Either[Type, TError] = {
     val root = e.withCS[CS]
     Util.timed(localState -> Statistics.typecheckTime) {
       try {
@@ -35,14 +34,14 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def typecheckRec(e: Node_[Constraint, CS, Result], ctx: TCtx): Result = {
+  def typecheckRec(e: Node_[Constraint, CS, Res], ctx: TCtx): Result = {
     val (t, cons, css) = typecheckStep(e, ctx)
     val subcs = css.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res)
     val cs = subcs addNewConstraints cons
     (cs applyPartialSolution t, cs.propagate)
   }
 
-  def typecheckStep(e: Node_[Constraint, CS, Result], ctx: TCtx): StepResult = e.kind.asInstanceOf[NodeKind[constraints.equality.Constraint, PCFCheck.Result]] match {
+  def typecheckStep(e: Node_[Constraint, CS, Res], ctx: TCtx): StepResult = e.kind.asInstanceOf[NodeKind[constraints.equality.Constraint, PCFCheck.Result]] match {
     case Num =>
       (TInteger, Seq(), Seq())
 

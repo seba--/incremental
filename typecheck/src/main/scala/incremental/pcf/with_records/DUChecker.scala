@@ -9,7 +9,7 @@ import incremental.{NodeKind, Node_, pcf}
 */
 abstract class DUChecker[CS <: ConstraintSystem[CS]] extends pcf.DUChecker[CS] {
 
-  override def typecheckStep(e: Node_[Constraint, CS, Result], ctx: TCtx): StepResult = e.kind.asInstanceOf[NodeKind[Constraint, PCFCheck.Result]] match {
+  override def typecheckStep(e: Node_[Constraint, CS, Res], ctx: TCtx): StepResult = e.kind.asInstanceOf[NodeKind[Constraint, PCFCheck.Result]] match {
     case Record =>
       val keys = e.lits.asInstanceOf[Seq[Symbol]]
 

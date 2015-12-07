@@ -10,7 +10,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   import csFactory._
 
   type TError = String
-  type Res = Result
 
   def typecheckImpl(e: Node[Constraint, Result]): Either[Type, TError] = {
     val root = e.withCS[CS]
@@ -41,7 +40,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, subnode) => cs mergeSubsystem subnode.cs)
     val cs = subcs addNewConstraints ctx.getConstraints
     val reqs2 = cs.applyPartialSolutionIt[(Symbol, T), Map[Symbol, T], T](reqs, p => p._2)
-    e.set(cs, (cs applyPartialSolution t, reqs2, cs.propagate).asInstanceOf[Result]) // TODO: get rid of instanceOf
+    e.set(cs.propagate, (cs applyPartialSolution t, reqs2).asInstanceOf[Result]) // TODO: get rid of instanceOf
   }
 }
 
