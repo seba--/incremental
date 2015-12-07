@@ -2,11 +2,12 @@ package incremental.pcf
 
 import benchmark.ExpGenerator
 import constraints.equality
-import constraints.equality.ConstraintSystem
+import constraints.equality.{Constraint, ConstraintSystem}
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveContinuously, SolveEnd}
 import incremental.Node.Node
 import incremental.Node._
 import incremental._
+import incremental.pcf.PCFCheck.Result
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import ExpGenerator._
 
@@ -22,17 +23,17 @@ class TestScaleNonInc[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  def typecheckTest(desc: String, e: => Node)(expected: equality.Type): Unit =
+  def typecheckTest(desc: String, e: => Node[Constraint, Result])(expected: equality.Type): Unit =
     test(s"$classdesc: Type check $desc", SlowTest) {
       val actual = checker.typecheck(e)
       assertResult(Left(expected))(actual)
     }
 
-  def scaleTests(heights: Set[Int], kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
+  def scaleTests(heights: Set[Int], kind: NodeKind[Constraint, Result], leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node[Constraint, Result]) => Node[Constraint, Result] = (_,e) => e)(expected: Int => equality.Type) =
     for (h <- heights)
       scaleTest(h, kind, leaveMaker, sharing, leaveDesc, wrap)(expected)
 
-  def scaleTest(height: Int, kind: NodeKind, leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node) => Node = (_,e) => e)(expected: Int => equality.Type) =
+  def scaleTest(height: Int, kind: NodeKind[Constraint, Result], leaveMaker: LeaveMaker, sharing: Boolean = false, leaveDesc: String = "", wrap : (Int,Node[Constraint, Result]) => Node[Constraint, Result] = (_,e) => e)(expected: Int => equality.Type) =
     typecheckTest(
       s"${if(sharing) "shared" else "non-shared"} $kind-tree(h=$height)${if(leaveDesc.isEmpty)"" else " with leaves " + leaveDesc}",
       wrap(height, makeBinTree(height, kind, leaveMaker, sharing)))(expected(height))

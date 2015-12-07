@@ -2,9 +2,10 @@ package incremental.pcf
 
 import constraints.{Statistics, CVar, equality}
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveContinuously, SolveEnd}
-import constraints.equality.ConstraintSystem
+import constraints.equality.{Constraint, ConstraintSystem}
 import incremental.Node._
 import incremental.Util
+import incremental.pcf.PCFCheck.Result
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
@@ -15,8 +16,8 @@ class TestIncremental[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  def incTypecheckTest(desc: String, e: =>Node)(expected: equality.Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
-  def incTypecheckTest(desc: String, e: =>Node, mod: =>Unit)(expected: equality.Type)(consCount: Int): Unit =
+  def incTypecheckTest(desc: String, e: =>Node[Constraint, Result])(expected: equality.Type)(consCount: Int): Unit = incTypecheckTest(desc, e, Unit)(expected)(consCount)
+  def incTypecheckTest(desc: String, e: =>Node[Constraint, Result], mod: =>Unit)(expected: equality.Type)(consCount: Int): Unit =
     test (s"$classdesc: Type check $desc") {
       val Unit = mod
       val actual = checker.typecheck(e)
@@ -24,7 +25,7 @@ class TestIncremental[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assertResult(consCount, "solved constraint(s)")(checker.localState.stats(Statistics.constraintCount))
     }
 
-  def typecheckTestError(e: =>Node) =
+  def typecheckTestError(e: =>Node[Constraint, Result]) =
     test (s"$classdesc: Type check $e") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")

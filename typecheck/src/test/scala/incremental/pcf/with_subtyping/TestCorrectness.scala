@@ -4,6 +4,7 @@ import constraints.subtype._
 import constraints.subtype.impl._
 import incremental.Node._
 import incremental.Util
+import incremental.pcf.PCFCheck.Result
 import incremental.pcf.{Num, Add, Mul, App, Fix, If0, Var}
 
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
@@ -19,7 +20,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   import scala.language.implicitConversions
   implicit def eqType(t: Type): PartialFunction[Type,Boolean] = {case t2 => t == t2}
 
-  def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: =>Node[Constraint, Result])(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
@@ -34,7 +35,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     def -->:(t2: Type) = TFun(t2, t)
   }
 
-  def typecheckTestError(desc: String, e: =>Node) =
+  def typecheckTestError(desc: String, e: =>Node[Constraint, Result]) =
     test (s"$classdesc: Type check error $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")

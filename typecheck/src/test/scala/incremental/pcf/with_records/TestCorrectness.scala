@@ -1,9 +1,10 @@
 package incremental.pcf.with_records
 
 import constraints.equality.impl.{SolveContinuousSubstThreshold, SolveContinuousSubst, SolveEnd, SolveContinuously}
-import constraints.equality.{Type, ConstraintSystem}
+import constraints.equality.{Constraint, Type, ConstraintSystem}
 import incremental.Node._
 import incremental.Util
+import incremental.pcf.PCFCheck._
 import incremental.pcf._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
@@ -15,7 +16,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  def typecheckTest(desc: String, e: =>Node)(expected: Type) =
+  def typecheckTest(desc: String, e: =>Node[Constraint, Result])(expected: Type) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
@@ -26,7 +27,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
-  def typecheckTestError(desc: String, e: =>Node) =
+  def typecheckTestError(desc: String, e: =>Node[Constraint, Result]) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
