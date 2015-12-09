@@ -9,6 +9,7 @@ import incremental.pcf._
 /**
  * Created by oliver on 20.11.14.
  */
+/*
 abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   import csFactory._
@@ -17,7 +18,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type Reqs = Map[Symbol, Type]
 
   type Result = (Type, Reqs, CS)
-  type Res = Result
+  override type Res = Result
   type StepResult = (Type, Reqs, Seq[Constraint])
 
   def typecheckImpl(e: Node[Constraint, Result]): Either[Type, TError] = {
@@ -124,3 +125,5 @@ case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSyste
     implicit val csFactory: CSFactory = factory
   }
 }
+
+*/
