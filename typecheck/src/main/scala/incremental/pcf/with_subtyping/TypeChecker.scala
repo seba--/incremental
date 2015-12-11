@@ -2,7 +2,6 @@ package incremental.pcf.with_subtyping
 
 import constraints.subtype._
 import incremental.MyBuilder
-import incremental.pcf.PCFCheck
 
 import scala.collection.generic.CanBuildFrom
 
@@ -11,7 +10,7 @@ import scala.collection.generic.CanBuildFrom
  */
 abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Gen, Constraint, CS] {
   type T = Type
-  type Res = PCFCheck.Result
+  type Res = SubtypingCheck.Result
 
   type CSFactory <: ConstraintSystemFactory[CS]
   implicit val csFactory: CSFactory
