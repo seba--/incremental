@@ -37,7 +37,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   type TError = String
 
   def typecheckImpl(e: Node[Constraint, Result]): Either[CheckRes, TError] = {
-    //val root = e.withTypes[Constraint, CS, Result]
     val root = e.withCS[CS]
 
     Util.timed(localState -> Statistics.typecheckTime) {
@@ -67,10 +66,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val res@(t, vReqs, cReqs) = e.kind.check(e.lits, e.kids.seq, ctx)
     val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, subnode) => cs mergeSubsystem subnode.cs)
     val cs = subcs addNewConstraints ctx.getConstraints
-    //val vReqs2 = cs.applyPartialSolutionIt[(Symbol, T), Map[Symbol, T], T](vReqs, p => p._2)
-    // TODO: bf explizit übergeben
+    val vReqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](vReqs, p => p._2)
 
-    e.set(cs, (t, vReqs, cReqs)) // TODO: apply (partial) solution (mgu) on t (and cReqs?)
+    e.set(cs.propagate, (t, vReqs, cReqs)) // TODO: apply (partial) solution (mgu) on t (and cReqs?)
   }
 }
 

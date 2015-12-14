@@ -10,7 +10,6 @@ abstract class NodeKind[C, T](val syntaxcheck: SyntaxChecking.SyntaxCheck) exten
     else
       None
 
-  //def check(lits: Seq[Any], kids: Seq[Node_[_, T]]): T
   def check(lits: Seq[Any], kids: Seq[Node_[C, _, T]], context: Context[C]): T
 }
 
