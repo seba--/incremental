@@ -2,6 +2,7 @@ package constraints.normequality
 
 import constraints.{CTermBase, CVar}
 import constraints.normequality.CSubst.CSubst
+import incremental.systemfomega.OmegaCheck.Result
 import incremental.{Node_, SyntaxChecking, NodeKind}
 import incremental.Node._
 
@@ -21,12 +22,12 @@ trait Type extends CTerm[Type] {
 }
 
 object Type {
-  abstract class Kind(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck) {
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]): Type
-    def getType(e: Node_[_]): Type = e.kind.asInstanceOf[Kind].getType(e.lits, e.kids.seq)
+  abstract class Kind(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind[Constraint, Result](syntaxcheck) {
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]): Type
+    def getType(e: Node_[Constraint, _, Result]): Type = e.kind.asInstanceOf[Kind].getType(e.lits, e.kids.seq)
   }
 
-  def from(e: Node_[_]) = e.kind.asInstanceOf[Kind].getType(e.lits, e.kids.seq)
+  def from(e: Node_[Constraint, _, Result]) = e.kind.asInstanceOf[Kind].getType(e.lits, e.kids.seq)
 
   val cType = classOf[Kind]
 }

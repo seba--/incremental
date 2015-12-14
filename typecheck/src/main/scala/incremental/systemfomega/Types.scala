@@ -7,7 +7,8 @@ import constraints.normequality._
 import constraints.normequality.CSubst.CSubst
 import constraints.normequality.Type._
 import incremental.Node._
-import incremental.{Node_, NodeKind}
+import incremental.systemfomega.OmegaCheck._
+import incremental.{Context, Node_, NodeKind}
 
 import scala.reflect.ClassTag
 
@@ -35,7 +36,8 @@ case class UVar(x: CVar[Type]) extends Type {
 object UVar extends TypeExtractor[UVar, CVar[Type]] {
   case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]))) {
     override def toString() = "UVar"
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = UVar(lits(0).asInstanceOf[CVar[Type]])
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]) = UVar(lits(0).asInstanceOf[CVar[Type]])
+    def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]) = ???
   }
 }
 
@@ -51,7 +53,8 @@ case class TNum() extends Type {
 object TNum extends TypeExtractorBoolean[TNum] {
   case object Kind extends Type.Kind(simple()) {
     override def toString() = "TNum"
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = TNum()
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]) = TNum()
+    def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]) = TypeResult(KStar, emptyTReqs)
   }
 }
 
@@ -69,7 +72,17 @@ case class TFun(t1: Type, t2: Type) extends Type {
 object TFun extends TypeExtractor[TFun, (Type,Type)] {
   case object Kind extends Type.Kind(simple(cType, cType)) {
     override def toString() = "TFun"
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = TFun(getType(kids(0)), getType(kids(1)))
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]) = TFun(getType(kids(0)), getType(kids(1)))
+    def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]) = {
+      val TypeResult(k1, treqs1) = kids(0).typ
+      val TypeResult(k2, treqs2) = kids(1).typ
+      val (mtcons, mtreqs) = mergeTReqMaps(treqs1, treqs2)
+
+      context.addConstraints(EqKindConstraint(k1, KStar), EqKindConstraint(k2, KStar))
+      context.addConstraintSeq(mtcons)
+
+      TypeResult(KStar, mtreqs)
+    }
   }
 }
 
@@ -89,7 +102,12 @@ case class TVar(alpha : Symbol) extends Type {
 object TVar extends TypeExtractor[TVar, Symbol] {
   case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]))) {
     override def toString() = "TVar"
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = TVar(lits(0).asInstanceOf[Symbol])
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]) = TVar(lits(0).asInstanceOf[Symbol])
+    def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]) = {
+      val X = lits(0).asInstanceOf[Symbol]
+      val K = freshKUVar()
+      TypeResult(K, Map(X -> K))
+    }
   }
 }
 
@@ -111,11 +129,36 @@ case class TUniv(alpha : Symbol, k: Option[Kind], t : Type) extends Type {
 object TUniv extends TypeExtractor[TUniv, (Symbol, Option[Kind], Type)] {
   case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]), cType) orElse simple(Seq(classOf[Symbol], classOf[Kind]), cType)) {
     override def toString() = "TUniv"
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) =
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]) =
       if (lits.size == 1)
         TUniv(lits(0).asInstanceOf[Symbol], None, getType(kids(0)))
       else
         TUniv(lits(0).asInstanceOf[Symbol], Some(lits(1).asInstanceOf[Kind]), getType(kids(0)))
+    def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]) = {
+      val X = lits(0).asInstanceOf[Symbol]
+      val TypeResult(kt, treqs) = kids(0).typ
+      val ktc = EqKindConstraint(kt, KStar)
+
+      context.addConstraint(ktc)
+
+      if (lits.size == 2) {
+        val k = lits(1).asInstanceOf[Kind]
+
+        treqs.get(X) match {
+          case None => TypeResult(k, treqs)
+          case Some(k2) =>
+            context.addConstraint(EqKindConstraint(k, k2))
+            TypeResult(k, treqs - X)
+        }
+      }
+      else {
+        treqs.get(X) match {
+          case None => TypeResult(freshKUVar(), treqs)
+          case Some(k2) =>
+            TypeResult(k2, treqs - X)
+        }
+      }
+    }
   }
 }
 
@@ -144,8 +187,11 @@ case class UUniv(alpha: CVar[Type], k: Kind, t : Type) extends Type {
 object UUniv extends TypeExtractor[UUniv, (CVar[Type], Kind, Type)] {
   case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]), cType) orElse simple(Seq(classOf[Symbol], classOf[Kind]), cType)) {
     override def toString() = "UUniv"
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) =
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]) =
       UUniv(lits(0).asInstanceOf[CVar[Type]], lits(1).asInstanceOf[Kind], getType(kids(0)))
+    def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]) = {
+      ???
+    }
   }
 }
 
@@ -168,11 +214,14 @@ case class TTAbs(alpha: Symbol, k: Option[Kind], t: Type) extends Type {
 object TTAbs extends TypeExtractor[TTAbs, (Symbol, Option[Kind], Type)] {
   case object Kind extends Type.Kind(simple(Seq(classOf[Symbol]), cType) orElse simple(Seq(classOf[Symbol], classOf[Kind]), cType)) {
     override def toString() = "TTAbs"
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) =
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]) =
       if (lits.size == 1)
         TTAbs(lits(0).asInstanceOf[Symbol], None, getType(kids(0)))
       else
         TTAbs(lits(0).asInstanceOf[Symbol], Some(lits(1).asInstanceOf[Kind]), getType(kids(0)))
+    def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]) = {
+      ???
+    }
   }
 }
 
@@ -196,6 +245,9 @@ case class TTApp(t1: Type, t2: Type) extends Type {
 object TTApp extends TypeExtractor[TTApp, (Type, Type)] {
   case object Kind extends Type.Kind(simple(cType, cType)) {
     override def toString() = "TTApp"
-    def getType(lits: Seq[Lit], kids: Seq[Node_[_]]) = TTApp(getType(kids(0)), getType(kids(1)))
+    def getType(lits: Seq[Lit], kids: Seq[Node_[Constraint, _, Result]]) = TTApp(getType(kids(0)), getType(kids(1)))
+    def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]) = {
+      ???
+    }
   }
 }

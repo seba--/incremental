@@ -2,6 +2,7 @@ package incremental.systemfomega
 
 import constraints.normequality._
 import incremental.MyBuilder
+import incremental.systemfomega.OmegaCheck.Result
 
 import scala.collection.generic.CanBuildFrom
 
@@ -10,6 +11,7 @@ import scala.collection.generic.CanBuildFrom
  */
 abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Gen, Constraint, CS] {
   type T = Type
+  type Res = Result
 
   type CSFactory <: ConstraintSystemFactory[CS]
   implicit val csFactory: CSFactory

@@ -22,7 +22,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type Result[T] = (T, CS)
 
-  def typecheckImpl(e: Node): Either[Type, TError] =
+  def typecheckImpl(e: Node[Constraint, Res]): Either[Type, TError] =
     Util.timed(localState -> Statistics.typecheckTime) {
       try {
         val (t, sol_) = typecheckExpRec(e, Map(), Map())
@@ -37,21 +37,21 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
     }
 
-  def typecheckExpRec(e: Node, ctx: Ctx, tctx: TCtx): Result[Type] = {
+  def typecheckExpRec(e: Node[Constraint, Res], ctx: Ctx, tctx: TCtx): Result[Type] = {
     val (t, cons, css) = typecheckExpStep(e, ctx, tctx)
     val subcs = css.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res)
     val cs = subcs addNewConstraints cons
     (cs applyPartialSolution t, cs.propagate)
   }
 
-  def typecheckTypeRec(e: Node, tctx: TCtx): Result[Kind] = {
+  def typecheckTypeRec(e: Node[Constraint, Res], tctx: TCtx): Result[Kind] = {
     val (k, cons, css) = typecheckTypeStep(e, tctx)
     val subcs = css.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res)
     val cs = subcs addNewConstraints cons
     (cs applyPartialSolution k, cs.propagate)
   }
 
-  def typecheckExpStep(e: Node, ctx: Ctx, tctx: TCtx): StepResult[Type] = e.kind match {
+  def typecheckExpStep(e: Node[Constraint, Res], ctx: Ctx, tctx: TCtx): StepResult[Type] = e.kind match {
     case Num => (TNum(), Seq(), Seq())
     case k if k == Add || k == Mul =>
       val (t1, cs1) = typecheckExpRec(e.kids(0), ctx, tctx)
@@ -140,7 +140,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (Xres, Seq(ucons, vcons), Seq(cs))
   }
 
-  def typecheckTypeStep(e: Node, tctx: TCtx): StepResult[Kind] = e.kind match {
+  def typecheckTypeStep(e: Node[Constraint, Res], tctx: TCtx): StepResult[Kind] = e.kind match {
     case TNum.Kind => (KStar, Seq(), Seq())
 
     case TVar.Kind =>

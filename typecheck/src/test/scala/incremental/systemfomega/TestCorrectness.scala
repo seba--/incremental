@@ -2,9 +2,10 @@ package incremental.systemfomega
 
 import constraints.CVar
 import constraints.normequality.impl.{SolveContinuousSubst, SolveContinuousSubstThreshold, SolveContinuously, SolveEnd}
-import constraints.normequality.{ConstraintSystem, Type}
+import constraints.normequality.{Constraint, ConstraintSystem, Type}
 import incremental.Node._
 import incremental.Util
+import incremental.systemfomega.OmegaCheck.Result
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 /**
@@ -15,7 +16,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  def typecheckTest(desc: String, e: =>Node)(expected: Type): Unit =
+  def typecheckTest(desc: String, e: =>Node[Constraint, Result])(expected: Type): Unit =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
@@ -26,7 +27,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
-  def typecheckTestError(desc: String, e: =>Node) =
+  def typecheckTestError(desc: String, e: =>Node[Constraint, Result]) =
     test (s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
       assert(actual.isRight, s"Expected type error but got $actual")
