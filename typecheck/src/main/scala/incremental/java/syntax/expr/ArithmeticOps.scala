@@ -39,8 +39,8 @@ case object Plus extends Expr(simple(cExpr, cExpr) orElse simple(cExpr)){
 
       val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
-      context.addConstraints(widenString, widenEq)
       context.addConstraintSeq(oneOfCons)
+      context.addConstraints(widenString, widenEq)
       context.addConstraintSeq(mCons)
 
       (ExprType(X), mReqs, mergeCReqs(cReqs1, cReqs2))

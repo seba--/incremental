@@ -45,8 +45,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         true
       }
 
-      println(s"rootCS = ${root.cs}")
-
       val (tRes, vReqs, cReqs) = root.typ
       val sol_ = root.cs
       val sol = sol_.tryFinalize
@@ -66,7 +64,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     val res@(t, vReqs, cReqs) = e.kind.check(e.lits, e.kids.seq, ctx)
     val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, subnode) => cs mergeSubsystem subnode.cs)
     val cs = subcs addNewConstraints ctx.getConstraints
-    val vReqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](vReqs, p => p._2)
+    //val vReqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](vReqs, p => p._2)
 
     e.set(cs.propagate, (t, vReqs, cReqs)) // TODO: apply (partial) solution (mgu) on t (and cReqs?)
   }
