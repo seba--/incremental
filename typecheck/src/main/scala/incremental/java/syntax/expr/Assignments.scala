@@ -14,7 +14,23 @@ import incremental.java.syntax.expr.Expr._
 
 // Assignment Operators
 case object Assign extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr)){
-  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = kids(0).kind match {
+    case x : ExprName.type =>
+      val (ExprType(t1), vReqs1, cReqs1) = kids(0).typ
+      val (ExprType(t2), vReqs2, cReqs2) = kids(1).typ
+
+      val widen = DirectedWidening(t2, t1)
+      val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+
+      context.addConstraintSeq(mCons)
+      context.addConstraint(widen)
+
+      (ExprType(t1), mReqs, mergeCReqs(cReqs1, cReqs2))
+    case f : FieldAccess =>
+      ???
+    case arr : ArrayAccess.type =>
+      ???
+  }
 }
 case object AssignMul extends Expr(simple(ExprName.getClass, cExpr) orElse simple(classOf[FieldAccess], cExpr) orElse simple(ArrayAccess.getClass, cExpr)){
   def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???

@@ -34,7 +34,19 @@ case class PackageOrTypeNameExt(ext: PackageOrTypeName, id: String) extends Pack
 
 trait NT_ExprName
 case object ExprName extends Expr(simple(Seq(classOf[String])) orElse simple(Seq(classOf[AmbName], classOf[String]))) with NT_ExprName{
-  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = lits.size match {
+    case 1 =>
+      val X = freshUVar()
+      val name: String = lits(0).asInstanceOf[String]
+      (ExprType(X), Map(Symbol(name) -> X), emptyCReqs)
+    case 2 =>
+      val X = freshUVar()
+      val varName = lits(1).asInstanceOf[String]
+
+      // TODO: stuff
+
+      (ExprType(X), emptyVReqs, emptyCReqs)
+  }
 }
 
 trait Id extends NT_VarDecId

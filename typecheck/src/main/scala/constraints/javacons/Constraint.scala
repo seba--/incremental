@@ -27,6 +27,10 @@ case class PrimitiveWideningEq(res: Type, actual: Type, expected: Type) extends 
   def subst(s: CSubst) = PrimitiveWideningEq(res.subst(s), actual.subst(s), expected.subst(s))
 }
 
+case class DirectedWidening(candidate: Type, widenTo: Type) extends Constraint {
+  def subst(s: CSubst) = DirectedWidening(candidate.subst(s), widenTo.subst(s))
+}
+
 case class OneOf(actual: Type, expected: Seq[Type]) extends Constraint {
   def subst(s: CSubst) = OneOf(actual.subst(s), expected.map(_.subst(s)))
 }
