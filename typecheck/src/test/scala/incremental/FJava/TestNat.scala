@@ -81,10 +81,10 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
     Seq(
       MethodDec(
         CName('Nat), 'succ, Seq(),
-        New(CName('Succ), Var('this))),
+        New(CName('Succ), New(CName('Nat)))), // --- New(CName('Succ), Var('this))),
       MethodDec(
         CName('Nat), 'pred, Seq(),
-        FieldAcc('x, New(CName('Succ), Var('this)))), // pred of Zero is Zero
+        FieldAcc('x, Var('this))), // pred of Zero is Zero -- FieldAcc('x, New(CName('Succ), Var('this))))
       MethodDec(
         CName('Nat), 'plus, Seq('other -> CName('Nat)),
         New(CName('Succ), Invk('plus, FieldAcc('x, Var('this)), Var('other)))) // plus(Succ(x), other) = Succ(plus(x, other))

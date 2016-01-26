@@ -57,7 +57,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           case None =>
             creqs = creqs + (t2 -> creq2)
           case Some(creqOther) =>
-            val (newcons, mcreq) = mergeCCld(creqOther, creq2)
+            val (newcons, mcreq, umap) = mergeCCld(creqOther, creq2)
             creqs = creqs + (t2 -> mcreq)
             cons = cons ++ newcons
         }
@@ -331,18 +331,19 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case Some(typ) =>
           restReqs = restReqs - 'this
           cons = cons :+ Equal(typ, Uc)
-          umaps += typ -> Uc
+          //umaps += typ -> Uc
       }
 
       val (extendCons, creqs1) = addExtendsReq(bodyCreqs, Uc, Ud)
       val (condCons, creqs2) = addCMethodReq(creqs1, Ud, m, params.unzip._2.toList, retT)
 
       //add requirement for current class
-      val reqs = restReqs + (CURRENT_CLASS -> Uc)
+      val ( currCons, reqs) = mergeReqMaps(restReqs, Map(CURRENT_CLASS -> Uc))
 
       val creqs3 = CR(creqs2.cr , umaps ++ creqs2.umap)
+println(s"Methods umaps $umaps")
 
-      (MethodOK, reqs, creqs3, cons ++ extendCons ++ condCons, Map())
+      (MethodOK, reqs, creqs3, cons ++ extendCons ++ condCons ++ currCons, Map())
 
     case ClassDec =>
       var umaps = Map[Type, Type]()
@@ -376,21 +377,24 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
 
       val (mccons, cr) = mergeCReqMaps(creqss)
-      val (mrcons, req, um) = mergeReqMaps(reqss)
+      val (mrcons, req) = mergeReqMaps(reqss)
 
       CT = Map(c -> CSig(sup,  ctor, fields.toMap, methods))
 
-      val currentCons = req.get(CURRENT_CLASS) match {
+      var currentCons = Seq[Constraint]()
+        req.get(CURRENT_CLASS) match {
         case None => Seq()
         case Some(typ) =>
-          Seq(Equal(typ, c))
-          umaps += typ -> c
+         // umaps += typ -> c
+          currentCons = Seq(Equal(typ, c))
       }
       val restReq = req - CURRENT_CLASS
       val (mconsD, crD) = addCtorReq(cr, sup, ctor.supCtorParams)
-      val (creq2, cons2) = remove(CT, crD)
+      val (creq2, cons2) = removeLoop(CT, crD)
+      val cres = CR(creq2.cr, umaps ++ creq2.umap)
 println(creq2)
-      (c, restReq, creq2, mccons ++ mrcons ++ currentCons ++ mconsD ++ cons2 ++ cons, CT)
+      println(umaps)
+      (c, restReq, cres, mccons ++ mrcons ++ currentCons ++ mconsD ++ cons2 ++ cons, CT)
 
     case ProgramM =>
 
@@ -436,17 +440,16 @@ println(creq2)
     (name -> CSig(sup, ctor, fields, methods))
   }
 
-  private val init: (Seq[Constraint], Reqs, Map[Type, Type]) = (Seq(), Map(), Map())
+  private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
 
-  def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs, Map[Type, Type]) = mergeReqMaps(req +: reqs)
+  def mergeReqMaps(req: Reqs, reqs: Reqs*): (Seq[Constraint], Reqs) = mergeReqMaps(req +: reqs)
 
-  def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs, Map[Type, Type]) =
+  def mergeReqMaps(reqs: Seq[Reqs]): (Seq[Constraint], Reqs) =
     Util.timed(localState -> Statistics.mergeReqsTime) {
-      reqs.foldLeft[(Seq[Constraint], Reqs, Map[Type, Type])](init)(_mergeReqMaps)
+      reqs.foldLeft[(Seq[Constraint], Reqs)](init)(_mergeReqMaps)
     }
 
-  private def _mergeReqMaps(was: (Seq[Constraint], Reqs, Map[Type, Type]), newReqs: Reqs) = {
-    var umap = was._3
+  private def _mergeReqMaps(was: (Seq[Constraint], Reqs), newReqs: Reqs) = {
     val wasReqs = was._2
     var mcons = was._1
     var mreqs = wasReqs
@@ -456,9 +459,8 @@ println(creq2)
         case Some(r1) =>
           mreqs += x -> r2
           mcons =  Equal(r1, r2) +: mcons
-          umap += r1 -> r2
       }
-    (mcons, mreqs, umap)
+    (mcons, mreqs)
   }
 
   private def findTransitive(t1 : Type, umap : Map[Type, Type]) : Type = {
@@ -468,16 +470,16 @@ println(creq2)
     }
   }
 
-  private def removeNew(CT : Map[Type, CSig], creqs : CR) : (CR, Seq[Constraint]) = {
+  private def removeNew(CT : Map[Type, CSig], creqs : CR, rcons : Seq[Constraint]) : (CR, Seq[Constraint]) = {
     val creqsCr = creqs.cr
     var cr = creqsCr
-    var cons = Seq[Constraint]()
+    var cons = rcons //Seq[Constraint]()//rcons
     var uvarMap = creqs.umap
 
     for ((c, ClassReq(rsup, rctor, rfields, rmethods, rcmethods)) <- creqs.cr)
       CT.get(findTransitive(c, uvarMap)) match {
         case None =>
-        case Some(CSig(sup, ctor, fields, methods, cmethods)) =>
+        case Some(CSig(sup, ctor, fields, methods)) =>
           var restReq = ClassReq()
 
           rsup match {
@@ -501,6 +503,7 @@ println(creq2)
             fields.get(f) match {
               case Some(ct) => // subclass fields
                 cons = cons :+ Equal(ct, t)
+                uvarMap += (t -> ct)
               case None =>
                 fieldD.get(f) match {
                   //current class fields
@@ -508,6 +511,7 @@ println(creq2)
                     restReq = restReq.copy(fields = Fields(restReq.fields.fld + (f -> t)))
                   case Some(typ2) =>
                     cons = cons :+ Equal(typ2, t)
+                    uvarMap += (t -> typ2)
                 }
             }
 
@@ -534,14 +538,18 @@ println(creq2)
           else
             cr = cr.updated(c, restReq)
       }
+println(uvarMap)
 
+   // println(s"Constranssssssss areee $cons")
     (CR(cr, uvarMap), cons)
 
   }
+  var consRem = Seq[Constraint]()
 
   def removeLoop(CT : Map[Type, CSig], creqs : CR) : (CR, Seq[Constraint]) = {
-    var cons = Seq[Constraint]()
-    val (ncr, ncons) = removeNew(CT, creqs)
+
+    val (ncr, ncons) = removeNew(CT, creqs, consRem)
+    consRem = consRem ++ ncons
     if (creqs.umap.size == ncr.umap.size)
       (ncr, ncons)
     else removeLoop(CT, ncr)
@@ -725,7 +733,7 @@ println(creq2)
       case (Some(st), None) => Some(st)
       case (Some(t1), Some(t2)) =>
         mcons = mcons :+ Equal(t1, t2)
-        umap += t1 -> t2
+       // umap += t1 -> t2 // TODO do we actually need the cons from the merging --- > Probably NO
         Some(t2)
     }
 
