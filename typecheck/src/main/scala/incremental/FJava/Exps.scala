@@ -115,7 +115,7 @@ object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
     if (!(lits(1).isInstanceOf[Symbol]))
       error(s"Expected Method name Symbol, but got ${lits(0)}")
 
-      for (i <- 2 until lits.size - 2 by 2) {
+    for (i <- 2 until lits.size - 2 by 2) {
       val name = lits(i)
       if (i + 1 >= lits.size)
         error(s"Field $name misses annotated type")

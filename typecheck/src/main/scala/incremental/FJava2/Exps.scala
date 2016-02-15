@@ -109,22 +109,31 @@ object FieldSyntax extends SyntaxChecking.SyntaxChecker(FieldDec) {
 object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
 
+    if (lits.size != 4)
+      error(s"Not enough arguments Method(owner, name, params, return)")
+
     if (!(lits(0).isInstanceOf[CName]))
-      error(s"Expected return type CName, but got ${lits(0)}")
+      error(s"Expected method owner CName, but got ${lits(0)}")
 
     if (!(lits(1).isInstanceOf[Symbol]))
-      error(s"Expected Method name Symbol, but got ${lits(0)}")
+      error(s"Expected Method name Symbol, but got ${lits(1)}")
 
-      for (i <- 2 until lits.size - 2 by 2) {
-      val name = lits(i)
+    if (!lits(2).isInstanceOf[Seq[_]])
+      error(s"Missing parameter list")
+    val params = lits(2).asInstanceOf[Seq[_]]
+    for (i <- 0 until params.size by 2) {
+      val name = params(i)
       if (i + 1 >= lits.size)
         error(s"Field $name misses annotated type")
-      val typ = lits(i+1)
+      val typ = params(i+1)
       if (!name.isInstanceOf[Symbol])
         error(s"Expected field name of type Symbol but got $name")
       if (!typ.isInstanceOf[Type])
         error(s"Expected field type of type Type but got $typ")
     }
+
+    if (!(lits(3).isInstanceOf[CName]))
+      error(s"Expected return type CName, but got ${lits(3)}")
 
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
