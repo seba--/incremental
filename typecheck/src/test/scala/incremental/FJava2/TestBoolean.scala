@@ -39,7 +39,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
 
 
   val Bool = ClassDec(
-    Seq(CName('Bool), CName('Object), Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('Bool), CName('Object), Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -53,7 +53,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
   typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
 
   val True = ClassDec(
-    Seq(CName('True), CName('Bool), Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('True), CName('Bool), Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -65,7 +65,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
     )
   )
   val False = ClassDec(
-    Seq(CName('False), CName('Bool),Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('False), CName('Bool),Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(

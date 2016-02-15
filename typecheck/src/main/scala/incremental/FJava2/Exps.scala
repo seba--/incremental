@@ -13,6 +13,8 @@ abstract class Toplevel(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKin
 case object ProgramM extends NodeKind(_ => ProgramSyntax)
 
 case object ClassDec extends Toplevel(_ => ClassSyntax)
+case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CName])
+
 case object FieldDec extends Toplevel(_ => FieldSyntax)
 case object MethodDec extends Toplevel(_ => MethodSyntax)
 

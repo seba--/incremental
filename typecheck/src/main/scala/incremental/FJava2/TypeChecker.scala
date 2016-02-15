@@ -24,8 +24,6 @@ abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeC
   def freshUVar() = UVar(freshSymbol("x$"))
 
   def freshCName() = UCName(freshSymbol("C$"))
-  def freshParam() = freshSymbol[Param]("p$")
-  def freshField() = freshSymbol[FieldName]("f$")
 
 }
 

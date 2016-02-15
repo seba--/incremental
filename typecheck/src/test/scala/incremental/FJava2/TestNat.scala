@@ -40,7 +40,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
 
 
   val Nat = ClassDec(
-    Seq(CName('Nat), CName('Object),  Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('Nat), CName('Object),  Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -58,7 +58,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
   typecheckTest("Nat ok", ProgramM(Nat))(ProgramOK)
 
   val Zero = ClassDec(
-    Seq(CName('Zero), CName('Nat),  Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('Zero), CName('Nat),  Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -76,7 +76,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
   typecheckTestError("Zero ok", Zero)
 
   val Succ = ClassDec(
-    Seq(CName('Succ), CName('Nat),  Ctor(ListMap('x -> CName('Nat)), List(), ListMap('x -> 'x)),
+    Seq(CName('Succ), CName('Nat),  Ctor(ListMap(), ListMap('x -> CName('Nat))),
       Seq(('x -> CName('Nat)))), // x is the predecessor of this nat
     Seq(
       MethodDec(

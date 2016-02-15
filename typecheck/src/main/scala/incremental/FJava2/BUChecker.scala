@@ -12,14 +12,6 @@ import scala.collection.immutable.ListMap
  */
 
 
-case class FieldName(x: Symbol)
-case class Param(x: Symbol)
-case class Ctor(params: ListMap[Symbol, CName], superCall: List[Symbol], fieldDefs: ListMap[Symbol, Symbol]) {
-  def supCtorParams: List[Type] = params.values.take(superCall.size).toList
-}
-case class Fields(fld: Map[Symbol, Type])
-case class Methods(m : Map[Symbol, (Type, List[Type])])
-
 trait CReq[T] {
   val cls: Type
   def canMerge(other: CReq[T]): Boolean = false
@@ -136,6 +128,11 @@ case class ClassReqs (
   }
 
   private def merge[T <: CReq[T]](crs1: Map[T, Condition], crs2: Map[T, Condition]): (Map[T, Condition], Seq[Constraint]) = {
+    if (crs1.isEmpty)
+      return (crs2, Seq())
+    if (crs2.isEmpty)
+      return (crs1, Seq())
+
     var cons = Seq[Constraint]()
     val cr = crs1.flatMap { case (cr1, cond1) =>
       crs2.flatMap { case (cr2, cond2) =>
@@ -339,88 +336,61 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         }
       }
 
-      val (creqs1, extendCons) = bodyCreqs.merge(ExtCReq(Uc, Ud).lift)
+      val (creqs1, extendCons) = bodyCreqs.copy(currentClass = Some(Uc)).merge(ExtCReq(Uc, Ud).lift)
       val (creqs2, condCons) = creqs1.merge(MethodCReq(Ud, m, params.map(_._2), retT).liftOpt)
 
       (MethodOK, restReqs, creqs2, cons ++ extendCons ++ condCons)
 
-//    case ClassDec =>
-//      var umaps = Map[Type, Type]()
-//      val c = e.lits(0).asInstanceOf[CName]
-//      val sup = e.lits(1).asInstanceOf[CName]
-//      val ctor = e.lits(2).asInstanceOf[Ctor]
-//      val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
-//
-//      var cons = Seq[Constraint]()
-//      //TODO check if ctor instantiates all fields super and current class
-//      if (fields.size != ctor.fieldDefs.size) cons = cons :+  Equal(CName('TNum), CName('TString))
-//
-//      // TODO prevent cyclic extends A extends B, B extends A
-//      var CT = Map[Type, CSig]()
-//
-//      var reqss = Seq[Reqs]()
-//      var creqss = Seq[CR]()
-//      var methods = Map[Symbol, (Type, List[Type])]()
-//
-//      for (i <- 0 until e.kids.seq.size) {
-//        val (t, req, creq, _) = e.kids(i).typ
-//        reqss = reqss :+ req
-//        creqss = creqss :+ creq
-//        val retT = e.kids(i).lits(0).asInstanceOf[CName]
-//        val m = e.kids(i).lits(1).asInstanceOf[Symbol]
-//        val params = e.kids(i).lits(2).asInstanceOf[Seq[(Symbol, Type)]]
-//        var par = List[Type]()
-//        for((t, p) <- params.toMap)
-//          par = par :+ p
-//        methods = methods + (m -> (retT, par))
-//      }
-//
-//      val (mccons, cr) = mergeCReqMaps(creqss)
-//      val (mrcons, req) = mergeReqMaps(reqss)
-//
-//      CT = Map(c -> CSig(sup,  ctor, fields.toMap, methods))
-//
-//      var currentCons = Seq[Constraint]()
-//      req.get(CURRENT_CLASS) match {
-//        case None => Seq()
-//        case Some(typ) =>
-//          // umaps += typ -> c
-//          currentCons = Seq(Equal(typ, c))
-//      }
-//      val restReq = req - CURRENT_CLASS
-//      val (mconsD, crD) = addCtorReq(cr, sup, ctor.supCtorParams)
-//      val (creq2, cons2) = removeLoop(CT, crD)
-//      val cres = CR(creq2.cr, umaps ++ creq2.umap)
-//      println(creq2)
-//      println(umaps)
-//      (c, restReq, cres, mccons ++ mrcons ++ currentCons ++ mconsD ++ cons2 ++ cons, CT)
-//
-//    case ProgramM =>
-//
-//      var reqss = Seq[Reqs]()
-//      var creqss = Seq[CR]()
-//      var CT = Map[Type, CSig]()
-//      var cs : CS = freshConstraintSystem
-//      // collect class table
-//      for (i <- 0 until e.kids.seq.size) {
-//        val (ct, reqs, creqs, csReq) = e.kids(i).typ
-//        reqss = reqss :+ reqs
-//        creqss = creqss :+ creqs
-//        val csig = extractClassSignature(e.kids(i))
-//        CT =  CT + csig
-//        cs = cs.mergeSubsystem(csReq)
-//      }
-//
-//      val (mcons, mcreqs) = mergeCReqMaps(creqss)
-//      val (mrcons, mreqs) = mergeReqMaps(reqss)
-//      //remove class requirements
-//
-//      println(cs)
-//      println(mcreqs)
-//
-//      val (creqF, consF) = removeLoop(CT, mcreqs)
-//
-//      (ProgramOK, mreqs, creqF, consF, CT)
+    case ClassDec =>
+      val c = e.lits(0).asInstanceOf[CName]
+      val sup = e.lits(1).asInstanceOf[CName]
+      val ctor = e.lits(2).asInstanceOf[Ctor]
+      val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
+
+      var reqss = Seq[Reqs]()
+      var creqss = Seq[ClassReqs]()
+      var currentClassCons = Seq[Constraint]()
+
+      // handle all methods, satisfying current-class reqs
+      for (i <- 0 until e.kids.seq.size) {
+        val (t, req, creq, _) = e.kids(i).typ
+        reqss = reqss :+ req
+        creqss = creqss :+ creq.copy(currentClass = None)
+        creq.currentClass match {
+          case None =>
+          case Some(t) => currentClassCons = currentClassCons :+ Equal(c, t)
+        }
+      }
+
+      val (creqs, mccons) = mergeCReqMaps(creqss)
+      val (reqs, mrcons) = mergeReqMaps(reqss)
+
+      // constructor initializes all local fields
+      val fieldInitCons = currentClassCons :+ AllEqual(fields.values.toSeq, ctor.fields.values.toSeq)
+      // constructor provides correct arguments to super constructor
+      val (creqs2, supCons) = creqs.merge(CtorCReq(sup, ctor.superParams.values.toSeq).lift)
+
+      (c, reqs, creqs2, mccons ++ mrcons ++ currentClassCons ++ supCons ++ fieldInitCons)
+
+    case ProgramM =>
+
+      var reqss = Seq[Reqs]()
+      var creqss = Seq[ClassReqs]()
+
+      for (i <- 0 until e.kids.seq.size) {
+        val (ct, reqs, creqs, _) = e.kids(i).typ
+        reqss = reqss :+ reqs
+        creqss = creqss :+ creqs
+      }
+
+      val (mcreqs, mcons) = mergeCReqMaps(creqss)
+      val (mreqs, mrcons) = mergeReqMaps(reqss)
+
+      // remove class requirements
+      
+
+
+      (ProgramOK, mreqs, mcreqs, mcons ++ mrcons)
 
   }
 

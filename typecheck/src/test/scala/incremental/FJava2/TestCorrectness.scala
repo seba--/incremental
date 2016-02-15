@@ -113,18 +113,18 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestError("(New Pair(fst, snd)).setFirst(fst)", Invk(Seq('setFrist), Seq(New(Seq(CName('Pair)), Seq(Var('frt), Var('snd))), Var('frt))))//(TNum)
 
-val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CName('Int)), List(), ListMap('Pair -> 'Pair)), Seq(('First, CName('Int)))), Seq())
+val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap(), ListMap('Pair -> CName('Int))), Seq(('First, CName('Int)))), Seq())
   typecheckTestFJ(" Pair Int First ",ProgramM(Fst))(ProgramOK)
 
-  val GetX = ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('First -> CName('Int)), List(), ListMap('First -> 'First)), Seq(('First, CName('Int)))),
+  val GetX = ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap(), ListMap('First -> CName('Int))), Seq(('First, CName('Int)))),
     Seq(MethodDec(Seq(CName('TNum), 'getX, Seq(('x, CName('Int)))), Seq(Num(0)))))
   typecheckTestFJ(" Pair Int First, Int {(new Number(x)).getX(x): Int} ", ProgramM(GetX))(ProgramOK)
   typecheckTestError(" Pair String First, Double getX(First : Double){ return (New Pair).First} ", ClassDec(Seq(CName('Pair), CName('Object),
-    Ctor(ListMap('First -> CName('String)), List(), ListMap('First -> 'First)), Seq(('First, CName('String)))),
+    Ctor(ListMap(), ListMap('First -> CName('String))), Seq(('First, CName('String)))),
     Seq(MethodDec(Seq(CName('Double), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Var('First))))))))//(CName('Pair))
 
 
-  val Pair2 = ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('First -> CName('TNum)), List(), ListMap('First -> 'First)),
+  val Pair2 = ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap(), ListMap('First -> CName('TNum))),
     Seq(('First, CName('TNum)))),
     Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Num(1)))))))
 
@@ -132,44 +132,44 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
 
 
   val Pair1 =  ClassDec(Seq(CName('Pair), CName('Object),
-    Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+    Ctor(ListMap(), ListMap('First -> CName('TNum), 'Second -> CName('TNum))),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
     Seq(MethodDec(Seq(CName('TNum), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Num(1), Num(2)))))))
   typecheckTestFJ("Pair Tnum First, Tnum Second, TNum getX() {return (New Pair(Num(1), Num(2)).First)}",ProgramM(Pair1))(ProgramOK)
 
   typecheckTestError("Pair TNum first, TNum second, String getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair), CName('Object),
-    Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+    Ctor(ListMap(), ListMap('First -> CName('TNum), 'Second -> CName('TNum))),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
   Seq(MethodDec(Seq(CName('TString), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Num(0), Num(1))))))))
 
   typecheckTestError("Pair TNum first, string second, TNum getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair), CName('Object),
-    Ctor(ListMap('First -> CName('TNum), 'Second -> CName('String)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+    Ctor(ListMap(), ListMap('First -> CName('TNum), 'Second -> CName('String))),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
     Seq(MethodDec(Seq(CName('TString), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair), Num(0), Num(1))))))))
 
   val Pair = ClassDec(Seq(CName('Pair), CName('Object),
-    Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+    Ctor(ListMap(), ListMap('First -> CName('TNum), 'Second -> CName('TNum))),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))),
     Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
     Seq(Add(FieldAcc('First, New(CName('Pair), Num(1), Num(2))), FieldAcc('Second, New(CName('Pair), Num(1), Num(2))))))))
   typecheckTestFJ("Pair Int First, Int Second, Int add() { return (New Pair).add(first, second) }", ProgramM(Pair) )(ProgramOK)
 
   typecheckTestError("Pair Int First, Int Second, String addField() { return add(first Int, second Int) }", ClassDec(Seq(CName('TNum), CName('Object),
-    Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+    Ctor(ListMap(), ListMap('First -> CName('TNum), 'Second -> CName('TNum))),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('String), 'add, Seq()),
     Seq(Add(FieldAcc('First, New(CName('Pair), Num(0))), FieldAcc('Second, New(CName('Pair), Num(1)))))))))//(CName('TNum))
 
   typecheckTestError("Pair String First, Int Second, Int addField() { return add(first, second) }", ClassDec(Seq(CName('TNum), CName('Object),
-    Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+    Ctor(ListMap(), ListMap('First -> CName('TNum), 'Second -> CName('TNum))),
     Seq(('First, CName('String)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
     Seq(Add(FieldAcc('First, New(CName('Pair), Num(0))), FieldAcc('Second, New(CName('Pair), Num(1))))))))) //(CName('TNum))
 
   typecheckTestError("Pair Int First, Int Second, Int addField() { return add(first : String, second : TNum) }", ClassDec(Seq(CName('TNum), CName('Object),
-    Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+    Ctor(ListMap(), ListMap('First -> CName('TNum), 'Second -> CName('TNum))),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq(MethodDec(Seq(CName('TNum), 'add, Seq()),
     Seq(Add(FieldAcc('First, New(CName('Pair), Str('a))), FieldAcc('Second, New(CName('Pair), Num(0)))))))))//(CName('TNum))
 
- val foo =  ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()), Seq()),
+ val foo =  ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
    Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1))))))
   typecheckTestFJ("Class C, Int foo(){return 1+1}} ",ProgramM(foo))(ProgramOK)
 
@@ -178,84 +178,84 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
  // typecheckTestFJ("Int foo(){return 1+1}", MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))))(CName('C))
   typecheckTestError("string c.foo", MethodDec(Seq(CName('String), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)))))))//(CName('C))
 
-  typecheckTestError("Class C, Int foo(){return 1+1}, String bar(){return foo();} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()), Seq()),
+  typecheckTestError("Class C, Int foo(){return 1+1}, String bar(){return foo();} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('String), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)))))))))//(CName('C))
 
-  val C0 = ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()), Seq()),
+  val C0 = ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C))))))))
     typecheckTestFJ("Class C, Tnum foo(){return 1+1}, TNum bar(){return foo();} ", ProgramM(C0))(ProgramOK)
 
-  typecheckTestError("Class C, Tnum foo(x TNum){return 1+1}, TNum bar(){return foo();} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()), Seq()),
+  typecheckTestError("Class C, Tnum foo(x TNum){return 1+1}, TNum bar(){return foo();} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)))))))))
 
-  typecheckTestError("Class C, Tnum foo(x int){return 1+1}, TNum bar(){return foo('a);} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()), Seq()),
+  typecheckTestError("Class C, Tnum foo(x int){return 1+1}, TNum bar(){return foo('a);} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this), Str('a))))))))
 
-  val C1 = ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()), Seq()),
+  val C1 = ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)),Num(0)))))))
 
   typecheckTestFJ("Class C, Tnum foo(x int){return 1+1}, TNum bar(){return foo(Num(1));} ", ProgramM(C1))(ProgramOK)
 
-  typecheckTestError("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Num(1));} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()), Seq()),
+  typecheckTestError("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Num(1));} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Num(1))))))))
 
-  typecheckTestError("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Num(1), string a);} ", ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+  typecheckTestError("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Num(1), string a);} ", ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Num(1), Str('a))))))))
 
-  typecheckTestError("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Var(x), Num(2));} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
+  typecheckTestError("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Var(x), Num(2));} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()),Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Var('x), Num(2))))))))
 
-   val C2 = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+   val C2 = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
      Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Num(1), Num(1)))),
        MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)), Num(1), Num(2)))))))
 
   typecheckTestFJ("Class C, Tnum foo(x int, y int){return 1+1}, TNum bar(){return foo(Num(1), Num(2));} ", ProgramM(C2))(ProgramOK)
 
-  val C3 =  ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val C3 =  ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this))))),
       MethodDec(Seq(CName('TNum), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(Var('this)))))))
   typecheckTestFJ("Class C, Tnum foo(){return 1+1}, TNum bar(){return foo()}, TNum getBar() {return bar} ", ProgramM(C3))(ProgramOK)
 
-  typecheckTestError("Class C, Tnum foo(){return 1+1}, TNum bar(){return foo()}, String getBar() {return bar} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
+  typecheckTestError("Class C, Tnum foo(){return 1+1}, TNum bar(){return foo()}, String getBar() {return bar} ", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()),Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Add(Num(1), Num(1)))),
       MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(New(CName('C)))))),
       MethodDec(Seq(CName('String), 'getbar, Seq()), Seq(Invk(Seq('bar), Seq(New(CName('C)))))))))//(CName('C))
 
-  typecheckTestError("Class C, TNum add(a Int, b Int){ C.add('a 2)}", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
+  typecheckTestError("Class C, TNum add(a Int, b Int){ C.add('a 2)}", ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()),Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'add, Seq(('a, CName('TNum)), ('b, CName('TNum)))), Seq(Invk(Seq('add), Seq(New(CName('C)), Str('a), Num(2))))))))
 
 
-  typecheckTestFJ("Class C, Tnum foo(x int, y int){return x+y}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
+  typecheckTestFJ("Class C, Tnum foo(x int, y int){return x+y}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()),Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('x), Var('y))))))))(ProgramOK)
 
-  typecheckTestError("Class C, Tnum foo(x int, y int){return z+z}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), List(), ListMap()),Seq()),
+  typecheckTestError("Class C, Tnum foo(x int, y int){return z+z}} ", ProgramM(ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()),Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq(('x, CName('TNum)), ('y, CName('TNum)))), Seq(Add(Var('z), Var('z))))))))
 
-  val M1 =  ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val M1 =  ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Num(1)))))
 
-  val M2 =  ClassDec(Seq(CName('C1), CName('C),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val M2 =  ClassDec(Seq(CName('C1), CName('C),Ctor(ListMap(), ListMap()), Seq()),
     Seq())
 
-  val M3 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val M3 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TString), 'foo, Seq()), Seq(Str('a)))))
 
-  val M4 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val M4 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Num(1)))))
 
-  val M5 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val M5 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
     Seq())
 
-  val M6 =  ClassDec(Seq(CName('C3), CName('C2),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val M6 =  ClassDec(Seq(CName('C3), CName('C2),Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Num(1)))))
 
   typecheckTestError("{M1, M2, M3} ok", ProgramM(M1, M2, M3))
@@ -263,38 +263,38 @@ val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap('Pair -> CNam
   typecheckTestFJ("{M1, M2, M5, M6} ok", ProgramM(M1, M2, M5, M6))(ProgramOK)
   typecheckTestError("{M1, M2, M3, M6} ok", ProgramM(M1, M2, M3, M6))
 
-  val MutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val MutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
     MethodDec(Seq(CName('TNum), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
 
-  val WMutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val WMutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('TNum), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
       MethodDec(Seq(CName('TString), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
 
   typecheckTestFJ("{C int foo() {this.bar()}, int bar() {this.foo()}} ok", ProgramM(MutualRec))(ProgramOK)
   typecheckTestError("{C string foo() {this.bar()}, int bar() {this.foo()}}ok", ProgramM(WMutualRec))
 
-  val mutS1 = ClassDec(Seq(CName('C1), CName('C2),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val mutS1 = ClassDec(Seq(CName('C1), CName('C2),Ctor(ListMap(), ListMap()), Seq()),
   Seq())
 
-  val mutS2 = ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), List(), ListMap()), Seq()),
+  val mutS2 = ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
     Seq())
 
   typecheckTestError("{Mutual Super Types} ok", ProgramM(mutS1, mutS2))
 
-  val ctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap('First -> CName('TNum), 'Second -> CName('TNum)), List(), ListMap('First -> 'First, 'Second -> 'Second)),
+  val ctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap(), ListMap('First -> CName('TNum), 'Second -> CName('TNum))),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq())
 
-  val wctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap('First -> CName('TNum)), List(), ListMap('First -> 'First)),
+  val wctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap(), ListMap('First -> CName('TNum))),
     Seq(('First, CName('TNum)), ('Second, CName('TNum)))), Seq())
 
   typecheckTestFJ("{ctorFC} ok", ProgramM(ctorFC))(ProgramOK)
   typecheckTestError("{wctorFC} ok", ProgramM(wctorFC))
 
-  val A = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap('i -> CName('TNum)), List(), ListMap('i -> 'i)), Seq(('i, CName('TNum)))),
+  val A = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap(), ListMap('i -> CName('TNum))), Seq(('i, CName('TNum)))),
     Seq(MethodDec(Seq(CName('Object), 'm, Seq(('b, CName('B)))), Seq(New(CName('B), FieldAcc('i, Var('this)))))))
 
-  val B = ClassDec(Seq(CName('B), CName('A),Ctor(ListMap('i -> CName('TNum)), List('i), ListMap()), Seq()),
+  val B = ClassDec(Seq(CName('B), CName('A),Ctor(ListMap('i -> CName('TNum)), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('Object), 'm, Seq(('b, CName('B)))), Seq(FieldAcc('i, UCast(CName('A),Var('b)))))))
 
   typecheckTestFJ("{A, B} ok", ProgramM(A, B))(ProgramOK)

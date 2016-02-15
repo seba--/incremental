@@ -42,24 +42,23 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
 
 
   val Title = ClassDec(
-    Seq(CName('Title), CName('Object), Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('Title), CName('Object), Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq() // no methods
   )
   val NoTitle = ClassDec(
-    Seq(CName('NoTitle), CName('Title),  Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('NoTitle), CName('Title),  Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq() // no methods
   )
   val ProfTitle = ClassDec(
-    Seq(CName('ProfTitle), CName('Title), Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('ProfTitle), CName('Title), Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq() // no methods
   )
 
   val Person = ClassDec(
-    Seq(CName('Person), CName('Object),  Ctor(ListMap('name -> CName('Object),
-      'address -> CName('Object)), List(), ListMap('name -> 'name, 'address -> 'address)),
+    Seq(CName('Person), CName('Object),  Ctor(ListMap(), ListMap('name -> CName('Object), 'address -> CName('Object))),
       Seq(
         ('name -> CName('Object)),
         ('address -> CName('Object)))),
@@ -73,9 +72,8 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     )
   )
   val Professor = ClassDec(
-    Seq(CName('Professor), CName('Person), Ctor(ListMap('name -> CName('Object),
-      'address -> CName('Object), 'age -> CName('Object)), List('name, 'address), ListMap('age->'age)),
-      Seq(('age -> CName('Object)))), // no fields
+    Seq(CName('Professor), CName('Person), Ctor(ListMap('name -> CName('Object), 'address -> CName('Object)), ListMap('age -> CName('Object))),
+      Seq(('age -> CName('Object)))),
     Seq(
       MethodDec(
         CName('Object), 'age, Seq(),
@@ -86,8 +84,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
     )
   )
   val Student = ClassDec(
-    Seq(CName('Student), CName('Person), Ctor(ListMap('name -> CName('Object),
-      'address -> CName('Object), 'age -> CName('Object)), List('name, 'address), ListMap('age->'age)),
+    Seq(CName('Student), CName('Person), Ctor(ListMap('name -> CName('Object), 'address -> CName('Object)), ListMap('age -> CName('Object))),
       Seq(('age -> CName('Object)))), // no fields
     Seq(
       MethodDec(
