@@ -31,6 +31,12 @@ case class Equal(expected: Type, actual: Type) extends Constraint {
   override def subst(s: CSubst): Constraint = Equal(expected.subst(s), actual.subst(s))
 }
 
+case class EqualIf(expected: Type, actual: Type, cond: Constraint) extends Constraint {
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = expected.unify(actual, cs) // TODO apply condition
+
+  override def subst(s: CSubst): Constraint = Equal(expected.subst(s), actual.subst(s))
+}
+
 case class NotEqual(expected: Type, actual: Type) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.never(Equal(expected, actual))
 
@@ -43,10 +49,26 @@ case class Never(c: Constraint) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.never(this)
 }
 
-case class AllEqual(expected: List[Type], actual: List[Type]) extends Constraint {
+case class AllEqual(expected: Seq[Type], actual: Seq[Type]) extends Constraint {
   def subst(s: CSubst) = AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
 
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
+    if (expected.size != actual.size)
+      cs.never(this)
+    else {
+      var cons = Seq[Constraint]()
+      for (i <- 0 until expected.size)
+        cons = cons :+ Equal(expected(i), actual(i))
+
+      cs.addNewConstraints(cons)
+    }
+  }
+}
+
+case class AllEqualIf(expected: Seq[Type], actual: Seq[Type], cond: Constraint) extends Constraint {
+  def subst(s: CSubst) = AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
+
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = { // TODO apply condition
     if (expected.size != actual.size)
       cs.never(this)
     else {
