@@ -55,6 +55,8 @@ case class SolveEndCS(notyet: Seq[Constraint]) extends ConstraintSystem[SolveEnd
 
   def addUpperBound(v: CVar[Type], t: Type) = SolveEndCS(notyet :+ subtype.Subtype(UVar(v), t))
 
+  def shouldApplySubst: Boolean = false
+
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t
 
   def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]

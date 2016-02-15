@@ -1,6 +1,6 @@
 package incremental.FJava2
 
-import constraints.Statistics
+import constraints.{CTermBase, Statistics}
 import constraints.fjava.CSubst.CSubst
 import constraints.fjava._
 import incremental.Node._
@@ -98,6 +98,7 @@ case object FalseCond extends Condition {
 }
 
 case class ClassReqs (
+    currentClass: Option[Type] = None,
     ext: Map[ExtCReq, Condition] = Map(),
     ctorParams: Map[CtorCReq, Condition] = Map(),
     fields: Map[FieldCReq, Condition] = Map(),
@@ -105,6 +106,7 @@ case class ClassReqs (
     optMethods: Map[MethodCReq, Condition] = Map()) {
 
   def subst(s: CSubst): ClassReqs = ClassReqs(
+    currentClass.map(_.subst(s)),
     subst(ext, s),
     subst(ctorParams, s),
     subst(fields, s),
@@ -123,13 +125,14 @@ case class ClassReqs (
   def isEmpty = ext.isEmpty && ctorParams.isEmpty && fields.isEmpty && methods.isEmpty
 
   def merge(crs: ClassReqs): (ClassReqs, Seq[Constraint]) = {
+    val (currentX, cons0) = (currentClass.orElse(crs.currentClass), for (t1 <- currentClass; t2 <- crs.currentClass) yield Equal(t1, t2))
     val (extX, cons1) = merge(ext, crs.ext)
     val (ctorX, cons2) = merge(ctorParams, crs.ctorParams)
     val (fieldsX, cons3) = merge(fields, crs.fields)
     val (methodsX, cons4) = merge(methods, crs.methods)
     val (optMethodsX, cons5) = merge(optMethods, crs.optMethods)
-    val cons = cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
-    (ClassReqs(extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
+    val cons = cons0.toSeq ++ cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
+    (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
   }
 
   private def merge[T <: CReq[T]](crs1: Map[T, Condition], crs2: Map[T, Condition]): (Map[T, Condition], Seq[Constraint]) = {
@@ -154,12 +157,12 @@ case class ClassReqs (
 
 
 
-//case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
-//  def makeChecker = new BUChecker[CS] {
-//    type CSFactory = factory.type
-//    implicit val csFactory: CSFactory = factory
-//  }
-//}
+case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+  def makeChecker = new BUChecker[CS] {
+    type CSFactory = factory.type
+    implicit val csFactory: CSFactory = factory
+  }
+}
 
 
 abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
@@ -176,44 +179,41 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
 //  val CURRENT_CLASS = '$current
 
-//  def typecheckImpl(e: Node): Either[Type, TError] = {
-//    val root = e.withType[Result]
-//
-//    Util.timed(localState -> Statistics.typecheckTime) {
-//      root.visitUninitialized { e =>
-//        val (t, reqs, creqs, cons, classT) = typecheckStep(e)
-//        //var cr = CR(Map[Type, ClassReq]())
-//        val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeFJavaSubsystem (res.typ._4, classT))
-//        val cs = subcs addNewConstraints cons
-//        val (creqs2, cs1) = creqs.subst(cs)
-//        val reqs2 = cs1.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-//
-//        e.typ = (cs1 applyPartialSolution t, reqs2, creqs2, cs1.propagate)
-//        true
-//      }
-//      val (tRoot, reqsRoot, creqsRoot, csRoot) = root.typ
+  def typecheckImpl(e: Node): Either[Type, TError] = {
+    val root = e.withType[Result]
+
+    Util.timed(localState -> Statistics.typecheckTime) {
+      root.visitUninitialized { e =>
+        val (t, reqs, creqs, cons) = typecheckStep(e)
+        val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem(res.typ._4))
+        val cs = subcs addNewConstraints cons
+        val creqs2 = if (cs.shouldApplySubst) creqs.subst(cs.substitution) else creqs
+        val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
+
+        e.typ = (cs applyPartialSolution t, reqs2, creqs2, cs.propagate)
+        true
+      }
+
+      val (tRoot, reqsRoot, creqsRoot, csRoot) = root.typ
+
 //      val (creqsNoObject, ccons) = remove(Map(CName('Object) -> CSig(null, Ctor(ListMap(), List(), ListMap()), Map(), Map())), creqsRoot)
-//
-//      val csRootFinal = csRoot.addNewConstraints(ccons).tryFinalize
-//      val (creqsFinal, csFinal) = creqsNoObject.subst(csRootFinal, isFinal = true)
-//
-//      val tFinal = tRoot.subst(csFinal.substitution)
-//      val reqsFinal = reqsRoot mapValues (_.subst(csFinal.substitution))
-//
-//      // TODO don't store finalized values
-//      root.typ = (tFinal, reqsFinal, creqsFinal, csFinal)
-//
-//      if (!reqsFinal.isEmpty)
-//        Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${csFinal.unsolved}")
-//      else if (!creqsFinal.cr.isEmpty)
-//        Right(s"Unresolved type-variable requirements $creqsRoot, type $tFinal, unres ${csFinal.unsolved}")
-//      else if (!csFinal.isSolved)
-//
-//        Right(s"Unresolved constraints ${csFinal.unsolved}, type $tFinal")
-//      else
-//        Left(tFinal)
-//    }
-//  }
+
+      val sol = csRoot.tryFinalize
+
+      val tFinal = tRoot.subst(sol.substitution)
+      val reqsFinal = reqsRoot mapValues (_.subst(sol.substitution))
+      val creqsFinal = creqsRoot.subst(sol.substitution)
+
+      if (!reqsFinal.isEmpty)
+        Right(s"Unresolved variable requirements $reqsRoot, type $tFinal, unres ${sol.unsolved}")
+      else if (!creqsFinal.isEmpty)
+        Right(s"Unresolved class requirements $creqsRoot, type $tFinal, unres ${sol.unsolved}")
+      else if (!sol.isSolved)
+        Right(s"Unresolved constraints ${sol.unsolved}, type $tFinal")
+      else
+        Left(tFinal)
+    }
+  }
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
 
@@ -314,13 +314,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case MethodDec =>
 
-      val C = e.lits(0).asInstanceOf[CName] // current class
+      val retT = e.lits(0).asInstanceOf[CName] // return type
       val m = e.lits(1).asInstanceOf[Symbol] // method name
       val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
-      val retT = e.lits(3).asInstanceOf[CName]
 
       val (bodyT, bodyReqs, bodyCreqs, _) = e.kids(0).typ
 
+      val Uc = freshCName() // current class
+      val Ud = freshCName() // current super class
 
       var restReqs = bodyReqs
       var cons = Seq[Constraint]()
@@ -329,7 +330,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       cons = Subtype(bodyT, retT) +: cons
 
       // remove params and 'this from body requirements
-      for ((x, xC) <- params :+ ('this, C)) {
+      for ((x, xC) <- params :+ ('this, Uc)) {
         bodyReqs.get(x) match {
           case None =>
           case Some(typ) =>
@@ -338,8 +339,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         }
       }
 
-      val Ud = freshCName() // current super class
-      val (creqs1, extendCons) = bodyCreqs.merge(ExtCReq(C, Ud).lift)
+      val (creqs1, extendCons) = bodyCreqs.merge(ExtCReq(Uc, Ud).lift)
       val (creqs2, condCons) = creqs1.merge(MethodCReq(Ud, m, params.map(_._2), retT).liftOpt)
 
       (MethodOK, restReqs, creqs2, cons ++ extendCons ++ condCons)

@@ -57,6 +57,7 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, notyet: Seq[Con
     }
   }
 
+  def shouldApplySubst: Boolean = trigger
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) =
     if (trigger)
       t.subst(substitution)

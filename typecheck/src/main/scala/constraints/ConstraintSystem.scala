@@ -16,6 +16,7 @@ trait ConstraintSystem[G <: GenBase, C, CS] {
   def applyPartialSolutionIt[U, Col <: Iterable[U], CT <: CTerm[G, C, CT]]
     (it: Col, f: U=>CT)
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), Col]): Col
+  def shouldApplySubst: Boolean
   def propagate: CS
   def tryFinalize: ConstraintSystem[G, C, _]
 }

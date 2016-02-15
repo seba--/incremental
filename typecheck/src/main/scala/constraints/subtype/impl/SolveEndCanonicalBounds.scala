@@ -102,6 +102,7 @@ case class SolveEndCanonicalBoundsCS(bounds: Map[CVar[Type], (LBound, UBound)], 
     subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs)
   }
 
+  def shouldApplySubst: Boolean = false
 
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t
 
