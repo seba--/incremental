@@ -12,16 +12,7 @@ import scala.collection.immutable.ListMap
  */
 
 
-sealed trait Name extends Type {
-  def nameSubst(s: CSubst): Name = {
-    val t = this.subst(s)
-    if (t.isInstanceOf[Name])
-      t.asInstanceOf[Name]
-    throw new IllegalStateException(s"Invalid substitution that replaces name")
-  }
-}
-
-case class UCName(x: CVar[Type]) extends Type with Name {
+case class UCName(x: CVar[Type]) extends Type {
   val isGround = false
   def occurs(x2: CVar[_]) = x == x2
   def subst(s: CSubst): Type = s.hgetOrElse(x, this)
@@ -51,7 +42,7 @@ case class UCName(x: CVar[Type]) extends Type with Name {
   def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
 }
 
-case class CName(x: Symbol) extends Type with Name {
+case class CName(x: Symbol) extends Type {
   val isGround = true
   def freeTVars = Set()
   def normalize = this
