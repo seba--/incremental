@@ -37,13 +37,13 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
   def lift = ClassReqs(ext = Seq(this))
   def withCond(c: Condition) = copy(cond = c)
 }
-case class CtorCReq(cls: Type, fields: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
+case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
   val self = this
   def canMerge(other: CReq[CtorCReq]) = true
-  def assert(other: CReq[CtorCReq]) = Conditional(cls, other.self.cls, AllEqual(fields, other.self.fields))
+  def assert(other: CReq[CtorCReq]) = Conditional(cls, other.self.cls, AllEqual(args, other.self.args))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
-    cond.subst(cls_, s) map (CtorCReq(cls_, fields.map(_.subst(s)), _))
+    cond.subst(cls_, s) map (CtorCReq(cls_, args.map(_.subst(s)), _))
   }
   def lift = ClassReqs(ctorParams = Seq(this))
   def withCond(c: Condition) = copy(cond = c)
@@ -107,6 +107,9 @@ case class ClassReqs (
     methods: Seq[MethodCReq] = Seq(),
     optMethods: Seq[MethodCReq] = Seq()) {
 
+  override def toString =
+    s"ClassReqs(current=$currentClass, ext=$ext, ctorParams=$ctorParams, fields=$fields, methods=$methods, optMethods=$optMethods)"
+
   def subst(s: CSubst): ClassReqs = ClassReqs(
     currentClass.map(_.subst(s)),
     subst(ext, s),
@@ -162,6 +165,8 @@ case class ClassReqs (
   def satisfyExtends(ext: ExtCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[ExtCReq](ext, this.ext, x=>copy(ext=x))
   def satisfyCtor(ctor: CtorCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[CtorCReq](ctor, ctorParams, x=>copy(ctorParams=x))
   def satisfyField(field: FieldCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[FieldCReq](field, fields, x=>copy(fields=x))
+
+  // TODO optMethods
   def satisfyMethod(method: MethodCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[MethodCReq](method, methods, x=>copy(methods=x))
 
   private def satisfyCReq[T <: CReq[T]](creq1: T, crs: Seq[T], make: Seq[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
@@ -212,8 +217,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type Result = (Type, Reqs, ClassReqs, CS)
 
-//  val CURRENT_CLASS = '$current
-
   def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
@@ -255,23 +258,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
-
-    case Num =>
-      (CName('Numeric), Map(), ClassReqs(), Seq())
-
-    case Str =>
-      (CName('String), Map(), ClassReqs(), Seq())
-
-    case op if op == Add || op == Mul =>
-      val (t1, reqs1, creqs1, _) = e.kids(0).typ
-      val (t2, reqs2, creqs2, _) = e.kids(1).typ
-
-      val lcons = Subtype(t1, CName('Numeric))
-      val rcons = Subtype(t2, CName('Numeric))
-      val (mreqs, mcons) = mergeReqMaps(reqs1, reqs2)
-      val (mCreqs, mcCons) = creqs1.merge(creqs2)
-
-      (CName('Numeric), mreqs, mCreqs, mcons ++ mcCons :+ lcons :+ rcons)
 
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -406,7 +392,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (reqs, mrcons) = mergeReqMaps(reqss)
 
       // constructor initializes all local fields
-      val fieldInitCons = currentClassCons :+ AllEqual(fields.values.toSeq, ctor.fields.values.toSeq)
+      val fieldInitCons = currentClassCons :+ AllEqual(fields.values.toList, ctor.fields.values.toList)
       // constructor provides correct arguments to super constructor
       val (creqs2, supCons) = creqs.merge(CtorCReq(sup, ctor.superParams.values.toList).lift)
 
@@ -437,7 +423,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
         val methods = cls.kids.seq
 
-        val (creqs1, cons1) = restCReqs.satisfyCtor(CtorCReq(cname, ctor.fields.values.toSeq))
+        val (creqs1, cons1) = restCReqs.satisfyCtor(CtorCReq(cname, ctor.allArgTypes))
         val (creqs2, cons2) = creqs1.satisfyExtends(ExtCReq(cname, sup))
         val (creqs3, cons3) = creqs2.many(_.satisfyField, fields map (f => FieldCReq(cname, f._1, f._2)))
         val (creqs4, cons4) = creqs3.many(_.satisfyMethod,

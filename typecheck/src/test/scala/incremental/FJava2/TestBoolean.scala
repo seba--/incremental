@@ -50,7 +50,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         New(CName('Object))) // dummy body, will be overwritten by subclasses
     )
   )
-//  typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
+  typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
 
   val True = ClassDec(
     Seq(CName('True), CName('Bool), Ctor(ListMap(), ListMap()),
@@ -78,8 +78,8 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
   )
 
   // without True knowing False (and vice versa), the class fails to check
-//  typecheckTestError("True ok", True)
-//  typecheckTestError("False ok", False)
+  typecheckTestError("True ok", True)
+  typecheckTestError("False ok", False)
 
   // Taking all classes into consideration, checking should succeed
   typecheckTest("{Boolean, True, False} ok", ProgramM(Bool, True, False))(ProgramOK)

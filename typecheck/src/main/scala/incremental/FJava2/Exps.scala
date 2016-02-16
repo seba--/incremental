@@ -13,7 +13,9 @@ abstract class Toplevel(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKin
 case object ProgramM extends NodeKind(_ => ProgramSyntax)
 
 case object ClassDec extends Toplevel(_ => ClassSyntax)
-case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CName])
+case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CName]) {
+  def allArgTypes: Seq[CName] = superParams.values.toList ++ fields.values
+}
 
 case object FieldDec extends Toplevel(_ => FieldSyntax)
 case object MethodDec extends Toplevel(_ => MethodSyntax)
@@ -24,10 +26,6 @@ object Exp {
 }
 import Exp._
 
-case object Num extends Exp(simple(Seq(classOf[Integer])))
-case object Str extends Exp(simple(Seq(classOf[Symbol])))
-case object Add extends Exp(simple(cExp, cExp))
-case object Mul extends Exp(simple(cExp, cExp))
 case object Var  extends Exp(simple(Seq(classOf[Symbol])))
 case object This extends Exp(simple(Seq(classOf[Symbol])))
 case object FieldAcc extends Exp(simple(Seq(classOf[Symbol]), cExp))
