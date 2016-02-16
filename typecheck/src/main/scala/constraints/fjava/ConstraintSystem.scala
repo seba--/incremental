@@ -17,6 +17,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def extendz(t1: Type, t2: Type): CS
   def solved(s: CSubst): CS
  // def solvedFJ( s: CSubst, ext : ExtendD) : CS
+  def notyet(c: Constraint): CS
   def never(c: Constraint): CS
 
   def isSubtype(t1 : Type, t2 : Type): Boolean

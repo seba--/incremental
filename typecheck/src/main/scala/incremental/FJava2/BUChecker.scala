@@ -11,63 +11,76 @@ import scala.collection.immutable.ListMap
  * Created by lirakuci on 3/2/15.
  */
 
+import Condition.trueCond
 
 trait CReq[T] {
   val self: T
   val cls: Type
+  val cond: Condition
   def canMerge(other: CReq[T]): Boolean
   def assert(other: CReq[T]): Constraint
-  def subst(s: CSubst): T
+  def subst(s: CSubst): Option[T]
+
+  def withCond(cond: Condition): T
+  def alsoNot(n: Type): Option[T] = if (cls == n || cond.same.contains(n)) None else Some(withCond(Condition(cond.not :+ n, cond.same)))
+  def alsoSame(n: Type): Option[T] = if (cls.isGround && n.isGround && cls != n || cond.not.contains(n)) None else Some(withCond(Condition(cond.not, cond.same :+ n)))
+  def alsoCond(other: Condition): Option[T] = if (other.not.contains(cls) || other.not.exists(cond.same.contains(_)) || cond.not.exists(other.same.contains(_))) None else Some(withCond(Condition(cond.not ++ other.not, cond.same ++ other.same)))
 }
-case class ExtCReq(cls: Type, ext: Type) extends CReq[ExtCReq] {
+case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CReq[ExtCReq] {
   val self = this
   def canMerge(other: CReq[ExtCReq]) = true
   def assert(other: CReq[ExtCReq]) = EqualIf(ext, other.self.ext, Equal(cls, other.self.cls))
-  def subst(s: CSubst) = ExtCReq(cls.subst(s), ext.subst(s))
-  def lift = ClassReqs(ext = Map(this -> StructCond(Seq(), Seq())))
+  def subst(s: CSubst) = {
+    val cls_ = cls.subst(s)
+    cond.subst(cls_, s) map (ExtCReq(cls_, ext.subst(s), _))
+  }
+  def lift = ClassReqs(ext = Seq(this))
+  def withCond(c: Condition) = copy(cond = c)
 }
-case class CtorCReq(cls: Type, fields: Seq[Type]) extends CReq[CtorCReq] {
+case class CtorCReq(cls: Type, fields: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
   val self = this
   def canMerge(other: CReq[CtorCReq]) = true
   def assert(other: CReq[CtorCReq]) = AllEqualIf(fields, other.self.fields, Equal(cls, other.self.cls))
-  def subst(s: CSubst) = CtorCReq(cls.subst(s), fields.map(_.subst(s)))
-  def lift = ClassReqs(ctorParams = Map(this -> StructCond(Seq(), Seq())))
+  def subst(s: CSubst) = {
+    val cls_ = cls.subst(s)
+    cond.subst(cls_, s) map (CtorCReq(cls_, fields.map(_.subst(s)), _))
+  }
+  def lift = ClassReqs(ctorParams = Seq(this))
+  def withCond(c: Condition) = copy(cond = c)
 }
-case class FieldCReq(cls: Type, field: Symbol, typ: Type) extends CReq[FieldCReq] {
+case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = trueCond) extends CReq[FieldCReq] {
   val self = this
   def canMerge(other: CReq[FieldCReq]): Boolean = field == other.self.field
   def assert(other: CReq[FieldCReq]) = EqualIf(typ, other.self.typ, Equal(cls, other.self.cls))
-  def subst(s: CSubst) = FieldCReq(cls.subst(s), field, typ.subst(s))
-  def lift = ClassReqs(fields = Map(this -> StructCond(Seq(), Seq())))
+  def subst(s: CSubst) = {
+    val cls_ = cls.subst(s)
+    cond.subst(cls_, s) map (FieldCReq(cls_, field, typ.subst(s), _))
+  }
+  def lift = ClassReqs(fields = Seq(this))
+  def withCond(c: Condition) = copy(cond = c)
 }
-case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type) extends CReq[MethodCReq] {
+case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, cond: Condition = trueCond) extends CReq[MethodCReq] {
   val self = this
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
   def assert(other: CReq[MethodCReq]) = AllEqualIf(params :+ ret, other.self.params :+ other.self.ret, Equal(cls, other.self.cls))
-  def subst(s: CSubst) = MethodCReq(cls.subst(s), name, params.map(_.subst(s)), ret.subst(s))
-  def liftOpt = ClassReqs(optMethods = Map(this -> StructCond(Seq(), Seq())))
-  def lift = ClassReqs(methods = Map(this -> StructCond(Seq(), Seq())))
+  def subst(s: CSubst) = {
+    val cls_ = cls.subst(s)
+    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), _))
+  }
+  def liftOpt = ClassReqs(optMethods = Seq(this))
+  def lift = ClassReqs(methods = Seq(this))
+  def withCond(c: Condition) = copy(cond = c)
 }
 
-trait Condition {
-  def alsoNot(n: Type): Condition
-  def alsoSame(n: Type): Condition
-  def ++(other: Condition): Condition
-  def subst(cls: Type, s: CSubst): Condition
-  def isFalse: Boolean
+object Condition {
+  def trueCond = Condition(Seq(), Seq())
 }
-case class StructCond(not: Seq[Type], same: Seq[Type]) extends Condition {
-  def alsoNot(n: Type) = if (same.contains(n)) FalseCond else StructCond(not :+ n, same)
-  def alsoSame(n: Type) = if (not.contains(n)) FalseCond else StructCond(not, same :+ n)
-  def ++(other: Condition) = other match {
-    case other: StructCond => StructCond(not ++ other.not, same ++ other.same)
-    case _ => other ++ this
-  }
-  def subst(cls: Type, s: CSubst): Condition = {
+case class Condition(not: Seq[Type], same: Seq[Type]){
+  def subst(cls: Type, s: CSubst): Option[Condition] = {
     val newnot = not flatMap { n =>
       val n2 = n.subst(s)
       if (cls == n2)
-        return FalseCond
+        return None
       else if (cls.isGround && n2.isGround) // && cls != n2 (implicit)
         None
       else
@@ -78,29 +91,21 @@ case class StructCond(not: Seq[Type], same: Seq[Type]) extends Condition {
       if (cls == n2)
         None
       else if (cls.isGround && n2.isGround) // && cls != n2 (implicit)
-        return FalseCond
+        return None
       else
         Some(n2)
     }
-    StructCond(newnot, newsame)
+    Some(Condition(newnot, newsame))
   }
-  def isFalse = false
-}
-case object FalseCond extends Condition {
-  def alsoNot(n: Type) = this
-  def alsoSame(n: Type) = this
-  def ++(other: Condition) = this
-  def subst(cls: Type, s: CSubst) = this
-  def isFalse = true
 }
 
 case class ClassReqs (
     currentClass: Option[Type] = None,
-    ext: Map[ExtCReq, Condition] = Map(),
-    ctorParams: Map[CtorCReq, Condition] = Map(),
-    fields: Map[FieldCReq, Condition] = Map(),
-    methods: Map[MethodCReq, Condition] = Map(),
-    optMethods: Map[MethodCReq, Condition] = Map()) {
+    ext: Seq[ExtCReq] = Seq(),
+    ctorParams: Seq[CtorCReq] = Seq(),
+    fields: Seq[FieldCReq] = Seq(),
+    methods: Seq[MethodCReq] = Seq(),
+    optMethods: Seq[MethodCReq] = Seq()) {
 
   def subst(s: CSubst): ClassReqs = ClassReqs(
     currentClass.map(_.subst(s)),
@@ -110,14 +115,7 @@ case class ClassReqs (
     subst(methods, s),
     subst(optMethods, s))
 
-  private def subst[T <: CReq[T]](crs: Map[T, Condition], s: CSubst): Map[T, Condition] = crs.flatMap { kv =>
-    val req = kv._1.subst(s)
-    val cond = kv._2.subst(req.cls, s)
-    if (cond.isFalse)
-      None
-    else
-      Some(req -> cond)
-  }
+  private def subst[T <: CReq[T]](crs: Seq[T], s: CSubst): Seq[T] = crs.flatMap (_.subst(s))
 
   def isEmpty = currentClass.isEmpty && ext.isEmpty && ctorParams.isEmpty && fields.isEmpty && methods.isEmpty
 
@@ -132,26 +130,26 @@ case class ClassReqs (
     (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
   }
 
-  private def merge[T <: CReq[T]](crs1: Map[T, Condition], crs2: Map[T, Condition]): (Map[T, Condition], Seq[Constraint]) = {
+  private def merge[T <: CReq[T]](crs1: Seq[T], crs2: Seq[T]): (Seq[T], Seq[Constraint]) = {
     if (crs1.isEmpty)
       return (crs2, Seq())
     if (crs2.isEmpty)
       return (crs1, Seq())
 
     var cons = Seq[Constraint]()
-    val cr = crs1.flatMap { case (cr1, cond1) =>
-      crs2.flatMap { case (cr2, cond2) =>
+    val cr = crs1.flatMap ( cr1 =>
+      crs2.flatMap ( cr2 =>
         if (cr1.canMerge(cr2)) {
-          val reqDiff1 = cr1 -> cond1.alsoNot(cr2.cls)
-          val reqDiff2 = cr2 -> cond1.alsoNot(cr1.cls)
-          val reqSame = cr1 -> (cond1 ++ cond2).alsoSame(cr2.cls)
+          val reqDiff1 = cr1.alsoNot(cr2.cls)
+          val reqDiff2 = cr2.alsoNot(cr1.cls)
+          val reqSame = cr1.alsoCond(cr2.cond).flatMap(_.alsoSame(cr2.cls))
           cons = cons :+ cr1.assert(cr2)
-          Seq(reqDiff1, reqDiff2, reqSame)
+          Seq(reqDiff1, reqDiff2, reqSame).flatten
         }
         else
-          Seq(cr1 -> cond1, cr2 -> cond2)
-      }
-    }
+          Seq(cr1, cr2)
+      )
+    )
     (cr, cons)
   }
 
@@ -166,6 +164,19 @@ case class ClassReqs (
   def satisfyField(field: FieldCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[FieldCReq](field, fields, x=>copy(fields=x))
   def satisfyMethod(method: MethodCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[MethodCReq](method, methods, x=>copy(methods=x))
 
+  private def satisfyCReq[T <: CReq[T]](creq1: T, crs: Seq[T], make: Seq[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
+    var cons = Seq[Constraint]()
+    val newcrs = crs flatMap ( creq2 =>
+      if (creq1.canMerge(creq2)) {
+        cons = cons :+ creq1.assert(creq2)
+        creq2.alsoNot(creq1.cls)
+      }
+      else
+        Some(creq2)
+    )
+    (make(newcrs), cons)
+  }
+
   def many[T <: CReq[T]](f: ClassReqs => T => (ClassReqs, Seq[Constraint]), reqs: Iterable[T]) = {
     var cons = Seq[Constraint]()
     var creqs = this
@@ -175,19 +186,6 @@ case class ClassReqs (
       cons = cons ++ newcons
     }
     (creqs, cons)
-  }
-
-  private def satisfyCReq[T <: CReq[T]](creq1: T, crs: Map[T, Condition], make: Map[T, Condition] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
-    var cons = Seq[Constraint]()
-    val newcrs = crs map { case (creq2, cond) =>
-      if (creq1.canMerge(creq2)) {
-        cons = cons :+ creq1.assert(creq2)
-        creq2 -> cond.alsoNot(creq1.cls)
-      }
-      else
-        creq2 -> cond
-    }
-    (make(newcrs), cons)
   }
 }
 
@@ -223,11 +221,16 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       root.visitUninitialized { e =>
         val (t, reqs, creqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem(res.typ._4))
-        val cs = subcs addNewConstraints cons
+        val csPre = subcs addNewConstraints cons
+        val cs = if (e.kind != ClassDec) csPre else {
+          // add inheritance to constraint system
+          val c = e.lits(0).asInstanceOf[CName]
+          val sup = e.lits(1).asInstanceOf[CName]
+          csPre.extendz(c, sup)
+        }
         val creqs2 = if (cs.shouldApplySubst) creqs.subst(cs.substitution) else creqs
         val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-
-        e.typ = (cs applyPartialSolution t, reqs2, creqs2, cs.propagate)
+        e.typ = (cs.applyPartialSolution(t), reqs2, creqs2, cs.propagate)
         true
       }
 

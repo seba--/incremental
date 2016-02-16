@@ -12,32 +12,33 @@ import incremental.Util
 import scala.collection.generic.CanBuildFrom
 
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
-  def freshConstraintSystem = new SolveContinuousSubstCS(Map(), Map(), Seq(), Map())
-  def solved(s: CSubst) = new SolveContinuousSubstCS(s, Map(), Seq(), Map())
-  def notyet(c: Constraint) = freshConstraintSystem.addNewConstraint(c)
-  def never(c: Constraint) = new SolveContinuousSubstCS(Map(), Map(), Seq(c), Map())
+  def freshConstraintSystem = new SolveContinuousSubstCS(Map(), Map(), Seq(), Seq(), Map())
+  def solved(s: CSubst) = new SolveContinuousSubstCS(s, Map(), Seq(), Seq(), Map())
+  def notyet(c: Constraint) = new SolveContinuousSubstCS(Map(), Map(), Seq(c), Seq(), Map())
+  def never(c: Constraint) = new SolveContinuousSubstCS(Map(), Map(), Seq(), Seq(c), Map())
 }
 
-case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Type]], never: Seq[Constraint], extend: Map[Type, Type]) extends ConstraintSystem[SolveContinuousSubstCS] {
+case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[Type, Type]) extends ConstraintSystem[SolveContinuousSubstCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
   def state = SolveContinuousSubst.state.value
 
   def notyet = {
-    var cons = Seq[Constraint]()
+    var cons = _notyet
     for ((t, tbnds) <- bounds; bound <- tbnds) {
       cons = cons :+ Subtype(t, bound)
     }
     cons
   }
 
-  def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, never :+ c, extend)
+  def notyet(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, _notyet :+ c, never, extend)
+  def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, _notyet, never :+ c, extend)
 
   def mergeSubsystem(that: SolveContinuousSubstCS) = {
     var msubst = substitution ++ that.substitution
     var mnever = never ++ that.never
-    val init = SolveContinuousSubstCS(msubst, this.bounds, mnever, this.extend)
+    val init = SolveContinuousSubstCS(msubst, this.bounds, this._notyet, mnever, this.extend)
     val extendedCS = that.extend.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
     that.bounds.foldLeft(extendedCS) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
@@ -59,7 +60,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
           else ext
       }
     }*/
-    val init = SolveContinuousSubstCS(msubst, this.bounds, mnever, ext)
+    val init = SolveContinuousSubstCS(msubst, this.bounds, this._notyet, mnever, ext)
     that.bounds.foldLeft(init) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
     }
@@ -95,7 +96,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
           if (lt.isEmpty) newBounds = newBounds
           else newBounds = newBounds + (t -> lt)
       }
-      SolveContinuousSubstCS(this.substitution, newBounds, this.never, this.extend )
+      SolveContinuousSubstCS(this.substitution, newBounds, this._notyet, this.never, this.extend )
     }
 
   def trySolve: SolveContinuousSubstCS = this
@@ -118,7 +119,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   }
 
   private def extendMap(t1: Type, t2: Type) =
-    SolveContinuousSubstCS(this.substitution, this.bounds, this.never, this.extend + (t1 -> t2))
+    SolveContinuousSubstCS(this.substitution, this.bounds, this._notyet, this.never, this.extend + (t1 -> t2))
 
   def isSubtype(t1 : Type, t2 : Type): Boolean = {
     (t1, t2) match {
@@ -153,7 +154,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   private def extendBound(t1: Type, t2: Type) = {
     val t1bnds = bounds.getOrElse(t1, Set[Type]())
-    SolveContinuousSubstCS(this.substitution, bounds + (t1 -> (t1bnds + t2)), this.never, this.extend)
+    SolveContinuousSubstCS(this.substitution, bounds + (t1 -> (t1bnds + t2)), this._notyet, this.never, this.extend)
   }
 
   def shouldApplySubst: Boolean = true
@@ -168,7 +169,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   def propagate = this///SolveContinuousSubstCS(Map(), bounds, never, extend)
 
   def solved(s: CSubst): SolveContinuousSubstCS = {
-    val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this.never.map(_.subst(s)), this.extend)
+    val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this._notyet.map(_.subst(s)), this.never.map(_.subst(s)), this.extend)
     val cs = this.extend.foldLeft(init) { case (cs, (t, tsuper)) =>
       val t2 = t.subst(s)
       val tsuper2 = tsuper.subst(s)
