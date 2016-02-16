@@ -29,7 +29,7 @@ trait CReq[T] {
 case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CReq[ExtCReq] {
   val self = this
   def canMerge(other: CReq[ExtCReq]) = true
-  def assert(other: CReq[ExtCReq]) = EqualIf(ext, other.self.ext, Equal(cls, other.self.cls))
+  def assert(other: CReq[ExtCReq]) = Conditional(cls, other.self.cls, Equal(ext, other.self.ext))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (ExtCReq(cls_, ext.subst(s), _))
@@ -40,7 +40,7 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
 case class CtorCReq(cls: Type, fields: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
   val self = this
   def canMerge(other: CReq[CtorCReq]) = true
-  def assert(other: CReq[CtorCReq]) = AllEqualIf(fields, other.self.fields, Equal(cls, other.self.cls))
+  def assert(other: CReq[CtorCReq]) = Conditional(cls, other.self.cls, AllEqual(fields, other.self.fields))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (CtorCReq(cls_, fields.map(_.subst(s)), _))
@@ -51,7 +51,7 @@ case class CtorCReq(cls: Type, fields: Seq[Type], cond: Condition = trueCond) ex
 case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = trueCond) extends CReq[FieldCReq] {
   val self = this
   def canMerge(other: CReq[FieldCReq]): Boolean = field == other.self.field
-  def assert(other: CReq[FieldCReq]) = EqualIf(typ, other.self.typ, Equal(cls, other.self.cls))
+  def assert(other: CReq[FieldCReq]) = Conditional(cls, other.self.cls, Equal(typ, other.self.typ))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (FieldCReq(cls_, field, typ.subst(s), _))
@@ -62,7 +62,7 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
 case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, cond: Condition = trueCond) extends CReq[MethodCReq] {
   val self = this
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[MethodCReq]) = AllEqualIf(params :+ ret, other.self.params :+ other.self.ret, Equal(cls, other.self.cls))
+  def assert(other: CReq[MethodCReq]) = Conditional(cls, other.self.cls, AllEqual(params :+ ret, other.self.params :+ other.self.ret))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), _))
@@ -408,7 +408,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       // constructor initializes all local fields
       val fieldInitCons = currentClassCons :+ AllEqual(fields.values.toSeq, ctor.fields.values.toSeq)
       // constructor provides correct arguments to super constructor
-      val (creqs2, supCons) = creqs.merge(CtorCReq(sup, ctor.superParams.values.toSeq).lift)
+      val (creqs2, supCons) = creqs.merge(CtorCReq(sup, ctor.superParams.values.toList).lift)
 
       (c, reqs, creqs2, mccons ++ mrcons ++ currentClassCons ++ supCons ++ fieldInitCons)
 

@@ -31,16 +31,19 @@ case class Equal(expected: Type, actual: Type) extends Constraint {
   override def subst(s: CSubst): Constraint = Equal(expected.subst(s), actual.subst(s))
 }
 
-case class EqualIf(expected: Type, actual: Type, cond: Equal) extends Constraint {
+case class Conditional(cls1: Type, cls2: Type, cons: Constraint) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
-    val cs2 = cond.solve(cs)
-    if (cs2.never.size == cs.never.size)
-      Equal(expected, actual).solve(cs2)
+    val cls1_ = cls1.subst(cs.substitution)
+    val cls2_ = cls2.subst(cs.substitution)
+    if (cls1_ == cls2_)
+      cons.solve(cs)
+    else if (cls1_.isGround && cls2_.isGround) // implicitly cls1 != cls2
+      cs // discard this constraint because condition is false
     else
-      cs.notyet(this)
+      cs.notyet(Conditional(cls1_, cls2_, cons))
   }
 
-  override def subst(s: CSubst): Constraint = Equal(expected.subst(s), actual.subst(s))
+  override def subst(s: CSubst): Constraint = Conditional(cls1.subst(s), cls2.subst(s), cons.subst(s))
 }
 
 case class NotEqual(expected: Type, actual: Type) extends Constraint {
@@ -68,18 +71,6 @@ case class AllEqual(expected: Seq[Type], actual: Seq[Type]) extends Constraint {
 
       cs.addNewConstraints(cons)
     }
-  }
-}
-
-case class AllEqualIf(expected: Seq[Type], actual: Seq[Type], cond: Equal) extends Constraint {
-  def subst(s: CSubst) = AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
-
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
-    val cs2 = cond.solve(cs)
-    if (cs2.never.size == cs.never.size)
-      AllEqual(expected, actual).solve(cs2)
-    else
-      cs.notyet(this)
   }
 }
 
