@@ -166,8 +166,11 @@ case class ClassReqs (
   def satisfyCtor(ctor: CtorCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[CtorCReq](ctor, ctorParams, x=>copy(ctorParams=x))
   def satisfyField(field: FieldCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[FieldCReq](field, fields, x=>copy(fields=x))
 
-  // TODO optMethods
-  def satisfyMethod(method: MethodCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[MethodCReq](method, methods, x=>copy(methods=x))
+  def satisfyMethod(method: MethodCReq): (ClassReqs, Seq[Constraint]) = {
+    val (creqs1, cons1) = satisfyCReq[MethodCReq](method, methods, x=>copy(methods=x))
+    val (creqs2, cons2) = satisfyCReq[MethodCReq](optMethods, optMethods, x=>copy(optMethods=x))
+    (creqs2, cons1 ++ cons2)
+  }
 
   private def satisfyCReq[T <: CReq[T]](creq1: T, crs: Seq[T], make: Seq[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
     var cons = Seq[Constraint]()
