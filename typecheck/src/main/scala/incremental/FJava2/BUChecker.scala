@@ -23,9 +23,9 @@ trait CReq[T] {
   def subst(s: CSubst): Option[T]
 
   def withCond(cond: Condition): T
-  def alsoNot(n: Type): Option[T] = if (cls == n || cond.same.contains(n)) None else Some(withCond(Condition(cond.not :+ n, cond.same)))
-  def alsoSame(n: Type): Option[T] = if (cls.isGround && n.isGround && cls != n || cond.not.contains(n)) None else Some(withCond(Condition(cond.not, cond.same :+ n)))
-  def alsoCond(other: Condition): Option[T] = if (other.not.contains(cls) || other.not.exists(cond.same.contains(_)) || cond.not.exists(other.same.contains(_))) None else Some(withCond(Condition(cond.not ++ other.not, cond.same ++ other.same)))
+  def alsoNot(n: Type): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
+  def alsoSame(n: Type): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
+  def alsoCond(other: Condition): Option[T] = cond.alsoCond(cls, other) map (withCond(_))
 }
 case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CReq[ExtCReq] {
   def self = this
@@ -78,9 +78,9 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, con
 }
 
 object Condition {
-  def trueCond = Condition(Seq(), Seq())
+  def trueCond = Condition(Set(), Set())
 }
-case class Condition(not: Seq[Type], same: Seq[Type]){
+case class Condition(not: Set[Type], same: Set[Type]){
   def subst(cls: Type, s: CSubst): Option[Condition] = {
     val newnot = not flatMap { n =>
       val n2 = n.subst(s)
@@ -102,6 +102,22 @@ case class Condition(not: Seq[Type], same: Seq[Type]){
     }
     Some(Condition(newnot, newsame))
   }
+
+  def alsoNot(cls: Type, n: Type): Option[Condition] =
+    if (cls == n || same.contains(n))
+      None
+    else
+      Some(Condition(not + n, same))
+  def alsoSame(cls: Type, n: Type): Option[Condition] =
+    if (cls.isGround && n.isGround && cls != n || not.contains(n))
+      None
+    else
+      Some(Condition(not, same + n))
+  def alsoCond(cls: Type, other: Condition): Option[Condition] =
+    if (other.not.contains(cls) || other.not.exists(same.contains(_)) || not.exists(other.same.contains(_)))
+      None
+    else
+      Some(Condition(not ++ other.not, same ++ other.same))
 }
 
 case class ClassReqs (
@@ -151,7 +167,8 @@ case class ClassReqs (
           val reqDiff1 = cr1.alsoNot(cr2.cls)
           val reqDiff2 = cr2.alsoNot(cr1.cls)
           val reqSame = cr1.alsoCond(cr2.cond).flatMap(_.alsoSame(cr2.cls))
-          cons = cons :+ cr1.assert(cr2)
+          if (!(cr1.cls.isGround && cr2.cls.isGround && cr1.cls != cr2.cls))
+            cons = cons :+ cr1.assert(cr2)
           Seq(reqDiff1, reqDiff2, reqSame).flatten
         }
         else
@@ -200,7 +217,8 @@ case class ClassReqs (
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq2 =>
       if (creq1.canMerge(creq2)) {
-        cons = cons :+ creq1.assert(creq2)
+        if (!(creq1.cls.isGround && creq2.cls.isGround && creq1.cls != creq2.cls))
+          cons = cons :+ creq1.assert(creq2)
         creq2.alsoNot(creq1.cls)
       }
       else

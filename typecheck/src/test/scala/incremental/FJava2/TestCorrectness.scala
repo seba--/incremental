@@ -153,7 +153,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Ctor(ListMap(), ListMap('First -> CName('Nat), 'Second -> CName('Nat))),
     Seq(('First, CName('Nat)), ('Second, CName('Nat)))),
     Seq(MethodDec(Seq(CName('Nat), 'add, Seq()),
-    Seq(Add(FieldAcc('First, New(CName('Pair), Num(1), Num(2))), FieldAcc('Second, New(CName('Pair), Num(1), Num(2))))))))
+          Seq(Add(FieldAcc('First, New(CName('Pair), Num(1), Num(2))), FieldAcc('Second, New(CName('Pair), Num(1), Num(2))))))))
   typecheckTestFJ("Pair Int First, Int Second, Int add() { return (New Pair).add(first, second) }", ProgramM(Pair) )(ProgramOK)
 
   typecheckTestError("Pair Int First, Int Second, String addField() { return add(first Int, second Int) }", ClassDec(Seq(CName('Nat), CName('Object),

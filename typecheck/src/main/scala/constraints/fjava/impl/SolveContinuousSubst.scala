@@ -167,7 +167,10 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
   = it.map(u => (u, f(u).subst(substitution)))
 
-  def propagate = this///SolveContinuousSubstCS(Map(), bounds, never, extend)
+  def propagate =
+    Util.timed(state -> Statistics.constraintSolveTime) {
+      _notyet.foldLeft(copy(_notyet = Seq()))((cs, c) => c.solve(cs)).trySolve
+    }
 
   def solved(s: CSubst): SolveContinuousSubstCS = {
     var mysubst = this.substitution mapValues (x => x.subst(s))
