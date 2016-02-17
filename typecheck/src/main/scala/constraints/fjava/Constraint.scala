@@ -1,6 +1,7 @@
 package constraints.fjava
 
 import constraints.fjava.CSubst.CSubst
+import incremental.fjava.Condition
 
 trait Constraint {
   def subst(s: CSubst): Constraint
@@ -26,19 +27,20 @@ case class Equal(expected: Type, actual: Type) extends Constraint {
   override def subst(s: CSubst): Constraint = Equal(expected.subst(s), actual.subst(s))
 }
 
-case class Conditional(cls1: Type, cls2: Type, cons: Constraint) extends Constraint {
+case class Conditional(cls: Type, cond: Condition, cons: Constraint) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
-    val cls1_ = cls1.subst(cs.substitution)
-    val cls2_ = cls2.subst(cs.substitution)
-    if (cls1_ == cls2_)
-      cons.solve(cs)
-    else if (cls1_.isGround && cls2_.isGround) // implicitly cls1 != cls2
-      cs // discard this constraint because condition is false
-    else
-      cs.notyet(Conditional(cls1_, cls2_, cons))
+    val cls_ = cls.subst(cs.substitution)
+    cond.subst(cls_, cs.substitution) match {
+      case None => cs // discard this constraint because condition is false
+      case Some(cond_) if cond_.isGround => cons.solve(cs)
+      case Some(cond_) => cs.notyet(Conditional(cls_, cond_, cons.subst(cs.substitution)))
+    }
   }
 
-  override def subst(s: CSubst): Constraint = Conditional(cls1.subst(s), cls2.subst(s), cons.subst(s))
+  override def subst(s: CSubst): Constraint = {
+    val cls_ = cls.subst(s)
+    Conditional(cls_, cond.subst(cls_, s).getOrElse(Condition.trueCond), cons.subst(s))
+  }
 }
 
 case class NotEqual(expected: Type, actual: Type) extends Constraint {

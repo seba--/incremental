@@ -11,13 +11,14 @@ import incremental.{Node_, Util}
 
 import incremental.fjava.Condition.trueCond
 
-trait CReq[T] {
+trait CReq[T <: CReq[T]] {
   def self: T
   val cls: Type
   def withCls(t: Type): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
-  def assert(other: CReq[T]): Constraint
+  def assert(other: CReq[T]): Option[Constraint] = for (c2 <- alsoCond(other.cond); c3 <- c2.alsoSame(other.cls)) yield assert(other, c3.cond)
+  def assert(other: CReq[T], cond: Condition): Constraint
   def subst(s: CSubst): Option[T]
 
   def withCond(cond: Condition): T
@@ -29,7 +30,7 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
   def self = this
   def withCls(t: Type) = copy(cls=t)
   def canMerge(other: CReq[ExtCReq]) = true
-  def assert(other: CReq[ExtCReq]) = Conditional(cls, other.self.cls, Equal(ext, other.self.ext))
+  def assert(other: CReq[ExtCReq], cond: Condition) = Conditional(cls, cond, Equal(ext, other.self.ext))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (ExtCReq(cls_, ext.subst(s), _))
@@ -41,7 +42,7 @@ case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) exte
   def self = this
   def withCls(t: Type) = copy(cls=t)
   def canMerge(other: CReq[CtorCReq]) = true
-  def assert(other: CReq[CtorCReq]) = Conditional(cls, other.self.cls, AllEqual(args, other.self.args))
+  def assert(other: CReq[CtorCReq], cond: Condition) = Conditional(cls, cond, AllEqual(args, other.self.args))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (CtorCReq(cls_, args.map(_.subst(s)), _))
@@ -53,7 +54,7 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
   def self = this
   def withCls(t: Type) = copy(cls=t)
   def canMerge(other: CReq[FieldCReq]): Boolean = field == other.self.field
-  def assert(other: CReq[FieldCReq]) = Conditional(cls, other.self.cls, Equal(typ, other.self.typ))
+  def assert(other: CReq[FieldCReq], cond: Condition) = Conditional(cls, cond, Equal(typ, other.self.typ))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (FieldCReq(cls_, field, typ.subst(s), _))
@@ -65,7 +66,7 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, con
   def self = this
   def withCls(t: Type) = copy(cls=t)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[MethodCReq]) = Conditional(cls, other.self.cls, AllEqual(params :+ ret, other.self.params :+ other.self.ret))
+  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(cls, cond, AllEqual(params :+ ret, other.self.params :+ other.self.ret))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), _))
@@ -116,6 +117,8 @@ case class Condition(not: Set[Type], same: Set[Type]){
       None
     else
       Some(Condition(not ++ other.not, same ++ other.same))
+
+  def isGround = not.foldLeft(true)((res, t) => res && t.isGround) && same.foldLeft(true)((res, t) => res && t.isGround)
 }
 
 case class ClassReqs (
@@ -165,8 +168,7 @@ case class ClassReqs (
           val reqDiff1 = cr1.alsoNot(cr2.cls)
           val reqDiff2 = cr2.alsoNot(cr1.cls)
           val reqSame = cr1.alsoCond(cr2.cond).flatMap(_.alsoSame(cr2.cls))
-          if (!(cr1.cls.isGround && cr2.cls.isGround && cr1.cls != cr2.cls))
-            cons = cons :+ cr1.assert(cr2)
+          cr1.assert(cr2) foreach (c => cons = cons :+ c)
           Seq(reqDiff1, reqDiff2, reqSame).flatten
         }
         else
@@ -215,8 +217,7 @@ case class ClassReqs (
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq2 =>
       if (creq1.canMerge(creq2)) {
-        if (!(creq1.cls.isGround && creq2.cls.isGround && creq1.cls != creq2.cls))
-          cons = cons :+ creq1.assert(creq2)
+        creq1.assert(creq2) foreach (c => cons = cons :+ c)
         creq2.alsoNot(creq1.cls)
       }
       else
