@@ -115,7 +115,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestError("(New Pair(fst, snd)).setFirst(fst)", Invk(Seq('setFrist), Seq(New(Seq(CName('Pair)), Seq(Var('frt), Var('snd))), Var('frt))))//(TNum)
 
-val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap(), ListMap('Pair -> CName('Int))), Seq(('First, CName('Int)))), Seq())
+  val Fst =  ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap(), ListMap('Pair -> CName('Int))), Seq(('First, CName('Int)))), Seq())
   typecheckTestFJ(" Pair Int First ",ProgramM(Fst))(ProgramOK)
 
   val GetX = ClassDec(Seq(CName('Pair), CName('Object), Ctor(ListMap(), ListMap('First -> CName('Int))), Seq(('First, CName('Int)))),

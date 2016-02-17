@@ -170,7 +170,15 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   def propagate = this///SolveContinuousSubstCS(Map(), bounds, never, extend)
 
   def solved(s: CSubst): SolveContinuousSubstCS = {
-    val init = SolveContinuousSubstCS(this.substitution ++ s,Map(), this._notyet.map(_.subst(s)), this.never.map(_.subst(s)), this.extend)
+    var mysubst = this.substitution mapValues (x => x.subst(s))
+    var newcons = Seq[Constraint]()
+    for ((x, t2) <- s) {
+      mysubst.get(x) match {
+        case None => mysubst = mysubst + (x -> t2.subst(mysubst))
+        case Some(t1) => newcons = newcons :+ t1.compatibleWith(t2)
+      }
+    }
+    val init = SolveContinuousSubstCS(mysubst, Map(), this._notyet.map(_.subst(s)), this.never.map(_.subst(s)), this.extend).addNewConstraints(newcons)
     val cs = this.extend.foldLeft(init) { case (cs, (t, tsuper)) =>
       val t2 = t.subst(s)
       val tsuper2 = tsuper.subst(s)

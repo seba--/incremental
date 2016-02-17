@@ -14,8 +14,9 @@ import scala.collection.immutable.ListMap
 import Condition.trueCond
 
 trait CReq[T] {
-  val self: T
+  def self: T
   val cls: Type
+  def withCls(t: Type): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
   def assert(other: CReq[T]): Constraint
@@ -27,7 +28,8 @@ trait CReq[T] {
   def alsoCond(other: Condition): Option[T] = if (other.not.contains(cls) || other.not.exists(cond.same.contains(_)) || cond.not.exists(other.same.contains(_))) None else Some(withCond(Condition(cond.not ++ other.not, cond.same ++ other.same)))
 }
 case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CReq[ExtCReq] {
-  val self = this
+  def self = this
+  def withCls(t: Type) = copy(cls=t)
   def canMerge(other: CReq[ExtCReq]) = true
   def assert(other: CReq[ExtCReq]) = Conditional(cls, other.self.cls, Equal(ext, other.self.ext))
   def subst(s: CSubst) = {
@@ -38,7 +40,8 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
   def withCond(c: Condition) = copy(cond = c)
 }
 case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
-  val self = this
+  def self = this
+  def withCls(t: Type) = copy(cls=t)
   def canMerge(other: CReq[CtorCReq]) = true
   def assert(other: CReq[CtorCReq]) = Conditional(cls, other.self.cls, AllEqual(args, other.self.args))
   def subst(s: CSubst) = {
@@ -49,7 +52,8 @@ case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) exte
   def withCond(c: Condition) = copy(cond = c)
 }
 case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = trueCond) extends CReq[FieldCReq] {
-  val self = this
+  def self = this
+  def withCls(t: Type) = copy(cls=t)
   def canMerge(other: CReq[FieldCReq]): Boolean = field == other.self.field
   def assert(other: CReq[FieldCReq]) = Conditional(cls, other.self.cls, Equal(typ, other.self.typ))
   def subst(s: CSubst) = {
@@ -60,7 +64,8 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
   def withCond(c: Condition) = copy(cond = c)
 }
 case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, cond: Condition = trueCond) extends CReq[MethodCReq] {
-  val self = this
+  def self = this
+  def withCls(t: Type) = copy(cls=t)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
   def assert(other: CReq[MethodCReq]) = Conditional(cls, other.self.cls, AllEqual(params :+ ret, other.self.params :+ other.self.ret))
   def subst(s: CSubst) = {
@@ -162,14 +167,33 @@ case class ClassReqs (
       case Some(t) => (copy(currentClass = None), Seq(Equal(cls, t)))
     }
   }
-  def satisfyExtends(ext: ExtCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[ExtCReq](ext, this.ext, x=>copy(ext=x))
+
+  def satisfyExtends(ext: ExtCReq): (ClassReqs, Seq[Constraint]) = {
+    val (creqs, cons) = satisfyCReq[ExtCReq](ext, this.ext, x=>copy(ext=x))
+    val newFields = satisfyExt(ext, creqs.fields)
+    val newMethods = satisfyExt(ext, creqs.methods)
+    val newOptMethods = satisfyExt(ext, creqs.optMethods)
+    (creqs.copy(fields = newFields, methods = newMethods, optMethods = newOptMethods), cons)
+  }
+
   def satisfyCtor(ctor: CtorCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[CtorCReq](ctor, ctorParams, x=>copy(ctorParams=x))
+
   def satisfyField(field: FieldCReq): (ClassReqs, Seq[Constraint]) = satisfyCReq[FieldCReq](field, fields, x=>copy(fields=x))
 
   def satisfyMethod(method: MethodCReq): (ClassReqs, Seq[Constraint]) = {
     val (creqs1, cons1) = satisfyCReq[MethodCReq](method, methods, x=>copy(methods=x))
-    val (creqs2, cons2) = satisfyCReq[MethodCReq](optMethods, optMethods, x=>copy(optMethods=x))
+    val (creqs2, cons2) = satisfyCReq[MethodCReq](method, optMethods, x=>creqs1.copy(optMethods=x))
     (creqs2, cons1 ++ cons2)
+  }
+
+  private def satisfyExt[T <: CReq[T]](ext: ExtCReq, crs: Seq[T]): Seq[T] = crs.flatMap { req =>
+    // TODO Currently, this method assumes that the removal of an extends clause implies no further declarations appear for req.cls
+
+    // ext.cls != req.cls
+    val diff = req.alsoNot(ext.cls)
+    // ext.cls == req.cls
+    val same = req.alsoSame(ext.cls).map(_.withCls(ext.ext))
+    Seq(diff, same).flatten
   }
 
   private def satisfyCReq[T <: CReq[T]](creq1: T, crs: Seq[T], make: Seq[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
@@ -395,11 +419,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (reqs, mrcons) = mergeReqMaps(reqss)
 
       // constructor initializes all local fields
-      val fieldInitCons = currentClassCons :+ AllEqual(fields.values.toList, ctor.fields.values.toList)
+      val fieldInitCons = AllEqual(fields.values.toList, ctor.fields.values.toList)
       // constructor provides correct arguments to super constructor
       val (creqs2, supCons) = creqs.merge(CtorCReq(sup, ctor.superParams.values.toList).lift)
 
-      (c, reqs, creqs2, mccons ++ mrcons ++ currentClassCons ++ supCons ++ fieldInitCons)
+      (c, reqs, creqs2, mccons ++ mrcons ++ currentClassCons ++ supCons :+ fieldInitCons)
 
     case ProgramM =>
 
@@ -419,7 +443,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var restCReqs = mcreqs
 
       // remove class requirements
-      for (cls <- e.kids.seq) {
+      for (cls <- e.kids.seq.reverseIterator) {
         val cname = cls.lits(0).asInstanceOf[CName]
         val sup = cls.lits(1).asInstanceOf[CName]
         val ctor = cls.lits(2).asInstanceOf[Ctor]
@@ -427,14 +451,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val methods = cls.kids.seq
 
         val (creqs1, cons1) = restCReqs.satisfyCtor(CtorCReq(cname, ctor.allArgTypes))
-        val (creqs2, cons2) = creqs1.satisfyExtends(ExtCReq(cname, sup))
-        val (creqs3, cons3) = creqs2.many(_.satisfyField, fields map (f => FieldCReq(cname, f._1, f._2)))
-        val (creqs4, cons4) = creqs3.many(_.satisfyMethod,
+        val (creqs2, cons2) = creqs1.many(_.satisfyField, fields map (f => FieldCReq(cname, f._1, f._2)))
+        val (creqs3, cons3) = creqs2.many(_.satisfyMethod,
           methods map (m => MethodCReq(
             cname,
             m.lits(1).asInstanceOf[Symbol],
             m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
             m.lits(0).asInstanceOf[Type])))
+        val (creqs4, cons4) = creqs3.satisfyExtends(ExtCReq(cname, sup))
 
         restCReqs = creqs4
         removeCons = removeCons ++ cons1 ++ cons2 ++ cons3 ++ cons4
