@@ -81,7 +81,8 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   def trySolve: SolveContinuousSubstCS = this
 
   def extendz(t1 : GroundType, t2:GroundType) = {
-    if (t1 == t2) never(Subtype(t1, t2))
+    if (t1 == t2 || isSubtype(t2, t1))
+      never(Subtype(t1, t2))
     else {
       t1 match {
         case CName('Object) =>
