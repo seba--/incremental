@@ -36,7 +36,7 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (ExtCReq(cls_, ext.subst(s), _))
   }
-  def lift = ClassReqs(ext = Seq(this))
+  def lift = ClassReqs(ext = Set(this))
   def withCond(c: Condition) = copy(cond = c)
 }
 case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
@@ -48,7 +48,7 @@ case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) exte
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (CtorCReq(cls_, args.map(_.subst(s)), _))
   }
-  def lift = ClassReqs(ctorParams = Seq(this))
+  def lift = ClassReqs(ctorParams = Set(this))
   def withCond(c: Condition) = copy(cond = c)
 }
 case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = trueCond) extends CReq[FieldCReq] {
@@ -60,7 +60,7 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (FieldCReq(cls_, field, typ.subst(s), _))
   }
-  def lift = ClassReqs(fields = Seq(this))
+  def lift = ClassReqs(fields = Set(this))
   def withCond(c: Condition) = copy(cond = c)
 }
 case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, cond: Condition = trueCond) extends CReq[MethodCReq] {
@@ -72,8 +72,8 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, con
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), _))
   }
-  def liftOpt = ClassReqs(optMethods = Seq(this))
-  def lift = ClassReqs(methods = Seq(this))
+  def liftOpt = ClassReqs(optMethods = Set(this))
+  def lift = ClassReqs(methods = Set(this))
   def withCond(c: Condition) = copy(cond = c)
 }
 
@@ -122,11 +122,11 @@ case class Condition(not: Set[Type], same: Set[Type]){
 
 case class ClassReqs (
     currentClass: Option[Type] = None,
-    ext: Seq[ExtCReq] = Seq(),
-    ctorParams: Seq[CtorCReq] = Seq(),
-    fields: Seq[FieldCReq] = Seq(),
-    methods: Seq[MethodCReq] = Seq(),
-    optMethods: Seq[MethodCReq] = Seq()) {
+    ext: Set[ExtCReq] = Set(),
+    ctorParams: Set[CtorCReq] = Set(),
+    fields: Set[FieldCReq] = Set(),
+    methods: Set[MethodCReq] = Set(),
+    optMethods: Set[MethodCReq] = Set()) {
 
   override def toString =
     s"ClassReqs(current=$currentClass, ext=$ext, ctorParams=$ctorParams, fields=$fields, methods=$methods, optMethods=$optMethods)"
@@ -139,7 +139,7 @@ case class ClassReqs (
     subst(methods, s),
     subst(optMethods, s))
 
-  private def subst[T <: CReq[T]](crs: Seq[T], s: CSubst): Seq[T] = crs.flatMap (_.subst(s))
+  private def subst[T <: CReq[T]](crs: Set[T], s: CSubst): Set[T] = crs.flatMap (_.subst(s))
 
   def isEmpty = currentClass.isEmpty && ext.isEmpty && ctorParams.isEmpty && fields.isEmpty && methods.isEmpty
 
@@ -154,7 +154,7 @@ case class ClassReqs (
     (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
   }
 
-  private def merge[T <: CReq[T]](crs1: Seq[T], crs2: Seq[T]): (Seq[T], Seq[Constraint]) = {
+  private def merge[T <: CReq[T]](crs1: Set[T], crs2: Set[T]): (Set[T], Seq[Constraint]) = {
     if (crs1.isEmpty)
       return (crs2, Seq())
     if (crs2.isEmpty)
@@ -203,7 +203,7 @@ case class ClassReqs (
     (creqs2, cons1 ++ cons2)
   }
 
-  private def satisfyExt[T <: CReq[T]](ext: ExtCReq, crs: Seq[T]): Seq[T] = crs.flatMap { req =>
+  private def satisfyExt[T <: CReq[T]](ext: ExtCReq, crs: Set[T]): Set[T] = crs.flatMap { req =>
     // TODO Currently, this method assumes that the removal of an extends clause implies no further declarations appear for req.cls
 
     // ext.cls != req.cls
@@ -213,7 +213,7 @@ case class ClassReqs (
     Seq(diff, same).flatten
   }
 
-  private def satisfyCReq[T <: CReq[T]](creq1: T, crs: Seq[T], make: Seq[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
+  private def satisfyCReq[T <: CReq[T]](creq1: T, crs: Set[T], make: Set[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq2 =>
       if (creq1.canMerge(creq2)) {
