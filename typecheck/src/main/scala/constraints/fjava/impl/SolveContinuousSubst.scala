@@ -1,11 +1,9 @@
 package constraints.fjava.impl
 
 
-import java.security.CodeSigner
-
 import constraints.{CTermBase, CVar, Statistics}
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{CSig, UCName, CName}
+import incremental.fjava.{UCName, CName}
 import constraints.fjava._
 import incremental.Util
 
@@ -18,7 +16,7 @@ object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubst
   def never(c: Constraint) = new SolveContinuousSubstCS(Map(), Map(), Seq(), Seq(c), Map())
 }
 
-case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[Type, Type]) extends ConstraintSystem[SolveContinuousSubstCS] {
+case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType]) extends ConstraintSystem[SolveContinuousSubstCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
@@ -47,26 +45,6 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   }
 
 
-  def mergeFJavaSubsystem(that: SolveContinuousSubstCS, CT : Map[Type, CSig]) = {
-    var msubst = substitution ++ that.substitution
-    var mnever = never ++ that.never
-    var ext = Map[Type, Type]()
-    for ((c, cld) <- CT) ext = ext + (c -> cld.extendc)
-    val mextend = ext
-   /* for ((c,d) <- ext) {
-      ext.get(d) match {
-        case None => ext
-        case Some(c1) =>
-          if (c == c1) mnever = mnever :+ NotEqual(c, d)
-          else ext
-      }
-    }*/
-    val init = SolveContinuousSubstCS(msubst, this.bounds, this._notyet, mnever, ext)
-    that.bounds.foldLeft(init) { case (cs, (t, ts)) =>
-      ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
-    }
-  }
-
   def addNewConstraint(c: Constraint) = {
     state += Statistics.constraintCount -> 1
     Util.timed(state -> Statistics.constraintSolveTime) {
@@ -87,7 +65,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       var lt = Set[Type]()
       for ((t, ts) <- this.bounds){
           lt = ts
-          if (extend.contains(t)) {
+          if (t.isGround && extend.contains(t.asInstanceOf[GroundType])) {
             ts.foreach { f =>
               if (isSubtype(t, f))
                 lt = lt - f
@@ -102,7 +80,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   def trySolve: SolveContinuousSubstCS = this
 
-  def extendz(t1 : Type, t2:Type) = {
+  def extendz(t1 : GroundType, t2:GroundType) = {
     if (t1 == t2) never(Subtype(t1, t2))
     else {
       t1 match {
@@ -119,22 +97,22 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     }
   }
 
-  private def extendMap(t1: Type, t2: Type) =
+  private def extendMap(t1: GroundType, t2: GroundType) =
     SolveContinuousSubstCS(this.substitution, this.bounds, this._notyet, this.never, this.extend + (t1 -> t2))
 
-  def isSubtype(t1 : Type, t2 : Type): Boolean = {
-    (t1, t2) match {
-      case (_, CName('Object)) => true
-      case (CName('Object), _) => false
-      case _ =>  extend.get(t1) match {
+  def isSubtype(t1 : Type, t2 : Type): Boolean =
+    if (t2 == CName('Object))
+      true
+    else if (t1 == CName('Object))
+      false
+    else if (t1.isGround)
+      extend.get(t1.asInstanceOf[GroundType]) match {
         case None => false
-        case Some(u) =>
-          if (u == t2) true
-          else isSubtype(u, t2)
-
+        case Some(u) => u == t2 || isSubtype(u, t2)
       }
-    }
-  }
+    else
+      false
+
 
   def addUpperBound(t1: Type, t2: Type) =
     if (t1 == t2)
@@ -185,9 +163,13 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     val cs = this.extend.foldLeft(init) { case (cs, (t, tsuper)) =>
       val t2 = t.subst(s)
       val tsuper2 = tsuper.subst(s)
-      if (cs.extend.contains(t2))
-        Equal(tsuper, cs.extend(t2)).solve(cs)
-      else cs
+      if (t2.isGround)
+        cs.extend.get(t2.asInstanceOf[GroundType]) match {
+          case Some(up) => Equal(tsuper, up).solve(cs)
+          case None => cs
+        }
+      else
+        cs
     }
     val extendedCS = bounds.foldLeft(cs) { case (cs, (t,ts)) =>
       ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}

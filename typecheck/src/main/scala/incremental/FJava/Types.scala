@@ -1,11 +1,8 @@
 package incremental.fjava
 
 import constraints.CVar
-import constraints.fjava.CSubst
 import constraints.fjava.CSubst._
-import constraints.fjava._
-
-import scala.collection.immutable.ListMap
+import constraints.fjava.{CSubst, _}
 
 /**
  * Created by lirakuci on 3/10/15.
@@ -13,7 +10,7 @@ import scala.collection.immutable.ListMap
 
 
 case class UCName(x: CVar[Type]) extends Type {
-  val isGround = false
+  def isGround = false
   def occurs(x2: CVar[_]) = x == x2
   def subst(s: CSubst): Type = s.hgetOrElse(x, this)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
@@ -38,18 +35,14 @@ case class UCName(x: CVar[Type]) extends Type {
       case None =>
         cs.addUpperBound(this, other)
   }
-
-  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
 }
 
-case class CName(x: Symbol) extends Type {
-  val isGround = true
+case class CName(x: Symbol) extends GroundType {
   def freeTVars = Set()
   def normalize = this
   def occurs(x2: CVar[_]) = x == x2
   def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
-  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
     case CName(`x`) => cs
     case UCName(_) => other.unify(this, cs)
@@ -57,38 +50,29 @@ case class CName(x: Symbol) extends Type {
   }
 }
 
-case object ProgramOK extends  Type
-{
-  val isGround = true
+case object ProgramOK extends GroundType {
   def freeTVars = Set()
   def normalize = this
   def occurs(x2: CVar[_]) = false
   def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = ???
-  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = ???
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = if (other == this) cs else cs.never(Equal(this, other))
 }
 
-case object ClassOK extends  Type
-{
-  val isGround = true
+case object ClassOK extends GroundType {
   def freeTVars = Set()
   def normalize = this
   def occurs(x2: CVar[_]) = false
   def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
-  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = this.unify(other, cs)
 }
 
-case object MethodOK extends  Type
-{
-  val isGround = true
+case object MethodOK extends GroundType {
   def freeTVars = Set()
   def normalize = this
   def occurs(x2: CVar[_]) = false
   def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
-  def extendz[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.extendz(this, other)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
 }

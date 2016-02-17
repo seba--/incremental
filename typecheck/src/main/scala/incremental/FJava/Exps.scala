@@ -1,6 +1,6 @@
 package incremental.fjava
 
-import constraints.equality.Type
+import constraints.fjava.Type
 import incremental.{NodeKind, SyntaxChecking}
 import incremental.Node._
 import incremental.{Node_, SyntaxChecking}
@@ -8,13 +8,17 @@ import incremental.{Node_, SyntaxChecking}
 import scala.collection.immutable.ListMap
 
 
-//case object Ctor extends NodeKind(_ => CtorSyntax)
-
-case object ClassDec extends NodeKind(_ => ClassSyntax)
-case object FieldDec extends NodeKind(_ => FieldSyntax)
-case object MethodDec extends NodeKind(_ => MethodSyntax)
+abstract class Toplevel(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 
 case object ProgramM extends NodeKind(_ => ProgramSyntax)
+
+case object ClassDec extends Toplevel(_ => ClassSyntax)
+case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CName]) {
+  def allArgTypes: Seq[CName] = superParams.values.toList ++ fields.values
+}
+
+case object FieldDec extends Toplevel(_ => FieldSyntax)
+case object MethodDec extends Toplevel(_ => MethodSyntax)
 
 abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 object Exp {
@@ -22,10 +26,6 @@ object Exp {
 }
 import Exp._
 
-case object Num extends Exp(simple(Seq(classOf[Integer])))
-case object Str extends Exp(simple(Seq(classOf[Symbol])))
-case object Add extends Exp(simple(cExp, cExp))
-case object Mul extends Exp(simple(cExp, cExp))
 case object Var  extends Exp(simple(Seq(classOf[Symbol])))
 case object This extends Exp(simple(Seq(classOf[Symbol])))
 case object FieldAcc extends Exp(simple(Seq(classOf[Symbol]), cExp))
@@ -109,22 +109,33 @@ object FieldSyntax extends SyntaxChecking.SyntaxChecker(FieldDec) {
 object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
 
+    if (lits.size != 3)
+      error(s"Wrong number of arguments. Expected Method(return, name, params), but got $lits")
+
     if (!(lits(0).isInstanceOf[CName]))
-      error(s"Expected return type CName, but got ${lits(0)}")
+      error(s"Expected return type CName, but got ${lits(3)}")
+//      error(s"Expected method owner CName, but got ${lits(0)}")
 
     if (!(lits(1).isInstanceOf[Symbol]))
-      error(s"Expected Method name Symbol, but got ${lits(0)}")
+      error(s"Expected Method name Symbol, but got ${lits(1)}")
 
-    for (i <- 2 until lits.size - 2 by 2) {
-      val name = lits(i)
-      if (i + 1 >= lits.size)
-        error(s"Field $name misses annotated type")
-      val typ = lits(i+1)
+    if (!lits(2).isInstanceOf[Seq[_]])
+      error(s"Expected parameter list, but got ${lits(2)}")
+    val params = lits(2).asInstanceOf[Seq[_]]
+    for (i <- 0 until params.size by 2) {
+      val nametype = params(i)
+      if (!nametype.isInstanceOf[(_, _)])
+        error(s"Expected name/type pair, but got $nametype")
+      val name = nametype.asInstanceOf[(_,_)]._1
+      val typ = nametype.asInstanceOf[(_,_)]._2
       if (!name.isInstanceOf[Symbol])
         error(s"Expected field name of type Symbol but got $name")
       if (!typ.isInstanceOf[Type])
         error(s"Expected field type of type Type but got $typ")
     }
+
+//    if (!(lits(3).isInstanceOf[CName]))
+//      error(s"Expected return type CName, but got ${lits(3)}")
 
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")

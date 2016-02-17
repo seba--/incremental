@@ -1,6 +1,5 @@
 package incremental.fjava
 
-import constraints.CVar
 import constraints.fjava._
 import constraints.fjava.impl._
 import incremental.Node._
@@ -25,7 +24,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
       val req = ev.withType[checker.Result].typ._2
       val creq = ev.withType[checker.Result].typ._3
       val cons = ev.withType[checker.Result].typ._4
-      assert(actual.isLeft, s"Expected $expected but got Type = $typ, Reqs = $req, CReqs = $creq, Constraint = $cons")
+      assert(actual.isLeft, actual.right)
 
       val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
         Equal(expected, actual.left.get).solve(SolveContinuousSubst.freshConstraintSystem).tryFinalize      }
@@ -40,7 +39,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
 
 
   val Bool = ClassDec(
-    Seq(CName('Bool), CName('Object), Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('Bool), CName('Object), Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -54,7 +53,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
   typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
 
   val True = ClassDec(
-    Seq(CName('True), CName('Bool), Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('True), CName('Bool), Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -66,7 +65,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
     )
   )
   val False = ClassDec(
-    Seq(CName('False), CName('Bool),Ctor(ListMap(), List(), ListMap()),
+    Seq(CName('False), CName('Bool),Ctor(ListMap(), ListMap()),
       Seq()), // no fields
     Seq(
       MethodDec(
@@ -84,8 +83,6 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
 
   // Taking all classes into consideration, checking should succeed
   typecheckTest("{Boolean, True, False} ok", ProgramM(Bool, True, False))(ProgramOK)
-
-
 }
 
 class TestBUSolveEndBoolean extends TestBoolean("BUSolveEnd", new BUCheckerFactory(SolveContinuousSubst))

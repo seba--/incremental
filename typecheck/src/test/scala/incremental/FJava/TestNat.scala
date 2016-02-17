@@ -10,10 +10,78 @@ import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/29/15.
  */
+
+object Nats {
+  val Nat = ClassDec(
+    Seq(CName('Nat), CName('Object),  Ctor(ListMap(), ListMap()),
+      Seq()), // no fields
+    Seq(
+      MethodDec(
+        CName('Nat), 'succ, Seq(),
+        Var('this)), // dummy body, will be overwritten by subclasses
+      MethodDec(
+        CName('Nat), 'pred, Seq(),
+        Var('this)), // dummy body, will be overwritten by subclasses
+      MethodDec(
+        CName('Nat), 'plus, Seq('other -> CName('Nat)),
+        Var('this )) // dummy body, will be overwritten by subclasses
+    )
+  )
+
+  val Zero = ClassDec(
+    Seq(CName('Zero), CName('Nat),  Ctor(ListMap(), ListMap()),
+      Seq()), // no fields
+    Seq(
+      MethodDec(
+        CName('Nat), 'succ, Seq(),
+        Var('this)),
+      MethodDec(
+        CName('Nat), 'pred, Seq(),
+        Var('this)), // pred of Zero is Zero
+      MethodDec(
+        CName('Nat), 'plus, Seq('other -> CName('Nat)),
+        Var('other))
+    )
+  )
+
+  val Succ = ClassDec(
+    Seq(CName('Succ), CName('Nat),  Ctor(ListMap(), ListMap('x -> CName('Nat))),
+      Seq(('x -> CName('Nat)))), // x is the predecessor of this nat
+    Seq(
+      MethodDec(
+        CName('Nat), 'succ, Seq(),
+        New(CName('Succ), New(CName('Nat)))), // --- New(CName('Succ), Var('this))),
+      MethodDec(
+        CName('Nat), 'pred, Seq(),
+        FieldAcc('x, Var('this))), // pred of Zero is Zero -- FieldAcc('x, New(CName('Succ), Var('this))))
+      MethodDec(
+        CName('Nat), 'plus, Seq('other -> CName('Nat)),
+        New(CName('Succ), Invk('plus, FieldAcc('x, Var('this)), Var('other)))) // plus(Succ(x), other) = Succ(plus(x, other))
+    )
+  )
+
+  val all = Seq(Nat, Zero, Succ)
+
+  def Num(n: Int): Node = if (n == 0) New(CName('Zero)) else New(CName('Succ), Num(n-1))
+
+  def Add(e1: Node, e2: Node) = Invk('plus, e1, e2)
+}
+
+object Strings {
+  val string = ClassDec(
+    Seq(CName('String), CName('Object), Ctor(ListMap(), ListMap('o -> CName('Object))), Seq('o -> CName('Object))),
+    Seq()
+  )
+
+  def Str(s: Any) = New(CName('String), New(CName('Object)))
+}
+
 class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
   val checker: BUChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
+
+  import Nats._
 
   def typecheckTest(desc: String, e: => Node)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
@@ -39,68 +107,16 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
     }
 
 
-  val Nat = ClassDec(
-    Seq(CName('Nat), CName('Object),  Ctor(ListMap(), List(), ListMap()),
-      Seq()), // no fields
-    Seq(
-      MethodDec(
-        CName('Nat), 'succ, Seq(),
-        Var('this)), // dummy body, will be overwritten by subclasses
-      MethodDec(
-        CName('Nat), 'pred, Seq(),
-        Var('this)), // dummy body, will be overwritten by subclasses
-      MethodDec(
-        CName('Nat), 'plus, Seq('other -> CName('Nat)),
-        Var('this )) // dummy body, will be overwritten by subclasses
-    )
-  )
-
   typecheckTest("Nat ok", ProgramM(Nat))(ProgramOK)
 
-  val Zero = ClassDec(
-    Seq(CName('Zero), CName('Nat),  Ctor(ListMap(), List(), ListMap()),
-      Seq()), // no fields
-    Seq(
-      MethodDec(
-        CName('Nat), 'succ, Seq(),
-        Var('this)),
-      MethodDec(
-        CName('Nat), 'pred, Seq(),
-        Var('this)), // pred of Zero is Zero
-      MethodDec(
-        CName('Nat), 'plus, Seq('other -> CName('Nat)),
-        Var('other))
-    )
-  )
   // without Zero knowing Succ, the class fails to check
   typecheckTestError("Zero ok", Zero)
 
-  val Succ = ClassDec(
-    Seq(CName('Succ), CName('Nat),  Ctor(ListMap('x -> CName('Nat)), List(), ListMap('x -> 'x)),
-      Seq(('x -> CName('Nat)))), // x is the predecessor of this nat
-    Seq(
-      MethodDec(
-        CName('Nat), 'succ, Seq(),
-        New(CName('Succ), New(CName('Nat)))), // --- New(CName('Succ), Var('this))),
-      MethodDec(
-        CName('Nat), 'pred, Seq(),
-        FieldAcc('x, Var('this))), // pred of Zero is Zero -- FieldAcc('x, New(CName('Succ), Var('this))))
-      MethodDec(
-        CName('Nat), 'plus, Seq('other -> CName('Nat)),
-        New(CName('Succ), Invk('plus, FieldAcc('x, Var('this)), Var('other)))) // plus(Succ(x), other) = Succ(plus(x, other))
-    )
-  )
- /* MethodDec(
-    CName('Nat), 'plus, Seq('x -> CName('Succ), 'other -> CName('Nat)),
-    Invk('plus, New(CName('Succ)),Fields('x, Var('this)), Var('other))) // plus(Succ(x), other) = Succ(plus(x, other))
-  ) /// was wrong before the rtest detected by the contraint solver  !
-  )*/
   // Succ refers to Nat and should fail to check
   typecheckTestError("Succ ok", Succ)
 
   // Taking all classes into consideration, checking should succeed
   typecheckTest("{Nat, Zero, Succ} ok", ProgramM(Nat, Zero, Succ))(ProgramOK)
-
 
 }
 

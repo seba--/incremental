@@ -1,6 +1,5 @@
 package incremental.fjava
 
-import constraints.CVar
 import constraints.fjava._
 import incremental.MyBuilder
 import incremental.systemf.UVar
@@ -24,8 +23,6 @@ abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeC
   def freshUVar() = UVar(freshSymbol("x$"))
 
   def freshCName() = UCName(freshSymbol("C$"))
-  def freshParam() = freshSymbol[Param]("p$")
-  def freshField() = freshSymbol[FieldName]("f$")
 
 }
 

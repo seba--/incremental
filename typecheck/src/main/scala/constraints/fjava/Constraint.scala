@@ -8,11 +8,6 @@ trait Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS
 }
 
-case class Extend(lower : Type, upper: Type) extends Constraint{
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) : CS = lower.extendz(upper, cs)
-
-  override def subst(s: CSubst): Constraint = Extend(lower.subst(s), upper.subst(s))
-}
 case class Subtype(lower: Type, upper: Type) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = lower.subtype(upper, cs)
 
