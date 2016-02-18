@@ -11,7 +11,7 @@ import scala.collection.immutable.ListMap
  * Created by lirakuci on 3/29/15.
  */
 
-object Nats {
+class Nats {
   val Nat = ClassDec(
     Seq(CName('Nat), CName('Object),  Ctor(ListMap(), ListMap()),
       Seq()), // no fields
@@ -67,7 +67,7 @@ object Nats {
   def Add(e1: Node, e2: Node) = Invk('plus, e1, e2)
 }
 
-object Strings {
+class Strings {
   val string = ClassDec(
     Seq(CName('String), CName('Object), Ctor(ListMap(), ListMap('o -> CName('Object))), Seq('o -> CName('Object))),
     Seq()
@@ -81,7 +81,9 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  import Nats._
+  val nats = new Nats
+
+  import nats._
 
   def typecheckTest(desc: String, e: => Node)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
@@ -120,8 +122,6 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUC
 
 }
 
-class TestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveContinuousSubst))
-//class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
-//class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
-//class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
+class TestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+class TestBUSolveContinuousSubstNat extends TestNat("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 

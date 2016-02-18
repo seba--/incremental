@@ -8,9 +8,6 @@ abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends const
 
   def freshConstraintSystem: CS
   def emptySolution = freshConstraintSystem
-  def solved(s: CSubst): CS
-  def notyet(c: Constraint): CS
-  def never(c: Constraint): CS
 }
 
 
