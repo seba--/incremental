@@ -27,7 +27,6 @@ object Exp {
 import Exp._
 
 case object Var  extends Exp(simple(Seq(classOf[Symbol])))
-case object This extends Exp(simple(Seq(classOf[Symbol])))
 case object FieldAcc extends Exp(simple(Seq(classOf[Symbol]), cExp))
 case object New extends Exp(_ => NewSyntax)
 case object UCast extends Exp(simple(Seq(classOf[CName]),cExp))

@@ -303,6 +303,14 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestFJ("{A, B} ok", ProgramM(A, B))(ProgramOK)
 
+
+  val ASup = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap(), ListMap()), Seq()), Seq())
+
+  val BSub = ClassDec(Seq(CName('B), CName('A), Ctor(ListMap(), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
+
+  typecheckTestError("{ASup, BSub} not ok: unprovided field 'i'", ProgramM(ASup, BSub))
+
 }
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))

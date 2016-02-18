@@ -14,7 +14,8 @@ import incremental.fjava.Condition.trueCond
 trait CReq[T <: CReq[T]] {
   def self: T
   val cls: Type
-  def withCls(t: Type): T
+  def withCls(t: Type): T = withCls(t, Condition(Set(), Set(), cond.others + (cls -> Condition(cond.not, cond.same, Map()))))
+  def withCls(t: Type, newcond: Condition): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
   def assert(other: CReq[T]): Option[Constraint] = for (c2 <- alsoCond(other.cond); c3 <- c2.alsoSame(other.cls)) yield assert(other, c3.cond)
@@ -28,7 +29,7 @@ trait CReq[T <: CReq[T]] {
 }
 case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CReq[ExtCReq] {
   def self = this
-  def withCls(t: Type) = copy(cls=t)
+  def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[ExtCReq]) = true
   def assert(other: CReq[ExtCReq], cond: Condition) = Conditional(cls, cond, Equal(ext, other.self.ext))
   def subst(s: CSubst) = {
@@ -40,7 +41,7 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
 }
 case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
   def self = this
-  def withCls(t: Type) = copy(cls=t)
+  def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[CtorCReq]) = true
   def assert(other: CReq[CtorCReq], cond: Condition) = Conditional(cls, cond, AllEqual(args, other.self.args))
   def subst(s: CSubst) = {
@@ -52,7 +53,7 @@ case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) exte
 }
 case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = trueCond) extends CReq[FieldCReq] {
   def self = this
-  def withCls(t: Type) = copy(cls=t)
+  def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[FieldCReq]): Boolean = field == other.self.field
   def assert(other: CReq[FieldCReq], cond: Condition) = Conditional(cls, cond, Equal(typ, other.self.typ))
   def subst(s: CSubst) = {
@@ -64,7 +65,7 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
 }
 case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, cond: Condition = trueCond) extends CReq[MethodCReq] {
   def self = this
-  def withCls(t: Type) = copy(cls=t)
+  def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
   def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(cls, cond, AllEqual(params :+ ret, other.self.params :+ other.self.ret))
   def subst(s: CSubst) = {
@@ -77,9 +78,9 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, con
 }
 
 object Condition {
-  def trueCond = Condition(Set(), Set())
+  def trueCond = Condition(Set(), Set(), Map())
 }
-case class Condition(not: Set[Type], same: Set[Type]){
+case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Condition]){
   def subst(cls: Type, s: CSubst): Option[Condition] = {
     val newnot = not flatMap { n =>
       val n2 = n.subst(s)
@@ -99,26 +100,36 @@ case class Condition(not: Set[Type], same: Set[Type]){
       else
         Some(n2)
     }
-    Some(Condition(newnot, newsame))
+    val newothers = others map { kv =>
+      val cls = kv._1.subst(s)
+      kv._2.subst(cls, s) match {
+        case Some(cond) => cls -> cond
+        case None => return None
+      }
+    }
+    Some(Condition(newnot, newsame, newothers))
   }
 
   def alsoNot(cls: Type, n: Type): Option[Condition] =
     if (cls == n || same.contains(n))
       None
     else
-      Some(Condition(not + n, same))
+      Some(Condition(not + n, same, others))
   def alsoSame(cls: Type, n: Type): Option[Condition] =
     if (cls.isGround && n.isGround && cls != n || not.contains(n))
       None
     else
-      Some(Condition(not, same + n))
+      Some(Condition(not, same + n, others))
   def alsoCond(cls: Type, other: Condition): Option[Condition] =
     if (other.not.contains(cls) || other.not.exists(same.contains(_)) || not.exists(other.same.contains(_)))
       None
     else
-      Some(Condition(not ++ other.not, same ++ other.same))
+      Some(Condition(not ++ other.not, same ++ other.same, others))
 
-  def isGround = not.foldLeft(true)((res, t) => res && t.isGround) && same.foldLeft(true)((res, t) => res && t.isGround)
+  def isGround: Boolean =
+    not.foldLeft(true)((res, t) => res && t.isGround) &&
+      same.foldLeft(true)((res, t) => res && t.isGround) &&
+      others.values.foldLeft(true)((res, cond) => res && cond.isGround)
 }
 
 case class ClassReqs (
