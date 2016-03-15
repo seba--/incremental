@@ -14,8 +14,8 @@ trait Constraint extends constraints.Constraint[Gen, Constraint]{
 
 case class Equality(expected: Type, actual: Type) extends Constraint {
   def subst(s: CSubst) = Equality(expected.subst(s), actual.subst(s))
-  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
-  def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = expected.unify(actual, cs)
+  def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = solve(cs)
 }
 
 case class PrimitiveWidening(actual: Type, expected: Type) extends Constraint {
@@ -36,14 +36,26 @@ case class PrimitiveWideningEq(res: Type, actual: Type, expected: Type) extends 
   def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
 }
 
-case class DirectedWidening(candidate: Type, widenTo: Type) extends Constraint {
-  def subst(s: CSubst) = DirectedWidening(candidate.subst(s), widenTo.subst(s))
+case class DirectedWidening(lower: Type, upper: Type) extends Constraint {
+  def subst(s: CSubst) = DirectedWidening(lower.subst(s), upper.subst(s))
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
   def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
 }
 
 case class OneOf(actual: Type, expected: Seq[Type]) extends Constraint {
   def subst(s: CSubst) = OneOf(actual.subst(s), expected.map(_.subst(s)))
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
+  def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
+}
+
+case class Subtype(lower: Type, upper: Type) extends Constraint {
+  def subst(s: CSubst) = Subtype(lower.subst(s), upper.subst(s))
+  def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
+  def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
+}
+
+case class SubtypeOrDirectedWidening(lower: Type, upper: Type) extends Constraint {
+  def subst(s: CSubst) = SubtypeOrDirectedWidening(lower.subst(s), upper.subst(s))
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
   def finalize[CS <: ConstraintSystem[CS]](cs: CS): CS = ???
 }

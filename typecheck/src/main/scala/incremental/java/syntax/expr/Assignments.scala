@@ -19,15 +19,25 @@ case object Assign extends Expr(simple(ExprName.getClass, cExpr) orElse simple(c
       val (ExprType(t1), vReqs1, cReqs1) = kids(0).typ
       val (ExprType(t2), vReqs2, cReqs2) = kids(1).typ
 
-      val widen = DirectedWidening(t2, t1)
+      val subtypewiden = SubtypeOrDirectedWidening(t2, t1)
       val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
 
       context.addConstraintSeq(mCons)
-      context.addConstraint(widen)
+      context.addConstraint(subtypewiden)
 
       (ExprType(t1), mReqs, mergeCReqs(cReqs1, cReqs2))
     case f : FieldAccess =>
-      ???
+      // merge into just one case?
+      val (ExprType(t1), vReqs1, cReqs1) = kids(0).typ
+      val (ExprType(t2), vReqs2, cReqs2) = kids(1).typ
+
+      val subtype = Subtype(t2, t1)
+      val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+
+      context.addConstraintSeq(mCons)
+      context.addConstraint(subtype)
+
+      (ExprType(t1), mReqs, mergeCReqs(cReqs1, cReqs2))
     case arr : ArrayAccess.type =>
       ???
   }
