@@ -40,14 +40,26 @@ case object If extends Stm(simple(cExpr, cStm) orElse simple(cExpr, cStm, cStm))
       val (StmOk, vReqs2, cReqs2) = kids(1).typ
 
       val t1IsBool = Equality(t1, TBoolean())
-      val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2)
+      val (mcons, mreqs) = mergeVReqs(vReqs1, vReqs2)
 
       context.addConstraint(t1IsBool)
-      context.addConstraintSeq(mCons)
+      context.addConstraintSeq(mcons)
 
-      (StmOk, mReqs, mergeCReqs(cReqs1, cReqs2))
+      (StmOk, mreqs, mergeCReqs(cReqs1, cReqs2))
     case 3 => // IfElse
-      ???
+      val (ExprType(t), vReqs1, cReqs1) = kids(0).typ
+      val (StmOk, vReqs2, cReqs2) = kids(1).typ
+      val (StmOk, vReqs3, cReqs3) = kids(2).typ
+
+      val tIsBool = Equality(t, TBoolean())
+      val (mcons, mvreqs) = mergeVReqs(Seq(vReqs1, vReqs2, vReqs3))
+
+      context.addConstraint(tIsBool)
+      context.addConstraintSeq(mcons)
+
+      val mcreqs = mergeCReqs(mergeCReqs(cReqs1, cReqs2), cReqs3)
+
+      (StmOk, mvreqs, mcreqs)
   }
 }
 
