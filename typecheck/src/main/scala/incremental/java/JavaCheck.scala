@@ -40,18 +40,24 @@ object JavaCheck {
 
   def freshUVar()  = UVar(gen.freshSymbol[Type]("T"))
 
-  def mergeVReqs(reqs1: VReqs, reqs2: VReqs): (Seq[Constraint], VReqs) = {
-    var cons = emptyCons
-    var reqs = reqs1
+  private val init: (Seq[Constraint], VReqs) = (emptyCons, emptyVReqs)
 
-    for((x, t2) <- reqs2){
-      reqs1.get(x) match {
-        case None => reqs += x -> t2
-        case Some(t1) => cons = Equality(t1, t2) +: cons
+  def mergeVReqs(req: VReqs, reqs: VReqs*): (Seq[Constraint], VReqs) = mergeVReqs(req +: reqs)
+
+  def mergeVReqs(reqs: Seq[VReqs]): (Seq[Constraint], VReqs) = reqs.foldLeft[(Seq[Constraint], VReqs)](init)(_mergeVReqs)
+
+  private def _mergeVReqs(was: (Seq[Constraint], VReqs), newReqs: VReqs) = {
+    val wasReqs = was._2
+    var mcons = was._1
+    var mreqs = wasReqs
+
+    for ((x, r2) <- newReqs)
+      wasReqs.get(x) match {
+        case None => mreqs += x -> r2
+        case Some(r1) => mcons = Equality(r1, r2) +: mcons
       }
-    }
 
-    (cons, reqs)
+    (mcons, mreqs)
   }
 
   def mergeCReqs(reqs1: CReqs, reqs2: CReqs): CReqs = reqs1 ++ reqs2
