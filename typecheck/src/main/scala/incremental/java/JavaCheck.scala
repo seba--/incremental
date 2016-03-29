@@ -15,7 +15,7 @@ object JavaCheck {
   trait CheckRes
   case object ClassOk extends CheckRes
   case object MethodOk extends CheckRes
-  case class StmType(t: Type) extends CheckRes
+  case object StmOk extends CheckRes
   case class ExprType(t: Type) extends CheckRes
 
   type VReqs = Map[Symbol, Type]
