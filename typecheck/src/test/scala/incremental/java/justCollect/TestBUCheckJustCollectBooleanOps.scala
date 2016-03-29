@@ -11,9 +11,6 @@ import incremental.java.JavaCheck._
  * Created by qwert on 19.01.16.
  */
 class TestBUCheckJustCollectBooleanOps extends TestBUCheckJustCollect {
-  val _true = Lit(Bool(True()))
-  val _false = Lit(Bool(False()))
-
   lazy val gtCons = Seq(PrimitiveWidening(TInt(), TLong()),
                         OneOf(TInt(), numTypes),
                         OneOf(TLong(), numTypes))

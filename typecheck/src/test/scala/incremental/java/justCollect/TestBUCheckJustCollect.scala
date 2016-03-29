@@ -4,6 +4,7 @@ import constraints.javacons._
 import constraints.javacons.impl._
 import incremental.Node._
 import incremental.java.JavaCheck._
+import incremental.java.syntax.expr.{False, True, Bool, Lit}
 import incremental.java.{BUCheckerFactory, TypeChecker}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
@@ -24,4 +25,7 @@ class TestBUCheckJustCollect extends FunSuite with BeforeAndAfterEach {
       assert(expected == actual, s"Expected $expected, but got ${actual}")
     }
   }
+
+  val _true = Lit(Bool(True()))
+  val _false = Lit(Bool(False()))
 }
