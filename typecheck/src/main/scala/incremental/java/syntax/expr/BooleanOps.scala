@@ -170,7 +170,7 @@ case object Cond extends Expr(simple(cExpr, cExpr, cExpr)){
     val t3isPrimitive = OneOf(t3, primTypes)
     val XisNumOps = OneOf(X, TBoolean() +: numericOpsTypes)
 
-    val (mCons, mReqs) = mergeVReqs(vReqs2, vReqs3) // TODO: expand merge to multiple operands
+    val (mCons, mReqs) = mergeVReqs(vReqs1, vReqs2, vReqs3)
     val cReqs = mergeCReqs(mergeCReqs(cReqs1, cReqs2), cReqs3) // TODO: expand merge to multiple operands
 
     context.addConstraints(t1IsBool, widen, widenEq, t2isPrimitive, t3isPrimitive, XisNumOps)

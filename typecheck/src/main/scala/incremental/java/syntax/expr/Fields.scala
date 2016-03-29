@@ -29,6 +29,7 @@ case object SuperField extends FieldAccess(simple(Seq(classOf[String]))){
 
     // TODO: class requirement
 
+    // TODO: vreq for super correct?
     (ExprType(X), Map('super -> X), emptyCReqs)
   }
 }
