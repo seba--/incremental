@@ -25,12 +25,13 @@ case object Field extends FieldAccess(simple(Seq(classOf[String]), cExpr)){
 }
 case object SuperField extends FieldAccess(simple(Seq(classOf[String]))){
   def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = {
-    val X = freshUVar()
+    val X = freshUVar() // for return type
+    val Y = freshUVar() // for type of super
 
     // TODO: class requirement
 
     // TODO: vreq for super correct?
-    (ExprType(X), Map('super -> X), emptyCReqs)
+    (ExprType(X), Map('super -> Y), emptyCReqs)
   }
 }
 case object QSuperField extends FieldAccess(simple(Seq(classOf[TypeName], classOf[String]))){
