@@ -6,13 +6,14 @@ import incremental.java.JavaCheck._
 import incremental.java.syntax._
 import incremental.{Context, NodeKind, SyntaxChecking}
 import incremental.java.syntax.expr.Expr._
+import incremental.java.syntax.JavaSyntaxChecker._
 
 /**
  * Created by qwert on 29.09.15.
  */
 
 // Method Invocation
-case object Invoke extends Expr(_ => MethodInvokationSyntax){
+case object Invoke extends Expr(noLits andAlso followedByKids(classOf[MethodSpec], cExpr)) {//(_ => MethodInvokationSyntax){
   def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???
 }
 
