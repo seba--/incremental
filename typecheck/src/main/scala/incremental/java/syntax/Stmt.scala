@@ -90,10 +90,32 @@ case object Default extends NodeKind[Constraint, Result](simple()) with NT_Switc
 
 // Loops
 case object While extends Stm(simple(cExpr, cStm)) {
-  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = {
+    val (ExprType(t1), vReqs1, cReqs1) = kids(0).typ
+    val (StmOk, vReqs2, cReqs2) = kids(1).typ
+
+    val exprIsBool = Equality(t1, TBoolean()) // TODO: change Equality with OneOf for boxing/unboxing?
+    val (mcons, mreqs) = mergeVReqs(vReqs1, vReqs2)
+
+    context.addConstraint(exprIsBool)
+    context.addConstraintSeq(mcons)
+
+    (StmOk, mreqs, mergeCReqs(cReqs1, cReqs2))
+  }
 }
 case object DoWhile extends Stm(simple(cStm, cExpr)) {
-  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = ???
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = {
+    val (StmOk, vReqs1, cReqs1) = kids(0).typ
+    val (ExprType(t2), vReqs2, cReqs2) = kids(1).typ
+
+    val exprIsBool = Equality(t2, TBoolean()) // TODO: change Equality with OneOf for boxing/unboxing?
+    val (mcons, mreqs) = mergeVReqs(vReqs1, vReqs2)
+
+    context.addConstraint(exprIsBool)
+    context.addConstraintSeq(mcons)
+
+    (StmOk, mreqs, mergeCReqs(cReqs1, cReqs2))
+  }
 }
 
 case object For extends Stm((noLits andAlso uFollowedByKids(Seq(classOf[NT_LocalVarDec], cStm), cExpr)) orElse // first the statement then the increasing expressions
