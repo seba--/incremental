@@ -79,6 +79,7 @@ object BlockSyntax extends SyntaxChecking.SyntaxChecker(Block){
 object FieldDecSyntax extends SyntaxChecking.SyntaxChecker(FieldDec){
   def check[C, CS, T](lits: Seq[Lit], kids: Seq[Node_[C, CS, T]]): Unit = {
     // TODO
+    // ( Anno | FieldMod )* Type {VarDec ","}+ ";" -> FieldDec {cons("FieldDec")}
   }
 }
 

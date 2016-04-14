@@ -4,7 +4,7 @@ import constraints.javacons.Constraint
 import incremental.Node._
 import incremental.java.JavaCheck._
 import incremental.java.syntax.expr.Expr
-import incremental.{NodeKind, SyntaxChecking}
+import incremental.{Context, NodeKind, SyntaxChecking}
 import incremental.java.syntax.JavaSyntaxChecker._
 
 /**
@@ -24,8 +24,28 @@ trait NT_Dim
 
 case object FieldDec extends NodeKind_TMP[Constraint, Result](_ => FieldDecSyntax) with NT_FieldDec
 
-case object VarDec extends NodeKind_TMP[Constraint, Result]((noKids andAlso lits(Seq(classOf[NT_VarDecId]))) orElse
-                                    (lits(Seq(classOf[NT_VarDecId])) andAlso unsafeKids(Seq(classOf[NT_VarInit])))) with NT_VarDec
+case object VarDec extends NodeKind[Constraint, Result]((noKids andAlso lits(Seq(classOf[NT_VarDecId]))) orElse
+                                    (lits(Seq(classOf[NT_VarDecId])) andAlso unsafeKids(Seq(classOf[NT_VarInit])))) with NT_VarDec {
+  def check(lits: Seq[Any], kids: Seq[Kid], context: Context[Constraint]): Result = {
+    if (kids.isEmpty) {
+      // uninitilized
+      lits(0) match {
+        case ID(s) => (VarDecOk(s, freshUVar()), emptyVReqs, emptyCReqs)
+        case ArrayVarDecId(s, dims) => {
+          if (dims.isEmpty)
+            throw new IllegalArgumentException("Dims must not be empty")
+
+          val t = dims.foldLeft[Type](freshUVar()) { (acc, current) => ArrayType(acc) }
+
+          (VarDecOk(s, t), emptyVReqs, emptyCReqs)
+        }
+      }
+    } else {
+      // initilized
+      ???
+    }
+  }
+}
 
 case class ArrayVarDecId(id: String, dims: Seq[NT_Dim]) extends NT_VarDecId
 

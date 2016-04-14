@@ -17,6 +17,7 @@ object JavaCheck {
   case object MethodOk extends CheckRes
   case object StmOk extends CheckRes
   case class ExprType(t: Type) extends CheckRes
+  case class VarDecOk(varName: String, varType: Type) extends CheckRes
 
   type VReqs = Map[Symbol, Type]
   type CReqs = Seq[Any] // TODO: find suitable type for class requirements
