@@ -140,10 +140,19 @@ object Node {
   implicit def kindExpression(k: NodeKind) = new KindExpression(k)
   class KindExpression(k: NodeKind) {
     def apply(): Node = new Node_[Any](k, Seq(), Seq())
-    def apply(l: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l), Seq(sub:_*))
-    def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
-    def apply(e: Node, sub: Node*): Node = new Node_[Any](k, scala.Seq(), e +: Seq(sub:_*))
+//    def apply(l: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l), Seq(sub:_*))
+//    def apply(l1: Lit, l2: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2), Seq(sub:_*))
+//    def apply(l1: Lit, l2: Lit, l3: Lit, s: Node, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2, l3), s +: Seq(sub:_*))
+//    def apply(l1: Lit, l2: Lit, l3: Lit, l4: Lit, s: Node, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2, l3, l4), s +: Seq(sub:_*))
+//    def apply(l1: Lit, l2: Lit, l3: Lit, l4: Lit, l5: Lit, s: Node, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2, l3, l4, l5), s +: Seq(sub:_*))
+//    def apply(e: Node, sub: Node*): Node = new Node_[Any](k, scala.Seq(), e +: Seq(sub:_*))
     def apply(lits: Seq[Lit], sub: Seq[Node]): Node = new Node_[Any](k, lits, sub)
+    def apply(as: Any*): Node = {
+      val (kids, lits) = as.partition(_.isInstanceOf[Node_[_]])
+      new Node_[Any](k, lits, kids.asInstanceOf[Seq[Node]])
+    }
+  //def apply(l1: Lit, l2: Lit, l3: Lit, l4: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2, l3, l4), Seq(sub:_*))
+
   }
   
   val ignore = (k: NodeKind) => new SyntaxChecking.IgnoreSyntax(k)

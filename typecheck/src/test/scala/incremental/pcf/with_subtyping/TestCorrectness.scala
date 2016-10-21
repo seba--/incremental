@@ -24,8 +24,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val actual = checker.typecheck(e)
       assert(actual.isLeft, s"Expected $expected but got $actual")
 
-      val sol = SolveContinuously.state.withValue(checker.csFactory.state.value) {
-        Equal(expected, actual.left.get).solve(SolveContinuously.freshConstraintSystem).tryFinalize
+      val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
+        Equal(expected, actual.left.get).solve(SolveContinuousSubst.freshConstraintSystem).tryFinalize
       }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
@@ -96,13 +96,13 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
 }
 
-class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
-class TestDUSolveEndCanonicalBoundsCorrectness extends TestCorrectness("DUSolveEndCanonicalBounds", new DUCheckerFactory(SolveEndCanonicalBounds))
-class TestDUSolveContinuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
+//class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
+//class TestDUSolveEndCanonicalBoundsCorrectness extends TestCorrectness("DUSolveEndCanonicalBounds", new DUCheckerFactory(SolveEndCanonicalBounds))
+//class TestDUSolveContinuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
 
-class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
-class TestBUSolveEndCanonicalBoundsCorrectness extends TestCorrectness("BUSolveEndCanonicalBounds", new BUCheckerFactory(SolveEndCanonicalBounds))
-class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
+//class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+//class TestBUSolveEndCanonicalBoundsCorrectness extends TestCorrectness("BUSolveEndCanonicalBounds", new BUCheckerFactory(SolveEndCanonicalBounds))
+//class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
 class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
-class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
+//class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)

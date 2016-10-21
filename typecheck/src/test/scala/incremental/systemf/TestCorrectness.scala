@@ -10,8 +10,8 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
 /**
  * Created by seba on 14/11/14.
  */
-class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
-  val checker: TypeChecker[CS] = checkerFactory.makeChecker
+class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: BUChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
@@ -24,6 +24,18 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
         expected.unify(actual.left.get, SolveContinuously.freshConstraintSystem).tryFinalize
       }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
+    }
+
+  def typecheckTestFJ(desc: String, e: =>Node)(expected: Type): Unit =
+    test (s"$classdesc: Type check $desc") {
+      val ev = e
+      val actual = checker.typecheck(ev)
+
+      val req = ev.withType[checker.Result].typ._2
+      val creq = ev.withType[checker.Result].typ._3
+      val sig = ev.withType[checker.Result].typ._4
+      assert(actual.isLeft, s"Reqs = $req, CReqs = $creq, Signature = $sig ")
+
     }
 
   def typecheckTestError(desc: String, e: =>Node) =
@@ -53,21 +65,22 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError("\\a. \\b. \\f:a . \\x:b. f x", TAbs('a,TAbs('b, Abs('f,TVar('a),Abs('x, TVar('b), App(Var('f),Var('x)))))))
   typecheckTest("(\\a. \\x : a. x) [Num]", TApp(TNum, TAbs('A, Abs('x, TVar('A), Var('x)))))(TFun(TNum,TNum))
   typecheckTest("\\b. (\\a. \\x : a. x) [b]", TAbs('B, TApp(TVar('B), TAbs('A, Abs('x, TVar('A), Var('x))))))(TUniv('B, TFun(TVar('B),TVar('B))))
-  typecheckTestError("\\x. x [Num]", Abs('x, TApp(TNum, Var('x))))
+  typecheckTestFJ("\\x. x [Num]", Abs('x, TApp(TNum, Var('x))))(TFun(TNum, TNum))
+  typecheckTestFJ("\\x x+ x", Abs('x, Add(Var('x), Var('x))))(TVar('x))
+
   typecheckTestError("\\x. (x [Num]) + 1", Abs('x, Add(TApp(TNum, Var('x)), Num(1))))
   typecheckTestError("\\x:X. x", Abs('x, TVar('X), Var('x)))
   typecheckTestError("(\\X.\\x:X. x)[Y]", TApp(TVar('Y), TAbs('X, Abs('x, TVar('X), Var('x)))))
   typecheckTest("\\f:(forall a. a)->TNum. \\x:(forall b. b) f x",
     Abs('f, TFun(TUniv('a, TVar('a)), TNum), Abs('x, TUniv('b, TVar('b)), App(Var('f), Var('x)))))(
-    TFun(TFun(TUniv('a, TVar('a)), TNum), TFun(TUniv('b, TVar('b)), TNum))
-  )
+    TFun(TFun(TUniv('a, TVar('a)), TNum), TFun(TUniv('b, TVar('b)), TNum)))
 }
 
-class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
-class TestDUSolveContniuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
+//class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
+//class TestDUSolveContniuouslyCorrectness extends TestCorrectness("DUSolveContinuously", new DUCheckerFactory(SolveContinuously))
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
-class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
-class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
-class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
+//class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
+//class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+//class TestBUSolveContinuousSubstThresholdCorrectness extends TestCorrectness("BUSolveContinuousSubstThreshold", new BUCheckerFactory(SolveContinuousSubstThreshold))
 //class TestBottomUpEagerSubstEarlyTermCorrectness extends TestCorrectness("BottomUpEagerSubstEarlyTerm", BottomUpEagerSubstEarlyTermCheckerFactory)

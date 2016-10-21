@@ -172,6 +172,7 @@ case class SolveContinuousSubstThresholdCS(substitution: CSubst, bounds: Map[CVa
     subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs)
   }
 
+  def shouldApplySubst: Boolean = trigger
 
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) =
     if (trigger)

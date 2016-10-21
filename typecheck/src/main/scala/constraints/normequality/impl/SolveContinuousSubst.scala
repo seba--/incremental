@@ -51,6 +51,8 @@ case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint],
     }
   }
 
+  def shouldApplySubst: Boolean = true
+
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t.subst(substitution)
 
   def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]

@@ -1,8 +1,10 @@
 package incremental.systemf
 
+
 import constraints.CVar
 import constraints.equality.CSubst.CSubst
 import constraints.equality._
+
 
 /**
  * Created by seba on 13/11/14.

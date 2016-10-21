@@ -175,6 +175,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[CVar[Type], 
     subtype.Join(changed, lower.nonground ++ lower.ground.toSet).solve(cs)
   }
 
+  def shouldApplySubst: Boolean = true
 
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t.subst(substitution)
 

@@ -22,3 +22,4 @@ case object Abs extends Exp(simple(Seq(classOf[Symbol]), cExp) orElse simple(Seq
 case object App extends Exp(simple(cExp, cExp))
 case object If0 extends Exp(simple(cExp, cExp, cExp))
 case object Fix extends Exp(simple(cExp))
+
