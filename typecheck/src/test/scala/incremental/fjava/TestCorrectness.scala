@@ -303,13 +303,23 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestFJ("{A, B} ok", ProgramM(A, B))(ProgramOK)
 
-
   val ASup = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap(), ListMap()), Seq()), Seq())
 
   val BSub = ClassDec(Seq(CName('B), CName('A), Ctor(ListMap(), ListMap()), Seq()),
     Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
 
   typecheckTestError("{ASup, BSub} not ok: unprovided field 'i'", ProgramM(ASup, BSub))
+
+  val AS = ClassDec(Seq(CName('A), CName('Object), Ctor(ListMap('i -> CName('Nat)), ListMap()), Seq()),
+    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
+
+  val BS = ClassDec(Seq(CName('B), CName('Object), Ctor(ListMap(), ListMap('i -> CName('Nat))), Seq(('i, CName('Nat)))),
+    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
+
+ // val CS = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()), Seq())
+
+  typecheckTestFJ("{ASup, CSub}", ProgramM(BS))(ProgramOK)
+
 
 }
 
