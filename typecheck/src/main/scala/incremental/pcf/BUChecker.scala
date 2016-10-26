@@ -36,6 +36,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
+
   def typecheckRec(e: Node_[Result]): Unit = {
     val res@(t, reqs, cons) = typecheckStep(e)
     val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
