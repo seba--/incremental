@@ -3,6 +3,8 @@ package incremental.fjava
 /**
  * Created by lirakuci on 10/26/16.
  */
+
+import com.typesafe.config.ConfigException.Null
 import constraints.Statistics
 import constraints.fjava.CSubst.CSubst
 import constraints.fjava._
@@ -56,7 +58,6 @@ case class CT (
 case class UnboundVariable(x: Symbol, ctx: Map[Symbol, Type]) extends RuntimeException
 
 
-
 case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
   def makeChecker = new BUChecker[CS] {
     type CSFactory = factory.type
@@ -77,32 +78,41 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type Result = (Type, CS)
 
-  def field(f : Symbol, cls : Type, ct: CT): FieldCT = {
+  val CURRENT_CLASS = '$current
+
+  def field(f : Symbol, cls : Type, ct: CT): Seq[Type] = {
     val posFTyp = ct.fields.find(ftyp => (ftyp.field == f) && (ftyp.cls == cls) )
     posFTyp match {
       case None => ct.ext.toMap[Type,Type].get(cls)   match {
-        case None => ???
+        case None => Seq()
         case Some(superCls) =>  field(f, superCls, ct)
       }
-      case Some(fTyp) => FieldCT(fTyp.cls, fTyp.field , fTyp.typ)
+      case Some(fTyp) =>  Seq(fTyp.typ)
     }
   }
 
-  def mtype(m : Symbol, cls : Type, ct: CT): MethodCT = {
+  def mtype(m : Symbol, cls : Type, ct: CT): Seq[Type] = {
     val posMTyp = ct.methods.find(ftyp => (ftyp.name == m) && (ftyp.cls == cls) )
     posMTyp match {
       case None => ct.ext.toMap[Type,Type].get(cls)   match {
-        case None => ???
+        case None => Seq()
         case Some(superCls) =>  mtype(m, superCls, ct)
       }
-      case Some(mTyp) => MethodCT(mTyp.cls, mTyp.name ,mTyp.params, mTyp.ret)
+      case Some(mTyp) => mTyp.params ++ Seq(mTyp.ret)
     }
   }
 
-  def extend(cls : Type, ct : CT) : Type = {
+  def extend(cls : Type, ct : CT) : Seq[Type] = {
     ct.ext.toMap[Type, Type].get(cls) match {
-      case None => ???
-      case Some(superCls) => superCls // or return ext(cls, superCls)
+      case None => Seq()
+      case Some(superCls) => Seq(superCls) // or return ext(cls, superCls)
+    }
+  }
+
+  def init(cls : Type, ct : CT) : Seq[Type] = { // return CtorCT
+    ct.ctorParams.toMap[Type, Seq[Type]].get(cls) match {
+      case None => Seq()
+      case Some(ctorTyp) => ctorTyp
     }
   }
 
@@ -140,105 +150,75 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
     case FieldAcc =>
       val f = e.lits(0).asInstanceOf[Symbol] //symbol
-    val (t, cs) = typecheckRec(e.kids(0), ctx, ct) //subsol
-      (t, Seq(), Seq(cs))
+      val (t, cs) = typecheckRec(e.kids(0), ctx, ct) //subsol
+      val fTyp = field(f,t, ct)
+      (fTyp.head, Seq(), Seq(cs))
 
     case Invk =>
       val m = e.lits(0).asInstanceOf[Symbol]
       val (te, cse) = typecheckRec(e.kids(0), ctx, ct)
-
+      val mtyp = mtype(m, te, ct)
+      var cs = Seq[CS]()
       var cons = Seq[Constraint]()
-      var reqss: Seq[Reqs] = Seq(reqs0)
-      var creqss: Seq[ClassReqs] = Seq(creqs0)
-      var params = Seq[Type]()
-
       for (i <- 1 until e.kids.seq.size) {
-        val (ti, subreqs, subcreqs, _) = e.kids(i).typ
-        val U = freshCName()
-        params = params :+ U
-        cons = cons :+ Subtype(ti, U)
-        reqss = reqss :+ subreqs
-        creqss = creqss :+ subcreqs
+        val (ti, csi) = typecheckRec(e.kids(i), ctx, ct)
+        cons = cons :+ Subtype(ti, mtyp.toList(i))
+        cs = cs ++ Seq(csi)
       }
-
-      val (mreqs, mcons) = mergeReqMaps(reqss)
-      val (creqs, cCons) = mergeCReqMaps(creqss)
-      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params, Uret).lift)
-
-      (Uret, mreqs, mcreqs, mcons ++ cCons ++ mcCons ++ cons)
+      (mtyp.last , cons, Seq(cse) ++ cs)
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
-
+      val ctor = init(c, ct)
       var cons = Seq[Constraint]()
-      var reqss = Seq[Reqs]()
-      var creqss = Seq[ClassReqs]()
-      var params: List[Type] = Nil
-
+      var cs = Seq[CS]()
       for (i <- 0 until e.kids.seq.size) {
-        val (ti, subreqs, subcreqs, _) = e.kids.seq(i).typ
-        val U = freshCName()
-        params = params :+ U
-        cons =  cons :+ Subtype(ti, U)
-        reqss = reqss :+ subreqs
-        creqss = creqss :+ subcreqs
+        val (ti, csi) = typecheckRec(e.kids(i), ctx, ct)
+        cons =  cons :+ Subtype(ti,ctor.toList(i))
+        cs = cs ++ Seq(csi)
       }
-
-      val (mreqs, mcons) = mergeReqMaps(reqss)
-      val (creqs, cCons) = mergeCReqMaps(creqss)
-      val (mcreqs, mcCons) = creqs.merge(CtorCReq(c, params).lift)
-
-      (c, mreqs, mcreqs, mcons ++ cCons ++ mcCons ++ cons)
+      (c, cons, cs)
 
     case UCast =>
-      val (t, reqs, creqs,_) = e.kids(0).typ
+      val (t, cs) = typecheckRec(e.kids(0), ctx, ct)
       val c = e.lits(0).asInstanceOf[CName]
 
-      (c, reqs, creqs, Seq(Subtype(t, c)))
+      (c, Seq(Subtype(t, c)), Seq(cs))
 
     case DCast =>
-      val (t, reqs, creqs, _) = e.kids(0).typ
+      val (t, cs) = typecheckRec(e.kids(0), ctx, ct)
       val c = e.lits(0).asInstanceOf[CName]
 
-      (c, reqs, creqs, Seq(Subtype(c, t), NotEqual(c, t)))
+      (c, Seq(Subtype(c, t), NotEqual(c, t)), Seq(cs))
 
     case SCast =>
-      val (t, reqs, creqs, _) = e.kids(0).typ
+      val (t, cs) = typecheckRec(e.kids(0), ctx, ct)
       val c = e.lits(0).asInstanceOf[CName]
 
-      (t, reqs, creqs, Seq(NotSubtype(c, t), NotSubtype(t, c), StupidCastWarning(t, c)))
+      (t, Seq(NotSubtype(c, t), NotSubtype(t, c), StupidCastWarning(t, c)), Seq(cs))
 
     case MethodDec =>
-
       val retT = e.lits(0).asInstanceOf[CName] // return type
-    val m = e.lits(1).asInstanceOf[Symbol] // method name
-    val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
+      val m = e.lits(1).asInstanceOf[Symbol] // method name
+      val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
 
-      val (bodyT, bodyReqs, bodyCreqs, _) = e.kids(0).typ
+      var ctMO = ct
 
-      val Uc = freshCName() // current class
-    val Ud = freshCName() // current super class
+      val cls = ctx.get(CURRENT_CLASS) match {
+        case None => Seq()
+        case Some(cls) => Seq(cls)
+      }
+      val mtyp = mtype(m, extend(cls.head, ct).head, ct)
+      //overide the signature of the method in super types
+      if (!mtyp.isEmpty) ctMO = ct.copy(methods = ct.methods.filter(msupTyp => (msupTyp.name== m && msupTyp.cls == extend(cls.head, ct).head )) ++ Seq(MethodCT(extend(cls.head, ct).head, m, params.toMap.values.toSeq, retT)))
 
-      var restReqs = bodyReqs
+      val (bodyT, csb) = typecheckRec(e.kids(0), ctx, ctMO)
       var cons = Seq[Constraint]()
 
       // body type is subtype of declared return type
       cons = Subtype(bodyT, retT) +: cons
 
-      // remove params and 'this from body requirements
-      for ((x, xC) <- params :+ ('this, Uc)) {
-        bodyReqs.get(x) match {
-          case None =>
-          case Some(typ) =>
-            restReqs = restReqs - x
-            cons = cons :+ Equal(xC, typ)
-        }
-      }
-
-      val (creqs1, extendCons) = bodyCreqs.copy(currentClass = Some(Uc)).merge(ExtCReq(Uc, Ud).lift)
-      val (creqs2, condCons) = creqs1.merge(MethodCReq(Ud, m, params.map(_._2), retT).liftOpt)
-
-      (MethodOK, restReqs, creqs2, cons ++ extendCons ++ condCons)
+        (MethodOK, cons, Seq(csb))
 
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
