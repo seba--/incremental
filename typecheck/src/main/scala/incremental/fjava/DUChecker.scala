@@ -6,8 +6,8 @@ package incremental.fjava
 
 import com.typesafe.config.ConfigException.Null
 import constraints.Statistics
-import constraints.fjava.CSubst.CSubst
-import constraints.fjava._
+import constraints.fjavaBU.CSubst.CSubst
+import constraints.fjavaBU._
 import incremental.Node._
 import incremental.{pcf, Util, Node_}
 import incremental.fjava.ClassReqs
@@ -17,7 +17,7 @@ import incremental.fjava.ExtCReq
 import incremental.fjava.FieldCReq
 import incremental.fjava.MethodCReq
 /**
- * Created by lirakuci on 3/2/15.
+ * Created by lirakuci on 24/10/16.
  */
 
 import incremental.fjava.Condition.trueCond
@@ -226,45 +226,30 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val ctor = e.lits(2).asInstanceOf[Ctor]
       val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
 
-      var reqss = Seq[Reqs]()
-      var creqss = Seq[ClassReqs]()
-      var currentClassCons = Seq[Constraint]()
+      var cs = Seq[CS]()
+    //  var currentClassCons = Seq[Constraint]()
 
       // handle all methods, satisfying current-class reqs
       for (i <- 0 until e.kids.seq.size) {
-        val (t, req, creq, _) = e.kids(i).typ
-        reqss = reqss :+ req
-        val (creq2, cons) = creq.satisfyCurrentClass(c)
-        creqss = creqss :+ creq2
-        currentClassCons = currentClassCons ++ cons
+        val (t, csi) = typecheckRec(e.kids(i), ctx + (CURRENT_CLASS -> c), ct)
+        cs = cs ++ Seq(csi)
+
       }
 
-      val (creqs, mccons) = mergeCReqMaps(creqss)
-      val (reqs, mrcons) = mergeReqMaps(reqss)
-
-      // constructor initializes all local fields
-      val fieldInitCons = AllEqual(fields.values.toList, ctor.fields.values.toList)
+      // constructor initializes all local  or super class fields
+      val fieldSupInitCons = AllEqual(init(sup, ct), ctor.superParams.values.toList)
       // constructor provides correct arguments to super constructor
-      val (creqs2, supCons) = creqs.merge(CtorCReq(sup, ctor.superParams.values.toList).lift)
 
-      (c, reqs, creqs2, mccons ++ mrcons ++ currentClassCons ++ supCons :+ fieldInitCons)
+      //add the super class in CS solver
+      fieldSupInitCons.extendz(c, sup)
+      (c, Seq(fieldSupInitCons), cs)
 
     case ProgramM =>
 
-      var reqss = Seq[Reqs]()
-      var creqss = Seq[ClassReqs]()
-
-      for (i <- 0 until e.kids.seq.size) {
-        val (ct, reqs, creqs, _) = e.kids(i).typ
-        reqss = reqss :+ reqs
-        creqss = creqss :+ creqs
-      }
-
-      val (mcreqs, mcons) = mergeCReqMaps(creqss)
-      val (mreqs, mrcons) = mergeReqMaps(reqss)
+      var cs= Seq[CS]()
 
       var removeCons = Seq[Constraint]()
-      var restCReqs = mcreqs
+      var ctNew = CT()
 
       // remove class requirements
       for (cls <- e.kids.seq.reverseIterator) {
@@ -274,22 +259,17 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
         val methods = cls.kids.seq
 
-        val (creqs1, cons1) = restCReqs.satisfyCtor(CtorCReq(cname, ctor.allArgTypes))
-        val (creqs2, cons2) = creqs1.many(_.satisfyField, fields map (f => FieldCReq(cname, f._1, f._2)))
-        val (creqs3, cons3) = creqs2.many(_.satisfyMethod,
-          methods map (m => MethodCReq(
-            cname,
-            m.lits(1).asInstanceOf[Symbol],
-            m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
-            m.lits(0).asInstanceOf[Type])))
-        val (creqs4, cons4) = creqs3.satisfyExtends(ExtCReq(cname, sup))
+        ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toSeq ++ ctor.fields.values.toSeq ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ methods.map(mtyp => MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(1).asInstanceOf[Seq[(Symbol, Type)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )) )
+      }
 
-        restCReqs = creqs4
-        removeCons = removeCons ++ cons1 ++ cons2 ++ cons3 ++ cons4
+      for (i <- 0 until e.kids.seq.size) {
+        val (ct, csi) = typecheckRec(e.kids(i), ctx, ctNew)
+        cs = cs ++ Seq(csi)
       }
 
 
-      (ProgramOK, mreqs, restCReqs, mcons ++ mrcons ++ removeCons)
+
+      (ProgramOK, Seq(), cs)
 
   }
 
