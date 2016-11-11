@@ -6,8 +6,8 @@ package incremental.fjava
 
 import com.typesafe.config.ConfigException.Null
 import constraints.Statistics
-import constraints.fjavaBU.CSubst.CSubst
-import constraints.fjavaBU._
+import constraints.fjavaBU.{ConstraintSystem, _}
+import incremental.fjava.TypesBU._
 import incremental.Node._
 import incremental.{pcf, Util, Node_}
 import incremental.fjava.ClassReqs
@@ -26,20 +26,20 @@ trait CTcls[T <: CTcls[T]] {
   def self: T
 }
 
-case class ExtCT(cls: Type, ext: Type) extends CTcls[ExtCT] {
+case class ExtCT(cls: TypeBU, ext: TypeBU) extends CTcls[ExtCT] {
   def self = this
  // def subst(s: CSubst) =  ExtCT(cls.subst(s), ext.subst(s))
   }
-case class CtorCT(cls: Type, args: Seq[Type]) extends CTcls[CtorCT] {
+case class CtorCT(cls: TypeBU, args: Seq[TypeBU]) extends CTcls[CtorCT] {
   def self = this
  // def subst(s: CSubst) = CtorCReq(cls.subst(s), args.map(_.subst(s)))
 
 }
-case class FieldCT(cls: Type, field: Symbol, typ: Type) extends CTcls[FieldCT] {
+case class FieldCT(cls: TypeBU, field: Symbol, typ: TypeBU) extends CTcls[FieldCT] {
   def self = this
  // def subst(s: CSubst) = FieldCReq(cls.subst(s), field, typ.subst(s))
 }
-case class MethodCT(cls: Type, name: Symbol, params: Seq[Type], ret: Type) extends CTcls[MethodCT] {
+case class MethodCT(cls: TypeBU, name: Symbol, params: Seq[TypeBU], ret: TypeBU) extends CTcls[MethodCT] {
   def self = this
 //  def subst(s: CSubst) = {
 //    val cls_ = cls.subst(s)
@@ -55,7 +55,7 @@ case class CT (
                 methods: Set[MethodCT] = Set())
 
 
-case class UnboundVariable(x: Symbol, ctx: Map[Symbol, Type]) extends RuntimeException
+case class UnboundVariable(x: Symbol, ctx: Map[Symbol, TypeBU]) extends RuntimeException
 
 
 case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
@@ -70,20 +70,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   import csFactory._
 
-  type Ctx = Map[Symbol, Type]
+  type Ctx = Map[Symbol, TypeBU]
 
-  type StepResult = (Type, Seq[Constraint], Seq[CS])
+  type StepResult = (TypeBU, Seq[Constraint], Seq[CS])
 
   type TError = String
 
-  type Result = (Type, CS)
+  type Result = (TypeBU, CS)
 
   val CURRENT_CLASS = '$current
 
-  def field(f : Symbol, cls : Type, ct: CT): Seq[Type] = {
+  def field(f : Symbol, cls : TypeBU, ct: CT): Seq[TypeBU] = {
     val posFTyp = ct.fields.find(ftyp => (ftyp.field == f) && (ftyp.cls == cls) )
     posFTyp match {
-      case None => ct.ext.toMap[Type,Type].get(cls)   match {
+      case None => ct.ext.toMap[TypeBU,TypeBU].get(cls)   match {
         case None => Seq()
         case Some(superCls) =>  field(f, superCls, ct)
       }
@@ -91,10 +91,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def mtype(m : Symbol, cls : Type, ct: CT): Seq[Type] = {
+  def mtype(m : Symbol, cls : TypeBU, ct: CT): Seq[TypeBU] = {
     val posMTyp = ct.methods.find(ftyp => (ftyp.name == m) && (ftyp.cls == cls) )
     posMTyp match {
-      case None => ct.ext.toMap[Type,Type].get(cls)   match {
+      case None => ct.ext.toMap[TypeBU,TypeBU].get(cls)   match {
         case None => Seq()
         case Some(superCls) =>  mtype(m, superCls, ct)
       }
@@ -102,21 +102,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def extend(cls : Type, ct : CT) : Seq[Type] = {
-    ct.ext.toMap[Type, Type].get(cls) match {
+  def extend(cls : TypeBU, ct : CT) : Seq[TypeBU] = {
+    ct.ext.toMap[TypeBU, TypeBU].get(cls) match {
       case None => Seq()
       case Some(superCls) => Seq(superCls) // or return ext(cls, superCls)
     }
   }
 
-  def init(cls : Type, ct : CT) : Seq[Type] = { // return CtorCT
-    ct.ctorParams.toMap[Type, Seq[Type]].get(cls) match {
+  def init(cls : TypeBU, ct : CT) : Seq[TypeBU] = { // return CtorCT
+    ct.ctorParams.toMap[TypeBU, Seq[TypeBU]].get(cls) match {
       case None => Seq()
       case Some(ctorTyp) => ctorTyp
     }
   }
 
-  def typecheckImpl(e: Node): Either[Type, TError] = {
+  def typecheckImpl(e: Node): Either[TypeBU, TError] = {
     val root = e.withType[Result]
 
     Util.timed(localState -> Statistics.typecheckTime) {
@@ -200,7 +200,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case MethodDec =>
       val retT = e.lits(0).asInstanceOf[CName] // return type
       val m = e.lits(1).asInstanceOf[Symbol] // method name
-      val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
+      val params = e.lits(2).asInstanceOf[Seq[(Symbol, TypeBU)]]
 
       var ctMO = ct
 
@@ -224,7 +224,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val c = e.lits(0).asInstanceOf[CName]
       val sup = e.lits(1).asInstanceOf[CName]
       val ctor = e.lits(2).asInstanceOf[Ctor]
-      val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
+      val fields = e.lits(3).asInstanceOf[Seq[(Symbol, TypeBU)]].toMap
 
       var cs = Seq[CS]()
     //  var currentClassCons = Seq[Constraint]()
@@ -256,10 +256,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val cname = cls.lits(0).asInstanceOf[CName]
         val sup = cls.lits(1).asInstanceOf[CName]
         val ctor = cls.lits(2).asInstanceOf[Ctor]
-        val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
+        val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, TypeBU)]].toMap
         val methods = cls.kids.seq
 
-        ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toSeq ++ ctor.fields.values.toSeq ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ methods.map(mtyp => MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(1).asInstanceOf[Seq[(Symbol, Type)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )) )
+        ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toSeq ++ ctor.fields.values.toSeq ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ methods.map(mtyp => MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(1).asInstanceOf[Seq[(Symbol, TypeBU)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )) )
       }
 
       for (i <- 0 until e.kids.seq.size) {
