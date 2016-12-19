@@ -88,8 +88,6 @@ abstract class IncrementalPerformanceTest(maxHeight: Int) extends PerformanceTes
 }
 
 
-
-
 object Incremental {
   def main(args: Array[String]): Unit = {
     if (args.size != 2)
