@@ -14,14 +14,18 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.1" % "test"
 
 testOptions in Test += Tests.Argument("-oD")
 
-scalacOptions ++= Seq("-feature")
+scalacOptions ++= Seq("-feature", "-deprecation")
 
 resolvers += "Sonatype OSS Snapshots" at
   "https://oss.sonatype.org/content/repositories/releases"
 
+resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+
 libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.7"
 
-testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.10"
+
+libraryDependencies += "com.github.scopt" %% "scopt" % "3.3.0"
 
 fork in run := true
 

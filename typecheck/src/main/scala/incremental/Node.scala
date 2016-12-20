@@ -15,9 +15,23 @@ abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Ser
 class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
   kind.syntaxcheck(kind).check(lits, kidsArg)
 
+  protected def maxHeight(seq: Seq[Node_[T]]): Int = {
+    val incr = if (seq.isEmpty) 0 else 1
+    seq.foldLeft(0){ case (i, n) => i.max(n._height) } + incr
+  }
+
+  protected def sumSize(seq: Seq[Node_[T]]): Int = {
+    seq.foldLeft(1){ case (s, n) => s + n.size }
+  }
+
+  private var _height: Int = maxHeight(kidsArg)
+  private var _size = sumSize(kidsArg)
   private var _typ: T = _
   private var _valid = false
 
+  def height = _height
+
+  def size = _size
   def valid = _valid // needed for propagation pruning
   def typ = _typ
   def typ_=(t: T): Unit = {
@@ -42,6 +56,8 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       else
         ee._typ = kids(i)._typ
       _kids(i) = ee
+      _height = maxHeight(_kids)
+      _size = sumSize(_kids)
     }
     def seq: Seq[Node_[T]] = _kids
   }
@@ -82,6 +98,28 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       _typ = t
       _valid = true
       doContinue
+    }
+    else
+      false
+  }
+
+  def visitInvalid(f: Node_[T] => Boolean): Boolean = {
+    var hasSubchange = false
+    for(k <- _kids if !k.valid) {
+      hasSubchange = k.visitInvalid(f)  || hasSubchange
+    }
+    if (!valid || hasSubchange)
+      f(this)
+    else
+      false
+  }
+
+  def visitUpto(depth: Int)(f: Node_[T] => Boolean): Boolean = {
+    if (depth > 0) {
+      val hasSubchange = _kids.foldLeft(false){ (changed, k) => k.visitUpto(depth - 1)(f) || changed }
+      if (!valid || hasSubchange)
+        f(this)
+      else false
     }
     else
       false

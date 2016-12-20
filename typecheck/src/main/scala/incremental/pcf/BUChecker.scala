@@ -19,11 +19,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized {e =>
-        val (t, reqs, cons) = typecheckStep(e)
-        val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
-        val cs = subcs addNewConstraints cons
-        val reqs2 = cs.applyPartialSolutionIt[(Symbol,Type),Map[Symbol,Type],Type](reqs, p => p._2)
-        e.typ = (cs applyPartialSolution t, reqs2, cs.propagate)
+        typecheckRec(e)
         true
       }
 
@@ -38,6 +34,15 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       else
         Left(t)
     }
+  }
+
+
+  def typecheckRec(e: Node_[Result]): Unit = {
+    val res@(t, reqs, cons) = typecheckStep(e)
+    val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._3)
+    val cs = subcs addNewConstraints cons
+    val reqs2 = cs.applyPartialSolutionIt[(Symbol, T), Map[Symbol, T], T](reqs, p => p._2)
+    e.typ = (cs applyPartialSolution t, reqs2, cs.propagate)
   }
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
@@ -145,6 +150,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
 }
+
+
 
 case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
   def makeChecker = new BUChecker[CS] {

@@ -58,7 +58,6 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case App =>
       val (t1, cs1) = typecheckRec(e.kids(0), ctx)
       val (t2, cs2) = typecheckRec(e.kids(1), ctx)
-      
       val X = freshUVar()
       val fcons = EqConstraint(TFun(t2, X), t1)
       
