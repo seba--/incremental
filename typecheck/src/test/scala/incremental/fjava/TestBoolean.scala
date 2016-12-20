@@ -10,8 +10,8 @@ import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/29/15.
  */
-class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
-  val checker: BUChecker[CS] = checkerFactory.makeChecker
+class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: DUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: DUChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
@@ -22,8 +22,8 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
 
       val typ = ev.withType[checker.Result].typ._1
       val req = ev.withType[checker.Result].typ._2
-      val creq = ev.withType[checker.Result].typ._3
-      val cons = ev.withType[checker.Result].typ._4
+    //  val creq = ev.withType[checker.Result].typ._3
+      //val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, actual.right)
 
       val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
@@ -85,6 +85,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
   typecheckTest("{Boolean, True, False} ok", ProgramM(Bool, True, False))(ProgramOK)
 }
 
-class TestBUSolveEndBoolean extends TestBoolean("BUSolveEnd", new BUCheckerFactory(SolveEnd))
-class TestBUSolveContinuousSubstBoolean extends TestBoolean("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+//class TestBUSolveEndBoolean extends TestBoolean("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+//class TestBUSolveContinuousSubstBoolean extends TestBoolean("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 
+class TestDUSolveEndBoolean extends TestBoolean("DUSolveEnd", new DUCheckerFactory(SolveEnd))
