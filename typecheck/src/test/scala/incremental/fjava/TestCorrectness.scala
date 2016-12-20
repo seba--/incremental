@@ -40,8 +40,6 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   def typecheckTestError(desc: String, e: => Node) =
     test(s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
-      if (desc == "Class C, Tnum foo(x TNum){return 1+1}, TNum bar(){return foo();} ")
-        print()
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 

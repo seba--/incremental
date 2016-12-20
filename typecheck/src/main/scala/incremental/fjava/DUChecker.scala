@@ -10,13 +10,6 @@ import constraints.fjava.CSubst.CSubst
 import constraints.fjava.{ConstraintSystem, _}
 import incremental.Node._
 import incremental.{Node_, Util, pcf}
-import incremental.fjava.ClassReqs
-import incremental.fjava.Condition
-import incremental.fjava.CtorCReq
-import incremental.fjava.ExtCReq
-import incremental.fjava.FieldCReq
-import incremental.fjava.MethodCReq
-import sun.util.resources.cldr.uk.CurrencyNames_uk
 /**
  * Created by lirakuci on 24/10/16.
  */

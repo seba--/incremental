@@ -176,7 +176,7 @@ object SyntaxChecking {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]])
   }
 
-  class SyntaxCheckOps(f: NodeKind => SyntaxChecker) {
+  class SyntaxCheckOps(f: NodeKind => SyntaxChecker) extends Serializable {
     def orElse(g: NodeKind => SyntaxChecker) = (k: NodeKind) => new AlternativeSyntax(k, f, g)
   }
 

@@ -71,7 +71,7 @@ abstract class FuturisticBUChecker[CS <: ConstraintSystem[CS]] extends BUChecker
     val (fut, trigger) = bottomUpFuture(root)
 
     Util.timed(localState -> Statistics.typecheckTime) {
-      trigger success ()
+      trigger.success(())
       Await.result(fut, 1 minute)
 
       val (t_, reqs, sol_) = root.typ
