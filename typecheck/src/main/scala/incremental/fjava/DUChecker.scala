@@ -16,6 +16,7 @@ import incremental.fjava.CtorCReq
 import incremental.fjava.ExtCReq
 import incremental.fjava.FieldCReq
 import incremental.fjava.MethodCReq
+import sun.util.resources.cldr.uk.CurrencyNames_uk
 /**
  * Created by lirakuci on 24/10/16.
  */
@@ -52,7 +53,7 @@ case class CT (
                 methods: Set[MethodCT] = Set())
 
 
-case class UnboundVariable(x: Symbol, ctx: Map[Symbol, CName]) extends RuntimeException
+case class UnboundVariable(x: Symbol, ctx: Map[Symbol, Type]) extends RuntimeException
 
 
 case class DUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
@@ -67,7 +68,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   import csFactory._
 
-  type Ctx = Map[Symbol, CName]
+  type Ctx = Map[Symbol, Type]
 
   type StepResult = (Type, Seq[Constraint], Seq[CS])
 
@@ -113,23 +114,18 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def typecheckImpl(e: Node): Either[CName, TError] = {
+  def typecheckImpl(e: Node): Either[Type, TError] = {
     val root = e.withType[Result]
 
     Util.timed(localState -> Statistics.typecheckTime) {
       try{
         val (t, sol_) = typecheckRec(root, Map(), CT())
-        val cs = if (e.kind != ClassDec) sol_ else {
-          // add extends to constraint system
-          val c = e.lits(0).asInstanceOf[GroundType]
-          val sup = e.lits(1).asInstanceOf[GroundType]
-          sol_.extendz(c, sup)
-        }
         val sol = sol_.tryFinalize
-      if (sol.isSolved)
-        Left(s"type ${t}")
-      else
+      if (!sol.isSolved)
         Right(s"Unresolved constraints ${sol.unsolved}, type ${t}")
+      else
+        Left(t)
+
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
       }
@@ -140,7 +136,13 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   val (t, cons, css) = typecheckStep (e, ctx, ct)
   val subcs = css.foldLeft (freshConstraintSystem) ((cs, res) => cs mergeSubsystem res)
   val cs = subcs addNewConstraints cons
-  (t, cs.propagate)
+    val csF = if (e.kind != ClassDec) cs else {
+      // add extends to constraint system
+      val c = e.lits(0).asInstanceOf[GroundType]
+      val sup = e.lits(1).asInstanceOf[GroundType]
+      cs.extendz(c, sup)
+    }
+  (t, csF.propagate)
   }
 
   def typecheckStep(e: Node_[Result], ctx: Ctx, ct: CT): StepResult = e.kind match {
@@ -206,16 +208,27 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val params = e.lits(2).asInstanceOf[Seq[(Symbol, CName)]]
 
       var ctMO = ct
+      var ctxP = ctx
 
-      val cls = ctx.get(CURRENT_CLASS) match {
-        case None => Seq()
-        case Some(cls) => Seq(cls)
+      for ((x,xC) <- params) {
+        ctxP = ctxP + (x -> xC)
       }
-      val mtyp = mtype(m, extend(cls.head, ct).head, ct)
-      //overide the signature of the method in super types
-      if (!mtyp.isEmpty) ctMO = ct.copy(methods = ct.methods.filter(msupTyp => (msupTyp.name== m && msupTyp.cls == extend(cls.head, ct).head )) ++ Seq(MethodCT(extend(cls.head, ct).head, m, params.toMap.values.toSeq, retT)))
+      val cls = ctxP.get(CURRENT_CLASS) match {
+        case None => CName('Object)
+        case Some(cls) => cls
+      }
 
-      val (bodyT, csb) = typecheckRec(e.kids(0), ctx, ctMO)
+      extend(cls, ct).headOption match {
+       case None => ct
+       case Some(extD) => mtype(m, extD , ct).headOption match {
+         case None => ct
+         case Some(mtyp) => ctMO = ct.copy(methods = ct.methods.filter(msupTyp => (msupTyp.name== m && msupTyp.cls == extD)) ++ Seq(MethodCT(extD, m, params.toMap.values.toSeq, retT)))
+       }
+      }
+
+      //overide the signature of the method in super types
+
+      val (bodyT, csb) = typecheckRec(e.kids(0), ctxP, ctMO)
       var cons = Seq[Constraint]()
 
       // body type is subtype of declared return type
@@ -234,9 +247,8 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       // handle all methods, satisfying current-class reqs
       for (i <- 0 until e.kids.seq.size) {
-        val (t, csi) = typecheckRec(e.kids(i), ctx + (CURRENT_CLASS -> c), ct)
+        val (t, csi) = typecheckRec(e.kids(i), ctx + (CURRENT_CLASS -> c) + ('this -> c) + ('other -> CName('Zero)), ct)
         cs = cs ++ Seq(csi)
-
       }
 
       // constructor initializes all local  or super class fields
@@ -254,14 +266,17 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var ctNew = CT()
 
       // remove class requirements
-      for (cls <- e.kids.seq.reverseIterator) {
+      for (cls <- e.kids.seq) {
         val cname = cls.lits(0).asInstanceOf[CName]
         val sup = cls.lits(1).asInstanceOf[CName]
         val ctor = cls.lits(2).asInstanceOf[Ctor]
         val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, CName)]].toMap
         val methods = cls.kids.seq
 
-        ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toSeq ++ ctor.fields.values.toSeq ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ methods.map(mtyp => MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(1).asInstanceOf[Seq[(Symbol, CName)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )) )
+        val newMethods = methods.map { mtyp =>
+          MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )}
+
+        ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toSeq ++ ctor.fields.values.toSeq ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ newMethods )
       }
 
       for (i <- 0 until e.kids.seq.size) {
