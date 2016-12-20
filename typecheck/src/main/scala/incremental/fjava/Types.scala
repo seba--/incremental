@@ -48,6 +48,8 @@ case class CName(x: Symbol) extends GroundType {
     case UCName(_) => other.unify(this, cs)
     case _ => cs.never(Equal(this, other))
   }
+
+  override def toString: String = x.name
 }
 
 case object ProgramOK extends GroundType {

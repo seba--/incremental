@@ -19,7 +19,9 @@ scalacOptions ++= Seq("-feature")
 resolvers += "Sonatype OSS Snapshots" at
   "https://oss.sonatype.org/content/repositories/releases"
 
-libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.6"
+libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.7"
+
+testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
 
 fork in run := true
 

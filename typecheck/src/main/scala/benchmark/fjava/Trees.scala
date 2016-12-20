@@ -26,6 +26,13 @@ object Trees {
   def isRoot(path: Seq[Int]) = path.size == 1
 
   /**
+    * @return optionally the path to the same class in the previous subhierarchy root
+    */
+  def prevRoot(path: Seq[Int]): Option[Seq[Int]] = if (path.head == 0) None else Some(path.updated(0, path.head - 1))
+
+  case class Config(ignoreRoot: Boolean, ignorePath: Boolean)
+
+  /**
     * @param roots number of subhierarchies below Object
     * @param height height of each subhierarchy
     * @param branching subclass branching factor within subhierarchies
@@ -66,7 +73,7 @@ object Trees {
   }
 
   def cname(path: Seq[Int]): CName =
-    CName(Symbol(s"C-${string(path)}"))
+    CName(Symbol(s"C-${string(path)(Config(false, false))}"))
 
   def csuper(path: Seq[Int]): CName =
     if (isRoot(path))
@@ -74,7 +81,20 @@ object Trees {
     else
       cname(path.dropRight(1))
 
-  def string(path: Seq[Int]) = path.mkString("[" , ",", "]")
+  def string(path: Seq[Int])(implicit config: Config) = {
+    var thepath = path.map(_.toString)
+    if (config.ignoreRoot)
+      thepath = thepath.updated(0, "_")
+    if (config.ignorePath)
+      thepath = thepath.take(1)
+    thepath.mkString("[", ",", "]")
+  }
+
+  def fname(path: Seq[Int], suffix: String = "")(implicit config: Config) = {
+    Symbol(s"f-${string(path)}$suffix")
+  }
+  def mname(path: Seq[Int], suffix: String = "")(implicit config: Config) =
+    Symbol(s"m-${string(path)}$suffix")
 
   val noFields: MkFields = path => ListMap()
   val noMethods: MkMethods = path => Seq()
@@ -86,10 +106,7 @@ object Trees {
     *    in the superclass and adds its field value to the result
     *  - all fields and methods have distinct names (no overriding)
     */
-  def intAcumHierarchy(roots: Int, height: Int, branching: Int): Node = {
-    def fname(path: Seq[Int]) = Symbol(s"f-${string(path)}")
-    def mname(path: Seq[Int]) = Symbol(s"m-acum-${string(path)}")
-
+  def intAcumSuperHierarchy(roots: Int, height: Int, branching: Int)(implicit config: Config): Node = {
     implicit val mkFields: MkFields = path =>
       ListMap(fname(path) -> CName('Nat))
 
@@ -107,6 +124,72 @@ object Trees {
   }
 
 
+  /**
+    * Generates a class hierarchy where
+    *  - each class has a field of type Nat
+    *  - each class has a field of its prev-root class
+    *  - each class has a single method that calls the corresponding method
+    *    in the prev-root class and adds its field value to the result
+    *  - all fields and methods have distinct names (no overriding)
+    */
+  def intAcumPrevHierarchy(roots: Int, height: Int, branching: Int)(implicit config: Config): Node = {
+    implicit val mkFields: MkFields = path => {
+      val prevField = prevRoot(path) match {
+        case None => Seq()
+        case Some(prev) => Seq(fname(path, "-prev") -> cname(prev))
+      }
+      ListMap(fname(path) -> CName('Nat)) ++ prevField
+    }
+
+    implicit val mkMethods: MkMethods = path => {
+      val prevAcum = prevRoot(path) match {
+        case None => New(CName('Zero))
+        case Some(prev) => Invk(mname(prev), FieldAcc(fname(path, "-prev"), Var('this)))
+      }
+      Seq(
+        MethodDec(CName('Nat), mname(path), Seq(),
+          Invk('plus, FieldAcc(fname(path), Var('this)), prevAcum)
+        )
+      )
+    }
+
+    val prog = hierarchy(roots, height, branching)
+    ProgramM(Seq(), prog.kids.seq ++ Classes.NatClasses)
+  }
+
+  /**
+    * Generates a class hierarchy where
+    *  - each class has a field of type Nat
+    *  - each class has a field of its prev-root class
+    *  - each class has a single method that calls the corresponding method
+    *    in the prev-root class and in the superclass and adds its field value to the result
+    *  - all fields and methods have distinct names (no overriding)
+    */
+  def intAcumPrevSuperHierarchy(roots: Int, height: Int, branching: Int)(implicit config: Config): Node = {
+    implicit val mkFields: MkFields = path => {
+      val prevField = prevRoot(path) match {
+        case None => Seq()
+        case Some(prev) => Seq(fname(path, "-prev") -> cname(prev))
+      }
+      ListMap(fname(path) -> CName('Nat)) ++ prevField
+    }
+
+    implicit val mkMethods: MkMethods = path => {
+      val prevAcum = prevRoot(path) match {
+        case None => New(CName('Zero))
+        case Some(prev) => Invk(mname(prev), FieldAcc(fname(path, "-prev"), Var('this)))
+      }
+      val superAcum = if (isRoot(path)) New(CName('Zero)) else Invk(mname(path.dropRight(1)), Var('this))
+      Seq(
+        MethodDec(CName('Nat), mname(path), Seq(),
+          Invk('plus, Invk('plus, FieldAcc(fname(path), Var('this)), prevAcum), superAcum)
+        )
+      )
+    }
+
+    val prog = hierarchy(roots, height, branching)
+    ProgramM(Seq(), prog.kids.seq ++ Classes.NatClasses)
+  }
 
 
 }
