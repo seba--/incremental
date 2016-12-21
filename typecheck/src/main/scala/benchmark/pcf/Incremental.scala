@@ -10,7 +10,7 @@ import org.scalameter.picklers.Implicits._
 
 class IncrementalOfflineReport(maxHeight: Int) extends Bench.OfflineReport {
   val opts = org.scalameter.api.Context(
-    exec.jvmflags -> List("-server", "-XX:CompileThreshold=100", "-Xmx4g")
+    exec.jvmflags -> (List("-server", "-XX:CompileThreshold=100") ++ Settings("jvmopts"))
   )
 
   override def reporter: Reporter[Double] = Reporter.Composite(
@@ -106,7 +106,7 @@ class IncrementalOfflineReport(maxHeight: Int) extends Bench.OfflineReport {
 
 class IncrementalMicroBenchmark(maxHeight: Int) extends Bench.LocalTime{
   val opts = org.scalameter.api.Context(
-    exec.jvmflags -> List("-server -XX:CompileThreshold=100", Settings("jvmopts"))
+    exec.jvmflags -> (List("-server", "-XX:CompileThreshold=100") ++ Settings("jvmopts"))
   )
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)

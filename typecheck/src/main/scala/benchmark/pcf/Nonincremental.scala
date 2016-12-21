@@ -10,7 +10,7 @@ import incremental.Node._
 
 class NonincrementalOfflineReport(maxHeight: Int) extends Bench.OfflineReport {
   val opts = org.scalameter.api.Context(
-    exec.jvmflags -> List("-server", "-XX:CompileThreshold=100", Settings("jvmopts"))
+    exec.jvmflags -> (List("-server", "-XX:CompileThreshold=100") ++ Settings("jvmopts"))
   )
 
   override def reporter: Reporter[Double] = Reporter.Composite(
@@ -28,7 +28,7 @@ class NonincrementalOfflineReport(maxHeight: Int) extends Bench.OfflineReport {
     val bu3 = (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e)
     val bu4 = (e:Node) => new BUCheckerFactory(SolveContinuousSubstThreshold).makeChecker.typecheck(e)
 
-    measureT("DU", du)(trees)
+//    measureT("DU", du)(trees)
     
     //BU1 is very slow for heights bigger than 12, therefore we exclude it
     if (maxHeight <= 12)
@@ -111,7 +111,7 @@ class NonincrementalOfflineReport(maxHeight: Int) extends Bench.OfflineReport {
 
 class NonincrementalMicroBenchmark(maxHeight: Int) extends Bench.LocalTime {
   val opts = org.scalameter.api.Context(
-    exec.jvmflags -> List("-server -XX:CompileThreshold=100", Settings("jvmopts"))
+    exec.jvmflags -> (List("-server", "-XX:CompileThreshold=100") ++ Settings("jvmopts"))
   )
 
   val heights: Gen[Int] = Gen.range("height")(2, maxHeight, 2)
