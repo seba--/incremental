@@ -2,6 +2,9 @@ package benchmark.fjava
 
 import incremental.Node._
 import incremental.fjava._
+import org.scalameter.api.Gen
+import org.scalameter.picklers.Implicits.intPickler
+import org.scalameter.picklers.Pickler
 
 import scala.collection.immutable.ListMap
 
@@ -30,15 +33,36 @@ object Trees {
     */
   def prevRoot(path: Seq[Int]): Option[Seq[Int]] = if (path.head == 0) None else Some(path.updated(0, path.head - 1))
 
-  case class Config(ignoreRoot: Boolean, ignorePath: Boolean)
+  sealed class Config(val ignoreRoot: Boolean, val ignorePath: Boolean, val desc: String)
+  object Unique extends Config(false, false, "unique")
+  object Mirrored extends Config(true, false, "mirrored")
+  object Overriding extends Config(false, true, "overriding")
+  object MirroredOverriding extends Config(true, true, "mirrored+overriding")
+
+
+  implicit val configPickler = new Pickler[Config] {
+    override def pickle(x: Config): Array[Byte] = x match {
+      case Unique => intPickler.pickle(0)
+      case `Mirrored` => intPickler.pickle(1)
+      case `Overriding` => intPickler.pickle(2)
+      case `MirroredOverriding` => intPickler.pickle(3)
+    }
+
+    override def unpickle(a: Array[Byte], from: Int): (Config, Int) = intPickler.unpickle(a, from) match {
+      case (0, from) => (Unique, from)
+      case (1, from) => (Mirrored, from)
+      case (2, from) => (Overriding, from)
+      case (3, from) => (MirroredOverriding, from)
+    }
+  }
 
   /**
     * @param roots number of subhierarchies below Object
     * @param height height of each subhierarchy
     * @param branching subclass branching factor within subhierarchies
     */
-  def hierarchySize(roots: Int, height: Int, branching: Int) =
-    roots * (Math.pow(branching, height) - 1)
+  def hierarchySize(roots: Int, height: Int, branching: Int): Long =
+    roots * (Math.pow(branching, height).toLong - 1)
 
   /**
     * @param roots number of subhierarchies below Object
@@ -58,7 +82,16 @@ object Trees {
     */
   def subhierarchy(height: Int, branching: Int, path: Seq[Int])(implicit mkFields: MkFields, mkMethods: MkMethods): Seq[Node] = {
     val fields = mkFields(path)
-    val superfields = if (isRoot(path)) ListMap[Symbol, CName]() else mkFields(path.dropRight(1))
+    val superfields = {
+      var prefix = 1
+      var fields = ListMap[Symbol, CName]()
+      while (prefix < path.size) {
+        val superPath = path.take(prefix)
+        fields = fields ++ mkFields(superPath)
+        prefix += 1
+      }
+      fields
+    }
     val cls = ClassDec(
       Seq(cname(path), csuper(path), Ctor(superfields, fields), fields.toSeq),
       mkMethods(path)
@@ -73,7 +106,7 @@ object Trees {
   }
 
   def cname(path: Seq[Int]): CName =
-    CName(Symbol(s"C-${string(path)(Config(false, false))}"))
+    CName(Symbol(s"C-${string(path)(Unique)}"))
 
   def csuper(path: Seq[Int]): CName =
     if (isRoot(path))
@@ -192,4 +225,29 @@ object Trees {
   }
 
 
+  val rootss = Gen.enumeration("roots")(10, 100, 1000)
+  val heightss = Gen.enumeration("heights")(5, 10)
+  val branchings = Gen.single("branching")(2)
+  val configs = Gen.enumeration("naming")(Unique, Mirrored, Overriding, MirroredOverriding)
+
+  val intAcumSuperHierarchyTrees = for
+      { roots <- rootss
+        heights <- heightss
+        branching <- branchings
+        config <- configs }
+    yield intAcumSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
+
+  val intAcumPrevHierarchyTrees = for
+      { roots <- rootss
+        heights <- heightss
+        branching <- branchings
+        config <- configs }
+  yield intAcumPrevHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
+
+  val intAcumPrevSuperHierarchyTrees = for
+      { roots <- rootss
+        heights <- heightss
+        branching <- branchings
+        config <- configs }
+    yield intAcumPrevSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
 }

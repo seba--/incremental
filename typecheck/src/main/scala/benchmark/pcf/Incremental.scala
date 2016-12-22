@@ -35,7 +35,7 @@ class IncrementalOfflineReport(maxHeight: Int) extends Bench.OfflineReport {
     val bu3 = (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e)
     val bu4 = (e:Node) => new BUCheckerFactory(SolveContinuousSubstThreshold).makeChecker.typecheck(e)
 
-    measureIncremental("DU", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(maxtree, heights)
+//    measureIncremental("DU", (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e))(maxtree, heights)
     //BU1 is very slow for heights bigger than 12, therefore we exclude it
     if (maxHeight <= 12)
       measureIncremental("BU1", bu1)(maxtree, heights)
