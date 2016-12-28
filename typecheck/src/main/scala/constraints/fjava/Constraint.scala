@@ -1,7 +1,7 @@
 package constraints.fjava
 
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.Condition
+import incremental.fjava.latemerge.Condition
 
 trait Constraint {
   def subst(s: CSubst): Constraint
@@ -25,22 +25,6 @@ case class Equal(expected: Type, actual: Type) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = expected.unify(actual, cs)
 
   override def subst(s: CSubst): Constraint = Equal(expected.subst(s), actual.subst(s))
-}
-
-case class Conditional(cls: Type, cond: Condition, cons: Constraint) extends Constraint {
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
-    val cls_ = cls.subst(cs.substitution)
-    cond.subst(cls_, cs.substitution) match {
-      case None => cs // discard this constraint because condition is false
-      case Some(cond_) if cond_.isGround => cons.solve(cs)
-      case Some(cond_) => cs.notyet(Conditional(cls_, cond_, cons.subst(cs.substitution)))
-    }
-  }
-
-  override def subst(s: CSubst): Constraint = {
-    val cls_ = cls.subst(s)
-    Conditional(cls_, cond.subst(cls_, s).getOrElse(Condition.trueCond), cons.subst(s))
-  }
 }
 
 case class NotEqual(expected: Type, actual: Type) extends Constraint {

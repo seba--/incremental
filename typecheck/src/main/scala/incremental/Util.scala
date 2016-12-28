@@ -40,6 +40,18 @@ object Util {
     if (LOGGING)
       println(s)
   }
+
+
+  def loop[Obj, In, Product](f: (Obj, In) => (Obj, Seq[Product]))(init: Obj, ins: Iterable[In]): (Obj, Seq[Product]) = {
+    var o = init
+    var prods = Seq[Product]()
+    for (in <- ins) {
+      val (newo, newprods) = f(o, in)
+      o = newo
+      prods = prods ++ newprods
+    }
+    (o, prods)
+  }
 }
 
 class MyBuilder[K,V] extends mutable.Builder[((K, V), V), Map[K, V]] {

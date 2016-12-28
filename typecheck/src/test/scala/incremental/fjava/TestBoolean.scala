@@ -3,6 +3,7 @@ package incremental.fjava
 import constraints.fjava._
 import constraints.fjava.impl._
 import incremental.Node._
+import incremental.fjava.latemerge.{BUChecker, BUCheckerFactory}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 import scala.collection.immutable.ListMap
@@ -46,7 +47,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         CName('Object), 'not, Seq(),
         New(CName('Bool))), // dummy body, will be overwritten by subclasses
       MethodDec(
-        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
+        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)),
         New(CName('Object))) // dummy body, will be overwritten by subclasses
     )
   )
@@ -60,8 +61,8 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         CName('Object), 'not, Seq(),
         New(CName('False))),
       MethodDec(
-        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
-        Var('then))
+        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)),
+        Var('vthen))
     )
   )
   val False = ClassDec(
@@ -72,8 +73,8 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         CName('Object), 'not, Seq(),
         New(CName('True))),
       MethodDec(
-        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)), //was bool, found the erroe by hte cons solver :)
-        Var('else))
+        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)), //was bool, found the erroe by hte cons solver :)
+        Var('velse))
     )
   )
 

@@ -4,6 +4,7 @@ import constraints.CVar
 import constraints.fjava._
 import constraints.fjava.impl._
 import incremental.Node._
+import incremental.fjava.latemerge.{BUChecker, BUCheckerFactory}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 import scala.collection.immutable.ListMap

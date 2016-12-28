@@ -14,7 +14,7 @@ import incremental.{Node_, Util, pcf}
  * Created by lirakuci on 24/10/16.
  */
 
-import incremental.fjava.Condition.trueCond
+import incremental.fjava.latemerge.Condition.trueCond
 
 trait CTcls[T <: CTcls[T]] {
   def self: T
