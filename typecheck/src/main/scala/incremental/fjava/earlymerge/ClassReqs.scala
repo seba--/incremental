@@ -23,6 +23,16 @@ trait CReq[T <: CReq[T]] {
   def alsoNot(n: Type): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
   def alsoSame(n: Type): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
   def alsoCond(other: Condition): Option[T] = cond.alsoCond(cls, other) map (withCond(_))
+
+  def satisfyExt(ext: ExtCReq): Seq[T] = {
+    // NOTE: we assume that the removal of an extends clause implies no further declarations appear for subclass `ext.cls`
+
+    // ext.cls != req.cls, so keep the original requirement
+    val diff = this.alsoNot(ext.cls)
+    // ext.cls == req.cls, so replace the original requirement with a super-class requirement `ext.ext`
+    val same = this.alsoSame(ext.cls).map(_.withCls(ext.ext))
+    Seq(diff, same).flatten
+  }
 }
 case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CReq[ExtCReq] {
   def self = this
@@ -200,59 +210,16 @@ case class ClassReqs (
     (diffcres ++ diffreq, Seq())
   }
 
-  def satisfyExtends(cls: Type, superT: Type): (ClassReqs, Seq[Constraint]) = {
-    val ext = ExtCReq(cls, superT)
-    val (creqs, cons) = satisfyCReq[ExtCReq](ext, this.exts, x=>copy(exts=x))
-    val newFields = satisfyExt(ext, creqs.fields)
-    val newMethods = satisfyExt(ext, creqs.methods)
-    val newOptMethods = satisfyExt(ext, creqs.optMethods)
-    (creqs.copy(fields = newFields, methods = newMethods, optMethods = newOptMethods), cons)
-  }
-
-  def satisfyCtor(cls: Type, args: Seq[Type]): (ClassReqs, Seq[Constraint]) =
-    satisfyCReq[CtorCReq](CtorCReq(cls, args), ctors, x=>copy(ctors=x))
-
-  def satisfyField(cls: Type, field: Symbol, typ: Type): (ClassReqs, Seq[Constraint]) =
-    satisfyCReq[FieldCReq](FieldCReq(cls, field, typ), fields, x=>copy(fields=x))
-
-  def satisfyMethod(cls: Type, name: Symbol, params: Seq[Type], ret: Type): (ClassReqs, Seq[Constraint]) = {
-    val method = MethodCReq(cls, name, params, ret)
-    val (creqs1, cons1) = satisfyCReq[MethodCReq](method, methods, x=>copy(methods=x))
-    val (creqs2, cons2) = satisfyCReq[MethodCReq](method, optMethods, x=>creqs1.copy(optMethods=x))
-    (creqs2, cons1 ++ cons2)
-  }
-
-  private def satisfyExt[T <: CReq[T]](ext: ExtCReq, crs: Set[T]): Set[T] = crs.flatMap { req =>
-    // TODO Currently, this method assumes that the removal of an extends clause implies no further declarations appear for req.cls
-
-    // ext.cls != req.cls
-    val diff = req.alsoNot(ext.cls)
-    // ext.cls == req.cls
-    val same = req.alsoSame(ext.cls).map(_.withCls(ext.ext))
-    Seq(diff, same).flatten
-  }
-
-  def satisfyCReq[T <: CReq[T]](creq1: T, crs: Set[T], make: Set[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
+  def satisfyCReq[T <: CReq[T]](creq1: T, crs: Set[T]): (Set[T], Seq[Constraint]) = {
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq2 =>
       if (creq1.canMerge(creq2)) {
-        creq1.assert(creq2) foreach (c => cons = cons :+ c)
+        cons ++= creq1.assert(creq2)
         creq2.alsoNot(creq1.cls)
       }
       else
         Some(creq2)
       )
-    (make(newcrs), cons)
-  }
-
-  def many[T <: CReq[T]](f: ClassReqs => T => (ClassReqs, Seq[Constraint]), reqs: Iterable[T]): (ClassReqs, Seq[Constraint]) = {
-    var cons = Seq[Constraint]()
-    var creqs = this
-    for (req <- reqs) {
-      val (newcreqs, newcons) = f(creqs)(req)
-      creqs = newcreqs
-      cons = cons ++ newcons
-    }
-    (creqs, cons)
+    (newcrs, cons)
   }
 }
