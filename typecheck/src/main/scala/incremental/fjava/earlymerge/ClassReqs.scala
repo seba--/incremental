@@ -3,6 +3,7 @@ package incremental.fjava.earlymerge
 import constraints.fjava.CSubst.CSubst
 import constraints.fjava._
 import Condition.trueCond
+import incremental.Util
 import incremental.fjava.CName
 
 import scala.collection.generic.CanBuildFrom
@@ -147,29 +148,29 @@ case class Conditional(cls: Type, cond: Condition, cons: Constraint) extends Con
 
 case class ClassReqs (
                        currentCls: Option[Type] = None,
-                       ext: Set[ExtCReq] = Set(),
-                       ctorParams: Set[CtorCReq] = Set(),
+                       exts: Set[ExtCReq] = Set(),
+                       ctors: Set[CtorCReq] = Set(),
                        fields: Set[FieldCReq] = Set(),
                        methods: Set[MethodCReq] = Set(),
                        optMethods: Set[MethodCReq] = Set()) {
 
   override def toString =
-    s"ClassReqs(current=$currentCls, ext=$ext, ctorParams=$ctorParams, fields=$fields, methods=$methods, optMethods=$optMethods)"
+    s"ClassReqs(current=$currentCls, ext=$exts, ctorParams=$ctors, fields=$fields, methods=$methods, optMethods=$optMethods)"
 
   def subst(s: CSubst): ClassReqs = ClassReqs(
     currentCls.map(_.subst(s)),
-    ext.flatMap(_.subst(s)),
-    ctorParams.flatMap(_.subst(s)),
+    exts.flatMap(_.subst(s)),
+    ctors.flatMap(_.subst(s)),
     fields.flatMap(_.subst(s)),
     methods.flatMap(_.subst(s)),
     optMethods.flatMap(_.subst(s)))
 
-  def isEmpty = currentCls.isEmpty && ext.isEmpty && ctorParams.isEmpty && fields.isEmpty && methods.isEmpty
+  def isEmpty = currentCls.isEmpty && exts.isEmpty && ctors.isEmpty && fields.isEmpty && methods.isEmpty
 
   def merge(crs: ClassReqs): (ClassReqs, Seq[Constraint]) = {
     val (currentX, cons0) = (currentCls.orElse(crs.currentCls), for (t1 <- currentCls; t2 <- crs.currentCls) yield Equal(t1, t2))
-    val (extX, cons1) = merge(ext, crs.ext)
-    val (ctorX, cons2) = merge(ctorParams, crs.ctorParams)
+    val (extX, cons1) = merge(exts, crs.exts)
+    val (ctorX, cons2) = merge(ctors, crs.ctors)
     val (fieldsX, cons3) = merge(fields, crs.fields)
     val (methodsX, cons4) = merge(methods, crs.methods)
     val (optMethodsX, cons5) = merge(optMethods, crs.optMethods)
@@ -180,29 +181,28 @@ case class ClassReqs (
   private def merge[T <: CReq[T]](crs1: Set[T], crs2: Set[T]): (Set[T], Seq[Constraint]) = {
     if (crs1.isEmpty)
       return (crs2, Seq())
-    if (crs2.isEmpty)
-      return (crs1, Seq())
 
-    var cons = Seq[Constraint]()
-    val cr = crs1.flatMap ( cr1 =>
-      crs2.flatMap ( cr2 =>
-        if (cr1.canMerge(cr2)) {
-          val reqDiff1 = cr1.alsoNot(cr2.cls)
-          val reqDiff2 = cr2.alsoNot(cr1.cls)
-          val reqSame = cr1.alsoCond(cr2.cond).flatMap(_.alsoSame(cr2.cls))
-          cr1.assert(cr2) foreach (c => cons = cons :+ c)
-          Seq(reqDiff1, reqDiff2, reqSame).flatten
-        }
-        else
-          Seq(cr1, cr2)
-      )
-    )
-    (cr, cons)
+    Util.loop[Set[T], T, Constraint](addRequirement)(crs1, crs2)
+  }
+
+  def addRequirement[T <: CReq[T]](crs: Set[T], req: T): (Set[T], Seq[Constraint]) = {
+    var diffreq: Option[T] = Some(req)
+    val diffcres = crs.flatMap{ creq =>
+      if (creq.canMerge(req)) {
+        val diff = creq.alsoNot(req.cls)
+        val same = creq.alsoSame(req.cls).flatMap(_.alsoCond(req.cond))
+        diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
+        Seq(diff, same).flatten
+      }
+      else
+        Seq(creq)
+    }
+    (diffcres ++ diffreq, Seq())
   }
 
   def satisfyExtends(cls: Type, superT: Type): (ClassReqs, Seq[Constraint]) = {
     val ext = ExtCReq(cls, superT)
-    val (creqs, cons) = satisfyCReq[ExtCReq](ext, this.ext, x=>copy(ext=x))
+    val (creqs, cons) = satisfyCReq[ExtCReq](ext, this.exts, x=>copy(exts=x))
     val newFields = satisfyExt(ext, creqs.fields)
     val newMethods = satisfyExt(ext, creqs.methods)
     val newOptMethods = satisfyExt(ext, creqs.optMethods)
@@ -210,7 +210,7 @@ case class ClassReqs (
   }
 
   def satisfyCtor(cls: Type, args: Seq[Type]): (ClassReqs, Seq[Constraint]) =
-    satisfyCReq[CtorCReq](CtorCReq(cls, args), ctorParams, x=>copy(ctorParams=x))
+    satisfyCReq[CtorCReq](CtorCReq(cls, args), ctors, x=>copy(ctors=x))
 
   def satisfyField(cls: Type, field: Symbol, typ: Type): (ClassReqs, Seq[Constraint]) =
     satisfyCReq[FieldCReq](FieldCReq(cls, field, typ), fields, x=>copy(fields=x))

@@ -176,7 +176,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
 
       val (cctx1, currentCons) = bodyCctx.addCurrentClassRequirement(Uc)
-      val (cctx2, extendCons) = cctx1.addRequirement(ExtCReq(Uc, Ud), MethodCReq(Ud, m, params.map(_._2), retT, true))
+      val (cctx2, extendCons) = cctx1.addRequirements(Seq(
+        ExtCReq(Uc, Ud),
+        MethodCReq(Ud, m, params.map(_._2), retT, true)))
 
       (MethodOK, restReqs, cctx2, cons ++ currentCons ++ extendCons)
 
