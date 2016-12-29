@@ -37,6 +37,6 @@ testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
 
 
 
-import com.typesafe.sbt.SbtStartScript
+//import com.typesafe.sbt.SbtStartScript
 
-seq(SbtStartScript.startScriptForClassesSettings: _*)
+//seq(SbtStartScript.startScriptForClassesSettings: _*)

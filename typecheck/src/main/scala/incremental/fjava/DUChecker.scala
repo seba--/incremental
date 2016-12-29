@@ -47,11 +47,13 @@ case class CT (
 
 
 case class UnboundVariable(x: Symbol, ctx: Map[Symbol, Type]) extends RuntimeException
+case class UndefinedSuper(cls: Type) extends RuntimeException
+case class UndefinedCClass(name : Symbol) extends RuntimeException
 case class UndefinedField(cls: Type, name: Symbol) extends RuntimeException
 case class UndefinedMethod(cls: Type, name: Symbol) extends RuntimeException
 case class MethodWrongArity(cls: Type, name: Symbol, expectedArity: Int) extends RuntimeException
 case class UndefinedCTor(cls: Type) extends RuntimeException
-case class CTorWrongArity(cls: Type, expectedArity: Int) extends RuntimeException
+//case class CTorWrongArity(cls: Type, expectedArity: Int) extends RuntimeException
 
 
 case class DUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
@@ -100,15 +102,20 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def extend(cls : Type, ct : CT) : Option[Type] = {
     ct.ext.find(extD => extD.cls == cls) match {
-      case None => Some(CName('Object))
+      case None => None
       case Some (extT) => Some(extT.ext)
     }
   }
 
   def init(cls : Type, ct : CT) : Option[List[Type]] = { // return CtorCT
-    ct.ctorParams.find(extD => extD.cls == cls) match {
-      case None => None
-      case Some(ctorTyp) => Some(ctorTyp.args)
+    if (cls == CName('Object)) {
+      Some(List())
+    }
+    else {
+      ct.ctorParams.find(extD => extD.cls == cls) match {
+        case None => None
+        case Some(ctorTyp) => Some(ctorTyp.args)
+      }
     }
   }
 
@@ -126,11 +133,13 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
+        case ex: UndefinedSuper => Right(s"Undefined super class ${ex.cls}")
+        case ex: UndefinedCClass => Right(s"Undefined CurrentClass for method ${ex.name}")
         case ex: UndefinedField => Right(s"Undefined field ${ex.name} in class ${ex.cls}")
         case ex: UndefinedMethod => Right(s"Undefined method ${ex.name} in class ${ex.cls}")
         case ex: MethodWrongArity => Right(s"Method ${ex.cls}.${ex.name} should have arity ${ex.expectedArity}")
         case ex: UndefinedCTor => Right(s"Undefined Constructor ${ex.cls}")
-        case ex: CTorWrongArity => Right(s"Constructor ${ex.cls} should have arity ${ex.expectedArity}")
+       // case ex: CTorWrongArity => Right(s"Constructor ${ex.cls} should have arity ${ex.expectedArity}")
       }
     }
   }
@@ -177,20 +186,21 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         cons = cons :+ Subtype(ti,  mtyp(i))
         cs = cs ++ Seq(csi)
       }
-      (mtyp.last , cons, Seq(cse) ++ cs)
+      (mtyp.head, cons, Seq(cse) ++ cs)
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
       val ctor = init(c, ct).getOrElse(throw new UndefinedCTor(c))
       var cons = Seq[Constraint]()
       var cs = Seq[CS]()
-      if (e.kids.seq.size != ctor.size)
-        throw new CTorWrongArity(c, e.kids.seq.size)
+
       for (i <- 0 until e.kids.seq.size) {
-        val (ti, csi) = typecheckRec(e.kids(i), ctx, ct)
-        cons =  cons :+ Subtype(ti, ctor(i))
-        cs = cs ++ Seq(csi)
-      }
+         val (ti, csi) = typecheckRec (e.kids (i), ctx, ct)
+         cons = cons :+ Subtype (ti, ctor(i) )
+         cs = cs ++ Seq (csi)
+       }
+
+
       (c, cons, cs)
 
     case UCast =>
@@ -223,7 +233,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         ctxP = ctxP + (x -> xC)
       }
       val cls = ctxP.get(CURRENT_CLASS) match {
-        case None => CName('Object)
+        case None => throw new UndefinedCClass(m)
         case Some(cls) => cls
       }
 
@@ -231,7 +241,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
        case None => cons
        case Some(extD) => mtype(m, extD, ct) match {
          case None => cons
-         case Some(mtyp) => cons = Equal(mtyp.last, retT) +: AllEqual(mtyp.dropRight(1) , params.toMap.values.toList) +: cons
+         case Some(mtyp) => cons = Equal(mtyp.head, retT) +: AllEqual(mtyp.drop(1), params.toMap.values.toList) +: cons
        }
       }
 
@@ -253,16 +263,17 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       // handle all methods, satisfying current-class reqs
       for (i <- 0 until e.kids.seq.size) {
-        val (t, csi) = typecheckRec(e.kids(i), ctx + (CURRENT_CLASS -> c) + ('this -> c) + ('other -> CName('Zero)), ct)
+        val (t, csi) = typecheckRec(e.kids(i), ctx + (CURRENT_CLASS -> c) + ('this -> c), ct)
         cs = cs ++ Seq(csi)
       }
       val ctorsup = init(sup, ct).getOrElse(throw new UndefinedCTor(sup))
       // constructor initializes all local  or super class fields
       val fieldSupInitCons = AllEqual(ctorsup, ctor.superParams.values.toList)
       // constructor provides correct arguments to super constructor
+      val fieldInitCons = AllEqual(fields.values.toList, ctor.fields.values.toList)
 
       //add the super class in CS solver
-      (c, Seq(fieldSupInitCons), cs)
+      (c, Seq(fieldSupInitCons) ++ Seq(fieldInitCons), cs)
 
     case ProgramM =>
 
