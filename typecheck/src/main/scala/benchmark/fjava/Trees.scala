@@ -46,6 +46,7 @@ object Trees {
       case `Mirrored` => intPickler.pickle(1)
       case `Overriding` => intPickler.pickle(2)
       case `MirroredOverriding` => intPickler.pickle(3)
+      case _ => throw new MatchError()
     }
 
     override def unpickle(a: Array[Byte], from: Int): (Config, Int) = intPickler.unpickle(a, from) match {
@@ -225,10 +226,10 @@ object Trees {
   }
 
 
-  val rootss = Gen.enumeration("roots")(10, 100, 1000)
-  val heightss = Gen.enumeration("heights")(5, 10)
+  val rootss = Gen.enumeration("roots")(10)//(10, 100, 1000)
+  val heightss = Gen.enumeration("heights")(5)//(5, 10)
   val branchings = Gen.single("branching")(2)
-  val configs = Gen.enumeration("naming")(Unique, Mirrored, Overriding, MirroredOverriding)
+  val configs = Gen.enumeration[Config]("naming")(Unique)//(Unique, Mirrored, Overriding, MirroredOverriding)
 
   val intAcumSuperHierarchyTrees = for
       { roots <- rootss

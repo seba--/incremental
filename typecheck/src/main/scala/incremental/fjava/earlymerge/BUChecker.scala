@@ -186,7 +186,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val c = e.lits(0).asInstanceOf[CName]
       val sup = e.lits(1).asInstanceOf[CName]
       val ctor = e.lits(2).asInstanceOf[Ctor]
-      val fields = e.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
+      val fields = e.lits(3).asInstanceOf[Seq[(Symbol, CName)]].toMap
+      val methods = e.kids.seq
 
       var reqss = Seq[Reqs]()
       var cctxs = Seq[ClassContext]()
@@ -208,7 +209,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       // constructor provides correct arguments to super constructor
       val (cctx3, supCons) = cctx2.addRequirement(CtorCReq(sup, ctor.superParams.values.toList))
 
-      (c, reqs, cctx3, mccons ++ mrcons ++ currentCons ++ supCons :+ fieldInitCons)
+      // add facts
+      val (cctxFact1, factCons1) = cctx3.addFact(CtorFact(c, ctor.allArgTypes))
+      val (cctxFact2, factCons2) = cctxFact1.addFacts(fields.map(f => FieldFact(c, f._1, f._2)))
+      val (cctxFact3, factCons3) = cctxFact2.addFacts(methods.map(m =>
+        MethodFact(c,
+          m.lits(1).asInstanceOf[Symbol],
+          m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
+          m.lits(0).asInstanceOf[CName])))
+      val (cctxFact4, factCons4) = cctxFact3.addFact(ExtendsFact(c, sup))
+
+      val newcons = (mccons :+ fieldInitCons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 ++ factCons4
+      (c, reqs, cctxFact4, newcons)
 
     case ProgramM =>
 
@@ -224,33 +236,33 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mcreqs, mcons) = mergeClassContexts(cctxs)
       val (mreqs, mrcons) = mergeReqMaps(reqss)
 
-      var satisfyCons = Seq[Constraint]()
-      var restCReqs = mcreqs
+//      var satisfyCons = Seq[Constraint]()
+//      var restCReqs = mcreqs
+//
+//      // remove class requirements
+//      for (cls <- e.kids.seq.reverseIterator) {
+//        val cname = cls.lits(0).asInstanceOf[CName]
+//        val sup = cls.lits(1).asInstanceOf[CName]
+//        val ctor = cls.lits(2).asInstanceOf[Ctor]
+//        val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, CName)]].toMap
+//        val methods = cls.kids.seq
+//
+//        val (creqs1, cons1) = restCReqs.addFact(CtorFact(cname, ctor.allArgTypes))
+//        val (creqs2, cons2) = creqs1.addFacts(fields.map(f => FieldFact(cname, f._1, f._2)))
+//        val (creqs3, cons3) = creqs2.addFacts(methods.map(m =>
+//          MethodFact(
+//            cname,
+//            m.lits(1).asInstanceOf[Symbol],
+//            m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
+//            m.lits(0).asInstanceOf[CName])))
+//        val (creqs4, cons4) = creqs3.addFact(ExtendsFact(cname, sup))
+//
+//        restCReqs = creqs4
+//        satisfyCons = satisfyCons ++ cons1 ++ cons2 ++ cons3 ++ cons4
+//      }
 
-      // remove class requirements
-      for (cls <- e.kids.seq.reverseIterator) {
-        val cname = cls.lits(0).asInstanceOf[CName]
-        val sup = cls.lits(1).asInstanceOf[CName]
-        val ctor = cls.lits(2).asInstanceOf[Ctor]
-        val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, CName)]].toMap
-        val methods = cls.kids.seq
 
-        val (creqs1, cons1) = restCReqs.addFact(CtorFact(cname, ctor.allArgTypes))
-        val (creqs2, cons2) = creqs1.addFacts(fields.map(f => FieldFact(cname, f._1, f._2)))
-        val (creqs3, cons3) = creqs2.addFacts(methods.map(m =>
-          MethodFact(
-            cname,
-            m.lits(1).asInstanceOf[Symbol],
-            m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
-            m.lits(0).asInstanceOf[CName])))
-        val (creqs4, cons4) = creqs3.addFact(ExtendsFact(cname, sup))
-
-        restCReqs = creqs4
-        satisfyCons = satisfyCons ++ cons1 ++ cons2 ++ cons3 ++ cons4
-      }
-
-
-      (ProgramOK, mreqs, restCReqs, mcons ++ mrcons ++ satisfyCons)
+      (ProgramOK, mreqs, mcreqs, mcons ++ mrcons)
 
   }
 

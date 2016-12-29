@@ -33,7 +33,7 @@ case class FieldCT(cls: Type, field: Symbol, typ: Type) extends CTcls[FieldCT] {
   def self = this
   def subst(s: CSubst) = FieldCT(cls, field, typ)
 }
-case class MethodCT(cls: Type, name: Symbol, params: Seq[Type], ret: Type) extends CTcls[MethodCT] {
+case class MethodCT(cls: Type, name: Symbol, params: List[Type], ret: Type) extends CTcls[MethodCT] {
   def self = this
  def subst(s: CSubst) = MethodCT(cls, name,  params, ret)
 }
@@ -47,6 +47,8 @@ case class CT (
 
 
 case class UnboundVariable(x: Symbol, ctx: Map[Symbol, Type]) extends RuntimeException
+case class UndefinedMethod(cls: Type, name: Symbol) extends RuntimeException
+case class MethodWrongArity(cls: Type, name: Symbol, expectedArity: Int) extends RuntimeException
 
 
 case class DUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
@@ -82,22 +84,19 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def mtype(m : Symbol, cls : Type, ct: CT): Seq[Type] = {
+  def mtype(m : Symbol, cls : Type, ct: CT): Option[List[Type]] = {
     val posMTyp = ct.methods.find(ftyp => (ftyp.name == m) && (ftyp.cls == cls) )
     posMTyp match {
       case None => ct.ext.find(extD => extD.cls == cls)  match {
-        case None => Seq()
+        case None => None
         case Some(superCls) =>  mtype(m, superCls.ext, ct)
       }
-      case Some(mTyp) => mTyp.params ++ Seq(mTyp.ret)
+      case Some(mTyp) => Some(mTyp.ret +: mTyp.params)
     }
   }
 
-  def extend(cls : Type, ct : CT) : Seq[Type] = {
-    ct.ext.find(extD => extD.cls == cls) match {
-      case None => Seq()
-      case Some(superCls) => Seq(superCls.ext) // or return ext(cls, superCls)
-    }
+  def extend(cls : Type, ct : CT) : Option[Type] = {
+    ct.ext.find(extD => extD.cls == cls).map(_.ext)
   }
 
   def init(cls : Type, ct : CT) : Seq[Type] = { // return CtorCT
@@ -121,6 +120,8 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
+        case ex: UndefinedMethod => Right(s"Undefined method ${ex.name} in class ${ex.cls}")
+        case ex: MethodWrongArity => Right(s"Method ${ex.cls}.${ex.name} should have arity ${ex.expectedArity}")
       }
     }
   }
@@ -155,12 +156,16 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case Invk =>
       val m = e.lits(0).asInstanceOf[Symbol]
       val (te, cse) = typecheckRec(e.kids(0), ctx, ct)
-      val mtyp = mtype(m, te, ct)
+      val mtyp = mtype(m, te, ct).getOrElse(throw new UndefinedMethod(te, m))
+      val params = mtyp.size - 1 // -1 because of return type
+      val args = e.kids.seq.size - 1 // -1 because of receiver expression
+      if (params != args)
+        throw new MethodWrongArity(te, m, args)
       var cs = Seq[CS]()
       var cons = Seq[Constraint]()
-      for (i <- 1 until e.kids.seq.size) {
+      for (i <- 1 until params) {
         val (ti, csi) = typecheckRec(e.kids(i), ctx, ct)
-        cons = cons :+ Subtype(ti,  mtyp.toList(i))
+        cons = cons :+ Subtype(ti,  mtyp(i))
         cs = cs ++ Seq(csi)
       }
       (mtyp.last , cons, Seq(cse) ++ cs)
@@ -211,11 +216,11 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case Some(cls) => cls
       }
 
-      extend(cls, ct).headOption match {
+      extend(cls, ct) match {
        case None => ct
-       case Some(extD) => mtype(m, extD , ct).headOption match {
+       case Some(extD) => mtype(m, extD, ct) match {
          case None => ct
-         case Some(mtyp) => ctMO = ct.copy(methods = ct.methods.filter(msupTyp => (msupTyp.name== m && msupTyp.cls == extD)) ++ Seq(MethodCT(extD, m, params.toMap.values.toSeq, retT)))
+         case Some(mtyp) => ctMO = ct.copy(methods = ct.methods.filter(msupTyp => (msupTyp.name== m && msupTyp.cls == extD)) ++ Seq(MethodCT(extD, m, params.toMap.values.toList, retT)))
        }
       }
 
@@ -267,7 +272,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val methods = cls.kids.seq
 
         val newMethods = methods.map { mtyp =>
-          MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )}
+          MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(2).asInstanceOf[List[(Symbol, CName)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )}
 
         ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toSeq ++ ctor.fields.values.toSeq ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ newMethods )
       }

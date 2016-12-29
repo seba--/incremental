@@ -104,7 +104,7 @@ class IncrementalOfflineReport(maxHeight: Int) extends Bench.OfflineReport {
 }
 
 
-class IncrementalMicroBenchmark(maxHeight: Int) extends Bench.LocalTime{
+class IncrementalMicroBenchmark(maxHeight: Int) extends Bench.LocalTime {
   val opts = org.scalameter.api.Context(
     exec.jvmflags -> (List("-server", "-XX:CompileThreshold=100") ++ Settings("jvmopts"))
   )

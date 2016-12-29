@@ -2,7 +2,7 @@ package benchmark.fjava
 
 import constraints.fjava.impl.{SolveContinuousSubst, SolveEnd}
 import incremental.Node.Node
-import incremental.fjava.DUCheckerFactory
+import incremental.fjava.{DUCheckerFactory, earlymerge}
 import incremental.fjava.latemerge.BUCheckerFactory
 
 /**
@@ -10,11 +10,13 @@ import incremental.fjava.latemerge.BUCheckerFactory
   */
 object Checkers extends App {
 
-  val du = (e:Node) => new DUCheckerFactory(SolveEnd).makeChecker.typecheck(e)
-  val buEnd = (e:Node) => new BUCheckerFactory(SolveEnd).makeChecker.typecheck(e)
-  val buCont = (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e)
+  def du = (e:Node) => new DUCheckerFactory(SolveEnd).makeChecker.typecheck(e)
+  def buEnd = (e:Node) => new BUCheckerFactory(SolveEnd).makeChecker.typecheck(e)
+  def buCont = (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e)
 
-  val prog = Trees.intAcumSuperHierarchy(1, 2, 2)(Trees.Unique)
+  def buEarlyCont = (e:Node) => new earlymerge.BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e)
 
-  buCont(prog)
+  val prog = Trees.intAcumSuperHierarchy(2, 3, 2)(Trees.Unique)
+
+  buEarlyCont(prog)
 }
