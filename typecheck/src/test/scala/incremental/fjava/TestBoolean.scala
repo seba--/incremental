@@ -87,7 +87,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
   typecheckTest("{Boolean, True, False} ok", ProgramM(Bool, True, False))(ProgramOK)
 }
 
-class TestDUSolveEndBoolean extends TestBoolean("BUSolveEnd", new DUCheckerFactory(SolveEnd))
+class TestDUSolveEndBoolean extends TestBoolean("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestBUSolveEndBoolean extends TestBoolean("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuousSubstBoolean extends TestBoolean("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 

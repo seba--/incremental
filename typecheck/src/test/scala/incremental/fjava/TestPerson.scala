@@ -120,7 +120,7 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   typecheckTest("{ProfTitle, Professor, Person, Title, Student, NoTitle} ok", ProgramM(ProfTitle, Professor, Person, Title, Student, NoTitle))(ProgramOK)
 }
 
-class TestDUSolveEndPerson extends TestPerson("BUSolveEnd", new DUCheckerFactory(SolveEnd))
+class TestDUSolveEndPerson extends TestPerson("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 
 class TestBUSolveEndPerson extends TestPerson("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuousSubstPerson extends TestPerson("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))

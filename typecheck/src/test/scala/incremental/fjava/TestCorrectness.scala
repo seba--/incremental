@@ -63,9 +63,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError(" (new Pair(first)).first : Int", FieldAcc('f, New(CName('Pair), Var('f)))) //(UCName(CVar('Int)))
 
 
-  typecheckTestError("'void m(x, y) ", MethodDec(Seq(CName('void), 'm, Seq(('x, UCName(CVar('x))), ('y, UCName(CVar('y))))),
+  typecheckTestError("'void m(x, y) ", MethodDec(Seq(CName('void), 'm, Seq(('x, CName('Tx)), ('y, CName('Ty)))),
     Seq(New(CName('Object)))))//(CName('Object))
-  typecheckTestError("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void), 'm, Seq(('c, UCName(CVar('c))))),
+  typecheckTestError("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void), 'm, Seq(('c, CName('Tc)))),
     Seq(Invk(Seq('m), Seq(Var('e0), Var('c)))))) // recoursive call, so it is correct
   typecheckTestError("void m() {New Pair first}", MethodDec(Seq(CName('void), 'm, Seq()), Seq(Invk(Seq('setfst),
     Seq(New(CName('Pair), Var('first)), Var('first))))))//(CName('Pair))
@@ -92,7 +92,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 //  typecheckTestFJ("Int getX(x: Int) {(new Nr).getX(x): Int} ", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
     //Seq(Invk(Seq('getX), Seq(New(CName('Nr)), Var('x))))))(CName('Nr))
 
-  typecheckTestError("Int getX(x: Int) {(new Number).gX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
+  typecheckTestError("Int getX(x: Int) {(new Number).gX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, CName('Int)))),
     Seq(Invk(Seq('gX), Seq(New(CName('Number)), Var('x))))))//(CName('Number))
 
   typecheckTestError("Int getX(x: Int) {(new Number(x)).getX(x): Int} ", MethodDec(Seq(CName('Int), 'getX, Seq()),
@@ -322,7 +322,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
 }
 
-class TestDUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new DUCheckerFactory(SolveEnd))
+class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 

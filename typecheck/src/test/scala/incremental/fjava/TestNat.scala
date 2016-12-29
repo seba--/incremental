@@ -123,7 +123,7 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: Typ
 
 }
 
-class TestDUSolveEndNat extends TestNat("BUSolveEnd", new DUCheckerFactory(SolveEnd))
+class TestDUSolveEndNat extends TestNat("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuousSubstNat extends TestNat("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 
