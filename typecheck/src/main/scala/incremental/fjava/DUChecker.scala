@@ -24,7 +24,7 @@ case class ExtCT(cls: Type, ext: Type) extends CTcls[ExtCT] {
   def self = this
  def subst(s: CSubst) =  ExtCT(cls, ext)
   }
-case class CtorCT(cls: Type, args: Seq[Type]) extends CTcls[CtorCT] {
+case class CtorCT(cls: Type, args: List[Type]) extends CTcls[CtorCT] {
   def self = this
   def subst(s: CSubst) = CtorCT(cls, args)
 
@@ -47,8 +47,11 @@ case class CT (
 
 
 case class UnboundVariable(x: Symbol, ctx: Map[Symbol, Type]) extends RuntimeException
+case class UndefinedField(cls: Type, name: Symbol) extends RuntimeException
 case class UndefinedMethod(cls: Type, name: Symbol) extends RuntimeException
 case class MethodWrongArity(cls: Type, name: Symbol, expectedArity: Int) extends RuntimeException
+case class UndefinedCTor(cls: Type) extends RuntimeException
+case class CTorWrongArity(cls: Type, expectedArity: Int) extends RuntimeException
 
 
 case class DUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
@@ -73,14 +76,14 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   val CURRENT_CLASS = '$current
 
-  def field(f : Symbol, cls : Type, ct: CT): Seq[Type] = {
+  def field(f : Symbol, cls : Type, ct: CT): Option[Type] = {
     val posFTyp = ct.fields.find(ftyp => (ftyp.field == f) && (ftyp.cls == cls) )
     posFTyp match {
       case None => ct.ext.find(extD => extD.cls == cls) match {
-        case None => Seq()
+        case None => None
         case Some(superCls) => field(f, superCls.ext, ct)
       }
-      case Some(fTyp) =>  Seq(fTyp.typ)
+      case Some(fTyp) =>  Some(fTyp.typ)
     }
   }
 
@@ -96,13 +99,16 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def extend(cls : Type, ct : CT) : Option[Type] = {
-    ct.ext.find(extD => extD.cls == cls).map(_.ext)
+    ct.ext.find(extD => extD.cls == cls) match {
+      case None => Some(CName('Object))
+      case Some (extT) => Some(extT.ext)
+    }
   }
 
-  def init(cls : Type, ct : CT) : Seq[Type] = { // return CtorCT
+  def init(cls : Type, ct : CT) : Option[List[Type]] = { // return CtorCT
     ct.ctorParams.find(extD => extD.cls == cls) match {
-      case None => Seq()
-      case Some(ctorTyp) => ctorTyp.args
+      case None => None
+      case Some(ctorTyp) => Some(ctorTyp.args)
     }
   }
 
@@ -120,8 +126,11 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
+        case ex: UndefinedField => Right(s"Undefined field ${ex.name} in class ${ex.cls}")
         case ex: UndefinedMethod => Right(s"Undefined method ${ex.name} in class ${ex.cls}")
         case ex: MethodWrongArity => Right(s"Method ${ex.cls}.${ex.name} should have arity ${ex.expectedArity}")
+        case ex: UndefinedCTor => Right(s"Undefined Constructor ${ex.cls}")
+        case ex: CTorWrongArity => Right(s"Constructor ${ex.cls} should have arity ${ex.expectedArity}")
       }
     }
   }
@@ -150,8 +159,8 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case FieldAcc =>
       val f = e.lits(0).asInstanceOf[Symbol] //symbol
       val (t, cs) = typecheckRec(e.kids(0), ctx, ct) //subsol
-      val fTyp = field(f,t, ct)
-      (fTyp.head, Seq(), Seq(cs))
+      val fTyp = field(f,t, ct).getOrElse(throw new UndefinedField(t, f))
+      (fTyp, Seq(), Seq(cs))
 
     case Invk =>
       val m = e.lits(0).asInstanceOf[Symbol]
@@ -172,12 +181,14 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
-      val ctor = init(c, ct)
+      val ctor = init(c, ct).getOrElse(throw new UndefinedCTor(c))
       var cons = Seq[Constraint]()
       var cs = Seq[CS]()
+      if (e.kids.seq.size != ctor.size)
+        throw new CTorWrongArity(c, e.kids.seq.size)
       for (i <- 0 until e.kids.seq.size) {
         val (ti, csi) = typecheckRec(e.kids(i), ctx, ct)
-        cons =  cons :+ Subtype(ti,ctor.toList(i))
+        cons =  cons :+ Subtype(ti, ctor(i))
         cs = cs ++ Seq(csi)
       }
       (c, cons, cs)
