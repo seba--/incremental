@@ -51,7 +51,6 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         New(CName('Object))) // dummy body, will be overwritten by subclasses
     )
   )
-  typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
 
   val True = ClassDec(
     Seq(CName('True), CName('Bool), Ctor(ListMap(), ListMap()),
@@ -78,6 +77,8 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
     )
   )
 
+  typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
+
   // without True knowing False (and vice versa), the class fails to check
   typecheckTestError("True ok", True)
   typecheckTestError("False ok", False)
@@ -89,5 +90,4 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
 class TestBUSolveEndBoolean extends TestBoolean("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuousSubstBoolean extends TestBoolean("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 
-class TestBUEarlySolveEndBoolean extends TestBoolean("BUEarlySolveEnd", new earlymerge.BUCheckerFactory(SolveEnd))
 class TestBUEarlySolveContinuousSubstBoolean extends TestBoolean("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubst))

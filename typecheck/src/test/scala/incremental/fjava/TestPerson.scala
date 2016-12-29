@@ -11,8 +11,8 @@ import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/29/15.
  */
-class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
-  val checker: BUChecker[CS] = checkerFactory.makeChecker
+class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
@@ -21,10 +21,10 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
       val ev = e
       val actual = checker.typecheck(ev)
 
-      val typ = ev.withType[checker.Result].typ._1
-      val req = ev.withType[checker.Result].typ._2
-      val creq = ev.withType[checker.Result].typ._3
-      val cons = ev.withType[checker.Result].typ._4
+//      val typ = ev.withType[checker.Result].typ._1
+//      val req = ev.withType[checker.Result].typ._2
+//      val creq = ev.withType[checker.Result].typ._3
+//      val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, actual.right)
 
       val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
@@ -122,3 +122,5 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
 
 class TestBUSolveEndPerson extends TestPerson("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuousSubstPerson extends TestPerson("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+
+class TestBUEarlySolveContinuousSubstPerson extends TestPerson("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubst))

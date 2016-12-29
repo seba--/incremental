@@ -119,6 +119,8 @@ case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Conditio
   def alsoNot(cls: Type, n: Type): Option[Condition] =
     if (cls == n || same.contains(n))
       None
+    else if (cls.isGround && n.isGround)
+      Some(this) // because cls != n
     else
       Some(Condition(not + n, same, others))
   def alsoSame(cls: Type, n: Type): Option[Condition] =
@@ -205,19 +207,31 @@ case class ClassReqs (
   }
 
   def addRequirement[T <: CReq[T]](crs: Set[T], req: T): (Set[T], Seq[Constraint]) = {
+    // the new requirement, refined to be different from all existing requirements
     var diffreq: Option[T] = Some(req)
+    // new constraints
+    var cons = Seq[Constraint]()
+    // updated requirements
     val diffcres = crs.flatMap{ creq =>
       if (creq.canMerge(req)) {
-        val diff = creq.alsoNot(req.cls)
+        diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
+
+        val diff1 = creq.alsoNot(req.cls)
+        val diff2 = req.alsoNot(creq.cls)
         val same1 = creq.alsoSame(req.cls).flatMap(_.alsoCond(req.cond))
         val same2 = req.alsoSame(creq.cls).flatMap(_.alsoCond(creq.cond))
-        diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
-        Seq(diff, same1, same2).flatten
+        val res = Seq(diff1, diff2, same1, same2).flatten
+
+//        // if creq.cls == req.cls then creq.assert(req)
+//        val c = None // same1.map(cr => creq.assert(req, cr.cond))
+//        cons = cons ++ c
+
+        res
       }
       else
         Seq(creq)
     }
-    (diffcres ++ diffreq, Seq())
+    (diffcres ++ diffreq, cons)
   }
 
   def satisfyCReq[T <: CReq[T]](creq1: T, crs: Set[T]): (Set[T], Seq[Constraint]) = {
