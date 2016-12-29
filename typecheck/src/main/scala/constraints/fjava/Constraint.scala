@@ -48,7 +48,7 @@ case class AllEqual(expected: Seq[Type], actual: Seq[Type]) extends Constraint {
     else {
       var newcs = cs
       for (i <- 0 until expected.size)
-        newcs = expected(i).unify(actual(i), cs)
+        newcs = expected(i).unify(actual(i), newcs)
       newcs
     }
   }

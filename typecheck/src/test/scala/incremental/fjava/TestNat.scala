@@ -110,13 +110,13 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: Typ
     }
 
 
-  typecheckTest("Nat ok", ProgramM(Nat))(ProgramOK)
-
-  // without Zero knowing Succ, the class fails to check
-  typecheckTestError("Zero ok", Zero)
-
-  // Succ refers to Nat and should fail to check
-  typecheckTestError("Succ ok", Succ)
+//  typecheckTest("Nat ok", ProgramM(Nat))(ProgramOK)
+//
+//  // without Zero knowing Succ, the class fails to check
+//  typecheckTestError("Zero ok", Zero)
+//
+//  // Succ refers to Nat and should fail to check
+//  typecheckTestError("Succ ok", Succ)
 
   // Taking all classes into consideration, checking should succeed
   typecheckTest("{Nat, Zero, Succ} ok", ProgramM(Nat, Zero, Succ))(ProgramOK)
