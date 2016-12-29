@@ -226,7 +226,7 @@ object Trees {
   }
 
 
-  val rootss = Gen.enumeration("roots")(10)//(10, 100, 1000)
+  val rootss = Gen.enumeration("roots")(10)//(10, 100)
   val heightss = Gen.enumeration("heights")(5)//(5, 10)
   val branchings = Gen.single("branching")(2)
   val configs = Gen.enumeration[Config]("naming")(Unique)//(Unique, Mirrored, Overriding, MirroredOverriding)
