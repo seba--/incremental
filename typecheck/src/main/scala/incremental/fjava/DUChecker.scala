@@ -270,6 +270,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       var removeCons = Seq[Constraint]()
       var ctNew = CT()
+      var ctxNew = Map()
 
       // remove class requirements
       for (cls <- e.kids.seq) {
@@ -281,8 +282,8 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
         val newMethods = methods.map { mtyp =>
           MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(2).asInstanceOf[List[(Symbol, CName)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )}
-
-        ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toSeq ++ ctor.fields.values.toSeq ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ newMethods )
+       //  ctxNew = ctx + (CURRENT_CLASS -> cname) + ('this -> c) + ('other -> CName('Zero))
+        ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toList ++ ctor.fields.values.toList ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ newMethods )
       }
 
       for (i <- 0 until e.kids.seq.size) {
