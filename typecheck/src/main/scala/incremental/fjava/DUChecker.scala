@@ -47,6 +47,8 @@ case class CT (
 
 
 case class UnboundVariable(x: Symbol, ctx: Map[Symbol, Type]) extends RuntimeException
+case class UndefinedSuper(cls: Type) extends RuntimeException
+case class UndefinedCClass(name : Symbol) extends RuntimeException
 case class UndefinedField(cls: Type, name: Symbol) extends RuntimeException
 case class UndefinedMethod(cls: Type, name: Symbol) extends RuntimeException
 case class MethodWrongArity(cls: Type, name: Symbol, expectedArity: Int) extends RuntimeException
@@ -100,7 +102,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def extend(cls : Type, ct : CT) : Option[Type] = {
     ct.ext.find(extD => extD.cls == cls) match {
-      case None => Some(CName('Object))
+      case None => None
       case Some (extT) => Some(extT.ext)
     }
   }
@@ -126,6 +128,8 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       } catch {
         case ex: UnboundVariable => Right(s"Unbound variable ${ex.x} in context ${ex.ctx}")
+        case ex: UndefinedSuper => Right(s"Undefined super class ${ex.cls}")
+        case ex: UndefinedCClass => Right(s"Undefined CurrentClass for method ${ex.name}")
         case ex: UndefinedField => Right(s"Undefined field ${ex.name} in class ${ex.cls}")
         case ex: UndefinedMethod => Right(s"Undefined method ${ex.name} in class ${ex.cls}")
         case ex: MethodWrongArity => Right(s"Method ${ex.cls}.${ex.name} should have arity ${ex.expectedArity}")
@@ -177,11 +181,11 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         cons = cons :+ Subtype(ti,  mtyp(i))
         cs = cs ++ Seq(csi)
       }
-      (mtyp.last , cons, Seq(cse) ++ cs)
+      (mtyp.head, cons, Seq(cse) ++ cs)
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
-      val ctor = init(c, ct).getOrElse(throw new UndefinedCTor(c))
+      val ctor = init(c, ct).getOrElse(throw new UndefinedCTor(c)
       var cons = Seq[Constraint]()
       var cs = Seq[CS]()
       if (e.kids.seq.size != ctor.size)
@@ -222,18 +226,14 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       for ((x,xC) <- params) {
         ctxP = ctxP + (x -> xC)
       }
-      val cls = ctxP.get(CURRENT_CLASS) match {
-        case None => CName('Object)
-        case Some(cls) => cls
-      }
 
-      extend(cls, ct) match {
-       case None => cons
-       case Some(extD) => mtype(m, extD, ct) match {
+      val cls = ctxP.get(CURRENT_CLASS).orElse(throw new UndefinedCClass(m))
+
+      val extD = extend(cls, ct).getOrElse(throw  new UndefinedSuper(cls))
+      mtype(m, extD, ct) match {
          case None => cons
-         case Some(mtyp) => cons = Equal(mtyp.last, retT) +: AllEqual(mtyp.dropRight(1) , params.toMap.values.toList) +: cons
+         case Some(mtyp) => cons = Equal(mtyp.last, retT) +: AllEqual(mtyp.drop(0) , params.toMap.values.toList) +: cons
        }
-      }
 
       val (bodyT, csb) = typecheckRec(e.kids(0), ctxP, ct)
 
