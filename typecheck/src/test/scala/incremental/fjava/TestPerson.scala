@@ -121,6 +121,8 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
 }
 
 class TestDUSolveEndPerson extends TestPerson("BUSolveEnd", new DUCheckerFactory(SolveEnd))
-//class TestBUSolveContinuousSubstPerson extends TestPerson("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 
-//class TestBUEarlySolveContinuousSubstPerson extends TestPerson("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveEndPerson extends TestPerson("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+class TestBUSolveContinuousSubstPerson extends TestPerson("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+
+class TestBUEarlySolveContinuousSubstPerson extends TestPerson("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubst))

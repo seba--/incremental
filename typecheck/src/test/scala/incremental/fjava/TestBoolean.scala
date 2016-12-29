@@ -88,6 +88,7 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
 }
 
 class TestDUSolveEndBoolean extends TestBoolean("BUSolveEnd", new DUCheckerFactory(SolveEnd))
-//class TestBUSolveContinuousSubstBoolean extends TestBoolean("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveEndBoolean extends TestBoolean("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+class TestBUSolveContinuousSubstBoolean extends TestBoolean("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
 
-//class TestBUEarlySolveContinuousSubstBoolean extends TestBoolean("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubst))
+class TestBUEarlySolveContinuousSubstBoolean extends TestBoolean("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubst))
