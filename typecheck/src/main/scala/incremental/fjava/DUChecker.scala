@@ -190,23 +190,16 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
-      val ctor = init(c, ct)//.getOrElse(throw new UndefinedCTor(c))
+      val ctor = init(c, ct).getOrElse(throw new UndefinedCTor(c))
       var cons = Seq[Constraint]()
       var cs = Seq[CS]()
-//      if (e.kids.seq.size != ctor.size)
-//        throw new CTorWrongArity(c, e.kids.seq.size)
 
-      ctor match {
-       case None =>  for (i <- 0 until e.kids.seq.size) {
-      val (ti, csi) = typecheckRec (e.kids (i), ctx, ct)
-      cs = cs ++ Seq (csi)
-      }
-       case Some(cctor) =>  for (i <- 0 until e.kids.seq.size) {
+      for (i <- 0 until e.kids.seq.size) {
          val (ti, csi) = typecheckRec (e.kids (i), ctx, ct)
-         cons = cons :+ Subtype (ti, cctor(i) )
+         cons = cons :+ Subtype (ti, ctor(i) )
          cs = cs ++ Seq (csi)
        }
-      }
+
 
       (c, cons, cs)
 
