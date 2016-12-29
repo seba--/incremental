@@ -46,7 +46,7 @@ object Trees {
       case `Mirrored` => intPickler.pickle(1)
       case `Overriding` => intPickler.pickle(2)
       case `MirroredOverriding` => intPickler.pickle(3)
-      case _ => throw new MatchError()
+      case _ => throw new MatchError(x)
     }
 
     override def unpickle(a: Array[Byte], from: Int): (Config, Int) = intPickler.unpickle(a, from) match {
