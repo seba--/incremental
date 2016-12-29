@@ -108,9 +108,14 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def init(cls : Type, ct : CT) : Option[List[Type]] = { // return CtorCT
-    ct.ctorParams.find(extD => extD.cls == cls) match {
-      case None => None
-      case Some(ctorTyp) => Some(ctorTyp.args)
+    if (cls == CName('Object)) {
+      Some(List())
+    }
+    else {
+      ct.ctorParams.find(extD => extD.cls == cls) match {
+        case None => None
+        case Some(ctorTyp) => Some(ctorTyp.args)
+      }
     }
   }
 
@@ -185,16 +190,24 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
-      val ctor = init(c, ct).getOrElse(throw new UndefinedCTor(c))
+      val ctor = init(c, ct)//.getOrElse(throw new UndefinedCTor(c))
       var cons = Seq[Constraint]()
       var cs = Seq[CS]()
-      if (e.kids.seq.size != ctor.size)
-        throw new CTorWrongArity(c, e.kids.seq.size)
-      for (i <- 0 until e.kids.seq.size) {
-        val (ti, csi) = typecheckRec(e.kids(i), ctx, ct)
-        cons =  cons :+ Subtype(ti, ctor(i))
-        cs = cs ++ Seq(csi)
+//      if (e.kids.seq.size != ctor.size)
+//        throw new CTorWrongArity(c, e.kids.seq.size)
+
+      ctor match {
+       case None =>  for (i <- 0 until e.kids.seq.size) {
+      val (ti, csi) = typecheckRec (e.kids (i), ctx, ct)
+      cs = cs ++ Seq (csi)
       }
+       case Some(cctor) =>  for (i <- 0 until e.kids.seq.size) {
+         val (ti, csi) = typecheckRec (e.kids (i), ctx, ct)
+         cons = cons :+ Subtype (ti, cctor(i) )
+         cs = cs ++ Seq (csi)
+       }
+      }
+
       (c, cons, cs)
 
     case UCast =>
@@ -235,7 +248,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
        case None => cons
        case Some(extD) => mtype(m, extD, ct) match {
          case None => cons
-         case Some(mtyp) => cons = Equal(mtyp.head, retT) +: AllEqual(mtyp.drop(0), params.toMap.values.toList) +: cons
+         case Some(mtyp) => cons = Equal(mtyp.head, retT) +: AllEqual(mtyp.drop(1), params.toMap.values.toList) +: cons
        }
       }
 
@@ -257,7 +270,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       // handle all methods, satisfying current-class reqs
       for (i <- 0 until e.kids.seq.size) {
-        val (t, csi) = typecheckRec(e.kids(i), ctx + (CURRENT_CLASS -> c) + ('this -> c) + ('other -> CName('Zero)), ct)
+        val (t, csi) = typecheckRec(e.kids(i), ctx + (CURRENT_CLASS -> c) + ('this -> c), ct)
         cs = cs ++ Seq(csi)
       }
       val ctorsup = init(sup, ct).getOrElse(throw new UndefinedCTor(sup))
