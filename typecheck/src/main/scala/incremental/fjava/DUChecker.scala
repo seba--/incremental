@@ -216,7 +216,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val m = e.lits(1).asInstanceOf[Symbol] // method name
       val params = e.lits(2).asInstanceOf[Seq[(Symbol, CName)]]
 
-      var ctMO = ct
+      var cons = Seq[Constraint]()
       var ctxP = ctx
 
       for ((x,xC) <- params) {
@@ -228,17 +228,14 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
 
       extend(cls, ct) match {
-       case None => ct
+       case None => cons
        case Some(extD) => mtype(m, extD, ct) match {
-         case None => ct
-         case Some(mtyp) => ctMO = ct.copy(methods = ct.methods.filter(msupTyp => (msupTyp.name== m && msupTyp.cls == extD)) ++ Seq(MethodCT(extD, m, params.toMap.values.toList, retT)))
+         case None => cons
+         case Some(mtyp) => cons = Equal(mtyp.last, retT) +: AllEqual(mtyp.dropRight(1) , params.toMap.values.toList) +: cons
        }
       }
 
-      //overide the signature of the method in super types
-
-      val (bodyT, csb) = typecheckRec(e.kids(0), ctxP, ctMO)
-      var cons = Seq[Constraint]()
+      val (bodyT, csb) = typecheckRec(e.kids(0), ctxP, ct)
 
       // body type is subtype of declared return type
       cons = Subtype(bodyT, retT) +: cons
@@ -259,9 +256,9 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (t, csi) = typecheckRec(e.kids(i), ctx + (CURRENT_CLASS -> c) + ('this -> c) + ('other -> CName('Zero)), ct)
         cs = cs ++ Seq(csi)
       }
-
+      val ctorsup = init(sup, ct).getOrElse(throw new UndefinedCTor(sup))
       // constructor initializes all local  or super class fields
-      val fieldSupInitCons = AllEqual(init(sup, ct).asInstanceOf[Seq[Type]], ctor.superParams.values.toList.asInstanceOf[Seq[Type]])
+      val fieldSupInitCons = AllEqual(ctorsup, ctor.superParams.values.toList)
       // constructor provides correct arguments to super constructor
 
       //add the super class in CS solver
