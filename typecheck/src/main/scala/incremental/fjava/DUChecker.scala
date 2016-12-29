@@ -53,7 +53,7 @@ case class UndefinedField(cls: Type, name: Symbol) extends RuntimeException
 case class UndefinedMethod(cls: Type, name: Symbol) extends RuntimeException
 case class MethodWrongArity(cls: Type, name: Symbol, expectedArity: Int) extends RuntimeException
 case class UndefinedCTor(cls: Type) extends RuntimeException
-case class CTorWrongArity(cls: Type, expectedArity: Int) extends RuntimeException
+//case class CTorWrongArity(cls: Type, expectedArity: Int) extends RuntimeException
 
 
 case class DUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
@@ -139,7 +139,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         case ex: UndefinedMethod => Right(s"Undefined method ${ex.name} in class ${ex.cls}")
         case ex: MethodWrongArity => Right(s"Method ${ex.cls}.${ex.name} should have arity ${ex.expectedArity}")
         case ex: UndefinedCTor => Right(s"Undefined Constructor ${ex.cls}")
-        case ex: CTorWrongArity => Right(s"Constructor ${ex.cls} should have arity ${ex.expectedArity}")
+       // case ex: CTorWrongArity => Right(s"Constructor ${ex.cls} should have arity ${ex.expectedArity}")
       }
     }
   }
@@ -270,9 +270,10 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       // constructor initializes all local  or super class fields
       val fieldSupInitCons = AllEqual(ctorsup, ctor.superParams.values.toList)
       // constructor provides correct arguments to super constructor
+      val fieldInitCons = AllEqual(fields.values.toList, ctor.fields.values.toList)
 
       //add the super class in CS solver
-      (c, Seq(fieldSupInitCons), cs)
+      (c, Seq(fieldSupInitCons) ++ Seq(fieldInitCons), cs)
 
     case ProgramM =>
 
