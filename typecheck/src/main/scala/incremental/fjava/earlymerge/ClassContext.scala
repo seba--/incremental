@@ -19,6 +19,8 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
 
   def subst(s: CSubst): ClassContext = withCReqs(creqs.subst(s))
 
+  def finalized: ClassContext = withCReqs(creqs.copy(optMethods = Set()))
+
   def merge(other: ClassContext): (ClassContext, Seq[Constraint]) = {
     val (satisfiedThis, cons1) = this.addFacts(other.cfacts)
     val (satisfiedOther, cons2) = other.addFacts(this.cfacts)

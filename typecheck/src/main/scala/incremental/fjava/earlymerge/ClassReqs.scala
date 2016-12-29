@@ -85,8 +85,14 @@ object Condition {
     override def isGround: Boolean = true
     override def toString: String = "trueCond"
   }
+
+  def apply(not: Set[Type], same: Set[Type], others: Map[Type, Condition]): Condition =
+    if (not.isEmpty && same.isEmpty && others.isEmpty)
+      trueCond
+    else
+      new Condition(not, same, others)
 }
-case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Condition]){
+class Condition(val not: Set[Type], val same: Set[Type], val others: Map[Type, Condition]){
   def subst(cls: Type, s: CSubst): Option[Condition] = {
     val newnot = not flatMap { n =>
       val n2 = n.subst(s)
@@ -97,12 +103,21 @@ case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Conditio
       else
         Some(n2)
     }
+    var seenGrounded = false
     val newsame = same flatMap { n =>
       val n2 = n.subst(s)
       if (cls == n2)
         None
-      else if (cls.isGround && n2.isGround) // && cls != n2 (implicit)
-        return None
+      else if (n2.isGround) {
+        if (seenGrounded)
+          return None
+        else if (cls.isGround) // && cls != n2 (implicit)
+          return None
+        else {
+          seenGrounded = true
+          Some(n2)
+        }
+      }
       else
         Some(n2)
     }
@@ -138,9 +153,22 @@ case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Conditio
 
   def isGround: Boolean =
     not.forall(_.isGround) && same.forall(_.isGround) && others.forall(_._2.isGround)
+
+  override def toString: String = {
+    val sothers = if (others.isEmpty) "" else s",others(${others.mkString(", ")})"
+    s"diff(${not.mkString(", ")}),same(${same.mkString(", ")})$sothers"
+  }
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case other: Condition =>
+      not == other.not && same == other.same && others == other.others
+    case _ => false
+  }
+
+  override def hashCode(): Int = not.hashCode() + 31*same.hashCode() + 63*others.hashCode()
 }
 
-class Conditional(cons: Constraint, cls: Type, cond: Condition) extends Constraint {
+class Conditional(val cons: Constraint, val cls: Type, val cond: Condition) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
     val cls_ = cls.subst(cs.substitution)
     cond.subst(cls_, cs.substitution) match {
@@ -156,6 +184,14 @@ class Conditional(cons: Constraint, cls: Type, cond: Condition) extends Constrai
   }
 
   override def toString: String = s"Conditional($cons, $cls, $cond)"
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case other: Conditional =>
+      (cons == other.cons) && (cls == other.cls) && (cond == other.cond)
+    case _ => false
+  }
+
+  override def hashCode(): Int = cons.hashCode() + 31*cls.hashCode() + 63*cond.hashCode()
 }
 object Conditional {
   def apply(cons: Constraint, cls: Type, cond: Condition): Constraint =
@@ -217,10 +253,14 @@ case class ClassReqs (
         diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
 
         val diff1 = creq.alsoNot(req.cls)
-        val diff2 = req.alsoNot(creq.cls)
         val same1 = creq.alsoSame(req.cls).flatMap(_.alsoCond(req.cond))
+        val req1 = if (diff1.isEmpty) same1 else if (same1.isEmpty) diff1 else Some(creq)
+
+        val diff2 = req.alsoNot(creq.cls)
         val same2 = req.alsoSame(creq.cls).flatMap(_.alsoCond(creq.cond))
-        val res = Seq(diff1, diff2, same1, same2).flatten
+        val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
+
+        val res = Seq() ++ req1 ++ req2
 
 //        // if creq.cls == req.cls then creq.assert(req)
 //        val c = None // same1.map(cr => creq.assert(req, cr.cond))

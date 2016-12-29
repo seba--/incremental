@@ -35,13 +35,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       root.visitUninitialized { e =>
         val (t, reqs, cctx, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem(res.typ._4))
-        val csPre = subcs addNewConstraints cons
-        val cs = if (e.kind != ClassDec) csPre else {
+        val csPre = if (e.kind != ClassDec) subcs else {
           // add inheritance to constraint system
           val c = e.lits(0).asInstanceOf[CName]
           val sup = e.lits(1).asInstanceOf[CName]
-          csPre.extendz(c, sup)
+          subcs.extendz(c, sup)
         }
+        val cs = csPre.addNewConstraints(cons)
         val creqs2 = if (cs.shouldApplySubst) cctx.subst(cs.substitution) else cctx
         val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
         e.typ = (cs.applyPartialSolution(t), reqs2, creqs2, cs.propagate)
@@ -55,7 +55,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val tFinal = tRoot.subst(sol.substitution)
       val reqsFinal = reqsRoot mapValues (_.subst(sol.substitution))
-      val cctxFinal = cctxNoObject.subst(sol.substitution)
+      val cctxFinal = cctxNoObject.subst(sol.substitution).finalized
 
       if (!reqsFinal.isEmpty)
         Right(s"Unresolved variable requirements $reqsFinal, type $tFinal, unres ${sol.unsolved}")

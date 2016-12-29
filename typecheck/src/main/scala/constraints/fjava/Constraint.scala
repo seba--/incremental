@@ -46,11 +46,10 @@ case class AllEqual(expected: Seq[Type], actual: Seq[Type]) extends Constraint {
     if (expected.size != actual.size)
       cs.never(this)
     else {
-      var cons = Seq[Constraint]()
+      var newcs = cs
       for (i <- 0 until expected.size)
-        cons = cons :+ Equal(expected(i), actual(i))
-
-      cs.addNewConstraints(cons)
+        newcs = expected(i).unify(actual(i), cs)
+      newcs
     }
   }
 }
