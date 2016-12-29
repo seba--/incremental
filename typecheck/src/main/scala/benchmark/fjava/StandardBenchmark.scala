@@ -4,6 +4,7 @@ import org.scalameter.api._
 import _root_.benchmark.pcf.Settings
 import incremental.Node.Node
 import Checkers._
+import incremental.fjava.TypeChecker
 
 /**
   * Standard execution, not parallel, not incremental
@@ -20,11 +21,11 @@ class StandardBenchmarkClass extends Bench.LocalTime {
 //    HtmlReporter(!online)
 //  )
 
-  def measureT(name: String, check: Node => _)(trees: Gen[(Node, Long)]): Unit = {
+  def measureT(name: String, checker: TypeChecker[_])(trees: Gen[(Node, Long)]): Unit = {
     measure method (name) in {
       using(trees).
         setUp { _._1.invalidate }.
-        in { case (tree, size) => check(tree) }
+        in { case (tree, size) => checker.typecheck(tree) }
     }
   }
 

@@ -3,7 +3,7 @@ package benchmark.fjava
 import constraints.fjava.impl.{SolveContinuousSubst, SolveEnd}
 import incremental.Node.Node
 import incremental.Util
-import incremental.fjava.{DUCheckerFactory, earlymerge}
+import incremental.fjava.{DUCheckerFactory, TypeChecker, earlymerge}
 import incremental.fjava.latemerge.BUCheckerFactory
 
 /**
@@ -11,14 +11,18 @@ import incremental.fjava.latemerge.BUCheckerFactory
   */
 object Checkers extends App {
 
-  def du = (e:Node) => new DUCheckerFactory(SolveEnd).makeChecker.typecheck(e)
-  def buEnd = (e:Node) => new BUCheckerFactory(SolveEnd).makeChecker.typecheck(e)
-  def buCont = (e:Node) => new BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e)
+  lazy val du: TypeChecker[_] = new DUCheckerFactory(SolveEnd).makeChecker
 
-  def buEarlyCont = (e:Node) => new earlymerge.BUCheckerFactory(SolveContinuousSubst).makeChecker.typecheck(e)
+  lazy val buEnd: TypeChecker[_] = new BUCheckerFactory(SolveEnd).makeChecker
+  lazy val buCont: TypeChecker[_] = new BUCheckerFactory(SolveContinuousSubst).makeChecker
+
+  lazy val buEarlyCont: TypeChecker[_] = new earlymerge.BUCheckerFactory(SolveContinuousSubst).makeChecker
 
   val prog = Trees.intAcumSuperHierarchy(10, 5, 2)(Trees.Unique)
 
-  println(Util.timed(du(prog)))
-  println(Util.timed(buEarlyCont(prog)))
+  println("DU check: " + du.typecheck(prog))
+  du.localState.printStatistics()
+
+  println("BU check: " + buEarlyCont.typecheck(prog))
+  buEarlyCont.localState.printStatistics()
 }
