@@ -60,7 +60,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       if (!reqsFinal.isEmpty)
         Right(s"Unresolved variable requirements $reqsFinal, type $tFinal, unres ${sol.unsolved}")
       else if (!cctxFinal.creqs.isEmpty)
-        Right(s"Unresolved class requirements $cctxFinal, type $tFinal, unres ${sol.unsolved}")
+        Right(s"Unresolved class requirements ${cctxFinal.creqs}, type $tFinal, unres ${sol.unsolved}")
       else if (!sol.isSolved)
         Right(s"Unresolved constraints ${sol.unsolved}, type $tFinal")
       else
@@ -233,11 +233,16 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val sup = cls.lits(1).asInstanceOf[CName]
         val ctor = cls.lits(2).asInstanceOf[Ctor]
         val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, CName)]].toMap
-        val methods = cls.kids.seq.asInstanceOf[Seq[(Symbol, Seq[(Symbol, CName)], CName)]]
+        val methods = cls.kids.seq
 
         val (creqs1, cons1) = restCReqs.addFact(CtorFact(cname, ctor.allArgTypes))
         val (creqs2, cons2) = creqs1.addFacts(fields.map(f => FieldFact(cname, f._1, f._2)))
-        val (creqs3, cons3) = creqs2.addFacts(methods.map(m => MethodFact(cname, m._1, m._2.map(_._2), m._3)))
+        val (creqs3, cons3) = creqs2.addFacts(methods.map(m =>
+          MethodFact(
+            cname,
+            m.lits(1).asInstanceOf[Symbol],
+            m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
+            m.lits(0).asInstanceOf[CName])))
         val (creqs4, cons4) = creqs3.addFact(ExtendsFact(cname, sup))
 
         restCReqs = creqs4

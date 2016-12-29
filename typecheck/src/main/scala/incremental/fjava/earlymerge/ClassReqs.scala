@@ -15,7 +15,7 @@ trait CReq[T <: CReq[T]] {
   def withCls(t: Type, newcond: Condition): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
-  def assert(other: CReq[T]): Option[Constraint] = for (c2 <- alsoCond(other.cond); c3 <- c2.alsoSame(other.cls)) yield assert(other, c3.cond)
+  def assert(other: CReq[T]): Option[Constraint] = for (c2 <- alsoSame(other.cls); c3 <- c2.alsoCond(other.cond)) yield assert(other, c3.cond)
   def assert(other: CReq[T], cond: Condition): Constraint
   def subst(s: CSubst): Option[T]
 
@@ -38,7 +38,7 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[ExtCReq]) = true
-  def assert(other: CReq[ExtCReq], cond: Condition) = Conditional(cls, cond, Equal(ext, other.self.ext))
+  def assert(other: CReq[ExtCReq], cond: Condition) = Conditional(Equal(ext, other.self.ext), cls, cond)
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (ExtCReq(cls_, ext.subst(s), _))
@@ -49,7 +49,7 @@ case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) exte
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[CtorCReq]) = true
-  def assert(other: CReq[CtorCReq], cond: Condition) = Conditional(cls, cond, AllEqual(args, other.self.args))
+  def assert(other: CReq[CtorCReq], cond: Condition) = Conditional(AllEqual(args, other.self.args), cls, cond)
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (CtorCReq(cls_, args.map(_.subst(s)), _))
@@ -60,7 +60,7 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[FieldCReq]): Boolean = field == other.self.field
-  def assert(other: CReq[FieldCReq], cond: Condition) = Conditional(cls, cond, Equal(typ, other.self.typ))
+  def assert(other: CReq[FieldCReq], cond: Condition) = Conditional(Equal(typ, other.self.typ), cls, cond)
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (FieldCReq(cls_, field, typ.subst(s), _))
@@ -71,7 +71,7 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(cls, cond, AllEqual(params :+ ret, other.self.params :+ other.self.ret))
+  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(AllEqual(params :+ ret, other.self.params :+ other.self.ret), cls, cond)
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _))
@@ -82,10 +82,8 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
 object Condition {
   val trueCond = new Condition(Set(), Set(), Map()) {
     override def subst(cls: Type, s: CSubst): Option[Condition] = Some(this)
-    override def alsoNot(cls: Type, n: Type): Option[Condition] = Some(this)
-    override def alsoSame(cls: Type, n: Type): Option[Condition] = Some(this)
-    override def alsoCond(cls: Type, other: Condition): Option[Condition] = Some(this)
     override def isGround: Boolean = true
+    override def toString: String = "trueCond"
   }
 }
 case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Condition]){
@@ -124,7 +122,9 @@ case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Conditio
     else
       Some(Condition(not + n, same, others))
   def alsoSame(cls: Type, n: Type): Option[Condition] =
-    if (cls.isGround && n.isGround && cls != n || not.contains(n))
+    if (cls == n)
+      Some(this)
+    else if (cls.isGround && n.isGround || not.contains(n))
       None
     else
       Some(Condition(not, same + n, others))
@@ -138,20 +138,29 @@ case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Conditio
     not.forall(_.isGround) && same.forall(_.isGround) && others.forall(_._2.isGround)
 }
 
-case class Conditional(cls: Type, cond: Condition, cons: Constraint) extends Constraint {
+class Conditional(cons: Constraint, cls: Type, cond: Condition) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
     val cls_ = cls.subst(cs.substitution)
     cond.subst(cls_, cs.substitution) match {
       case None => cs // discard this constraint because condition is false
       case Some(cond_) if cond_.isGround => cons.solve(cs)
-      case Some(cond_) => cs.notyet(Conditional(cls_, cond_, cons.subst(cs.substitution)))
+      case Some(cond_) => cs.notyet(new Conditional(cons.subst(cs.substitution), cls_, cond_))
     }
   }
 
   override def subst(s: CSubst): Constraint = {
     val cls_ = cls.subst(s)
-    Conditional(cls_, cond.subst(cls_, s).getOrElse(Condition.trueCond), cons.subst(s))
+    Conditional(cons.subst(s), cls_, cond.subst(cls_, s).getOrElse(Condition.trueCond))
   }
+
+  override def toString: String = s"Conditional($cons, $cls, $cond)"
+}
+object Conditional {
+  def apply(cons: Constraint, cls: Type, cond: Condition): Constraint =
+    if (cond == Condition.trueCond)
+      cons
+    else
+      new Conditional(cons, cls, cond)
 }
 
 
@@ -200,9 +209,10 @@ case class ClassReqs (
     val diffcres = crs.flatMap{ creq =>
       if (creq.canMerge(req)) {
         val diff = creq.alsoNot(req.cls)
-        val same = creq.alsoSame(req.cls).flatMap(_.alsoCond(req.cond))
+        val same1 = creq.alsoSame(req.cls).flatMap(_.alsoCond(req.cond))
+        val same2 = req.alsoSame(creq.cls).flatMap(_.alsoCond(creq.cond))
         diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
-        Seq(diff, same).flatten
+        Seq(diff, same1, same2).flatten
       }
       else
         Seq(creq)

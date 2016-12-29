@@ -29,16 +29,19 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
   def addFact(fact: ClassFact): (ClassContext, Seq[Constraint]) = fact match {
     case CtorFact(cls, args) =>
       val (crs, cons) = creqs.satisfyCReq(CtorCReq(cls, args), creqs.ctors)
-      (withCReqs(creqs.copy(ctors = crs)), cons)
+      val cctx = ClassContext(creqs.copy(ctors = crs), cfacts :+ fact)
+      (cctx, cons)
 
     case FieldFact(cls, field, typ) =>
       val (crs, cons) = creqs.satisfyCReq(FieldCReq(cls, field, typ), creqs.fields)
-      (withCReqs(creqs.copy(fields = crs)), cons)
+      val cctx = ClassContext(creqs.copy(fields = crs), cfacts :+ fact)
+      (cctx, cons)
 
     case MethodFact(cls, name, params, ret) =>
       val (crsMethods, cons1) = creqs.satisfyCReq(MethodCReq(cls, name, params, ret), creqs.methods)
       val (crsOptMethods, cons2) = creqs.satisfyCReq(MethodCReq(cls, name, params, ret), creqs.optMethods)
-      (withCReqs(creqs.copy(methods = crsMethods, optMethods = crsOptMethods)), cons1 ++ cons2)
+      val cctx = ClassContext(creqs.copy(methods = crsMethods, optMethods = crsOptMethods), cfacts :+ fact)
+      (cctx, cons1 ++ cons2)
 
     case ExtendsFact(cls, ext) =>
       val extReq = ExtCReq(cls, ext)
@@ -46,8 +49,8 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
       val newFields = creqs.fields.flatMap(_.satisfyExt(extReq))
       val newMethods = creqs.methods.flatMap(_.satisfyExt(extReq))
       val newOptMethods = creqs.optMethods.flatMap(_.satisfyExt(extReq))
-      (withCReqs(creqs.copy(exts = crs, fields = newFields, methods = newMethods, optMethods = newOptMethods)), cons)
-
+      val cctx = ClassContext(creqs.copy(exts = crs, fields = newFields, methods = newMethods, optMethods = newOptMethods), cfacts :+ fact)
+      (cctx, cons)
   }
 
   def addFacts(facts: Iterable[ClassFact]): (ClassContext, Seq[Constraint]) =
@@ -63,8 +66,14 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
       (withCReqs(creqs.copy(fields = crs)), cons)
 
     case req: MethodCReq =>
-      val (crs, cons) = creqs.addRequirement(creqs.methods, req)
-      (withCReqs(creqs.copy(methods = crs)), cons)
+      if (!req.optionallyDefined) {
+        val (crs, cons) = creqs.addRequirement(creqs.methods, req)
+        (withCReqs(creqs.copy(methods = crs)), cons)
+      }
+      else {
+        val (crs, cons) = creqs.addRequirement(creqs.optMethods, req)
+        (withCReqs(creqs.copy(optMethods = crs)), cons)
+      }
 
     case req: ExtCReq =>
       val (crs, cons) = creqs.addRequirement(creqs.exts, req)
