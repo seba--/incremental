@@ -73,7 +73,7 @@ object Trees {
   def hierarchy(roots: Int, height: Int, branching: Int)(implicit mkFields: MkFields, mkMethods: MkMethods): Node = {
     val rootClasses = for (rootID <- 0 until roots)
       yield subhierarchy(height, branching, Seq(rootID))
-    ProgramM(Seq(), rootClasses.flatten)
+    ProgramM(Seq(), rootClasses)
   }
 
   /**
@@ -81,7 +81,7 @@ object Trees {
     * @param branching subclass branching factor within subhierarchies
     * @param path path to current subhierarchy
     */
-  def subhierarchy(height: Int, branching: Int, path: Seq[Int])(implicit mkFields: MkFields, mkMethods: MkMethods): Seq[Node] = {
+  def subhierarchy(height: Int, branching: Int, path: Seq[Int])(implicit mkFields: MkFields, mkMethods: MkMethods): Node = {
     val fields = mkFields(path)
     val superfields = {
       var prefix = 1
@@ -99,10 +99,10 @@ object Trees {
     )
 
     if (height == 1)
-      Seq(cls)
+      cls
     else {
       val branches = for (b <- 0 until branching) yield subhierarchy(height - 1, branching, path :+ b)
-      cls +: branches.flatten
+      ProgramM(Seq(), branches :+ cls)
     }
   }
 
@@ -154,7 +154,7 @@ object Trees {
     }
 
     val prog = hierarchy(roots, height, branching)
-    ProgramM(Seq(), prog.kids.seq ++ Classes.NatClasses)
+    ProgramM(Seq(), prog +: Classes.NatClasses)
   }
 
 

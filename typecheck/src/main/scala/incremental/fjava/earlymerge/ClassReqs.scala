@@ -57,18 +57,21 @@ case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) exte
   }
   def withCond(c: Condition) = copy(cond = c)
 }
-case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = trueCond) extends CReq[FieldCReq] {
+trait Named {
+  val name: Symbol
+}
+case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: Condition = trueCond) extends CReq[FieldCReq] with Named {
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
-  def canMerge(other: CReq[FieldCReq]): Boolean = field == other.self.field
+  def canMerge(other: CReq[FieldCReq]): Boolean = name == other.self.name
   def assert(other: CReq[FieldCReq], cond: Condition) = Conditional(Equal(typ, other.self.typ), cls, cond)
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
-    cond.subst(cls_, s) map (FieldCReq(cls_, field, typ.subst(s), _))
+    cond.subst(cls_, s) map (FieldCReq(cls_, name, typ.subst(s), _))
   }
   def withCond(c: Condition) = copy(cond = c)
 }
-case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, optionallyDefined: Boolean = false, cond: Condition = trueCond) extends CReq[MethodCReq] {
+case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, optionallyDefined: Boolean = false, cond: Condition = trueCond) extends CReq[MethodCReq] with Named {
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
@@ -85,10 +88,14 @@ object Condition {
     override def subst(cls: Type, s: CSubst): Option[Condition] = Some(this)
     override def isGround: Boolean = true
     override def toString: String = "trueCond"
+
+    override def equals(obj: Any): Boolean = obj.isInstanceOf[AnyRef] && eq(obj.asInstanceOf[AnyRef])
+
+    override val hashCode: Int = not.hashCode() + 31*same.hashCode() + 63*others.hashCode()
   }
 
   def apply(not: Set[Type], same: Set[Type], others: Map[Type, Condition]): Condition =
-    if (not.isEmpty && same.isEmpty && others.isEmpty)
+    if (not.isEmpty && same.isEmpty && others.values.forall(_ == trueCond))
       trueCond
     else
       new Condition(not, same, others)
@@ -208,9 +215,9 @@ case class ClassReqs (
                        currentCls: Option[Type] = None,
                        exts: Set[ExtCReq] = Set(),
                        ctors: Set[CtorCReq] = Set(),
-                       fields: Set[FieldCReq] = Set(),
-                       methods: Set[MethodCReq] = Set(),
-                       optMethods: Set[MethodCReq] = Set()) {
+                       fields: Map[Symbol, Set[FieldCReq]] = Map(),
+                       methods: Map[Symbol, Set[MethodCReq]] = Map(),
+                       optMethods: Map[Symbol, Set[MethodCReq]] = Map()) {
 
   override def toString =
     s"ClassReqs(current=$currentCls, ext=$exts, ctorParams=$ctors, fields=$fields, methods=$methods, optMethods=$optMethods)"
@@ -219,19 +226,24 @@ case class ClassReqs (
     currentCls.map(_.subst(s)),
     exts.flatMap(_.subst(s)),
     ctors.flatMap(_.subst(s)),
-    fields.flatMap(_.subst(s)),
-    methods.flatMap(_.subst(s)),
-    optMethods.flatMap(_.subst(s)))
+    fields.mapValues(set => set.flatMap(_.subst(s))),
+    methods.mapValues(set => set.flatMap(_.subst(s))),
+    optMethods.mapValues(set => set.flatMap(_.subst(s))))
 
-  def isEmpty = currentCls.isEmpty && exts.isEmpty && ctors.isEmpty && fields.isEmpty && methods.isEmpty
+  def isEmpty =
+    currentCls.isEmpty &&
+    exts.isEmpty &&
+    ctors.isEmpty &&
+    fields.values.forall(_.isEmpty) &&
+    methods.values.forall(_.isEmpty)
 
   def merge(crs: ClassReqs): (ClassReqs, Seq[Constraint]) = {
     val (currentX, cons0) = (currentCls.orElse(crs.currentCls), for (t1 <- currentCls; t2 <- crs.currentCls) yield Equal(t1, t2))
     val (extX, cons1) = merge(exts, crs.exts)
     val (ctorX, cons2) = merge(ctors, crs.ctors)
-    val (fieldsX, cons3) = merge(fields, crs.fields)
-    val (methodsX, cons4) = merge(methods, crs.methods)
-    val (optMethodsX, cons5) = merge(optMethods, crs.optMethods)
+    val (fieldsX, cons3) = mergeMap(fields, crs.fields)
+    val (methodsX, cons4) = mergeMap(methods, crs.methods)
+    val (optMethodsX, cons5) = mergeMap(optMethods, crs.optMethods)
     val cons = cons0.toSeq ++ cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
     (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
   }
@@ -241,6 +253,13 @@ case class ClassReqs (
       return (crs2, Seq())
 
     Util.loop[Set[T], T, Constraint](addRequirement)(crs1, crs2)
+  }
+
+  private def mergeMap[T <: CReq[T] with Named](crs1: Map[Symbol, Set[T]], crs2: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+    if (crs1.isEmpty)
+      return (crs2, Seq())
+
+    Util.loop[Map[Symbol, Set[T]], T, Constraint](addRequirementMap)(crs1, crs2.values.toStream.flatten)
   }
 
   def addRequirement[T <: CReq[T]](crs: Set[T], req: T): (Set[T], Seq[Constraint]) = {
@@ -275,6 +294,43 @@ case class ClassReqs (
     (diffcres ++ diffreq, cons)
   }
 
+  def addRequirementMap[T <: CReq[T] with Named](crs: Map[Symbol, Set[T]], req: T): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+    val set = crs.getOrElse(req.name,
+      return (crs + (req.name -> Set(req)), Seq()))
+
+    // the new requirement, refined to be different from all existing requirements
+    var diffreq: Option[T] = Some(req)
+    // new constraints
+    var cons = Seq[Constraint]()
+
+    var newreqs = Map[(Type, Condition), T]()
+    def addReq(req: T) = {
+      val key = (req.cls, req.cond)
+      newreqs.get(key) match {
+        case None => newreqs += (key -> req)
+        case Some(oreq) => cons :+= req.assert(oreq, req.cond)
+      }
+    }
+
+    set.foreach{ creq =>
+      diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
+
+      val diff1 = creq.alsoNot(req.cls)
+      val same1 = creq.alsoSame(req.cls).flatMap(_.alsoCond(req.cond))
+      val req1 = if (diff1.isEmpty) same1 else if (same1.isEmpty) diff1 else Some(creq)
+
+      val diff2 = req.alsoNot(creq.cls)
+      val same2 = req.alsoSame(creq.cls).flatMap(_.alsoCond(creq.cond))
+      val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
+
+      req1.map(addReq)
+      req2.map(addReq)
+    }
+
+    (crs + (req.name -> (newreqs.values.toSet ++ diffreq)), cons)
+  }
+
+
   def satisfyCReq[T <: CReq[T]](creq1: T, crs: Set[T]): (Set[T], Seq[Constraint]) = {
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq2 =>
@@ -286,5 +342,24 @@ case class ClassReqs (
         Some(creq2)
       )
     (newcrs, cons)
+  }
+
+  def satisfyCReqMap[T <: CReq[T] with Named](creq1: T, crs: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+    val set = crs.getOrElse(creq1.name,
+      return (crs, Seq()))
+
+    var cons = Seq[Constraint]()
+    val newcrs = set.flatMap( creq2 =>
+      if (creq1.canMerge(creq2)) {
+        cons ++= creq1.assert(creq2)
+        creq2.alsoNot(creq1.cls)
+      }
+      else
+        Some(creq2)
+    )
+    if (newcrs.isEmpty)
+      (crs - creq1.name, cons)
+    else
+      (crs + (creq1.name -> newcrs), cons)
   }
 }

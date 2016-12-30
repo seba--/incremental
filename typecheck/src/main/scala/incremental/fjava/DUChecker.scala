@@ -283,8 +283,17 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var ctNew = CT()
       var ctxNew = Map()
 
+      var classes = Seq[Node_[Result]]()
+      def findClasses(node: Node_[Result]): Unit = {
+        if (node.kind == ProgramM)
+          node.kids.seq.map(findClasses)
+        else if (node.kind == ClassDec)
+          classes :+= node
+      }
+      findClasses(e)
+
       // remove class requirements
-      for (cls <- e.kids.seq) {
+      for (cls <- classes) {
         val cname = cls.lits(0).asInstanceOf[CName]
         val sup = cls.lits(1).asInstanceOf[CName]
         val ctor = cls.lits(2).asInstanceOf[Ctor]
@@ -297,8 +306,8 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toList ++ ctor.fields.values.toList ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ newMethods )
       }
 
-      for (i <- 0 until e.kids.seq.size) {
-        val (ct, csi) = typecheckRec(e.kids(i), ctx, ctNew)
+      for (cls <- classes) {
+        val (ct, csi) = typecheckRec(cls, ctx, ctNew)
         cs = cs ++ Seq(csi)
       }
 

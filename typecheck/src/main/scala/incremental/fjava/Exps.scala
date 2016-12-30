@@ -12,7 +12,7 @@ abstract class Toplevel(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKin
 
 case object ProgramM extends NodeKind(_ => ProgramSyntax) {
   override def toString(e: Node_[_]): Option[String] = {
-    Some(e.kids.seq.mkString("\n"))
+    Some(e.kids.seq.mkString("{", "\n", "}"))
   }
 }
 
@@ -31,7 +31,7 @@ case object ClassDec extends Toplevel(_ => ClassSyntax) {
 }
 
 case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CName]) {
-  def allArgTypes: Seq[CName] = superParams.values.toList ++ fields.values
+  val allArgTypes: Seq[CName] = superParams.values.toList ++ fields.values
 
   override def toString: String = {
     val sparams = superParams.map { case (param, typ) => s"$param: $typ" }.mkString(", ")
@@ -193,8 +193,9 @@ object ProgramSyntax extends SyntaxChecking.SyntaxChecker(ProgramM) {
     if (lits.nonEmpty)
       error(s"No literals expected")
 
-    if (kids.exists(_.kind != ClassDec))
-      error(s"All children of a program must be class declarations, but found ${kids.filter(_.kind != ClassDec)}")
+    kids.foreach( k =>
+      assert(k.kind == ClassDec || k.kind == ProgramM)
+    )
   }
 }
 
