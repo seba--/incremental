@@ -31,6 +31,7 @@ trait CReq[T <: CReq[T]] {
     val diff = this.alsoNot(ext.cls)
     // ext.cls == req.cls, so replace the original requirement with a super-class requirement `ext.ext`
     val same = this.alsoSame(ext.cls).map(_.withCls(ext.ext))
+
     Seq(diff, same).flatten
   }
 }
