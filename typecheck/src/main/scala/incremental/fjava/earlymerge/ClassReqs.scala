@@ -301,14 +301,16 @@ case class ClassReqs (
     // the new requirement, refined to be different from all existing requirements
     var diffreq: Option[T] = Some(req)
     // new constraints
-    var cons = Seq[Constraint]()
+    var cons = Set[Constraint]()
 
     var newreqs = Map[(Type, Condition), T]()
     def addReq(req: T) = {
       val key = (req.cls, req.cond)
       newreqs.get(key) match {
         case None => newreqs += (key -> req)
-        case Some(oreq) => cons :+= req.assert(oreq, req.cond)
+        case Some(oreq) =>
+          if (req != oreq)
+            cons += req.assert(oreq, req.cond)
       }
     }
 
@@ -327,7 +329,7 @@ case class ClassReqs (
       req2.map(addReq)
     }
 
-    (crs + (req.name -> (newreqs.values.toSet ++ diffreq)), cons)
+    (crs + (req.name -> (newreqs.values.toSet ++ diffreq)), cons.toSeq)
   }
 
 
