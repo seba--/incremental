@@ -10,9 +10,6 @@ import incremental.fjava.{CName, UCName}
 import scala.collection.generic.CanBuildFrom
 
 trait CReq[T <: CReq[T]] {
-  if (cls.isGround && cond.sameGround.nonEmpty)
-    println("WARNING 7")
-
   def self: T
   val cls: Type
   def withCls(t: Type): T = {
@@ -27,14 +24,13 @@ trait CReq[T <: CReq[T]] {
   def withCls(t: Type, newcond: Condition): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
-  def assert(other: CReq[T]): Option[Constraint] = for (c2 <- alsoSame(other.cls); c3 <- c2.alsoCond(other.cond)) yield assert(other, c3.cond)
+  def assert(sat: CReq[T]): Option[Constraint] = alsoSame(sat.cls).map(c2 => this.assert(sat, c2.cond))
   def assert(other: CReq[T], cond: Condition): Constraint
   def subst(s: CSubst): Option[T]
 
   def withCond(cond: Condition): T
   def alsoNot(n: Type): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
   def alsoSame(n: Type): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
-  def alsoCond(other: Condition): Option[T] = cond.alsoCond(cls, other) map (withCond(_))
 
   def satisfyExt(cls: CName, sup: CName): Seq[T] = {
     // NOTE: we assume that the removal of an extends clause implies no further declarations appear for subclass `ext.cls`
@@ -115,6 +111,8 @@ object Condition {
     override def equals(obj: Any): Boolean = obj.isInstanceOf[AnyRef] && eq(obj.asInstanceOf[AnyRef])
 
     override def hashCode: Int = 0
+
+    override def alsoCond(cls: Type, other: Condition) = Some(other)
   }
 
   def apply(notGround: Set[CName], notVar: Set[UCName], sameGround: Option[CName], sameVar: Set[UCName], othersGround: Map[CName, Condition], othersVar: Map[UCName, Condition]): Condition =
@@ -131,18 +129,20 @@ class Condition(
        val othersGround: Map[CName, Condition],
        val othersVar: Map[UCName, Condition]) {
 
-  if (sameGround.exists(notGround.contains(_)))
-    println("WARNING 1")
-  if (sameGround.size > 1)
-    println("WARNING 2")
-  if (othersGround.size > 1)
-    println("WARNING 3")
-  if (sameGround.nonEmpty && notGround.nonEmpty)
-    println("WARNING 4")
-  if (othersGround.values.exists(trueCond == _))
-    println("WARNING 5")
-  if (othersVar.values.exists(trueCond == _))
-    println("WARNING 6")
+//  if (sameGround.exists(notGround.contains(_)))
+//    println("WARNING 1")
+//  if (sameGround.size > 1)
+//    println("WARNING 2")
+//  if (othersGround.size > 1)
+//    println("WARNING 3")
+//  if (sameGround.nonEmpty && notGround.nonEmpty)
+//    println("WARNING 4")
+//  if (othersGround.values.exists(trueCond == _))
+//    println("WARNING 5")
+//  if (othersVar.values.exists(trueCond == _))
+//    println("WARNING 6")
+//  if (this == trueCond)
+//    println("WARNING 7")
 
 
   def subst(cls: Type, s: CSubst): Option[Condition] = {
@@ -369,7 +369,7 @@ class Condition(
     else if (other.sameGround.isDefined && sameGround.isDefined && other.sameGround.get != sameGround.get)
       None
     else
-      Some(new Condition(notGround ++ other.notGround, notVar ++ other.notVar, sameGround, sameVar ++ other.sameVar, othersGround ++ other.othersGround, othersVar ++ other.othersVar))
+      Some(new Condition(notGround ++ other.notGround, notVar ++ other.notVar, sameGround.orElse(other.sameGround), sameVar ++ other.sameVar, othersGround ++ other.othersGround, othersVar ++ other.othersVar))
 
   def uvars: Set[CVar[Type]] =
     notVar.map(_.x) ++ sameVar.map(_.x) ++ othersGround.flatMap(_._2.uvars) ++ othersVar.flatMap(kv => kv._2.uvars + kv._1.x)
@@ -509,11 +509,11 @@ case class ClassReqs (
         diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
 
         val diff1 = creq.alsoNot(req.cls)
-        val same1 = creq.alsoSame(req.cls).flatMap(_.alsoCond(req.cond))
+        val same1 = creq.alsoSame(req.cls)
         val req1 = if (diff1.isEmpty) same1 else if (same1.isEmpty) diff1 else Some(creq)
 
         val diff2 = req.alsoNot(creq.cls)
-        val same2 = req.alsoSame(creq.cls).flatMap(_.alsoCond(creq.cond))
+        val same2 = req.alsoSame(creq.cls)
         val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
 
         val res = Seq() ++ req1 ++ req2
@@ -543,51 +543,53 @@ case class ClassReqs (
       diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
 
       val diff1 = creq.alsoNot(req.cls)
-      val same1 = creq.alsoSame(req.cls).flatMap(_.alsoCond(req.cond))
+      val same1 = creq.alsoSame(req.cls)
       val req1 = if (diff1.isEmpty) same1 else if (same1.isEmpty) diff1 else Some(creq)
 
       val diff2 = req.alsoNot(creq.cls)
-      val same2 = req.alsoSame(creq.cls).flatMap(_.alsoCond(creq.cond))
+      val same2 = req.alsoSame(creq.cls)
       val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
 
-      req1.map(builder.addReq)
-      req2.map(builder.addReq)
+      req1.foreach(builder.addReq)
+      req2.foreach(builder.addReq)
     }
 
-    (crs + (req.name -> (builder.getRequirements ++ diffreq)), builder.getConstraints)
+    diffreq.foreach(builder.addReq)
+
+    (crs + (req.name -> builder.getRequirements), builder.getConstraints)
   }
 
 
-  def satisfyCReq[T <: CReq[T]](creq1: T, crs: Set[T]): (Set[T], Seq[Constraint]) = {
+  def satisfyCReq[T <: CReq[T]](sat: T, crs: Set[T]): (Set[T], Seq[Constraint]) = {
     var cons = Seq[Constraint]()
-    val newcrs = crs flatMap ( creq2 =>
-      if (creq1.canMerge(creq2)) {
-        cons ++= creq1.assert(creq2)
-        creq2.alsoNot(creq1.cls)
+    val newcrs = crs flatMap ( creq =>
+      if (sat.canMerge(creq)) {
+        cons ++= creq.assert(sat)
+        creq.alsoNot(sat.cls)
       }
       else
-        Some(creq2)
+        Some(creq)
       )
     (newcrs, cons)
   }
 
-  def satisfyCReqMap[T <: CReq[T] with Named](creq1: T, crs: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
-    val set = crs.getOrElse(creq1.name,
+  def satisfyCReqMap[T <: CReq[T] with Named](sat: T, crs: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+    val set = crs.getOrElse(sat.name,
       return (crs, Seq()))
 
     var cons = Seq[Constraint]()
-    val newcrs = set.flatMap( creq2 =>
-      if (creq1.canMerge(creq2)) {
-        cons ++= creq1.assert(creq2)
-        creq2.alsoNot(creq1.cls)
+    val newcrs = set.flatMap( creq =>
+      if (sat.canMerge(creq)) {
+        cons ++= creq.assert(sat)
+        creq.alsoNot(sat.cls)
       }
       else
-        Some(creq2)
+        Some(creq)
     )
     if (newcrs.isEmpty)
-      (crs - creq1.name, cons)
+      (crs - sat.name, cons)
     else
-      (crs + (creq1.name -> newcrs), cons)
+      (crs + (sat.name -> newcrs), cons)
   }
 }
 
