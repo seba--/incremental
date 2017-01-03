@@ -41,28 +41,23 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           val sup = e.lits(1).asInstanceOf[CName]
           subcs.extendz(c, sup)
         }
-        val cs = csPre.addNewConstraints(cons)
-        val creqs2 = if (cs.shouldApplySubst) cctx.subst(cs.substitution) else cctx
-        val reqs2 = cs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](reqs, p => p._2)
-        e.typ = (cs.applyPartialSolution(t), reqs2, creqs2, cs.propagate)
+
+        val (newt, newreqs, newcctx, newcs) = substFix(t, reqs, cctx, cons, csPre, false)
+        e.typ = (newt, newreqs, newcctx, newcs.propagate)
         true
       }
 
       val (tRoot, reqsRoot, cctxRoot, csRoot) = root.typ
-      val (cctxNoObject, objCons) = cctxRoot.addFact(CtorFact(CName('Object), Seq()))
+      val (cctxRootObject, objCons) = cctxRoot.addFact(CtorFact(CName('Object), Seq()))
 
-      val sol = csRoot.addNewConstraints(objCons).tryFinalize
-
-      val tFinal = tRoot.subst(sol.substitution)
-      val reqsFinal = reqsRoot mapValues (_.subst(sol.substitution))
-      val cctxFinal = cctxNoObject.subst(sol.substitution).finalized
+      val (tFinal, reqsFinal, cctxFinal, csFinal) = substFix(tRoot, reqsRoot, cctxRootObject, objCons, csRoot, true)
 
       if (!reqsFinal.isEmpty)
-        Right(s"Unresolved variable requirements $reqsFinal, type $tFinal, unres ${sol.unsolved}")
+        Right(s"Unresolved variable requirements $reqsFinal, type $tFinal, unres ${csFinal.unsolved}")
       else if (!cctxFinal.creqs.isEmpty)
-        Right(s"Unresolved class requirements ${cctxFinal.creqs}, type $tFinal, unres ${sol.unsolved}")
-      else if (!sol.isSolved)
-        Right(s"Unresolved constraints ${sol.unsolved}, type $tFinal")
+        Right(s"Unresolved class requirements ${cctxFinal.creqs}, type $tFinal, unres ${csFinal.unsolved}")
+      else if (!csFinal.isSolved)
+        Right(s"Unresolved constraints ${csFinal.unsolved}, type $tFinal")
       else
         Left(tFinal)
     }
@@ -303,5 +298,36 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   private def _mergeClassContexts(was: (ClassContext, Seq[Constraint]), newCtxs: ClassContext) = {
     val (mcctxs, cons) = was._1.merge(newCtxs)
     (mcctxs, was._2 ++ cons)
+  }
+
+  def substFix(t: Type, reqs: Reqs, cctx: ClassContext, cons: Seq[Constraint], csPre: CS, finalize: Boolean): (Type, Reqs, ClassContext, CS) = {
+    var newcons = cons
+    var newt = t
+    var newcs = csPre
+    var newcctx = cctx
+    var newreqs = reqs
+    var lastSubst: CSubst = Map()
+    while (newcons.nonEmpty) {
+      newcs = newcs.addNewConstraints(newcons)
+      if (finalize)
+        newcs = newcs.tryFinalize.asInstanceOf[CS]
+
+      if (!newcs.shouldApplySubst || newcs.substitution == lastSubst) {
+        newcons = Seq()
+      }
+      else {
+        val newsubst = newcs.substitution
+        val (ctx2, cons2) = newcctx.subst(newsubst)
+        newcctx = ctx2
+        newcons = cons2
+        lastSubst = newsubst
+      }
+
+      newreqs = newcs.applyPartialSolutionIt[(Symbol, Type), Map[Symbol, Type], Type](newreqs, p => p._2)
+      newt = newcs.applyPartialSolution(newt)
+    }
+    if (finalize)
+      newcctx = newcctx.finalized
+    (newt, newreqs, newcctx, newcs)
   }
 }

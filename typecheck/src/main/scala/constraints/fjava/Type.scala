@@ -2,6 +2,7 @@ package constraints.fjava
 
 import constraints.{CTermBase, CVar}
 import constraints.fjava.CSubst.CSubst
+import incremental.fjava.UCName
 
 //Type class for types with groundness test
 
@@ -10,6 +11,7 @@ trait Type extends CTerm[Type] {
   def occurs(x: CVar[_]): Boolean
   def subst(s: CSubst): Type
   def isGround: Boolean
+  def uvars: Set[CVar[Type]]
 
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
 

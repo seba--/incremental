@@ -3,15 +3,22 @@ package incremental.fjava.earlymerge
 import constraints.fjava.CSubst.CSubst
 import constraints.fjava._
 import Condition.trueCond
+import constraints.CVar
 import incremental.Util
-import incremental.fjava.CName
+import incremental.fjava.{CName, UCName}
 
 import scala.collection.generic.CanBuildFrom
 
 trait CReq[T <: CReq[T]] {
   def self: T
   val cls: Type
-  def withCls(t: Type): T = withCls(t, Condition(Set(), Set(), cond.others + (cls -> Condition(cond.not, cond.same, Map()))))
+  def withCls(t: Type): T = {
+    val newcond = Condition(cond.not, cond.same, Map())
+    if (trueCond == newcond)
+      withCls(t, Condition(Set(), Set(), cond.others))
+    else
+      withCls(t, Condition(Set(), Set(), cond.others + (cls -> newcond)))
+  }
   def withCls(t: Type, newcond: Condition): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
@@ -24,15 +31,26 @@ trait CReq[T <: CReq[T]] {
   def alsoSame(n: Type): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
   def alsoCond(other: Condition): Option[T] = cond.alsoCond(cls, other) map (withCond(_))
 
-  def satisfyExt(ext: ExtCReq): Seq[T] = {
+  def satisfyExt(cls: CName, sup: CName): Seq[T] = {
     // NOTE: we assume that the removal of an extends clause implies no further declarations appear for subclass `ext.cls`
 
     // ext.cls != req.cls, so keep the original requirement
-    val diff = this.alsoNot(ext.cls)
+    val diff = this.alsoNot(cls)
     // ext.cls == req.cls, so replace the original requirement with a super-class requirement `ext.ext`
-    val same = this.alsoSame(ext.cls).map(_.withCls(ext.ext))
+    val same = this.alsoSame(cls).map(_.withCls(sup))
 
-    Seq(diff, same).flatten
+    if (diff.isEmpty) {
+      if (same.isEmpty)
+        Seq()
+      else
+        Seq(same.get)
+    }
+    else {
+      if (same.isEmpty)
+        Seq(diff.get)
+      else
+        Seq(diff.get, same.get)
+    }
   }
 }
 case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CReq[ExtCReq] {
@@ -80,6 +98,7 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _))
   }
+  def uvars = cls.uvars ++ params.flatMap(_.uvars) ++ cond.uvars
   def withCond(c: Condition) = copy(cond = c)
 }
 
@@ -91,49 +110,57 @@ object Condition {
 
     override def equals(obj: Any): Boolean = obj.isInstanceOf[AnyRef] && eq(obj.asInstanceOf[AnyRef])
 
-    override val hashCode: Int = not.hashCode() + 31*same.hashCode() + 63*others.hashCode()
+    override val hashCode: Int = not.hashCode() + 31*same.hashCode() + 61*others.hashCode()
   }
 
   def apply(not: Set[Type], same: Set[Type], others: Map[Type, Condition]): Condition =
-    if (not.isEmpty && same.isEmpty && others.values.forall(_ == trueCond))
+    if (not.isEmpty && same.isEmpty && others.values.forall(trueCond == _))
       trueCond
     else
       new Condition(not, same, others)
 }
 class Condition(val not: Set[Type], val same: Set[Type], val others: Map[Type, Condition]){
   def subst(cls: Type, s: CSubst): Option[Condition] = {
+    var newothers = others flatMap { kv =>
+      val cls = kv._1.subst(s)
+      kv._2.subst(cls, s) match {
+        case Some(cond) =>
+          if (trueCond == cond)
+            None
+          else
+            Some(cls -> cond)
+        case None => return None
+      }
+    }
     val newnot = not flatMap { n =>
       val n2 = n.subst(s)
       if (cls == n2)
         return None
       else if (cls.isGround && n2.isGround) // && cls != n2 (implicit)
         None
-      else
-        Some(n2)
+      else newothers.get(n2) match {
+        case None => Some(n2)
+        case Some(c) =>
+          newothers += (n2 -> c.alsoNot(n2, cls).getOrElse(return None))
+          None
+      }
     }
     var seenGrounded = false
     val newsame = same flatMap { n =>
       val n2 = n.subst(s)
       if (cls == n2)
         None
-      else if (n2.isGround) {
-        if (seenGrounded)
+      else {
+        val ground = n2.isGround
+        if (ground && (seenGrounded || cls.isGround)) // cls != n2 (implicit)
           return None
-        else if (cls.isGround) // && cls != n2 (implicit)
-          return None
-        else {
-          seenGrounded = true
-          Some(n2)
+        seenGrounded = ground
+        newothers.get(n2) match {
+          case None => Some(n2)
+          case Some(c) =>
+            newothers += (n2 -> c.alsoSame(n2, cls).getOrElse(return None))
+            None
         }
-      }
-      else
-        Some(n2)
-    }
-    val newothers = others map { kv =>
-      val cls = kv._1.subst(s)
-      kv._2.subst(cls, s) match {
-        case Some(cond) => cls -> cond
-        case None => return None
       }
     }
     Some(Condition(newnot, newsame, newothers))
@@ -144,23 +171,44 @@ class Condition(val not: Set[Type], val same: Set[Type], val others: Map[Type, C
       None
     else if (cls.isGround && n.isGround)
       Some(this) // because cls != n
-    else
-      Some(Condition(not + n, same, others))
+    else others.get(n) match {
+      case None => Some(Condition(not + n, same, others))
+      case Some(c) => c.alsoNot(n, cls) match {
+        case None => None
+        case Some(c_) =>
+          if (trueCond == c_)
+            Some(Condition(not, same, others - n))
+          else
+            Some(Condition(not, same, others + (n -> c_)))
+      }
+    }
   def alsoSame(cls: Type, n: Type): Option[Condition] =
     if (cls == n)
       Some(this)
     else if (cls.isGround && n.isGround || not.contains(n))
       None
-    else
-      Some(Condition(not, same + n, others))
+    else others.get(n) match {
+      case None => Some(Condition(not, same + n, others))
+      case Some(c) => c.alsoSame(n, cls) match {
+        case None => None
+        case Some(c_) =>
+          if (trueCond == c_)
+            Some(Condition(not, same, others - n))
+          else
+            Some(Condition(not, same, others + (n -> c_)))
+      }
+    }
   def alsoCond(cls: Type, other: Condition): Option[Condition] =
     if (other.not.contains(cls) || other.not.exists(same.contains(_)) || not.exists(other.same.contains(_)))
       None
     else
-      Some(Condition(not ++ other.not, same ++ other.same, others))
+      Some(Condition(not ++ other.not, same ++ other.same, others ++ other.others))
 
   def isGround: Boolean =
     not.forall(_.isGround) && same.forall(_.isGround) && others.forall(_._2.isGround)
+
+  def uvars: Set[CVar[Type]] =
+    not.flatMap(_.uvars) ++ same.flatMap(_.uvars) ++ others.flatMap(kv => kv._1.uvars ++ kv._2.uvars)
 
   override def toString: String = {
     val sothers = if (others.isEmpty) "" else s",others(${others.mkString(", ")})"
@@ -173,7 +221,7 @@ class Condition(val not: Set[Type], val same: Set[Type], val others: Map[Type, C
     case _ => false
   }
 
-  override def hashCode(): Int = not.hashCode() + 31*same.hashCode() + 63*others.hashCode()
+  override def hashCode(): Int = not.hashCode() + 31*same.hashCode() + 61*others.hashCode()
 }
 
 class Conditional(val cons: Constraint, val cls: Type, val cond: Condition) extends Constraint {
@@ -181,7 +229,7 @@ class Conditional(val cons: Constraint, val cls: Type, val cond: Condition) exte
     val cls_ = cls.subst(cs.substitution)
     cond.subst(cls_, cs.substitution) match {
       case None => cs // discard this constraint because condition is false
-      case Some(cond_) if cond_.isGround => cons.solve(cs)
+      case Some(cond_) if trueCond == cond_ => cons.solve(cs)
       case Some(cond_) => cs.notyet(new Conditional(cons.subst(cs.substitution), cls_, cond_))
     }
   }
@@ -191,6 +239,8 @@ class Conditional(val cons: Constraint, val cls: Type, val cond: Condition) exte
     Conditional(cons.subst(s), cls_, cond.subst(cls_, s).getOrElse(Condition.trueCond))
   }
 
+  override def uvars: Set[CVar[Type]] = cons.uvars ++ cls.uvars ++ cond.uvars
+
   override def toString: String = s"Conditional($cons, $cls, $cond)"
 
   override def equals(obj: scala.Any): Boolean = obj match {
@@ -199,7 +249,7 @@ class Conditional(val cons: Constraint, val cls: Type, val cond: Condition) exte
     case _ => false
   }
 
-  override def hashCode(): Int = cons.hashCode() + 31*cls.hashCode() + 63*cond.hashCode()
+  override def hashCode(): Int = cons.hashCode() + 31*cls.hashCode() + 61*cond.hashCode()
 }
 object Conditional {
   def apply(cons: Constraint, cls: Type, cond: Condition): Constraint =
@@ -222,13 +272,32 @@ case class ClassReqs (
   override def toString =
     s"ClassReqs(current=$currentCls, ext=$exts, ctorParams=$ctors, fields=$fields, methods=$methods, optMethods=$optMethods)"
 
-  def subst(s: CSubst): ClassReqs = ClassReqs(
-    currentCls.map(_.subst(s)),
-    exts.flatMap(_.subst(s)),
-    ctors.flatMap(_.subst(s)),
-    fields.mapValues(set => set.flatMap(_.subst(s))),
-    methods.mapValues(set => set.flatMap(_.subst(s))),
-    optMethods.mapValues(set => set.flatMap(_.subst(s))))
+  def subst(s: CSubst): (ClassReqs, Seq[Constraint]) = {
+    val currentX = currentCls.map(_.subst(s))
+    val extX = exts.flatMap(_.subst(s))
+    val ctorX = ctors.flatMap(_.subst(s))
+    val (fieldX, cons1) = substMap(s, fields)
+    val (methodX, cons2) = substMap(s, methods)
+    val (optMethodX, cons3) = substMap(s, optMethods)
+    val crs = ClassReqs(currentX, extX, ctorX, fieldX, methodX, optMethodX)
+    (crs, cons1 ++ cons2 ++ cons3)
+  }
+
+  def substMap[T <: CReq[T] with Named](s: CSubst, m: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+    var res = Map[Symbol, Set[T]]()
+    var cons = Seq[Constraint]()
+
+    m.foreach { case (sym, set) =>
+      val builder = new MapRequirementsBuilder[T]
+      for (req <- set;
+           sreq <- req.subst(s))
+        builder.addReq(sreq)
+      res += sym -> builder.getRequirements
+      cons ++= builder.getConstraints
+    }
+
+    (res, cons)
+  }
 
   def isEmpty =
     currentCls.isEmpty &&
@@ -264,7 +333,7 @@ case class ClassReqs (
 
   def addRequirement[T <: CReq[T]](crs: Set[T], req: T): (Set[T], Seq[Constraint]) = {
     // the new requirement, refined to be different from all existing requirements
-    var diffreq: Option[T] = Some(req)
+    var diffreq: Option[T] = if (crs.size != 1) Some(req) else None
     // new constraints
     var cons = Seq[Constraint]()
     // updated requirements
@@ -299,20 +368,9 @@ case class ClassReqs (
       return (crs + (req.name -> Set(req)), Seq()))
 
     // the new requirement, refined to be different from all existing requirements
-    var diffreq: Option[T] = Some(req)
-    // new constraints
-    var cons = Set[Constraint]()
+    var diffreq: Option[T] = if (set.size != 1) Some(req) else None
 
-    var newreqs = Map[(Type, Condition), T]()
-    def addReq(req: T) = {
-      val key = (req.cls, req.cond)
-      newreqs.get(key) match {
-        case None => newreqs += (key -> req)
-        case Some(oreq) =>
-          if (req != oreq)
-            cons += req.assert(oreq, req.cond)
-      }
-    }
+    val builder = new MapRequirementsBuilder[T]
 
     set.foreach{ creq =>
       diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
@@ -325,11 +383,11 @@ case class ClassReqs (
       val same2 = req.alsoSame(creq.cls).flatMap(_.alsoCond(creq.cond))
       val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
 
-      req1.map(addReq)
-      req2.map(addReq)
+      req1.map(builder.addReq)
+      req2.map(builder.addReq)
     }
 
-    (crs + (req.name -> (newreqs.values.toSet ++ diffreq)), cons.toSeq)
+    (crs + (req.name -> (builder.getRequirements ++ diffreq)), builder.getConstraints)
   }
 
 
@@ -364,4 +422,23 @@ case class ClassReqs (
     else
       (crs + (creq1.name -> newcrs), cons)
   }
+}
+
+class MapRequirementsBuilder[T <: CReq[T] with Named] {
+  private var newreqs = Map[(Type, Condition), T]()
+  private var cons = Set[Constraint]()
+  def addReq(req: T) = {
+    val key = (req.cls, req.cond)
+    newreqs.get(key) match {
+      case None => newreqs += (key -> req)
+      case Some(oreq) =>
+        if (req != oreq) {
+          val c = req.assert(oreq, req.cond)
+          cons += c
+        }
+    }
+  }
+
+  def getRequirements: Set[T] = newreqs.values.toSet
+  def getConstraints: Seq[Constraint] = cons.toSeq
 }

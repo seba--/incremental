@@ -54,7 +54,7 @@ object Classes {
     )
   )
 
-  val NatClasses = Seq(Nat, Zero, Succ)
+  val NatClasses = ProgramM(Nat, Zero, Succ)
 
 
 

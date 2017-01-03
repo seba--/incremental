@@ -17,7 +17,10 @@ case class ExtendsFact(cls: CName, ext: CName) extends ClassFact
  */
 case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] = Seq()) {
 
-  def subst(s: CSubst): ClassContext = withCReqs(creqs.subst(s))
+  def subst(s: CSubst): (ClassContext, Seq[Constraint]) = {
+    val (newcreqs, cons) = creqs.subst(s)
+    (withCReqs(newcreqs), cons)
+  }
 
   def finalized: ClassContext = withCReqs(creqs.copy(optMethods = Map()))
 
@@ -45,12 +48,14 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
       val cctx = ClassContext(creqs.copy(methods = crsMethods, optMethods = crsOptMethods), cfacts :+ fact)
       (cctx, cons1 ++ cons2)
 
-    case ExtendsFact(cls, ext) =>
-      val extReq = ExtCReq(cls, ext)
-      val (crs, cons) = creqs.satisfyCReq(extReq, creqs.exts)
-      val newFields = creqs.fields.mapValues(set => set.flatMap(_.satisfyExt(extReq)))
-      val newMethods = creqs.methods.mapValues(set => set.flatMap(_.satisfyExt(extReq)))
-      val newOptMethods = creqs.optMethods.mapValues(set => set.flatMap(_.satisfyExt(extReq)))
+    case ExtendsFact(cls, sup) =>
+      val (crs, cons) = creqs.satisfyCReq(ExtCReq(cls, sup), creqs.exts)
+      val newFields = creqs.fields.mapValues(set => set.flatMap(_.satisfyExt(cls, sup)))
+//      println(newFields)
+      val newMethods = creqs.methods.mapValues(set => set.flatMap(_.satisfyExt(cls, sup)))
+//      println(newMethods)
+      val newOptMethods = creqs.optMethods.mapValues(set => set.flatMap(_.satisfyExt(cls, sup)))
+//      println(newOptMethods)
       val cctx = ClassContext(creqs.copy(exts = crs, fields = newFields, methods = newMethods, optMethods = newOptMethods), cfacts :+ fact)
       (cctx, cons)
   }

@@ -154,7 +154,7 @@ object Trees {
     }
 
     val prog = hierarchy(roots, height, branching)
-    ProgramM(Seq(), prog +: Classes.NatClasses)
+    ProgramM(prog, Classes.NatClasses)
   }
 
 
@@ -188,7 +188,7 @@ object Trees {
     }
 
     val prog = hierarchy(roots, height, branching)
-    ProgramM(Seq(), prog.kids.seq ++ Classes.NatClasses)
+    ProgramM(prog, Classes.NatClasses)
   }
 
   /**
@@ -222,7 +222,7 @@ object Trees {
     }
 
     val prog = hierarchy(roots, height, branching)
-    ProgramM(Seq(), prog.kids.seq ++ Classes.NatClasses)
+    ProgramM(prog, Classes.NatClasses)
   }
 
 

@@ -1,6 +1,7 @@
 package incremental.fjava.latemerge
 
 import Condition.trueCond
+import constraints.CVar
 import constraints.fjava.CSubst.CSubst
 import constraints.fjava._
 import incremental.fjava.CName
@@ -151,6 +152,8 @@ case class Conditional(cls: Type, cond: Condition, cons: Constraint) extends Con
     val cls_ = cls.subst(s)
     Conditional(cls_, cond.subst(cls_, s).getOrElse(Condition.trueCond), cons.subst(s))
   }
+
+  override def uvars: Set[CVar[Type]] = ???
 }
 
 case class ClassReqs (
