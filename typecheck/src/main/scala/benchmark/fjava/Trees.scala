@@ -98,7 +98,9 @@ object Trees {
       mkMethods(path)
     )
 
-    if (height == 1)
+    if (height < 1)
+      ProgramM()
+    else if (height == 1)
       cls
     else {
       val branches = for (b <- 0 until branching) yield subhierarchy(height - 1, branching, path :+ b)

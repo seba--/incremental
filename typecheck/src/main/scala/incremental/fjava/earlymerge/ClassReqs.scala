@@ -10,14 +10,19 @@ import incremental.fjava.{CName, UCName}
 import scala.collection.generic.CanBuildFrom
 
 trait CReq[T <: CReq[T]] {
+  if (cls.isGround && cond.sameGround.nonEmpty)
+    println("WARNING 7")
+
   def self: T
   val cls: Type
   def withCls(t: Type): T = {
-    val newcond = Condition(cond.not, cond.same, Map())
+    val newcond = Condition(cond.notGround, cond.notVar, cond.sameGround, cond.sameVar, Map(), Map())
     if (trueCond == newcond)
-      withCls(t, Condition(Set(), Set(), cond.others))
+      withCls(t, Condition(Set(), Set(), None, Set(), cond.othersGround, cond.othersVar))
+    else if (cls.isGround)
+      withCls(t, Condition(Set(), Set(), None, Set(), cond.othersGround + (cls.asInstanceOf[CName] -> newcond), cond.othersVar))
     else
-      withCls(t, Condition(Set(), Set(), cond.others + (cls -> newcond)))
+      withCls(t, Condition(Set(), Set(), None, Set(), cond.othersGround, cond.othersVar + (cls.asInstanceOf[UCName] -> newcond)))
   }
   def withCls(t: Type, newcond: Condition): T
   val cond: Condition
@@ -103,125 +108,287 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
 }
 
 object Condition {
-  val trueCond = new Condition(Set(), Set(), Map()) {
+  val trueCond = new Condition(Set(), Set(), None, Set(), Map(), Map()) {
     override def subst(cls: Type, s: CSubst): Option[Condition] = Some(this)
-    override def isGround: Boolean = true
     override def toString: String = "trueCond"
 
     override def equals(obj: Any): Boolean = obj.isInstanceOf[AnyRef] && eq(obj.asInstanceOf[AnyRef])
 
-    override val hashCode: Int = not.hashCode() + 31*same.hashCode() + 61*others.hashCode()
+    override def hashCode: Int = 0
   }
 
-  def apply(not: Set[Type], same: Set[Type], others: Map[Type, Condition]): Condition =
-    if (not.isEmpty && same.isEmpty && others.values.forall(trueCond == _))
+  def apply(notGround: Set[CName], notVar: Set[UCName], sameGround: Option[CName], sameVar: Set[UCName], othersGround: Map[CName, Condition], othersVar: Map[UCName, Condition]): Condition =
+    if (notGround.isEmpty && notVar.isEmpty && sameGround.isEmpty && sameVar.isEmpty && othersGround.isEmpty && othersVar.isEmpty)
       trueCond
     else
-      new Condition(not, same, others)
+      new Condition(notGround, notVar, sameGround, sameVar, othersGround, othersVar)
 }
-class Condition(val not: Set[Type], val same: Set[Type], val others: Map[Type, Condition]){
+class Condition(
+       val notGround: Set[CName],
+       val notVar: Set[UCName],
+       val sameGround: Option[CName],
+       val sameVar: Set[UCName],
+       val othersGround: Map[CName, Condition],
+       val othersVar: Map[UCName, Condition]) {
+
+  if (sameGround.exists(notGround.contains(_)))
+    println("WARNING 1")
+  if (sameGround.size > 1)
+    println("WARNING 2")
+  if (othersGround.size > 1)
+    println("WARNING 3")
+  if (sameGround.nonEmpty && notGround.nonEmpty)
+    println("WARNING 4")
+  if (othersGround.values.exists(trueCond == _))
+    println("WARNING 5")
+  if (othersVar.values.exists(trueCond == _))
+    println("WARNING 6")
+
+
   def subst(cls: Type, s: CSubst): Option[Condition] = {
-    var newothers = others flatMap { kv =>
+
+    var newothersGround: Map[CName, Condition] = othersGround flatMap { kv =>
+      val cls = kv._1
+      kv._2.subst(cls, s) match {
+        case None => return None
+        case Some(`trueCond`) => None
+        case Some(cond) => Some(cls -> cond)
+      }
+    }
+
+    var newothersVar: Map[UCName, Condition] = othersVar flatMap { kv =>
       val cls = kv._1.subst(s)
       kv._2.subst(cls, s) match {
-        case Some(cond) =>
-          if (trueCond == cond)
-            None
-          else
-            Some(cls -> cond)
         case None => return None
+        case Some(`trueCond`) => None
+        case Some(cond) =>
+          if (cls.isGround) {
+            val ct = cls.asInstanceOf[CName]
+            newothersGround.get(ct) match {
+              case None =>
+                newothersGround += (ct -> cond)
+              case Some(cond1) =>
+                newothersGround += (ct -> cond1.alsoCond(ct, cond).getOrElse(return None))
+            }
+            None
+          }
+          else {
+            // TODO possible key collision `cls`?
+            Some(cls.asInstanceOf[UCName] -> cond)
+          }
       }
     }
-    val newnot = not flatMap { n =>
-      val n2 = n.subst(s)
-      if (cls == n2)
+
+    var newsameGround: Option[CName] = sameGround flatMap { ct =>
+      if (cls == ct)
+        None
+      else if (cls.isGround) // && cls != n2 (implicit)
         return None
-      else if (cls.isGround && n2.isGround) // && cls != n2 (implicit)
-        None
-      else newothers.get(n2) match {
-        case None => Some(n2)
-        case Some(c) =>
-          newothers += (n2 -> c.alsoNot(n2, cls).getOrElse(return None))
-          None
-      }
-    }
-    var seenGrounded = false
-    val newsame = same flatMap { n =>
-      val n2 = n.subst(s)
-      if (cls == n2)
-        None
       else {
-        val ground = n2.isGround
-        if (ground && (seenGrounded || cls.isGround)) // cls != n2 (implicit)
-          return None
-        seenGrounded = ground
-        newothers.get(n2) match {
-          case None => Some(n2)
-          case Some(c) =>
-            newothers += (n2 -> c.alsoSame(n2, cls).getOrElse(return None))
+        newothersGround.get(ct) match {
+          case None => Some(ct)
+          case Some(cond) =>
+            newothersGround += (ct -> cond.alsoSame(ct, cls).getOrElse(return None))
             None
         }
       }
     }
-    Some(Condition(newnot, newsame, newothers))
+
+    val newsameVar: Set[UCName] = sameVar flatMap { vt =>
+      val n2 = vt.subst(s)
+      if (cls == n2)
+        None
+      else if (n2.isGround) {
+        if (cls.isGround) // && cls != n2 (implicit)
+          return None
+        else {
+          val ct = n2.asInstanceOf[CName]
+          if (newsameGround.isDefined) {
+            if (newsameGround.get != ct)
+              return None
+            else
+              None
+          }
+          else {
+            newothersGround.get(ct) match {
+              case None =>
+                newsameGround = Some(ct)
+                None
+              case Some(cond) =>
+                newothersGround += (ct -> cond.alsoSame(ct, cls).getOrElse(return None))
+                None
+            }
+          }
+        }
+      }
+      else {
+        val vt = n2.asInstanceOf[UCName]
+        newothersVar.get(vt) match {
+          case None =>
+            Some(vt)
+          case Some(cond) =>
+            newothersVar += (vt -> cond.alsoSame(vt, cls).getOrElse(return None))
+            None
+        }
+      }
+    }
+
+    var newnotGround: Set[CName] = notGround flatMap { ct =>
+      if (cls == ct)
+        return None
+      else if (cls.isGround) // && cls != n2 (implicit)
+        None
+      else if (newsameGround.isDefined) {
+        if (newsameGround.get != ct)
+          return None
+        else
+          None
+      }
+      else newothersGround.get(ct) match {
+        case None => Some(ct)
+        case Some(cond) =>
+          newothersGround += (ct -> cond.alsoNot(ct, cls).getOrElse(return None))
+          None
+      }
+    }
+
+    val newnotVar: Set[UCName] = notVar flatMap { vt =>
+      val n2 = vt.subst(s)
+      if (cls == n2)
+        return None
+      else if (n2.isGround) {
+        if (cls.isGround) // && cls != n2 (implicit)
+          None
+        else {
+          val ct = n2.asInstanceOf[CName]
+          newothersGround.get(ct) match {
+            case None =>
+              newnotGround += ct
+              None
+            case Some(cond) =>
+              newothersGround += (ct -> cond.alsoNot(ct, cls).getOrElse(return None))
+              None
+          }
+        }
+      }
+      else {
+        val vt = n2.asInstanceOf[UCName]
+        newothersVar.get(vt) match {
+          case None =>
+            Some(vt)
+          case Some(cond) =>
+            newothersVar += (vt -> cond.alsoNot(vt, cls).getOrElse(return None))
+            None
+        }
+      }
+    }
+
+    Some(Condition(newnotGround, newnotVar, newsameGround, newsameVar, newothersGround, newothersVar))
   }
 
-  def alsoNot(cls: Type, n: Type): Option[Condition] =
-    if (cls == n || same.contains(n))
+  def alsoNot(cls: Type, t: Type): Option[Condition] = {
+    if (cls == t)
       None
-    else if (cls.isGround && n.isGround)
-      Some(this) // because cls != n
-    else others.get(n) match {
-      case None => Some(Condition(not + n, same, others))
-      case Some(c) => c.alsoNot(n, cls) match {
-        case None => None
-        case Some(c_) =>
-          if (trueCond == c_)
-            Some(Condition(not, same, others - n))
-          else
-            Some(Condition(not, same, others + (n -> c_)))
+    else if (t.isGround) {
+      val ct = t.asInstanceOf[CName]
+      if (cls.isGround) // because cls != t
+        Some(this)
+      else if (sameGround.isDefined) {
+        if (sameGround.get != ct)
+          return None
+        else
+          None
+      }
+      else othersGround.get(ct) match {
+        case None => Some(new Condition(notGround + ct, notVar, sameGround, sameVar, othersGround, othersVar))
+        case Some(c) => c.alsoNot(ct, cls) match {
+          case None => None
+          case Some(`trueCond`) => Some(Condition(notGround, notVar, sameGround, sameVar, othersGround - ct, othersVar))
+          case Some(c_) => Some(new Condition(notGround, notVar, sameGround, sameVar, othersGround + (ct -> c_), othersVar))
+        }
       }
     }
-  def alsoSame(cls: Type, n: Type): Option[Condition] =
-    if (cls == n)
+    else {
+      val vt = t.asInstanceOf[UCName]
+      if (sameVar.contains(vt))
+        None
+      else othersVar.get(vt) match {
+        case None => Some(new Condition(notGround, notVar + vt, sameGround, sameVar, othersGround, othersVar))
+        case Some(c) => c.alsoNot(vt, cls) match {
+          case None => None
+          case Some(`trueCond`) => Some(Condition(notGround, notVar, sameGround, sameVar, othersGround, othersVar - vt))
+          case Some(c_) => Some(new Condition(notGround, notVar, sameGround, sameVar, othersGround, othersVar + (vt -> c_)))
+        }
+      }
+    }
+  }
+
+  def alsoSame(cls: Type, t: Type): Option[Condition] =
+    if (cls == t)
       Some(this)
-    else if (cls.isGround && n.isGround || not.contains(n))
-      None
-    else others.get(n) match {
-      case None => Some(Condition(not, same + n, others))
-      case Some(c) => c.alsoSame(n, cls) match {
-        case None => None
-        case Some(c_) =>
-          if (trueCond == c_)
-            Some(Condition(not, same, others - n))
-          else
-            Some(Condition(not, same, others + (n -> c_)))
+    else if (t.isGround) {
+      val ct = t.asInstanceOf[CName]
+      if (sameGround.isDefined) {
+        if (ct != sameGround.get)
+          None
+        else
+          Some(this)
+      }
+      else if (cls.isGround || notGround.contains(ct)) // because cls != t
+        None
+      else othersGround.get(ct) match {
+        case None => Some(new Condition(Set(), notVar, Some(ct), sameVar, othersGround, othersVar))
+        case Some(c) => c.alsoNot(ct, cls) match {
+          case None => None
+          case Some(`trueCond`) => Some(Condition(notGround, notVar, sameGround, sameVar, othersGround - ct, othersVar))
+          case Some(c_) => Some(new Condition(notGround, notVar, sameGround, sameVar, othersGround + (ct -> c_), othersVar))
+        }
       }
     }
+    else {
+      val vt = t.asInstanceOf[UCName]
+      if (notVar.contains(vt)) // because cls != t
+        None
+      else othersVar.get(vt) match {
+        case None => Some(new Condition(notGround, notVar, sameGround, sameVar + vt, othersGround, othersVar))
+        case Some(c) => c.alsoNot(vt, cls) match {
+          case None => None
+          case Some(`trueCond`) => Some(Condition(notGround, notVar, sameGround, sameVar, othersGround, othersVar - vt))
+          case Some(c_) => Some(new Condition(notGround, notVar, sameGround, sameVar, othersGround, othersVar + (vt -> c_)))
+        }
+      }
+    }
+
   def alsoCond(cls: Type, other: Condition): Option[Condition] =
-    if (other.not.contains(cls) || other.not.exists(same.contains(_)) || not.exists(other.same.contains(_)))
+    if (cls.isGround && other.notGround.contains(cls.asInstanceOf[CName]))
+      None
+    else if (other.notGround.exists(sameGround.contains(_)) || other.notVar.exists(sameVar.contains(_)))
+      None
+    else if (other.sameGround.exists(notGround.contains(_)) || other.sameVar.exists(notVar.contains(_)))
+      None
+    else if (other.sameGround.isDefined && sameGround.isDefined && other.sameGround.get != sameGround.get)
       None
     else
-      Some(Condition(not ++ other.not, same ++ other.same, others ++ other.others))
-
-  def isGround: Boolean =
-    not.forall(_.isGround) && same.forall(_.isGround) && others.forall(_._2.isGround)
+      Some(new Condition(notGround ++ other.notGround, notVar ++ other.notVar, sameGround, sameVar ++ other.sameVar, othersGround ++ other.othersGround, othersVar ++ other.othersVar))
 
   def uvars: Set[CVar[Type]] =
-    not.flatMap(_.uvars) ++ same.flatMap(_.uvars) ++ others.flatMap(kv => kv._1.uvars ++ kv._2.uvars)
+    notVar.map(_.x) ++ sameVar.map(_.x) ++ othersGround.flatMap(_._2.uvars) ++ othersVar.flatMap(kv => kv._2.uvars + kv._1.x)
 
   override def toString: String = {
+    val not = notGround ++ notVar
+    val same = sameGround ++ sameVar
+    val others = othersGround ++ othersVar
     val sothers = if (others.isEmpty) "" else s",others(${others.mkString(", ")})"
     s"diff(${not.mkString(", ")}),same(${same.mkString(", ")})$sothers"
   }
 
   override def equals(obj: scala.Any): Boolean = obj match {
     case other: Condition =>
-      not == other.not && same == other.same && others == other.others
+      notGround == other.notGround && notVar == other.notVar && sameGround == other.sameGround && sameVar == other.sameVar && othersGround == other.othersGround && othersVar == other.othersVar
     case _ => false
   }
 
-  override def hashCode(): Int = not.hashCode() + 31*same.hashCode() + 61*others.hashCode()
+  override def hashCode(): Int = notGround.hashCode() + 31*notVar.hashCode() + 61*sameGround.hashCode() + 97*sameVar.hashCode() + 127*othersGround.hashCode() + 163*othersVar.hashCode()
 }
 
 class Conditional(val cons: Constraint, val cls: Type, val cond: Condition) extends Constraint {
