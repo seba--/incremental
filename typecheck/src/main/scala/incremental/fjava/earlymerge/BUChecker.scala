@@ -212,7 +212,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           m.lits(1).asInstanceOf[Symbol],
           m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
           m.lits(0).asInstanceOf[CName])))
-      val (cctxFact4, factCons4) = cctxFact3.addFact(ExtendsFact(c, sup))
+      val (cctxFact4, factCons4) = cctxFact3.addExtFact(c, sup)
 
       val newcons = (mccons :+ fieldInitCons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 ++ factCons4
       (c, reqs, cctxFact4, newcons)

@@ -6,16 +6,15 @@ import incremental.Util
 import incremental.fjava.CName
 
 
-trait ClassFact
+sealed trait ClassFact
 case class CtorFact(cls: CName, args: Seq[CName]) extends ClassFact
 case class FieldFact(cls: CName, field: Symbol, typ: CName) extends ClassFact
 case class MethodFact(cls: CName, name: Symbol, params: Seq[CName], ret: CName) extends ClassFact
-case class ExtendsFact(cls: CName, ext: CName) extends ClassFact
 
 /*
  * Invariant: All cfacts have been used to satisfy requirements in creqs.
  */
-case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] = Seq()) {
+case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] = Seq(), extFacts: Map[CName, CName] = Map()) {
 
   def subst(s: CSubst): (ClassContext, Seq[Constraint]) = {
     val (newcreqs, cons) = creqs.subst(s)
@@ -26,42 +25,61 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
 
   def merge(other: ClassContext): (ClassContext, Seq[Constraint]) = {
     val (satisfiedThis, cons1) = this.addFacts(other.cfacts)
-    val (satisfiedOther, cons2) = other.addFacts(this.cfacts)
-    val (mergedReqs, cons3) = satisfiedThis.creqs.merge(satisfiedOther.creqs)
-    (satisfiedThis.withCReqs(mergedReqs), cons1 ++ cons2 ++ cons3)
+    val (satisfiedThisExt, cons2) = satisfiedThis.addExtFacts(other.extFacts)
+    val (satisfiedOther, cons3) = other.addFacts(this.cfacts)
+    val (satisfiedOtherExt, cons4) = satisfiedOther.addExtFacts(this.extFacts)
+    val (mergedReqs, cons5) = satisfiedThisExt.creqs.merge(satisfiedOtherExt.creqs)
+    (satisfiedThisExt.withCReqs(mergedReqs), cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5)
   }
 
   def addFact(fact: ClassFact): (ClassContext, Seq[Constraint]) = fact match {
     case CtorFact(cls, args) =>
       val (crs, cons) = creqs.satisfyCReq(CtorCReq(cls, args), creqs.ctors)
-      val cctx = ClassContext(creqs.copy(ctors = crs), cfacts :+ fact)
+      val cctx = ClassContext(creqs.copy(ctors = crs), cfacts :+ fact, extFacts)
       (cctx, cons)
 
     case FieldFact(cls, field, typ) =>
       val (crs, cons) = creqs.satisfyCReqMap(FieldCReq(cls, field, typ), creqs.fields)
-      val cctx = ClassContext(creqs.copy(fields = crs), cfacts :+ fact)
+      val cctx = ClassContext(creqs.copy(fields = crs), cfacts :+ fact, extFacts)
       (cctx, cons)
 
     case MethodFact(cls, name, params, ret) =>
       val (crsMethods, cons1) = creqs.satisfyCReqMap(MethodCReq(cls, name, params, ret), creqs.methods)
       val (crsOptMethods, cons2) = creqs.satisfyCReqMap(MethodCReq(cls, name, params, ret), creqs.optMethods)
-      val cctx = ClassContext(creqs.copy(methods = crsMethods, optMethods = crsOptMethods), cfacts :+ fact)
+      val cctx = ClassContext(creqs.copy(methods = crsMethods, optMethods = crsOptMethods), cfacts :+ fact, extFacts)
       (cctx, cons1 ++ cons2)
+  }
 
-    case ExtendsFact(cls, sup) =>
-      val (crs, cons) = creqs.satisfyCReq(ExtCReq(cls, sup), creqs.exts)
-      val newFields = creqs.fields.mapValues(set => set.flatMap(_.satisfyExt(cls, sup)))
-//      println(newFields)
-      val newMethods = creqs.methods.mapValues(set => set.flatMap(_.satisfyExt(cls, sup)))
-//      println(newMethods)
-      val newOptMethods = creqs.optMethods.mapValues(set => set.flatMap(_.satisfyExt(cls, sup)))
-//      println(newOptMethods)
-      val cctx = ClassContext(creqs.copy(exts = crs, fields = newFields, methods = newMethods, optMethods = newOptMethods), cfacts :+ fact)
-      (cctx, cons)
+  def getTopExtends(cls: CName): CName = {
+    var top = cls
+    while (true)
+      extFacts.get(top) match {
+        case None => return top
+        case Some(newtop) =>
+          top = newtop
+      }
+    ???
+  }
+
+  def addExtFact(cls: CName, sup: CName) = {
+    var top = getTopExtends(sup)
+
+    val (crs, cons) = creqs.satisfyCReq(ExtCReq(cls, top), creqs.exts)
+    val newFields = creqs.fields.mapValues(set => set.flatMap(_.satisfyExt(cls, top)))
+//    println(newFields)
+    val newMethods = creqs.methods.mapValues(set => set.flatMap(_.satisfyExt(cls, top)))
+//    println(newMethods)
+    val newOptMethods = creqs.optMethods.mapValues(set => set.flatMap(_.satisfyExt(cls, top)))
+//    println(newOptMethods)
+    val cctx = ClassContext(creqs.copy(exts = crs, fields = newFields, methods = newMethods, optMethods = newOptMethods), cfacts, extFacts + (cls -> sup))
+    (cctx, cons)
   }
 
   def addFacts(facts: Iterable[ClassFact]): (ClassContext, Seq[Constraint]) =
     Util.loop[ClassContext, ClassFact, Constraint](_.addFact(_))(this, facts)
+
+  def addExtFacts(facts: Iterable[(CName, CName)]): (ClassContext, Seq[Constraint]) =
+    Util.loop[ClassContext, (CName, CName), Constraint]((o, in) => o.addExtFact(in._1, in._2))(this, facts)
 
   def addRequirement(req: CReq[_]): (ClassContext, Seq[Constraint]) = req match {
     case req: CtorCReq =>
