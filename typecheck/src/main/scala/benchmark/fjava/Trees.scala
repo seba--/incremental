@@ -33,7 +33,9 @@ object Trees {
     */
   def prevRoot(path: Seq[Int]): Option[Seq[Int]] = if (path.head == 0) None else Some(path.updated(0, path.head - 1))
 
-  sealed class Config(val ignoreRoot: Boolean, val ignorePath: Boolean, val desc: String)
+  sealed class Config(val ignoreRoot: Boolean, val ignorePath: Boolean, val desc: String) {
+    override def toString: String = desc
+  }
   object Unique extends Config(false, false, "unique")
   object Mirrored extends Config(true, false, "mirrored")
   object Overriding extends Config(false, true, "overriding")
@@ -228,10 +230,10 @@ object Trees {
   }
 
 
-  val rootss = Gen.enumeration("roots")(10)//(10, 100)
-  val heightss = Gen.enumeration("heights")(5)//(5, 10)
+  val rootss = Gen.enumeration("roots")(2, 5, 10)//(10, 100)
+  val heightss = Gen.enumeration("heights")(2, 5, 10)
   val branchings = Gen.single("branching")(2)
-  val configs = Gen.enumeration[Config]("naming")(Unique)//(Unique, Mirrored, Overriding, MirroredOverriding)
+  val configs = Gen.enumeration[Config]("naming")(Unique, Mirrored, Overriding, MirroredOverriding)
 
   val intAcumSuperHierarchyTrees = for
       { roots <- rootss

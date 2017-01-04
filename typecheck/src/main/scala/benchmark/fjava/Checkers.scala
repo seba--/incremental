@@ -1,8 +1,6 @@
 package benchmark.fjava
 
 import constraints.fjava.impl.{SolveContinuousSubst, SolveEnd}
-import incremental.Node.Node
-import incremental.Util
 import incremental.fjava.{DUCheckerFactory, TypeChecker, earlymerge}
 import incremental.fjava.latemerge.BUCheckerFactory
 

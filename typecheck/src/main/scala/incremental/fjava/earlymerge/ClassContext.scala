@@ -65,11 +65,11 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
     var top = getTopExtends(sup)
 
     val (crs, cons) = creqs.satisfyCReq(ExtCReq(cls, top), creqs.exts)
-    val newFields = creqs.fields.mapValues(set => set.flatMap(_.satisfyExt(cls, top)))
+    val newFields = creqs.fields.mapValues(set => set.flatMap(_.satisfyExt(cls, top))).view.force
 //    println(newFields)
-    val newMethods = creqs.methods.mapValues(set => set.flatMap(_.satisfyExt(cls, top)))
+    val newMethods = creqs.methods.mapValues(set => set.flatMap(_.satisfyExt(cls, top))).view.force
 //    println(newMethods)
-    val newOptMethods = creqs.optMethods.mapValues(set => set.flatMap(_.satisfyExt(cls, top)))
+    val newOptMethods = creqs.optMethods.mapValues(set => set.flatMap(_.satisfyExt(cls, top))).view.force
 //    println(newOptMethods)
     val cctx = ClassContext(creqs.copy(exts = crs, fields = newFields, methods = newMethods, optMethods = newOptMethods), cfacts, extFacts + (cls -> sup))
     (cctx, cons)

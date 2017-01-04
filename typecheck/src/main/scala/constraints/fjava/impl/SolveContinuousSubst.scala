@@ -166,7 +166,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     }
 
   def solved(s: CSubst): SolveContinuousSubstCS = {
-    var mysubst = this.substitution mapValues (x => x.subst(s))
+    var mysubst = this.substitution.mapValues(x => x.subst(s)).view.force
     var newcons = Seq[Constraint]()
     for ((x, t2) <- s) {
       mysubst.get(x) match {
