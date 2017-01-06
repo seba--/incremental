@@ -9,7 +9,7 @@ import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
 
-object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] {
+object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] with Serializable {
   def freshConstraintSystem = SolveContinuousSubstCS(Map(), Map(), Seq(), Seq(), Map())
 }
 

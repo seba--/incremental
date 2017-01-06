@@ -8,7 +8,7 @@ import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
 
-object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
+object SolveEnd extends ConstraintSystemFactory[SolveEndCS] with Serializable {
   def freshConstraintSystem = SolveEndCS(Seq(), Seq(), Map())
 }
 

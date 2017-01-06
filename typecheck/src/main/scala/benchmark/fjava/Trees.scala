@@ -33,31 +33,22 @@ object Trees {
     */
   def prevRoot(path: Seq[Int]): Option[Seq[Int]] = if (path.head == 0) None else Some(path.updated(0, path.head - 1))
 
-  sealed class Config(val ignoreRoot: Boolean, val ignorePath: Boolean, val desc: String) {
+  object Config {
+    def fromValue(n: Int) = n match {
+      case 0 => Unique
+      case 1 => Mirrored
+      case 2 => Overriding
+      case 3 => MirroredOverriding
+    }
+  }
+  sealed class Config(val ignoreRoot: Boolean, val ignorePath: Boolean, val desc: String, val value: Int) extends Serializable {
     override def toString: String = desc
   }
-  object Unique extends Config(false, false, "unique")
-  object Mirrored extends Config(true, false, "mirrored")
-  object Overriding extends Config(false, true, "overriding")
-  object MirroredOverriding extends Config(true, true, "mirrored+overriding")
+  object Unique extends Config(false, false, "unique", 0)
+  object Mirrored extends Config(true, false, "mirrored", 1)
+  object Overriding extends Config(false, true, "overriding", 2)
+  object MirroredOverriding extends Config(true, true, "mirrored+overriding", 3)
 
-
-  implicit val configPickler = new Pickler[Config] {
-    override def pickle(x: Config): Array[Byte] = x match {
-      case Unique => intPickler.pickle(0)
-      case `Mirrored` => intPickler.pickle(1)
-      case `Overriding` => intPickler.pickle(2)
-      case `MirroredOverriding` => intPickler.pickle(3)
-      case _ => throw new MatchError(x)
-    }
-
-    override def unpickle(a: Array[Byte], from: Int): (Config, Int) = intPickler.unpickle(a, from) match {
-      case (0, from) => (Unique, from)
-      case (1, from) => (Mirrored, from)
-      case (2, from) => (Overriding, from)
-      case (3, from) => (MirroredOverriding, from)
-    }
-  }
 
   /**
     * @param roots number of subhierarchies below Object
@@ -230,29 +221,32 @@ object Trees {
   }
 
 
-  val rootss = Gen.enumeration("roots")(2, 5, 10)//(10, 100)
-  val heightss = Gen.enumeration("heights")(2, 5, 10)
-  val branchings = Gen.single("branching")(2)
-  val configs = Gen.enumeration[Config]("naming")(Unique, Mirrored, Overriding, MirroredOverriding)
+  val rootss = Gen.enumeration("roots")(10)//(10, 20, 40)
+  val heightss = Gen.enumeration("heights")(5)
+  val branchings = Gen.enumeration("branching")(2)
+  val configs = Gen.enumeration[Int]("naming")(Unique.value)//(Unique.value, Mirrored.value, Overriding.value, MirroredOverriding.value)
 
   val intAcumSuperHierarchyTrees = for
       { roots <- rootss
         heights <- heightss
         branching <- branchings
-        config <- configs }
+        configValue <- configs;
+        config = Config.fromValue(configValue) }
     yield intAcumSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
 
   val intAcumPrevHierarchyTrees = for
       { roots <- rootss
         heights <- heightss
         branching <- branchings
-        config <- configs }
+        configValue <- configs;
+        config = Config.fromValue(configValue) }
   yield intAcumPrevHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
 
   val intAcumPrevSuperHierarchyTrees = for
       { roots <- rootss
         heights <- heightss
         branching <- branchings
-        config <- configs }
+        configValue <- configs;
+        config = Config.fromValue(configValue) }
     yield intAcumPrevSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
 }
