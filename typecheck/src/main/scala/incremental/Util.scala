@@ -2,6 +2,7 @@ package incremental
 
 import constraints.State
 import constraints.Statistics.Statistics
+import util.TreeSeq
 
 import scala.collection.mutable
 
@@ -42,9 +43,9 @@ object Util {
   }
 
 
-  def loop[Obj, In, Product](f: (Obj, In) => (Obj, Seq[Product]))(init: Obj, ins: Iterable[In]): (Obj, Seq[Product]) = {
+  def loop[Obj, In, Product](f: (Obj, In) => (Obj, TreeSeq[Product]))(init: Obj, ins: Iterable[In]): (Obj, TreeSeq[Product]) = {
     var o = init
-    var prods = Seq[Product]()
+    var prods = TreeSeq[Product]()
     for (in <- ins) {
       val (newo, newprods) = f(o, in)
       o = newo

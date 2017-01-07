@@ -4,6 +4,7 @@ import constraints.fjava.CSubst.CSubst
 import constraints.fjava.{Constraint, Equal, Type}
 import incremental.Util
 import incremental.fjava.CName
+import util.TreeSeq
 
 
 sealed trait ClassFact
@@ -16,14 +17,14 @@ case class MethodFact(cls: CName, name: Symbol, params: Seq[CName], ret: CName) 
  */
 case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] = Seq(), extFacts: Map[CName, CName] = Map()) {
 
-  def subst(s: CSubst): (ClassContext, Seq[Constraint]) = {
+  def subst(s: CSubst): (ClassContext, TreeSeq[Constraint]) = {
     val (newcreqs, cons) = creqs.subst(s)
     (withCReqs(newcreqs), cons)
   }
 
   def finalized: ClassContext = withCReqs(creqs.copy(optMethods = Map()))
 
-  def merge(other: ClassContext): (ClassContext, Seq[Constraint]) = {
+  def merge(other: ClassContext): (ClassContext, TreeSeq[Constraint]) = {
     val (satisfiedThis, cons1) = this.addFacts(other.cfacts)
     val (satisfiedThisExt, cons2) = satisfiedThis.addExtFacts(other.extFacts)
     val (satisfiedOther, cons3) = other.addFacts(this.cfacts)
@@ -32,7 +33,7 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
     (satisfiedThisExt.withCReqs(mergedReqs), cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5)
   }
 
-  def addFact(fact: ClassFact): (ClassContext, Seq[Constraint]) = fact match {
+  def addFact(fact: ClassFact): (ClassContext, TreeSeq[Constraint]) = fact match {
     case CtorFact(cls, args) =>
       val (crs, cons) = creqs.satisfyCReq(CtorCReq(cls, args), creqs.ctors)
       val cctx = ClassContext(creqs.copy(ctors = crs), cfacts :+ fact, extFacts)
@@ -75,13 +76,13 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
     (cctx, cons)
   }
 
-  def addFacts(facts: Iterable[ClassFact]): (ClassContext, Seq[Constraint]) =
+  def addFacts(facts: Iterable[ClassFact]): (ClassContext, TreeSeq[Constraint]) =
     Util.loop[ClassContext, ClassFact, Constraint](_.addFact(_))(this, facts)
 
-  def addExtFacts(facts: Iterable[(CName, CName)]): (ClassContext, Seq[Constraint]) =
+  def addExtFacts(facts: Iterable[(CName, CName)]): (ClassContext, TreeSeq[Constraint]) =
     Util.loop[ClassContext, (CName, CName), Constraint]((o, in) => o.addExtFact(in._1, in._2))(this, facts)
 
-  def addRequirement(req: CReq[_]): (ClassContext, Seq[Constraint]) = req match {
+  def addRequirement(req: CReq[_]): (ClassContext, TreeSeq[Constraint]) = req match {
     case req: CtorCReq =>
       val (crs, cons) = creqs.addRequirement(creqs.ctors, req)
       (withCReqs(creqs.copy(ctors = crs)), cons)
@@ -105,7 +106,7 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
       (withCReqs(creqs.copy(exts = crs)), cons)
   }
 
-  def addRequirements(reqs: Iterable[CReq[_]]): (ClassContext, Seq[Constraint]) =
+  def addRequirements(reqs: Iterable[CReq[_]]): (ClassContext, TreeSeq[Constraint]) =
     Util.loop[ClassContext, CReq[_], Constraint](_.addRequirement(_))(this, reqs)
 
 
@@ -114,9 +115,9 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
     case Some(t) => (this, Some(Equal(t, cls)))
   }
 
-  def satisfyCurrentClass(cls: CName): (ClassContext, Seq[Constraint]) = creqs.currentCls match {
-    case None => (this, Seq())
-    case Some(t) => (withCReqs(creqs.copy(currentCls = None)), Seq(Equal(t, cls)))
+  def satisfyCurrentClass(cls: CName): (ClassContext, TreeSeq[Constraint]) = creqs.currentCls match {
+    case None => (this, TreeSeq())
+    case Some(t) => (withCReqs(creqs.copy(currentCls = None)), TreeSeq(Equal(t, cls)))
   }
 
   private def withCReqs(newcreqs: ClassReqs): ClassContext = this.copy(creqs = newcreqs)

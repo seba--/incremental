@@ -6,6 +6,7 @@ import Condition.trueCond
 import constraints.CVar
 import incremental.Util
 import incremental.fjava.{CName, UCName}
+import util.TreeSeq
 
 import scala.collection.generic.CanBuildFrom
 
@@ -439,7 +440,7 @@ case class ClassReqs (
   override def toString =
     s"ClassReqs(current=$currentCls, ext=$exts, ctorParams=$ctors, fields=$fields, methods=$methods, optMethods=$optMethods)"
 
-  def subst(s: CSubst): (ClassReqs, Seq[Constraint]) = {
+  def subst(s: CSubst): (ClassReqs, TreeSeq[Constraint]) = {
     val currentX = currentCls.map(_.subst(s))
     val extX = exts.flatMap(_.subst(s))
     val ctorX = ctors.flatMap(_.subst(s))
@@ -450,9 +451,9 @@ case class ClassReqs (
     (crs, cons1 ++ cons2 ++ cons3)
   }
 
-  def substMap[T <: CReq[T] with Named](s: CSubst, m: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+  def substMap[T <: CReq[T] with Named](s: CSubst, m: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], TreeSeq[Constraint]) = {
     var res = Map[Symbol, Set[T]]()
-    var cons = Seq[Constraint]()
+    var cons = TreeSeq[Constraint]()
 
     m.foreach { case (sym, set) =>
       val builder = new MapRequirementsBuilder[T]
@@ -473,36 +474,36 @@ case class ClassReqs (
     fields.values.forall(_.isEmpty) &&
     methods.values.forall(_.isEmpty)
 
-  def merge(crs: ClassReqs): (ClassReqs, Seq[Constraint]) = {
+  def merge(crs: ClassReqs): (ClassReqs, TreeSeq[Constraint]) = {
     val (currentX, cons0) = (currentCls.orElse(crs.currentCls), for (t1 <- currentCls; t2 <- crs.currentCls) yield Equal(t1, t2))
     val (extX, cons1) = merge(exts, crs.exts)
     val (ctorX, cons2) = merge(ctors, crs.ctors)
     val (fieldsX, cons3) = mergeMap(fields, crs.fields)
     val (methodsX, cons4) = mergeMap(methods, crs.methods)
     val (optMethodsX, cons5) = mergeMap(optMethods, crs.optMethods)
-    val cons = cons0.toSeq ++ cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
+    val cons = cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5 ++ cons0
     (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
   }
 
-  private def merge[T <: CReq[T]](crs1: Set[T], crs2: Set[T]): (Set[T], Seq[Constraint]) = {
+  private def merge[T <: CReq[T]](crs1: Set[T], crs2: Set[T]): (Set[T], TreeSeq[Constraint]) = {
     if (crs1.isEmpty)
-      return (crs2, Seq())
+      return (crs2, TreeSeq())
 
     Util.loop[Set[T], T, Constraint](addRequirement)(crs1, crs2)
   }
 
-  private def mergeMap[T <: CReq[T] with Named](crs1: Map[Symbol, Set[T]], crs2: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+  private def mergeMap[T <: CReq[T] with Named](crs1: Map[Symbol, Set[T]], crs2: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], TreeSeq[Constraint]) = {
     if (crs1.isEmpty)
-      return (crs2, Seq())
+      return (crs2, TreeSeq())
 
     Util.loop[Map[Symbol, Set[T]], T, Constraint](addRequirementMap)(crs1, crs2.values.toStream.flatten)
   }
 
-  def addRequirement[T <: CReq[T]](crs: Set[T], req: T): (Set[T], Seq[Constraint]) = {
+  def addRequirement[T <: CReq[T]](crs: Set[T], req: T): (Set[T], TreeSeq[Constraint]) = {
     // the new requirement, refined to be different from all existing requirements
     var diffreq: Option[T] = if (crs.size != 1) Some(req) else None
     // new constraints
-    var cons = Seq[Constraint]()
+    var cons = TreeSeq[Constraint]()
     // updated requirements
     val diffcres = crs.flatMap{ creq =>
       if (creq.canMerge(req)) {
@@ -530,9 +531,9 @@ case class ClassReqs (
     (diffcres ++ diffreq, cons)
   }
 
-  def addRequirementMap[T <: CReq[T] with Named](crs: Map[Symbol, Set[T]], req: T): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+  def addRequirementMap[T <: CReq[T] with Named](crs: Map[Symbol, Set[T]], req: T): (Map[Symbol, Set[T]], TreeSeq[Constraint]) = {
     val set = crs.getOrElse(req.name,
-      return (crs + (req.name -> Set(req)), Seq()))
+      return (crs + (req.name -> Set(req)), TreeSeq()))
 
     // the new requirement, refined to be different from all existing requirements
     var diffreq: Option[T] = if (set.size != 1) Some(req) else None
@@ -560,8 +561,8 @@ case class ClassReqs (
   }
 
 
-  def satisfyCReq[T <: CReq[T]](sat: T, crs: Set[T]): (Set[T], Seq[Constraint]) = {
-    var cons = Seq[Constraint]()
+  def satisfyCReq[T <: CReq[T]](sat: T, crs: Set[T]): (Set[T], TreeSeq[Constraint]) = {
+    var cons = TreeSeq[Constraint]()
     val newcrs = crs flatMap ( creq =>
       if (sat.canMerge(creq)) {
         cons ++= creq.assert(sat)
@@ -573,11 +574,11 @@ case class ClassReqs (
     (newcrs, cons)
   }
 
-  def satisfyCReqMap[T <: CReq[T] with Named](sat: T, crs: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+  def satisfyCReqMap[T <: CReq[T] with Named](sat: T, crs: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], TreeSeq[Constraint]) = {
     val set = crs.getOrElse(sat.name,
-      return (crs, Seq()))
+      return (crs, TreeSeq()))
 
-    var cons = Seq[Constraint]()
+    var cons = TreeSeq[Constraint]()
     val newcrs = set.flatMap( creq =>
       if (sat.canMerge(creq)) {
         cons ++= creq.assert(sat)
@@ -595,7 +596,7 @@ case class ClassReqs (
 
 class MapRequirementsBuilder[T <: CReq[T] with Named] {
   private var newreqs = Map[(Type, Condition), T]()
-  private var cons = Set[Constraint]()
+  private var cons = TreeSeq[Constraint]()
   def addReq(req: T) = {
     val key = (req.cls, req.cond)
     newreqs.get(key) match {
@@ -603,11 +604,11 @@ class MapRequirementsBuilder[T <: CReq[T] with Named] {
       case Some(oreq) =>
         if (req != oreq) {
           val c = req.assert(oreq, req.cond)
-          cons += c
+          cons +:= c
         }
     }
   }
 
   def getRequirements: Set[T] = newreqs.values.toSet
-  def getConstraints: Seq[Constraint] = cons.toSeq
+  def getConstraints: TreeSeq[Constraint] = cons
 }

@@ -49,6 +49,23 @@ object Trees {
   object Overriding extends Config(false, true, "overriding", 2)
   object MirroredOverriding extends Config(true, true, "mirrored+overriding", 3)
 
+  implicit val configPickler = new Pickler[Config] {
+    override def pickle(x: Config): Array[Byte] = x match {
+      case Unique => intPickler.pickle(0)
+      case `Mirrored` => intPickler.pickle(1)
+      case `Overriding` => intPickler.pickle(2)
+      case `MirroredOverriding` => intPickler.pickle(3)
+      case _ => throw new MatchError(x)
+    }
+
+    override def unpickle(a: Array[Byte], from: Int): (Config, Int) = intPickler.unpickle(a, from) match {
+      case (0, from) => (Unique, from)
+      case (1, from) => (Mirrored, from)
+      case (2, from) => (Overriding, from)
+      case (3, from) => (MirroredOverriding, from)
+    }
+  }
+
 
   /**
     * @param roots number of subhierarchies below Object
@@ -221,7 +238,7 @@ object Trees {
   }
 
 
-  val rootss = Gen.enumeration("roots")(10)//(10, 20, 40)
+  val rootss = Gen.enumeration("roots")(10, 20, 40)
   val heightss = Gen.enumeration("heights")(5)
   val branchings = Gen.enumeration("branching")(2)
   val configs = Gen.enumeration[Int]("naming")(Unique.value)//(Unique.value, Mirrored.value, Overriding.value, MirroredOverriding.value)
@@ -230,23 +247,20 @@ object Trees {
       { roots <- rootss
         heights <- heightss
         branching <- branchings
-        configValue <- configs;
-        config = Config.fromValue(configValue) }
-    yield intAcumSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
+        configValue <- configs }
+    yield intAcumSuperHierarchy(roots, heights, branching)(Config.fromValue(configValue)) -> hierarchySize(roots, heights, branching)
 
   val intAcumPrevHierarchyTrees = for
       { roots <- rootss
         heights <- heightss
         branching <- branchings
-        configValue <- configs;
-        config = Config.fromValue(configValue) }
-  yield intAcumPrevHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
+        configValue <- configs }
+  yield intAcumPrevHierarchy(roots, heights, branching)(Config.fromValue(configValue)) -> hierarchySize(roots, heights, branching)
 
   val intAcumPrevSuperHierarchyTrees = for
       { roots <- rootss
         heights <- heightss
         branching <- branchings
-        configValue <- configs;
-        config = Config.fromValue(configValue) }
-    yield intAcumPrevSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
+        configValue <- configs }
+    yield intAcumPrevSuperHierarchy(roots, heights, branching)(Config.fromValue(configValue)) -> hierarchySize(roots, heights, branching)
 }

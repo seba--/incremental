@@ -6,6 +6,7 @@ import constraints.fjava._
 import incremental.fjava._
 import incremental.Node._
 import incremental.{Node_, Util}
+import util.TreeSeq
 
 
 case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
@@ -22,7 +23,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   type Reqs = Map[Symbol, Type]
 
-  type StepResult = (Type, Reqs, ClassContext, Seq[Constraint])
+  type StepResult = (Type, Reqs, ClassContext, TreeSeq[Constraint])
 
   type TError = String
 
@@ -68,7 +69,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshCName()
-      (X, Map(x -> X), ClassContext(), Seq())
+      (X, Map(x -> X), ClassContext(), TreeSeq())
 
     case FieldAcc =>
       val f = e.lits(0).asInstanceOf[Symbol] //symbol
@@ -91,7 +92,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (ti, subreqs, subCctx, _) = e.kids(i).typ
         val U = freshCName()
         params = params :+ U
-        cons = cons :+ Subtype(ti, U)
+        cons = Subtype(ti, U) +: cons
         reqss = reqss :+ subreqs
         cctxs = cctxs :+ subCctx
       }
@@ -100,7 +101,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mCctx, cCons) = mergeClassContexts(cctxs)
       val (mcCctx, mcCons) = mCctx.addRequirement(MethodCReq(te, m, params, Uret))
 
-      (Uret, mreqs, mcCctx, mcons ++ cCons ++ mcCons ++ cons)
+      (Uret, mreqs, mcCctx, mcons ++ cCons ++ mcCons ++ TreeSeq(cons))
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
@@ -114,7 +115,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (ti, subreqs, subCctx, _) = e.kids.seq(i).typ
         val U = freshCName()
         params = params :+ U
-        cons =  cons :+ Subtype(ti, U)
+        cons =  Subtype(ti, U) +: cons
         reqss = reqss :+ subreqs
         cctx = cctx :+ subCctx
       }
@@ -123,25 +124,25 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mCctx, cCons) = mergeClassContexts(cctx)
       val (mcCctx, mcCons) = mCctx.addRequirement(CtorCReq(c, params))
 
-      (c, mreqs, mcCctx, mcons ++ cCons ++ mcCons ++ cons)
+      (c, mreqs, mcCctx, mcons ++ cCons ++ mcCons ++ TreeSeq(cons))
 
     case UCast =>
       val (t, reqs, cctx,_) = e.kids(0).typ
       val c = e.lits(0).asInstanceOf[CName]
 
-      (c, reqs, cctx, Seq(Subtype(t, c)))
+      (c, reqs, cctx, TreeSeq(Subtype(t, c)))
 
     case DCast =>
       val (t, reqs, cctx, _) = e.kids(0).typ
       val c = e.lits(0).asInstanceOf[CName]
 
-      (c, reqs, cctx, Seq(Subtype(c, t), NotEqual(c, t)))
+      (c, reqs, cctx, TreeSeq(Subtype(c, t), NotEqual(c, t)))
 
     case SCast =>
       val (t, reqs, cctx, _) = e.kids(0).typ
       val c = e.lits(0).asInstanceOf[CName]
 
-      (t, reqs, cctx, Seq(NotSubtype(c, t), NotSubtype(t, c), StupidCastWarning(t, c)))
+      (t, reqs, cctx, TreeSeq(NotSubtype(c, t), NotSubtype(t, c), StupidCastWarning(t, c)))
 
     case MethodDec =>
 
@@ -155,10 +156,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val Ud = freshCName() // current super class
 
       var restReqs = bodyReqs
-      var cons = Seq[Constraint]()
-
       // body type is subtype of declared return type
-      cons = Subtype(bodyT, retT) +: cons
+      var cons = Seq[Constraint](Subtype(bodyT, retT))
 
       // remove params and 'this from body requirements
       for ((x, xC) <- params :+ ('this, Uc)) {
@@ -166,7 +165,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           case None =>
           case Some(typ) =>
             restReqs = restReqs - x
-            cons = cons :+ Equal(xC, typ)
+            cons = Equal(xC, typ) +: cons
         }
       }
 
@@ -175,7 +174,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         ExtCReq(Uc, Ud),
         MethodCReq(Ud, m, params.map(_._2), retT, true)))
 
-      (MethodOK, restReqs, cctx2, cons ++ currentCons ++ extendCons)
+      (MethodOK, restReqs, cctx2, TreeSeq(cons) ++ extendCons ++ currentCons)
 
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
@@ -214,7 +213,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           m.lits(0).asInstanceOf[CName])))
       val (cctxFact4, factCons4) = cctxFact3.addExtFact(c, sup)
 
-      val newcons = (mccons :+ fieldInitCons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 ++ factCons4
+      val newcons = (fieldInitCons +: mccons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 ++ factCons4
       (c, reqs, cctxFact4, newcons)
 
     case ProgramM =>
@@ -262,16 +261,16 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
 
-  private val init: (Reqs, Seq[Constraint]) = (Map(), Seq())
+  private val init: (Reqs, TreeSeq[Constraint]) = (Map(), TreeSeq())
 
-  def mergeReqMaps(req: Reqs, reqs: Reqs*): (Reqs, Seq[Constraint]) = mergeReqMaps(req +: reqs)
+  def mergeReqMaps(req: Reqs, reqs: Reqs*): (Reqs, TreeSeq[Constraint]) = mergeReqMaps(req +: reqs)
 
-  def mergeReqMaps(reqs: Seq[Reqs]): (Reqs, Seq[Constraint]) =
+  def mergeReqMaps(reqs: Seq[Reqs]): (Reqs, TreeSeq[Constraint]) =
     Util.timed(localState -> Statistics.mergeReqsTime) {
-      reqs.foldLeft[(Reqs, Seq[Constraint])](init)(_mergeReqMaps)
+      reqs.foldLeft[(Reqs, TreeSeq[Constraint])](init)(_mergeReqMaps)
     }
 
-  private def _mergeReqMaps(was: (Reqs, Seq[Constraint]), newReqs: Reqs) = {
+  private def _mergeReqMaps(was: (Reqs, TreeSeq[Constraint]), newReqs: Reqs) = {
     val wasReqs = was._1
     var mcons = was._2
     var mreqs = wasReqs
@@ -286,21 +285,21 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
 
-  private val cinit: (ClassContext, Seq[Constraint]) = (ClassContext(), Seq())
+  private val cinit: (ClassContext, TreeSeq[Constraint]) = (ClassContext(), TreeSeq())
 
-  def mergeClassContexts(cctx: ClassContext, cctxs: ClassContext*): (ClassContext, Seq[Constraint]) = mergeClassContexts(cctx +: cctxs)
+  def mergeClassContexts(cctx: ClassContext, cctxs: ClassContext*): (ClassContext, TreeSeq[Constraint]) = mergeClassContexts(cctx +: cctxs)
 
-  def mergeClassContexts(cctxs: Seq[ClassContext]): (ClassContext, Seq[Constraint]) =
+  def mergeClassContexts(cctxs: Seq[ClassContext]): (ClassContext, TreeSeq[Constraint]) =
     Util.timed(localState -> Statistics.mergeCReqsTime) {
-      cctxs.foldLeft[(ClassContext, Seq[Constraint])](cinit)(_mergeClassContexts)
+      cctxs.foldLeft[(ClassContext, TreeSeq[Constraint])](cinit)(_mergeClassContexts)
     }
 
-  private def _mergeClassContexts(was: (ClassContext, Seq[Constraint]), newCtxs: ClassContext) = {
+  private def _mergeClassContexts(was: (ClassContext, TreeSeq[Constraint]), newCtxs: ClassContext): (ClassContext, TreeSeq[Constraint]) = {
     val (mcctxs, cons) = was._1.merge(newCtxs)
     (mcctxs, was._2 ++ cons)
   }
 
-  def substFix(t: Type, reqs: Reqs, cctx: ClassContext, cons: Seq[Constraint], csPre: CS, finalize: Boolean): (Type, Reqs, ClassContext, CS) = {
+  def substFix(t: Type, reqs: Reqs, cctx: ClassContext, cons: TreeSeq[Constraint], csPre: CS, finalize: Boolean): (Type, Reqs, ClassContext, CS) = {
     var newcons = cons
     var newt = t
     var newcs = csPre
@@ -313,7 +312,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         newcs = newcs.tryFinalize.asInstanceOf[CS]
 
       if (!newcs.shouldApplySubst || newcs.substitution == lastSubst) {
-        newcons = Seq()
+        newcons = TreeSeq()
       }
       else {
         val newsubst = newcs.substitution
