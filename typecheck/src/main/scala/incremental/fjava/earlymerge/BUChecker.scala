@@ -87,13 +87,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var cctxs: Seq[ClassContext] = Seq(cctx0)
       var params = Seq[Type]()
 
-      for (i <- 1 until e.kids.seq.size) {
+      for (i <- (e.kids.seq.size-1) to 1 by -1) {
         val (ti, subreqs, subCctx, _) = e.kids(i).typ
         val U = freshCName()
-        params = params :+ U
-        cons = cons :+ Subtype(ti, U)
-        reqss = reqss :+ subreqs
-        cctxs = cctxs :+ subCctx
+        params = U +: params
+        cons = Subtype(ti, U) +: cons
+        reqss = subreqs +: reqss
+        cctxs = subCctx +: cctxs
       }
 
       val (mreqs, mcons) = mergeReqMaps(reqss)
@@ -110,13 +110,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var cctx = Seq[ClassContext]()
       var params: List[Type] = Nil
 
-      for (i <- 0 until e.kids.seq.size) {
+      for (i <- (e.kids.seq.size-1) to 0 by -1) {
         val (ti, subreqs, subCctx, _) = e.kids.seq(i).typ
         val U = freshCName()
-        params = params :+ U
-        cons =  cons :+ Subtype(ti, U)
-        reqss = reqss :+ subreqs
-        cctx = cctx :+ subCctx
+        params = U +: params
+        cons =  Subtype(ti, U) +: cons
+        reqss = subreqs +: reqss
+        cctx = subCctx +: cctx
       }
 
       val (mreqs, mcons) = mergeReqMaps(reqss)
@@ -161,12 +161,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       cons = Subtype(bodyT, retT) +: cons
 
       // remove params and 'this from body requirements
-      for ((x, xC) <- params :+ ('this, Uc)) {
+      for ((x, xC) <- ('this, Uc) +: params) {
         bodyReqs.get(x) match {
           case None =>
           case Some(typ) =>
             restReqs = restReqs - x
-            cons = cons :+ Equal(xC, typ)
+            cons = Equal(xC, typ) +: cons
         }
       }
 
@@ -188,10 +188,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var cctxs = Seq[ClassContext]()
 
       // handle all methods, satisfying current-class reqs
-      for (i <- 0 until e.kids.seq.size) {
+      for (i <- (e.kids.seq.size-1) to 0 by -1) {
         val (t, req, cctx, _) = e.kids(i).typ
-        reqss = reqss :+ req
-        cctxs = cctxs :+ cctx
+        reqss = req +: reqss
+        cctxs = cctx +: cctxs
       }
 
       val (reqs, mrcons) = mergeReqMaps(reqss)
@@ -214,7 +214,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           m.lits(0).asInstanceOf[CName])))
       val (cctxFact4, factCons4) = cctxFact3.addExtFact(c, sup)
 
-      val newcons = (mccons :+ fieldInitCons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 ++ factCons4
+      val newcons = (fieldInitCons +: mccons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 ++ factCons4
       (c, reqs, cctxFact4, newcons)
 
     case ProgramM =>
@@ -222,10 +222,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var reqss = Seq[Reqs]()
       var cctxs = Seq[ClassContext]()
 
-      for (i <- 0 until e.kids.seq.size) {
+      for (i <- (e.kids.seq.size-1) to 0 by -1) {
         val (ct, reqs, cctx, cs) = e.kids(i).typ
-        reqss = reqss :+ reqs
-        cctxs = cctxs :+ cctx
+        reqss = reqs +: reqss
+        cctxs = cctx +: cctxs
       }
 
       val (mcreqs, mcons) = mergeClassContexts(cctxs)

@@ -35,18 +35,18 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
   def addFact(fact: ClassFact): (ClassContext, Seq[Constraint]) = fact match {
     case CtorFact(cls, args) =>
       val (crs, cons) = creqs.satisfyCReq(CtorCReq(cls, args), creqs.ctors)
-      val cctx = ClassContext(creqs.copy(ctors = crs), cfacts :+ fact, extFacts)
+      val cctx = ClassContext(creqs.copy(ctors = crs), fact +: cfacts, extFacts)
       (cctx, cons)
 
     case FieldFact(cls, field, typ) =>
       val (crs, cons) = creqs.satisfyCReqMap(FieldCReq(cls, field, typ), creqs.fields)
-      val cctx = ClassContext(creqs.copy(fields = crs), cfacts :+ fact, extFacts)
+      val cctx = ClassContext(creqs.copy(fields = crs), fact +: cfacts, extFacts)
       (cctx, cons)
 
     case MethodFact(cls, name, params, ret) =>
       val (crsMethods, cons1) = creqs.satisfyCReqMap(MethodCReq(cls, name, params, ret), creqs.methods)
       val (crsOptMethods, cons2) = creqs.satisfyCReqMap(MethodCReq(cls, name, params, ret), creqs.optMethods)
-      val cctx = ClassContext(creqs.copy(methods = crsMethods, optMethods = crsOptMethods), cfacts :+ fact, extFacts)
+      val cctx = ClassContext(creqs.copy(methods = crsMethods, optMethods = crsOptMethods), fact +: cfacts, extFacts)
       (cctx, cons1 ++ cons2)
   }
 

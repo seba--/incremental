@@ -22,13 +22,13 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   def notyet = {
     var cons = _notyet
     for ((t, tbnds) <- bounds; bound <- tbnds) {
-      cons = cons :+ Subtype(t, bound)
+      cons = Subtype(t, bound) +: cons
     }
     cons
   }
 
-  def notyet(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, _notyet :+ c, never, extend)
-  def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, _notyet, never :+ c, extend)
+  def notyet(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, c +: _notyet, never, extend)
+  def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, _notyet, c +: never, extend)
 
   def mergeSubsystem(that: SolveContinuousSubstCS) = {
     var msubst = substitution ++ that.substitution
@@ -171,7 +171,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     for ((x, t2) <- s) {
       mysubst.get(x) match {
         case None => mysubst = mysubst + (x -> t2.subst(mysubst))
-        case Some(t1) => newcons = newcons :+ t1.compatibleWith(t2)
+        case Some(t1) => newcons = t1.compatibleWith(t2) +: newcons
       }
     }
     val init = SolveContinuousSubstCS(mysubst, Map(), this._notyet.map(_.subst(s)), this.never.map(_.subst(s)), this.extend).addNewConstraints(newcons)

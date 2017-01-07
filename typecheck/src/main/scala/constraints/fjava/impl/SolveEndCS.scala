@@ -20,8 +20,8 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
   def substitution = CSubst.empty
 
   def solved(s: CSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
-  def notyet(c: Constraint) = SolveEndCS(notyet :+ c, never, extend)
-  def never(c: Constraint) = SolveEndCS(notyet, never :+ c, extend)
+  def notyet(c: Constraint) = SolveEndCS(c +: notyet, never, extend)
+  def never(c: Constraint) = SolveEndCS(notyet, c +: never, extend)
 
   def mergeSubsystem(that: SolveEndCS) =
     Util.timed(state -> Statistics.mergeSolutionTime) {
@@ -34,7 +34,7 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
   def addNewConstraint(c: Constraint) = {
     state += Statistics.constraintCount -> 1
     Util.timed(state -> Statistics.constraintSolveTime) {
-      SolveEndCS(notyet :+ c, never, extend)
+      SolveEndCS(c +: notyet, never, extend)
     }
   }
 

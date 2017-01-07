@@ -183,7 +183,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var cons = Seq[Constraint]()
       for (i <- 1 until params) {
         val (ti, csi) = typecheckRec(e.kids(i), ctx, ct)
-        cons = cons :+ Subtype(ti,  mtyp(i))
+        cons = Subtype(ti,  mtyp(i)) +: cons
         cs = cs ++ Seq(csi)
       }
       (mtyp.head, cons, Seq(cse) ++ cs)
@@ -196,7 +196,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       for (i <- 0 until e.kids.seq.size) {
          val (ti, csi) = typecheckRec (e.kids (i), ctx, ct)
-         cons = cons :+ Subtype (ti, ctor(i) )
+         cons = Subtype (ti, ctor(i) ) +: cons
          cs = cs ++ Seq (csi)
        }
 
@@ -288,7 +288,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         if (node.kind == ProgramM)
           node.kids.seq.map(findClasses)
         else if (node.kind == ClassDec)
-          classes :+= node
+          classes = node +: classes
       }
       findClasses(e)
 

@@ -94,7 +94,7 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(AllEqual(params :+ ret, other.self.params :+ other.self.ret), cls, cond)
+  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(AllEqual(ret +: params, other.self.ret +: other.self.params), cls, cond)
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _))
