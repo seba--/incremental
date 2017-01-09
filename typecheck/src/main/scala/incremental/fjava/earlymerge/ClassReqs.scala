@@ -214,10 +214,11 @@ case class ClassReqs (
   def addRequirement[T <: CReq[T]](crs: Seq[T], req: T): (Seq[T], Seq[Constraint]) = {
     // the new requirement, refined to be different from all existing requirements
     var diffreq: Option[T] = if (crs.size != 1) Some(req) else None
-    // new constraints
-    var cons = Seq[Constraint]()
+
+    val builder = new MapRequirementsBuilder[T]
+
     // updated requirements
-    val diffcres = crs.flatMap{ creq =>
+    crs.foreach{ creq =>
       if (creq.canMerge(req)) {
         diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
 
@@ -229,18 +230,19 @@ case class ClassReqs (
         val same2 = req.alsoSame(creq.cls)
         val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
 
-        val res = Seq() ++ req1 ++ req2
-
-//        // if creq.cls == req.cls then creq.assert(req)
-//        val c = None // same1.map(cr => creq.assert(req, cr.cond))
-//        cons = cons ++ c
-
-        res
+        if (!req1.isEmpty)
+          builder.addReq(req1.get)
+        if (!req2.isEmpty)
+          builder.addReq(req2.get)
       }
       else
         Seq(creq)
     }
-    (diffcres ++ diffreq, cons)
+
+    if (!diffreq.isEmpty)
+      builder.addReq(diffreq.get)
+
+    (builder.getRequirements, builder.getConstraints)
   }
 
   def addRequirementMap[T <: CReq[T] with Named](crs: Map[Symbol, Seq[T]], req: T): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
