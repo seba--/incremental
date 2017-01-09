@@ -14,15 +14,6 @@ import scala.collection.{immutable, mutable}
 trait CReq[T <: CReq[T]] {
   def self: T
   val cls: Type
-  def withCls(t: Type): T = {
-    val newcond = ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives, cond.sameVar)
-    if (ConditionNested.trueCond == newcond)
-      withCls(t, Condition(Set(), Set(), Set(), Set(), cond.othersGround, cond.othersVar))
-    else if (cls.isGround)
-      withCls(t, Condition(Set(), Set(), Set(), Set(), cond.othersGround + (cls.asInstanceOf[CName] -> newcond), cond.othersVar))
-    else
-      withCls(t, Condition(Set(), Set(), Set(), Set(), cond.othersGround, cond.othersVar + (cls.asInstanceOf[UCName] -> newcond)))
-  }
   def withCls(t: Type, newcond: Condition): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
@@ -34,13 +25,28 @@ trait CReq[T <: CReq[T]] {
   def alsoNot(n: Type): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
   def alsoSame(n: Type): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
 
-  def satisfyExt(cls: CName, sup: CName): Seq[T] = {
+  def satisfyExt(sub: CName, sup: CName): Seq[T] = {
     // NOTE: we assume that the removal of an extends clause implies no further declarations appear for subclass `ext.cls`
 
     // ext.cls != req.cls, so keep the original requirement
-    val diff = this.alsoNot(cls)
+    val diff = this.alsoNot(sub)
     // ext.cls == req.cls, so replace the original requirement with a super-class requirement `ext.ext`
-    val same = this.alsoSame(cls).map(_.withCls(sup))
+    val same = this.alsoSame(sub).map { _ =>
+      if (cls.isGround) {
+        if (cls == sub)
+          self
+        else {
+          val subCond = new ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives + cls.asInstanceOf[CName], cond.sameVar)
+          val supCond = Condition(Set(), Set(), Set(), Set(), cond.othersGround + (sub -> subCond))
+          this.withCls(sup, supCond)
+        }
+      }
+      else {
+        val subCond = new ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives, cond.sameVar + cls.asInstanceOf[UCName])
+        val supCond = Condition(Set(), Set(), Set(), Set(), cond.othersGround + (sub -> subCond))
+        this.withCls(sup, supCond)
+      }
+    }
 
     if (diff.isEmpty) {
       if (same.isEmpty)
@@ -313,7 +319,6 @@ class MapRequirementsBuilder[T <: CReq[T] with Named] {
     lists.foreach { buf =>
       var sameGroundAlternatives = Set[CName]()
       var othersGroundSameGround = Map[CName, Set[CName]]()
-      var othersVarSameGround = Map[UCName, Set[CName]]()
       buf.foreach { c =>
         val cond = c.cond
         sameGroundAlternatives ++= cond.sameGroundAlternatives
@@ -322,11 +327,6 @@ class MapRequirementsBuilder[T <: CReq[T] with Named] {
           othersGroundSameGround = cond.othersGround.mapValues(_.sameGroundAlternatives)
         else
           othersGroundSameGround = othersGroundSameGround.map { case (key, cts) => key -> (cts ++ cond.othersGround(key).sameGroundAlternatives ) }
-
-        if (othersVarSameGround.isEmpty)
-          othersVarSameGround = cond.othersVar.mapValues(_.sameGroundAlternatives)
-        else
-          othersVarSameGround = othersVarSameGround.map { case (key, cts) => key -> (cts ++ cond.othersVar(key).sameGroundAlternatives ) }
       }
       val head = buf(0)
       val headcond = head.cond
@@ -335,8 +335,7 @@ class MapRequirementsBuilder[T <: CReq[T] with Named] {
         headcond.notVar,
         sameGroundAlternatives,
         headcond.sameVar,
-        headcond.othersGround.map { case (key,cn) => key -> new ConditionNested(cn.notGround, cn.notVar, othersGroundSameGround(key), cn.sameVar) },
-        headcond.othersVar.map { case (key,cn) => key -> new ConditionNested(cn.notGround, cn.notVar, othersVarSameGround(key), cn.sameVar) }
+        headcond.othersGround.map { case (key,cn) => key -> new ConditionNested(cn.notGround, cn.notVar, othersGroundSameGround(key), cn.sameVar) }
       )
       set += head.withCond(mergeCond)
       buf.foreach{ req =>
