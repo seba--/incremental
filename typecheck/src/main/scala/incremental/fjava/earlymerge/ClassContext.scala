@@ -34,9 +34,10 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
 
   def addFact(fact: ClassFact): (ClassContext, Seq[Constraint]) = fact match {
     case CtorFact(cls, args) =>
-      val (crs, cons) = creqs.satisfyCReq(CtorCReq(cls, args), creqs.ctors)
-      val cctx = ClassContext(creqs.copy(ctors = crs), fact +: cfacts, extFacts)
-      (cctx, cons)
+      val (crsGround, cons1) = creqs.satisfyCReq(CtorCReq(cls, args), creqs.ctorsGround)
+      val (crsVar, cons2) = creqs.satisfyCReq(CtorCReq(cls, args), creqs.ctorsGround)
+      val cctx = ClassContext(creqs.copy(ctorsGround = crsGround, ctorsVar = crsVar), fact +: cfacts, extFacts)
+      (cctx, cons1 ++ cons2)
 
     case FieldFact(cls, field, typ) =>
       val (crs, cons) = creqs.satisfyCReqMap(FieldCReq(cls, field, typ), creqs.fields)
@@ -83,8 +84,14 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
 
   def addRequirement(req: CReq[_]): (ClassContext, Seq[Constraint]) = req match {
     case req: CtorCReq =>
-      val (crs, cons) = creqs.addRequirement(creqs.ctors, req)
-      (withCReqs(creqs.copy(ctors = crs)), cons)
+      if (req.cls.isGround) {
+        val (crs, cons) = creqs.addRequirement(creqs.ctorsGround, req)
+        (withCReqs(creqs.copy(ctorsGround = crs)), cons)
+      }
+      else {
+        val (crs, cons) = creqs.addRequirement(creqs.ctorsGround, req)
+        (withCReqs(creqs.copy(ctorsVar = crs)), cons)
+      }
 
     case req: FieldCReq =>
       val (crs, cons) = creqs.addRequirementMap(creqs.fields, req)

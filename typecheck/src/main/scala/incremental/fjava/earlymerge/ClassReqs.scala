@@ -7,9 +7,7 @@ import constraints.CVar
 import incremental.Util
 import incremental.fjava.{CName, UCName}
 
-import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.ListBuffer
-import scala.collection.{immutable, mutable}
 
 trait CReq[T <: CReq[T]] {
   def self: T
@@ -116,26 +114,54 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
 case class ClassReqs (
                        currentCls: Option[Type] = None,
                        exts: Seq[ExtCReq] = Seq(),
-                       ctors: Seq[CtorCReq] = Seq(),
+                       ctorsGround: Seq[CtorCReq] = Seq(),
+                       ctorsVar: Seq[CtorCReq] = Seq(),
                        fields: Map[Symbol, Seq[FieldCReq]] = Map(),
                        methods: Map[Symbol, Seq[MethodCReq]] = Map(),
                        optMethods: Map[Symbol, Seq[MethodCReq]] = Map()) {
 
   override def toString =
-    s"ClassReqs(current=$currentCls, ext=$exts, ctorParams=$ctors, fields=$fields, methods=$methods, optMethods=$optMethods)"
+    s"ClassReqs(current=$currentCls, ext=$exts, ctorParams=${ctorsGround ++ ctorsVar}, fields=$fields, methods=$methods, optMethods=$optMethods)"
 
   def subst(s: CSubst): (ClassReqs, Seq[Constraint]) = {
     val currentX = currentCls.map(_.subst(s))
     val extX = exts.flatMap(_.subst(s))
-    val ctorX = ctors.flatMap(_.subst(s))
-    val (fieldX, cons1) = substMap(s, fields)
-    val (methodX, cons2) = substMap(s, methods)
-    val (optMethodX, cons3) = substMap(s, optMethods)
-    val crs = ClassReqs(currentX, extX, ctorX, fieldX, methodX, optMethodX)
-    (crs, cons1 ++ cons2 ++ cons3)
+    val (ctorGroundX, ctorVarX, cons1) = substCtors(s, ctorsGround, ctorsVar)
+    val (fieldX, cons2) = substMapSeq(s, fields)
+    val (methodX, cons3) = substMapSeq(s, methods)
+    val (optMethodX, cons4) = substMapSeq(s, optMethods)
+    val crs = ClassReqs(currentX, extX, ctorGroundX, ctorVarX, fieldX, methodX, optMethodX)
+    (crs, cons1 ++ cons2 ++ cons3 ++ cons4)
   }
 
-  def substMap[T <: CReq[T] with Named](s: CSubst, m: Map[Symbol, Seq[T]]): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
+  def substCtors(s: CSubst, ground: Seq[CtorCReq], vars: Seq[CtorCReq]): (Seq[CtorCReq], Seq[CtorCReq], Seq[Constraint]) = {
+    val groundBuilder = new MapRequirementsBuilder[CtorCReq]
+    val varsBuilder = new MapRequirementsBuilder[CtorCReq]
+
+    ground.foreach { greq =>
+      val mreq = greq.subst(s)
+      if (!mreq.isEmpty)
+        groundBuilder.addReq(mreq.get)
+    }
+
+    vars.foreach { vreq =>
+      val mreq = vreq.subst(s)
+      if (!mreq.isEmpty) {
+        val req = mreq.get
+        if (req.cls.isGround)
+          groundBuilder.addReq(req)
+        else
+          varsBuilder.addReq(req)
+      }
+        None
+    }
+
+    val newGround = groundBuilder.getRequirements
+    val newVars = varsBuilder.getRequirements
+    (newGround, newVars, groundBuilder.getConstraints ++ varsBuilder.getConstraints)
+  }
+
+  def substMapSeq[T <: CReq[T] with Named](s: CSubst, m: Map[Symbol, Seq[T]]): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
     var res = Map[Symbol, Seq[T]]()
     var cons = Seq[Constraint]()
 
@@ -154,19 +180,21 @@ case class ClassReqs (
   def isEmpty =
     currentCls.isEmpty &&
     exts.isEmpty &&
-    ctors.isEmpty &&
+    ctorsGround.isEmpty &&
+    ctorsVar.isEmpty &&
     fields.values.forall(_.isEmpty) &&
     methods.values.forall(_.isEmpty)
 
   def merge(crs: ClassReqs): (ClassReqs, Seq[Constraint]) = {
     val (currentX, cons0) = (currentCls.orElse(crs.currentCls), for (t1 <- currentCls; t2 <- crs.currentCls) yield Equal(t1, t2))
     val (extX, cons1) = merge(exts, crs.exts)
-    val (ctorX, cons2) = merge(ctors, crs.ctors)
+    val (ctorGroundX, cons2g) = merge(ctorsGround, crs.ctorsGround)
+    val (ctorVarX, cons2v) = merge(ctorsVar, crs.ctorsVar)
     val (fieldsX, cons3) = mergeMap(fields, crs.fields)
     val (methodsX, cons4) = mergeMap(methods, crs.methods)
     val (optMethodsX, cons5) = mergeMap(optMethods, crs.optMethods)
-    val cons = cons0.toSeq ++ cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
-    (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
+    val cons = cons0.toSeq ++ cons1 ++ cons2g ++ cons2v ++ cons3 ++ cons4 ++ cons5
+    (ClassReqs(currentX, extX.distinct, ctorGroundX, ctorVarX, fieldsX, methodsX, optMethodsX), cons)
   }
 
   private def merge[T <: CReq[T]](crs1: Seq[T], crs2: Seq[T]): (Seq[T], Seq[Constraint]) = {
@@ -283,7 +311,7 @@ case class ClassReqs (
   }
 }
 
-class MapRequirementsBuilder[T <: CReq[T] with Named] {
+class MapRequirementsBuilder[T <: CReq[T]] {
   private var lists = Seq[ListBuffer[T]]()
   private var newreqs = Map[Condition.MergeKey, ListBuffer[T]]()
   private var cons = Seq[Constraint]()
