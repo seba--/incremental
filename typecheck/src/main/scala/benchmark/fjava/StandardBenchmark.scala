@@ -30,15 +30,15 @@ class StandardBenchmarkClass extends Bench.LocalTime {
   }
 
   def measureCheckers(trees: Gen[(Node, Long)]): Unit = {
-//    measureT("DU", du)(trees)
+    measureT("DU", du)(trees)
 //    measureT("BU-End", buEnd)(trees)
 //    measureT("BU-Cont", buCont)(trees)
     measureT("BU-Early-Cont", buEarlyCont)(trees)
   }
 
-  measureCheckers(Trees.intAcumSuperHierarchyTrees)
+//  measureCheckers(Trees.intAcumSuperHierarchyTrees)
 //  measureCheckers(Trees.intAcumPrevHierarchyTrees)
-//  measureCheckers(Trees.intAcumPrevSuperHierarchyTrees)
+  measureCheckers(Trees.intAcumPrevSuperHierarchyTrees)
 }
 
 object StandardBenchmark {

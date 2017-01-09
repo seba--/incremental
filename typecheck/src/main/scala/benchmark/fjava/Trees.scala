@@ -224,7 +224,7 @@ object Trees {
   val rootss = Gen.enumeration("roots")(10)//(10, 20, 40)
   val heightss = Gen.enumeration("heights")(5)
   val branchings = Gen.enumeration("branching")(2)
-  val configs = Gen.enumeration[Int]("naming")(Unique.value)//(Unique.value, Mirrored.value, Overriding.value, MirroredOverriding.value)
+  val configs = Gen.enumeration[Int]("naming")(Unique.value, Mirrored.value, Overriding.value, MirroredOverriding.value)
 
   val intAcumSuperHierarchyTrees = for
       { roots <- rootss
