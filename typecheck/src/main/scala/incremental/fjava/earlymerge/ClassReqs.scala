@@ -1,13 +1,14 @@
 package incremental.fjava.earlymerge
 
 import constraints.fjava.CSubst.CSubst
-import constraints.fjava._
+import constraints.fjava.{Type, _}
 import Condition.trueCond
 import constraints.CVar
 import incremental.Util
 import incremental.fjava.{CName, UCName}
 
 import scala.collection.generic.CanBuildFrom
+import scala.collection.immutable
 
 trait CReq[T <: CReq[T]] {
   def self: T
@@ -227,11 +228,14 @@ case class ClassReqs (
       val same2 = req.alsoSame(creq.cls)
       val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
 
-      req1.foreach(builder.addReq)
-      req2.foreach(builder.addReq)
+      if (!req1.isEmpty)
+        builder.addReq(req1.get)
+      if (!req2.isEmpty)
+        builder.addReq(req2.get)
     }
 
-    diffreq.foreach(builder.addReq)
+    if (!diffreq.isEmpty)
+      builder.addReq(diffreq.get)
 
     (crs + (req.name -> builder.getRequirements), builder.getConstraints)
   }
@@ -241,7 +245,9 @@ case class ClassReqs (
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq =>
       if (sat.canMerge(creq)) {
-        creq.assert(sat).foreach(cons +:= _)
+        val mcons = creq.assert(sat)
+        if (!mcons.isEmpty)
+          cons +:= mcons.get
         creq.alsoNot(sat.cls)
       }
       else
@@ -271,25 +277,26 @@ case class ClassReqs (
 }
 
 class MapRequirementsBuilder[T <: CReq[T] with Named] {
-  private var newreqs = Map[(Type, Condition.MergeKey), T]()
+  private var newreqs = Map[Condition.MergeKey, T]()
   private var cons = Seq[Constraint]()
   def addReq(req: T) = {
-    val mergeKey = req.cond.mergeKey
-    val key = (req.cls, mergeKey)
+    val key = req.cond.mergeKey(req.cls)
     newreqs.get(key) match {
       case None => newreqs += (key -> req)
       case Some(oreq) => {
         val reqCond = req.cond
         val oreqCond = oreq.cond
-        if (mergeKey.needsMerge(reqCond, oreqCond)) {
-          val mergeCond = mergeKey.merge(reqCond, oreqCond)
+        if (key.needsMerge(reqCond, oreqCond)) {
+          val mergeCond = key.merge(reqCond, oreqCond)
           newreqs += (key -> oreq.withCond(mergeCond))
           val c = req.assert(oreq, mergeCond)
-          c.foreach(cons +:= _)
+          if (!c.isEmpty)
+            cons +:= c.get
         }
         else if (req != oreq) {
           val c = req.assert(oreq, req.cond)
-          c.foreach(cons +:= _)
+          if (!c.isEmpty)
+            cons +:= c.get
         }
       }
     }
