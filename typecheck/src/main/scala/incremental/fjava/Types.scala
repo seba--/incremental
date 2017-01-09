@@ -35,6 +35,8 @@ case class UCName(x: CVar[Type]) extends Type {
 
 
   def uvars = Set(x)
+
+  override val hashCode: Int = x.x.hashCode()
 }
 
 case class CName(x: Symbol) extends GroundType {
@@ -51,6 +53,8 @@ case class CName(x: Symbol) extends GroundType {
 
   override def toString: String = x.name
   def uvars = Set()
+
+  override val hashCode: Int = x.hashCode()
 }
 
 case object ProgramOK extends GroundType {

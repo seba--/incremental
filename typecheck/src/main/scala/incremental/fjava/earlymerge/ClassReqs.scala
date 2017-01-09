@@ -241,7 +241,7 @@ case class ClassReqs (
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq =>
       if (sat.canMerge(creq)) {
-        cons ++= creq.assert(sat)
+        creq.assert(sat).foreach(cons +:= _)
         creq.alsoNot(sat.cls)
       }
       else
@@ -272,7 +272,7 @@ case class ClassReqs (
 
 class MapRequirementsBuilder[T <: CReq[T] with Named] {
   private var newreqs = Map[(Type, Condition.MergeKey), T]()
-  private var cons = Set[Constraint]()
+  private var cons = Seq[Constraint]()
   def addReq(req: T) = {
     val mergeKey = req.cond.mergeKey
     val key = (req.cls, mergeKey)
@@ -285,16 +285,16 @@ class MapRequirementsBuilder[T <: CReq[T] with Named] {
           val mergeCond = mergeKey.merge(reqCond, oreqCond)
           newreqs += (key -> oreq.withCond(mergeCond))
           val c = req.assert(oreq, mergeCond)
-          c.foreach(cons += _)
+          c.foreach(cons +:= _)
         }
         else if (req != oreq) {
           val c = req.assert(oreq, req.cond)
-          c.foreach(cons += _)
+          c.foreach(cons +:= _)
         }
       }
     }
   }
 
   def getRequirements: Set[T] = newreqs.values.toSet
-  def getConstraints: Seq[Constraint] = cons.toSeq
+  def getConstraints: Seq[Constraint] = cons
 }
