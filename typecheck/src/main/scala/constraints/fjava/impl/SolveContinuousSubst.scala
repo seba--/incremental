@@ -32,7 +32,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   def mergeSubsystem(that: SolveContinuousSubstCS) = {
     var msubst = substitution ++ that.substitution
-    var mnotyet = _notyet ++ that.notyet
+    var mnotyet = _notyet ++ that._notyet
     var mnever = never ++ that.never
     val init = SolveContinuousSubstCS(msubst, this.bounds, mnotyet, mnever, this.extend)
     val extendedCS = that.extend.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
@@ -140,7 +140,6 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       case (CName('Object), CName(n)) if n != 'Object =>
         this.never(Subtype(t1, t2))
       case _  =>
-
         extendBound(t1, t2)
     }
 
