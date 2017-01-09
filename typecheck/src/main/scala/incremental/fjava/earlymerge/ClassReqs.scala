@@ -8,7 +8,8 @@ import incremental.Util
 import incremental.fjava.{CName, UCName}
 
 import scala.collection.generic.CanBuildFrom
-import scala.collection.immutable
+import scala.collection.mutable.ListBuffer
+import scala.collection.{immutable, mutable}
 
 trait CReq[T <: CReq[T]] {
   def self: T
@@ -277,21 +278,26 @@ case class ClassReqs (
 }
 
 class MapRequirementsBuilder[T <: CReq[T] with Named] {
-  private var newreqs = Map[Condition.MergeKey, T]()
+  private var lists = Seq[ListBuffer[T]]()
+  private var newreqs = Map[Condition.MergeKey, ListBuffer[T]]()
   private var cons = Seq[Constraint]()
   def addReq(req: T) = {
     val key = req.cond.mergeKey(req.cls)
     newreqs.get(key) match {
-      case None => newreqs += (key -> req)
-      case Some(oreq) => {
+      case None =>
+        val buf = ListBuffer(req)
+        lists +:= buf
+        newreqs += (key -> buf)
+      case Some(oreqs) => {
         val reqCond = req.cond
+        val oreq = oreqs(0)
         val oreqCond = oreq.cond
         if (key.needsMerge(reqCond, oreqCond)) {
-          val mergeCond = key.merge(reqCond, oreqCond)
-          newreqs += (key -> oreq.withCond(mergeCond))
-          val c = req.assert(oreq, mergeCond)
-          if (!c.isEmpty)
-            cons +:= c.get
+//          val mergeCond = key.merge(reqCond, oreqCond)
+          oreqs += req
+//          val c = req.assert(oreq, mergeCond)
+//          if (!c.isEmpty)
+//            cons +:= c.get
         }
         else if (req != oreq) {
           val c = req.assert(oreq, req.cond)
@@ -302,6 +308,44 @@ class MapRequirementsBuilder[T <: CReq[T] with Named] {
     }
   }
 
-  def getRequirements: Set[T] = newreqs.values.toSet
+  def getRequirements: Set[T] = {
+    var set = Set[T]()
+    lists.foreach { buf =>
+      var sameGroundAlternatives = Set[CName]()
+      var othersGroundSameGround = Map[CName, Set[CName]]()
+      var othersVarSameGround = Map[UCName, Set[CName]]()
+      buf.foreach { c =>
+        val cond = c.cond
+        sameGroundAlternatives ++= cond.sameGroundAlternatives
+
+        if (othersGroundSameGround.isEmpty)
+          othersGroundSameGround = cond.othersGround.mapValues(_.sameGroundAlternatives)
+        else
+          othersGroundSameGround = othersGroundSameGround.map { case (key, cts) => key -> (cts ++ cond.othersGround(key).sameGroundAlternatives ) }
+
+        if (othersVarSameGround.isEmpty)
+          othersVarSameGround = cond.othersVar.mapValues(_.sameGroundAlternatives)
+        else
+          othersVarSameGround = othersVarSameGround.map { case (key, cts) => key -> (cts ++ cond.othersVar(key).sameGroundAlternatives ) }
+      }
+      val head = buf(0)
+      val headcond = head.cond
+      val mergeCond = Condition(
+        headcond.notGround,
+        headcond.notVar,
+        sameGroundAlternatives,
+        headcond.sameVar,
+        headcond.othersGround.map { case (key,cn) => key -> new ConditionNested(cn.notGround, cn.notVar, othersGroundSameGround(key), cn.sameVar) },
+        headcond.othersVar.map { case (key,cn) => key -> new ConditionNested(cn.notGround, cn.notVar, othersVarSameGround(key), cn.sameVar) }
+      )
+      set += head.withCond(mergeCond)
+      buf.foreach{ req =>
+        val c = req.assert(head, mergeCond)
+        if (!c.isEmpty)
+          cons +:= c.get
+      }
+    }
+    set
+  }
   def getConstraints: Seq[Constraint] = cons
 }
