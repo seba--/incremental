@@ -115,11 +115,11 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
 
 case class ClassReqs (
                        currentCls: Option[Type] = None,
-                       exts: Set[ExtCReq] = Set(),
-                       ctors: Set[CtorCReq] = Set(),
-                       fields: Map[Symbol, Set[FieldCReq]] = Map(),
-                       methods: Map[Symbol, Set[MethodCReq]] = Map(),
-                       optMethods: Map[Symbol, Set[MethodCReq]] = Map()) {
+                       exts: Seq[ExtCReq] = Seq(),
+                       ctors: Seq[CtorCReq] = Seq(),
+                       fields: Map[Symbol, Seq[FieldCReq]] = Map(),
+                       methods: Map[Symbol, Seq[MethodCReq]] = Map(),
+                       optMethods: Map[Symbol, Seq[MethodCReq]] = Map()) {
 
   override def toString =
     s"ClassReqs(current=$currentCls, ext=$exts, ctorParams=$ctors, fields=$fields, methods=$methods, optMethods=$optMethods)"
@@ -135,8 +135,8 @@ case class ClassReqs (
     (crs, cons1 ++ cons2 ++ cons3)
   }
 
-  def substMap[T <: CReq[T] with Named](s: CSubst, m: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
-    var res = Map[Symbol, Set[T]]()
+  def substMap[T <: CReq[T] with Named](s: CSubst, m: Map[Symbol, Seq[T]]): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
+    var res = Map[Symbol, Seq[T]]()
     var cons = Seq[Constraint]()
 
     m.foreach { case (sym, set) =>
@@ -169,21 +169,21 @@ case class ClassReqs (
     (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
   }
 
-  private def merge[T <: CReq[T]](crs1: Set[T], crs2: Set[T]): (Set[T], Seq[Constraint]) = {
+  private def merge[T <: CReq[T]](crs1: Seq[T], crs2: Seq[T]): (Seq[T], Seq[Constraint]) = {
     if (crs1.isEmpty)
       return (crs2, Seq())
 
-    Util.loop[Set[T], T, Constraint](addRequirement)(crs1, crs2)
+    Util.loop[Seq[T], T, Constraint](addRequirement)(crs1, crs2)
   }
 
-  private def mergeMap[T <: CReq[T] with Named](crs1: Map[Symbol, Set[T]], crs2: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+  private def mergeMap[T <: CReq[T] with Named](crs1: Map[Symbol, Seq[T]], crs2: Map[Symbol, Seq[T]]): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
     if (crs1.isEmpty)
       return (crs2, Seq())
 
-    Util.loop[Map[Symbol, Set[T]], T, Constraint](addRequirementMap)(crs1, crs2.values.toStream.flatten)
+    Util.loop[Map[Symbol, Seq[T]], T, Constraint](addRequirementMap)(crs1, crs2.values.toStream.flatten)
   }
 
-  def addRequirement[T <: CReq[T]](crs: Set[T], req: T): (Set[T], Seq[Constraint]) = {
+  def addRequirement[T <: CReq[T]](crs: Seq[T], req: T): (Seq[T], Seq[Constraint]) = {
     // the new requirement, refined to be different from all existing requirements
     var diffreq: Option[T] = if (crs.size != 1) Some(req) else None
     // new constraints
@@ -215,16 +215,16 @@ case class ClassReqs (
     (diffcres ++ diffreq, cons)
   }
 
-  def addRequirementMap[T <: CReq[T] with Named](crs: Map[Symbol, Set[T]], req: T): (Map[Symbol, Set[T]], Seq[Constraint]) = {
-    val set = crs.getOrElse(req.name,
-      return (crs + (req.name -> Set(req)), Seq()))
+  def addRequirementMap[T <: CReq[T] with Named](crs: Map[Symbol, Seq[T]], req: T): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
+    val seq = crs.getOrElse(req.name,
+      return (crs + (req.name -> Seq(req)), Seq()))
 
     // the new requirement, refined to be different from all existing requirements
-    var diffreq: Option[T] = if (set.size != 1) Some(req) else None
+    var diffreq: Option[T] = if (seq.size != 1) Some(req) else None
 
     val builder = new MapRequirementsBuilder[T]
 
-    set.foreach{ creq =>
+    seq.foreach{ creq =>
       diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
 
       val diff1 = creq.alsoNot(req.cls)
@@ -248,7 +248,7 @@ case class ClassReqs (
   }
 
 
-  def satisfyCReq[T <: CReq[T]](sat: T, crs: Set[T]): (Set[T], Seq[Constraint]) = {
+  def satisfyCReq[T <: CReq[T]](sat: T, crs: Seq[T]): (Seq[T], Seq[Constraint]) = {
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq =>
       if (sat.canMerge(creq)) {
@@ -263,7 +263,7 @@ case class ClassReqs (
     (newcrs, cons)
   }
 
-  def satisfyCReqMap[T <: CReq[T] with Named](sat: T, crs: Map[Symbol, Set[T]]): (Map[Symbol, Set[T]], Seq[Constraint]) = {
+  def satisfyCReqMap[T <: CReq[T] with Named](sat: T, crs: Map[Symbol, Seq[T]]): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
     val set = crs.getOrElse(sat.name,
       return (crs, Seq()))
 
@@ -314,8 +314,8 @@ class MapRequirementsBuilder[T <: CReq[T] with Named] {
     }
   }
 
-  def getRequirements: Set[T] = {
-    var set = Set[T]()
+  def getRequirements: Seq[T] = {
+    var seq = Seq[T]()
     lists.foreach { buf =>
       var sameGroundAlternatives = Set[CName]()
       var othersGroundSameGround = Map[CName, Set[CName]]()
@@ -337,14 +337,14 @@ class MapRequirementsBuilder[T <: CReq[T] with Named] {
         headcond.sameVar,
         headcond.othersGround.map { case (key,cn) => key -> new ConditionNested(cn.notGround, cn.notVar, othersGroundSameGround(key), cn.sameVar) }
       )
-      set += head.withCond(mergeCond)
+      seq +:= head.withCond(mergeCond)
       buf.foreach{ req =>
         val c = req.assert(head, mergeCond)
         if (!c.isEmpty)
           cons +:= c.get
       }
     }
-    set
+    seq
   }
   def getConstraints: Seq[Constraint] = cons
 }
