@@ -292,7 +292,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def mergeClassContexts(cctxs: Seq[ClassContext]): (ClassContext, Seq[Constraint]) =
     Util.timed(localState -> Statistics.mergeCReqsTime) {
-      cctxs.foldLeft[(ClassContext, Seq[Constraint])](cinit)(_mergeClassContexts)
+      if (cctxs.isEmpty)
+        cinit
+      else
+        cctxs.tail.foldLeft[(ClassContext, Seq[Constraint])]((cctxs.head, Seq()))(_mergeClassContexts)
     }
 
   private def _mergeClassContexts(was: (ClassContext, Seq[Constraint]), newCtxs: ClassContext) = {
