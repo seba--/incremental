@@ -24,8 +24,8 @@ trait CReq[T <: CReq[T]] {
   def withCls(t: Type, newcond: Condition): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
-  def assert(sat: CReq[T]): Option[Constraint] = alsoSame(sat.cls).map(c2 => this.assert(sat, c2.cond))
-  def assert(other: CReq[T], cond: Condition): Constraint
+  def assert(sat: CReq[T]): Option[Constraint] = alsoSame(sat.cls).flatMap(c2 => this.assert(sat, c2.cond))
+  def assert(other: CReq[T], cond: Condition): Option[Constraint]
   def subst(s: CSubst): Option[T]
 
   def withCond(cond: Condition): T
@@ -58,7 +58,7 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[ExtCReq]) = true
-  def assert(other: CReq[ExtCReq], cond: Condition) = Conditional(Equal(ext, other.self.ext), cls, cond)
+  def assert(other: CReq[ExtCReq], cond: Condition) = if (ext == other.self.ext) None else Some(Conditional(Equal(ext, other.self.ext), cls, cond))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (ExtCReq(cls_, ext.subst(s), _))
@@ -69,7 +69,7 @@ case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) exte
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[CtorCReq]) = true
-  def assert(other: CReq[CtorCReq], cond: Condition) = Conditional(AllEqual(args, other.self.args), cls, cond)
+  def assert(other: CReq[CtorCReq], cond: Condition) = if (args == other.self.args) None else Some(Conditional(AllEqual(args, other.self.args), cls, cond))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (CtorCReq(cls_, args.map(_.subst(s)), _))
@@ -83,7 +83,7 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: Condition = trueC
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[FieldCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[FieldCReq], cond: Condition) = Conditional(Equal(typ, other.self.typ), cls, cond)
+  def assert(other: CReq[FieldCReq], cond: Condition) = if (typ == other.self.typ) None else Some(Conditional(Equal(typ, other.self.typ), cls, cond))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (FieldCReq(cls_, name, typ.subst(s), _))
@@ -94,7 +94,7 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(AllEqual(ret +: params, other.self.ret +: other.self.params), cls, cond)
+  def assert(other: CReq[MethodCReq], cond: Condition) = if (ret == other.self.ret && params == other.self.params) None else Some(Conditional(AllEqual(ret +: params, other.self.ret +: other.self.params), cls, cond))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _))
@@ -271,17 +271,27 @@ case class ClassReqs (
 }
 
 class MapRequirementsBuilder[T <: CReq[T] with Named] {
-  private var newreqs = Map[(Type, Condition), T]()
+  private var newreqs = Map[(Type, Condition.MergeKey), T]()
   private var cons = Set[Constraint]()
   def addReq(req: T) = {
-    val key = (req.cls, req.cond)
+    val mergeKey = req.cond.mergeKey
+    val key = (req.cls, mergeKey)
     newreqs.get(key) match {
       case None => newreqs += (key -> req)
-      case Some(oreq) =>
-        if (req != oreq) {
-          val c = req.assert(oreq, req.cond)
-          cons += c
+      case Some(oreq) => {
+        val reqCond = req.cond
+        val oreqCond = oreq.cond
+        if (mergeKey.needsMerge(reqCond, oreqCond)) {
+          val mergeCond = mergeKey.merge(reqCond, oreqCond)
+          newreqs += (key -> oreq.withCond(mergeCond))
+          val c = req.assert(oreq, mergeCond)
+          c.foreach(cons += _)
         }
+        else if (req != oreq) {
+          val c = req.assert(oreq, req.cond)
+          c.foreach(cons += _)
+        }
+      }
     }
   }
 
