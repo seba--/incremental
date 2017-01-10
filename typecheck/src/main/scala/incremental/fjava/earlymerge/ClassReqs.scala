@@ -12,20 +12,20 @@ import scala.collection.mutable.ListBuffer
 trait CReq[T <: CReq[T]] {
   def self: T
   val cls: Type
-  def withCls(t: Type, newcond: Condition): T
-  val cond: Condition
+  def withCls(t: Type, newcond: ConditionTrait): T
+  val cond: ConditionTrait
   def canMerge(other: CReq[T]): Boolean
   def assert(sat: CReq[T]): Option[Constraint] = alsoSame(sat.cls.asInstanceOf[CName]).flatMap(c2 => this.assert(sat, c2.cond))
-  def assert(other: CReq[T], cond: Condition): Option[Constraint]
+  def assert(other: CReq[T], cond: ConditionTrait): Option[Constraint]
   def subst(s: CSubst): Option[T]
 
-  def withCond(cond: Condition): T
+  def withCond(cond: ConditionTrait): T
 
-  def alsoNot(n: CName): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
-  def alsoNot(n: UCName): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
+  def alsoNot(n: CName): Option[T] = cond.asInstanceOf[Condition].alsoNot(cls, n) map (withCond(_))
+  def alsoNot(n: UCName): Option[T] = cond.asInstanceOf[Condition].alsoNot(cls, n) map (withCond(_))
 
-  def alsoSame(n: CName): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
-  def alsoSame(n: UCName): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
+  def alsoSame(n: CName): Option[T] = cond.asInstanceOf[Condition].alsoSame(cls, n) map (withCond(_))
+  def alsoSame(n: UCName): Option[T] = cond.asInstanceOf[Condition].alsoSame(cls, n) map (withCond(_))
 
   def satisfyExt(sub: CName, sup: CName): Seq[T] = {
     // NOTE: we assume that the removal of an extends clause implies no further declarations appear for subclass `sub`
@@ -37,23 +37,30 @@ trait CReq[T <: CReq[T]] {
     val same =
       if (cls.isGround) {
         if (cls == sub) {
-          val subCond = ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives, cond.sameVar)
-          val others = if (subCond == ConditionNested.trueCond) cond.othersGround else (cond.othersGround + (sub -> subCond))
-          val supCond = Condition(Set.empty, Set.empty, Set.empty, Set.empty, others)
-          Some(this.withCls(sup, supCond))
+          if (cond.isInstanceOf[Condition]) {
+            val cond_ = cond.asInstanceOf[Condition]
+            val subCond = Condition(cond_.notGround, cond_.notVar, cond_.sameGroundAlternatives, cond_.sameVar)
+            val supCond = ConditionOther(sub, subCond)
+            Some(this.withCls(sup, supCond))
+          }
+          else {
+            // val cond_ = cond.asInstanceOf[ConditionOther]
+            // val subCond = trueCond
+            // val supCond = cond_.add(sub, subCond)
+            Some(this.withCls(sup, cond))
+          }
         }
-        else {
+        else { // since cls != sub
           None
         }
       }
       else {
         // Note: since cond.othersGround is only set in satisfyExt alongside a concrete cls and because
         // this.cls is not ground, cond.othersGround must be empty. Consequently, the rest of cond must be non-empty (otherwise would be trueCond).
-        Predef.assert(cond.othersGround.isEmpty)
-        val subCond0 = new ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives, cond.sameVar + cls.asInstanceOf[UCName])
+        val cond_ = cond.asInstanceOf[Condition]
+        val subCond0 = new Condition(cond_.notGround, cond_.notVar, cond_.sameGroundAlternatives, cond_.sameVar + cls.asInstanceOf[UCName])
         subCond0.forCls(sub).map { subCond =>
-          val others = if (subCond == ConditionNested.trueCond) Map.empty[CName, ConditionNested] else Map(sub -> subCond)
-          val supCond = Condition(Set.empty, Set.empty, Set.empty, Set.empty, others)
+          val supCond = ConditionOther(sub, subCond)
           this.withCls(sup, supCond)
         }
       }
@@ -72,53 +79,53 @@ trait CReq[T <: CReq[T]] {
     }
   }
 }
-case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CReq[ExtCReq] {
+case class ExtCReq(cls: Type, ext: Type, cond: ConditionTrait = trueCond) extends CReq[ExtCReq] {
   def self = this
-  def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
+  def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[ExtCReq]) = true
-  def assert(other: CReq[ExtCReq], cond: Condition) = if (ext == other.self.ext) None else Some(Conditional(Equal(ext, other.self.ext), cls, cond))
+  def assert(other: CReq[ExtCReq], cond: ConditionTrait) = if (ext == other.self.ext) None else Some(Conditional(Equal(ext, other.self.ext), cls, cond))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (ExtCReq(cls_, ext.subst(s), _))
   }
-  def withCond(c: Condition) = copy(cond = c)
+  def withCond(c: ConditionTrait) = copy(cond = c)
 }
-case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
+case class CtorCReq(cls: Type, args: Seq[Type], cond: ConditionTrait = trueCond) extends CReq[CtorCReq] {
   def self = this
-  def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
+  def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[CtorCReq]) = true
-  def assert(other: CReq[CtorCReq], cond: Condition) = if (args == other.self.args) None else Some(Conditional(AllEqual(args, other.self.args), cls, cond))
+  def assert(other: CReq[CtorCReq], cond: ConditionTrait) = if (args == other.self.args) None else Some(Conditional(AllEqual(args, other.self.args), cls, cond))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (CtorCReq(cls_, args.map(_.subst(s)), _))
   }
-  def withCond(c: Condition) = copy(cond = c)
+  def withCond(c: ConditionTrait) = copy(cond = c)
 }
 trait Named {
   val name: Symbol
 }
-case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: Condition = trueCond) extends CReq[FieldCReq] with Named {
+case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = trueCond) extends CReq[FieldCReq] with Named {
   def self = this
-  def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
+  def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[FieldCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[FieldCReq], cond: Condition) = if (typ == other.self.typ) None else Some(Conditional(Equal(typ, other.self.typ), cls, cond))
+  def assert(other: CReq[FieldCReq], cond: ConditionTrait) = if (typ == other.self.typ) None else Some(Conditional(Equal(typ, other.self.typ), cls, cond))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (FieldCReq(cls_, name, typ.subst(s), _))
   }
-  def withCond(c: Condition) = copy(cond = c)
+  def withCond(c: ConditionTrait) = copy(cond = c)
 }
-case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, optionallyDefined: Boolean = false, cond: Condition = trueCond) extends CReq[MethodCReq] with Named {
+case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, optionallyDefined: Boolean = false, cond: ConditionTrait = trueCond) extends CReq[MethodCReq] with Named {
   def self = this
-  def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
+  def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[MethodCReq], cond: Condition) = if (ret == other.self.ret && params == other.self.params) None else Some(Conditional(AllEqual(ret +: params, other.self.ret +: other.self.params), cls, cond))
+  def assert(other: CReq[MethodCReq], cond: ConditionTrait) = if (ret == other.self.ret && params == other.self.params) None else Some(Conditional(AllEqual(ret +: params, other.self.ret +: other.self.params), cls, cond))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _))
   }
   def uvars = cls.uvars ++ params.flatMap(_.uvars) ++ cond.uvars
-  def withCond(c: Condition) = copy(cond = c)
+  def withCond(c: ConditionTrait) = copy(cond = c)
 }
 
 
@@ -325,7 +332,7 @@ case class ClassReqs (
 
 class MapRequirementsBuilder[T <: CReq[T]] {
   private var lists = Seq[ListBuffer[T]]()
-  private var newreqs = Map[(Type, Condition.MergeKey), ListBuffer[T]]()
+  private var newreqs = Map[(Type, MergeKey), ListBuffer[T]]()
   private var cons = Seq[Constraint]()
   def addReq(req: T) = {
     val mkey = req.cond.mergeKey
@@ -336,15 +343,10 @@ class MapRequirementsBuilder[T <: CReq[T]] {
         lists +:= buf
         newreqs += (key -> buf)
       case Some(oreqs) => {
-        val reqCond = req.cond
         val oreq = oreqs(0)
         val oreqCond = oreq.cond
-        if (mkey.needsMerge(reqCond, oreqCond)) {
-//          val mergeCond = key.merge(reqCond, oreqCond)
+        if (mkey.needsMerge(oreqCond)) {
           oreqs += req
-//          val c = req.assert(oreq, mergeCond)
-//          if (!c.isEmpty)
-//            cons +:= c.get
         }
         else if (req != oreq) {
           val c = req.assert(oreq, req.cond)
