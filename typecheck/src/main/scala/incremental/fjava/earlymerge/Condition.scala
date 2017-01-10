@@ -209,22 +209,24 @@ class Condition(
 }
 
 object ConditionOther {
-  def apply(cls: CName, cond: Condition): ConditionTrait =
+  def apply(cls: Type, cond: Condition): ConditionTrait =
     if (Condition.trueCond == cond)
       Condition.trueCond
     else
       new ConditionOther(cls, cond)
 }
 
-final class ConditionOther(val cls: CName, val cond: Condition) extends ConditionTrait {
+final class ConditionOther(val cls: Type, val cond: Condition) extends ConditionTrait {
 
   override def toString: String = s"others($cls -> $cond)"
 
-  override def subst(clsx: Type, s: CSubst): Option[ConditionTrait] =
-    cond.subst(cls, s) match {
+  override def subst(clsx: Type, s: CSubst): Option[ConditionTrait] = {
+    val cls_ = cls.subst(s)
+    cond.subst(cls_, s) match {
       case None => return None
-      case Some(c) => Some(ConditionOther(cls, c))
+      case Some(c) => Some(ConditionOther(cls_, c))
     }
+  }
 
   override def uvars: Set[CVar[Type]] = cond.uvars
 

@@ -97,7 +97,7 @@ object IncHashedSet {
     override def hashCode(): Int = {
       var h = MurmurHash3.setSeed
       h = MurmurHash3.mix(h, a)
-      h = MurmurHash3.mix(h, b)
+      h = MurmurHash3.mixLast(h, b)
       MurmurHash3.finalizeHash(h, n)
     }
   }

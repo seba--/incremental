@@ -21,8 +21,8 @@ object Checkers extends App {
 
 //  println(prog)
 
-//  println("DU check: " + du.typecheck(prog))
-//  du.localState.printStatistics()
+  println("DU check: " + du.typecheck(prog))
+  du.localState.printStatistics()
 
 //  println("DUCont check: " + duCont.typecheck(prog))
 //  duCont.localState.printStatistics()

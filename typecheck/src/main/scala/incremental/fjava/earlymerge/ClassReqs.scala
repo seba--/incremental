@@ -84,9 +84,9 @@ trait CReq[T <: CReq[T]] {
         // Note: since cond.othersGround is only set in satisfyExt alongside a concrete cls and because
         // this.cls is not ground, cond.othersGround must be empty. Consequently, the rest of cond must be non-empty (otherwise would be trueCond).
         val cond_ = cond.asInstanceOf[Condition]
-        val subCond0 = new Condition(cond_.notGround, cond_.notVar, cond_.sameGroundAlternatives, cond_.sameVar + cls.asInstanceOf[UCName])
-        subCond0.forCls(sub).map { subCond =>
-          val supCond = ConditionOther(sub, subCond)
+        val subCond0 = cond_.alsoSame(cls, sub)
+        subCond0.map { subCond =>
+          val supCond = ConditionOther(cls, subCond)
           this.withCls(sup, supCond)
         }
       }
