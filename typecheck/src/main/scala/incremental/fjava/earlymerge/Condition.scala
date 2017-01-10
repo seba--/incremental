@@ -194,8 +194,8 @@ class Condition(
   def uvars: Set[CVar[Type]] = notVar.set.map(_.x) ++ sameVar.set.map(_.x)
 
   override def toString: String = {
-    val not = notGround.asInstanceOf[IncHashedSet[Type]] ++ notVar
-    val same = sameGroundAlternatives.asInstanceOf[IncHashedSet[Type]] ++ sameVar
+    val not = notGround.asInstanceOf[IncHashedSet[Type]] ++ notVar.asInstanceOf[IncHashedSet[Type]]
+    val same = sameGroundAlternatives.asInstanceOf[IncHashedSet[Type]] ++ sameVar.asInstanceOf[IncHashedSet[Type]]
     s"diff(${not.mkString(", ")}),same(${same.mkString(", ")})"
   }
 

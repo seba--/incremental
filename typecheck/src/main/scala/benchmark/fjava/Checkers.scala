@@ -29,4 +29,12 @@ object Checkers extends App {
 
   println("BU check: " + buEarlyCont.typecheck(prog))
   buEarlyCont.localState.printStatistics()
+
+  prog.kids(1).kids(0).invalidate
+
+  println("DU check incremental: " + du.typecheck(prog))
+  du.localState.printStatistics()
+
+  println("BU check incremental: " + buEarlyCont.typecheck(prog))
+  buEarlyCont.localState.printStatistics()
 }

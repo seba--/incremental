@@ -3,6 +3,7 @@ package incremental
 import constraints.State
 import constraints.Statistics.Statistics
 
+import scala.collection.immutable.HashSet
 import scala.collection.{GenTraversableOnce, mutable}
 import scala.util.hashing.MurmurHash3
 
@@ -64,7 +65,7 @@ class MyBuilder[K,V] extends mutable.Builder[((K, V), V), Map[K, V]] {
 
 object IncHashedSet {
   def empty[T]: IncHashedSet[T] = {
-    val set = Set.empty[T]
+    val set = HashSet.empty[T]
     new IncHashedSet[T](set, new IncrementalUnorderedHash())
   }
   def apply[T]() = empty[T]
@@ -105,9 +106,9 @@ object IncHashedSet {
 }
 
 class IncHashedSet[T](val set: Set[T], private val hash: IncHashedSet.IncrementalUnorderedHash) {
-  def +[T1 <: T](t: T1): IncHashedSet[T] = new IncHashedSet(set + t, hash + t)
-  def ++[T1 <: T](other: IncHashedSet[T1]): IncHashedSet[T] = new IncHashedSet(set ++ other.set, hash ++ other.hash)
-  def -[T1 <: T](t: T1): IncHashedSet[T] = new IncHashedSet(set - t, hash - t)
+  def +(t: T): IncHashedSet[T] = new IncHashedSet(set + t, hash + t)
+  def ++(other: IncHashedSet[T]): IncHashedSet[T] = new IncHashedSet(set union (other.set), hash ++ other.hash)
+  def -(t: T): IncHashedSet[T] = new IncHashedSet(set - t, hash - t)
   def isEmpty: Boolean = set.isEmpty
   def contains(t: T): Boolean = set.contains(t)
   def foreach(f: T => Unit): Unit = set.foreach(f)
