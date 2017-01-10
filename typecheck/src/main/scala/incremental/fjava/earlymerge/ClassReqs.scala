@@ -21,17 +21,43 @@ trait CReq[T <: CReq[T]] {
 
   def withCond(cond: ConditionTrait): T
 
-  def alsoNot(n: CName): Option[T] = cond.asInstanceOf[Condition].alsoNot(cls, n) map (withCond(_))
+  def alsoNot(n: CName): Option[T] =
+    if (cls.isGround) {
+      if (cls == n)
+        None
+      else
+        Some(self)
+    }
+    else
+      cond.asInstanceOf[Condition].alsoNot(cls, n) map (withCond(_))
+
   def alsoNot(n: UCName): Option[T] = cond.asInstanceOf[Condition].alsoNot(cls, n) map (withCond(_))
 
-  def alsoSame(n: CName): Option[T] = cond.asInstanceOf[Condition].alsoSame(cls, n) map (withCond(_))
+  def alsoSame(n: CName): Option[T] =
+    if (cls.isGround) {
+      if (cls == n)
+        Some(self)
+      else
+        None
+    }
+    else
+      cond.asInstanceOf[Condition].alsoSame(cls, n) map (withCond(_))
+  
   def alsoSame(n: UCName): Option[T] = cond.asInstanceOf[Condition].alsoSame(cls, n) map (withCond(_))
 
   def satisfyExt(sub: CName, sup: CName): Seq[T] = {
     // NOTE: we assume that the removal of an extends clause implies no further declarations appear for subclass `sub`
 
     // ext.cls != req.cls, so keep the original requirement
-    val diff = this.alsoNot(sub)
+    val diff =
+      if (cls.isGround) {
+        if (cls == sub)
+          None
+        else
+          Some(self)
+      }
+      else
+        this.alsoNot(sub)
 
     // ext.cls == req.cls, so replace the original requirement with a super-class requirement `ext.ext`
     val same =
@@ -360,26 +386,37 @@ class MapRequirementsBuilder[T <: CReq[T]] {
   def getRequirements: Seq[T] = {
     var seq = Seq[T]()
     lists.foreach { buf =>
-      var sameGroundAlternatives = Set[CName]()
-      var othersGroundSameGround = Map[CName, Set[CName]]()
-      buf.foreach { c =>
-        val cond = c.cond
-        sameGroundAlternatives ++= cond.sameGroundAlternatives
-
-        if (othersGroundSameGround.isEmpty)
-          othersGroundSameGround = cond.othersGround.mapValues(_.sameGroundAlternatives)
-        else
-          othersGroundSameGround = othersGroundSameGround.map { case (key, cts) => key -> (cts ++ cond.othersGround(key).sameGroundAlternatives ) }
-      }
       val head = buf(0)
       val headcond = head.cond
-      val mergeCond = Condition(
-        headcond.notGround,
-        headcond.notVar,
-        sameGroundAlternatives,
-        headcond.sameVar,
-        headcond.othersGround.map { case (key,cn) => key -> new ConditionNested(cn.notGround, cn.notVar, othersGroundSameGround(key), cn.sameVar) }
-      )
+
+      val mergeCond = if (headcond.isInstanceOf[Condition]) {
+        val headcond_ = headcond.asInstanceOf[Condition]
+        var sameGroundAlternatives = Set[CName]()
+        buf.foreach { c =>
+          val cond = c.cond.asInstanceOf[Condition]
+          sameGroundAlternatives ++= cond.sameGroundAlternatives
+        }
+        Condition(
+          headcond_.notGround,
+          headcond_.notVar,
+          sameGroundAlternatives,
+          headcond_.sameVar
+        )
+      }
+      else {
+        val headcond_ = headcond.asInstanceOf[ConditionOther]
+        var othersGroundSameGround = Map[CName, ListBuffer[CName]]()
+        buf.foreach { c =>
+          val cond = c.cond.asInstanceOf[ConditionOther]
+          if (othersGroundSameGround.isEmpty)
+            othersGroundSameGround = cond.others.mapValues(c => ListBuffer.empty ++= c.sameGroundAlternatives)
+          else
+            othersGroundSameGround.foreach { case (key, cts) => cts ++= cond.others(key).sameGroundAlternatives }
+        }
+        val others = headcond_.others.map { case (key, cn) => key -> new Condition(cn.notGround, cn.notVar, othersGroundSameGround(key).toSet, cn.sameVar) }
+        new ConditionOther(others)
+      }
+
       seq +:= head.withCond(mergeCond)
       buf.foreach{ req =>
         val c = req.assert(head, mergeCond)
