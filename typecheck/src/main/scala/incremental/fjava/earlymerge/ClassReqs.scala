@@ -15,36 +15,48 @@ trait CReq[T <: CReq[T]] {
   def withCls(t: Type, newcond: Condition): T
   val cond: Condition
   def canMerge(other: CReq[T]): Boolean
-  def assert(sat: CReq[T]): Option[Constraint] = alsoSame(sat.cls).flatMap(c2 => this.assert(sat, c2.cond))
+  def assert(sat: CReq[T]): Option[Constraint] = alsoSame(sat.cls.asInstanceOf[CName]).flatMap(c2 => this.assert(sat, c2.cond))
   def assert(other: CReq[T], cond: Condition): Option[Constraint]
   def subst(s: CSubst): Option[T]
 
   def withCond(cond: Condition): T
-  def alsoNot(n: Type): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
-  def alsoSame(n: Type): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
+
+  def alsoNot(n: CName): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
+  def alsoNot(n: UCName): Option[T] = cond.alsoNot(cls, n) map (withCond(_))
+
+  def alsoSame(n: CName): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
+  def alsoSame(n: UCName): Option[T] = cond.alsoSame(cls, n) map (withCond(_))
 
   def satisfyExt(sub: CName, sup: CName): Seq[T] = {
-    // NOTE: we assume that the removal of an extends clause implies no further declarations appear for subclass `ext.cls`
+    // NOTE: we assume that the removal of an extends clause implies no further declarations appear for subclass `sub`
 
     // ext.cls != req.cls, so keep the original requirement
     val diff = this.alsoNot(sub)
+
     // ext.cls == req.cls, so replace the original requirement with a super-class requirement `ext.ext`
-    val same = this.alsoSame(sub).map { _ =>
+    val same =
       if (cls.isGround) {
-        if (cls == sub)
-          self
+        if (cls == sub) {
+          val subCond = ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives, cond.sameVar)
+          val others = if (subCond == ConditionNested.trueCond) cond.othersGround else (cond.othersGround + (sub -> subCond))
+          val supCond = Condition(Set.empty, Set.empty, Set.empty, Set.empty, others)
+          Some(this.withCls(sup, supCond))
+        }
         else {
-          val subCond = new ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives + cls.asInstanceOf[CName], cond.sameVar)
-          val supCond = Condition(Set(), Set(), Set(), Set(), cond.othersGround + (sub -> subCond))
-          this.withCls(sup, supCond)
+          None
         }
       }
       else {
-        val subCond = new ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives, cond.sameVar + cls.asInstanceOf[UCName])
-        val supCond = Condition(Set(), Set(), Set(), Set(), cond.othersGround + (sub -> subCond))
-        this.withCls(sup, supCond)
+        // Note: since cond.othersGround is only set in satisfyExt alongside a concrete cls and because
+        // this.cls is not ground, cond.othersGround must be empty. Consequently, the rest of cond must be non-empty (otherwise would be trueCond).
+        Predef.assert(cond.othersGround.isEmpty)
+        val subCond0 = new ConditionNested(cond.notGround, cond.notVar, cond.sameGroundAlternatives, cond.sameVar + cls.asInstanceOf[UCName])
+        subCond0.forCls(sub).map { subCond =>
+          val others = if (subCond == ConditionNested.trueCond) Map.empty[CName, ConditionNested] else Map(sub -> subCond)
+          val supCond = Condition(Set.empty, Set.empty, Set.empty, Set.empty, others)
+          this.withCls(sup, supCond)
+        }
       }
-    }
 
     if (diff.isEmpty) {
       if (same.isEmpty)
@@ -212,22 +224,48 @@ case class ClassReqs (
   }
 
   def addRequirement[T <: CReq[T]](crs: Seq[T], req: T): (Seq[T], Seq[Constraint]) = {
-    // the new requirement, refined to be different from all existing requirements
-    var diffreq: Option[T] = if (crs.size != 1) Some(req) else None
+    if (crs.isEmpty)
+      return (Seq(req), Seq.empty)
 
     val builder = new MapRequirementsBuilder[T]
 
     // updated requirements
     crs.foreach{ creq =>
-      if (creq.canMerge(req)) {
-        diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
-
-        val diff1 = creq.alsoNot(req.cls)
-        val same1 = creq.alsoSame(req.cls)
+      if (creq.cls.isGround && req.cls.isGround) {
+        // if (creq.cls == req.cls) diff1 = None, diff2 = None, same1 = Some(creq), same2 = Some(req)
+        // else                     diff1 = Some(creq), diff2 = Some(req), same1 = None, same2 = None
+        // thus in all cases:
+         builder.addReq(creq)
+         builder.addReq(req)
+      }
+      else if (creq.cls.isGround) {
+        // creq.cls is ground but req.cls is not ground (due to previous conditional branch)
+        // thus req.cls is compatible with creq as either same or different
+        // val diff1 = creq.alsoNot(req.cls)  =>  Some(...)
+        // val same1 = creq.alsoSame(req.cls)  =>  Some(...)
+        builder.addReq(creq)
+        val diff2 = req.alsoNot(creq.cls.asInstanceOf[CName])
+        val same2 = req.alsoSame(creq.cls.asInstanceOf[CName])
+        val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
+        if (!req2.isEmpty)
+          builder.addReq(req2.get)
+      }
+      else if (req.cls.isGround) {
+        // analogous to previous branch
+        val diff1 = creq.alsoNot(req.cls.asInstanceOf[CName])
+        val same1 = creq.alsoSame(req.cls.asInstanceOf[CName])
+        val req1 = if (diff1.isEmpty) same1 else if (same1.isEmpty) diff1 else Some(creq)
+        if (!req1.isEmpty)
+          builder.addReq(req1.get)
+        builder.addReq(req)
+      }
+      else {
+        val diff1 = creq.alsoNot(req.cls.asInstanceOf[UCName])
+        val same1 = creq.alsoSame(req.cls.asInstanceOf[UCName])
         val req1 = if (diff1.isEmpty) same1 else if (same1.isEmpty) diff1 else Some(creq)
 
-        val diff2 = req.alsoNot(creq.cls)
-        val same2 = req.alsoSame(creq.cls)
+        val diff2 = req.alsoNot(creq.cls.asInstanceOf[UCName])
+        val same2 = req.alsoSame(creq.cls.asInstanceOf[UCName])
         val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
 
         if (!req1.isEmpty)
@@ -235,12 +273,7 @@ case class ClassReqs (
         if (!req2.isEmpty)
           builder.addReq(req2.get)
       }
-      else
-        Seq(creq)
     }
-
-    if (!diffreq.isEmpty)
-      builder.addReq(diffreq.get)
 
     (builder.getRequirements, builder.getConstraints)
   }
@@ -249,43 +282,20 @@ case class ClassReqs (
     val seq = crs.getOrElse(req.name,
       return (crs + (req.name -> Seq(req)), Seq()))
 
-    // the new requirement, refined to be different from all existing requirements
-    var diffreq: Option[T] = if (seq.size != 1) Some(req) else None
-
-    val builder = new MapRequirementsBuilder[T]
-
-    seq.foreach{ creq =>
-      diffreq = diffreq.flatMap(_.alsoNot(creq.cls))
-
-      val diff1 = creq.alsoNot(req.cls)
-      val same1 = creq.alsoSame(req.cls)
-      val req1 = if (diff1.isEmpty) same1 else if (same1.isEmpty) diff1 else Some(creq)
-
-      val diff2 = req.alsoNot(creq.cls)
-      val same2 = req.alsoSame(creq.cls)
-      val req2 = if (diff2.isEmpty) same2 else if (same2.isEmpty) diff2 else Some(req)
-
-      if (!req1.isEmpty)
-        builder.addReq(req1.get)
-      if (!req2.isEmpty)
-        builder.addReq(req2.get)
-    }
-
-    if (!diffreq.isEmpty)
-      builder.addReq(diffreq.get)
-
-    (crs + (req.name -> builder.getRequirements), builder.getConstraints)
+    val (newReqs, cons) = addRequirement(seq,req)
+    (crs + (req.name -> newReqs), cons)
   }
 
 
   def satisfyCReq[T <: CReq[T]](sat: T, crs: Seq[T]): (Seq[T], Seq[Constraint]) = {
+    // sat.cls is ground and sat.cond is trueCond
     var cons = Seq[Constraint]()
     val newcrs = crs flatMap ( creq =>
       if (sat.canMerge(creq)) {
         val mcons = creq.assert(sat)
         if (!mcons.isEmpty)
           cons +:= mcons.get
-        creq.alsoNot(sat.cls)
+        creq.alsoNot(sat.cls.asInstanceOf[CName])
       }
       else
         Some(creq)
@@ -301,7 +311,7 @@ case class ClassReqs (
     val newcrs = set.flatMap( creq =>
       if (sat.canMerge(creq)) {
         cons ++= creq.assert(sat)
-        creq.alsoNot(sat.cls)
+        creq.alsoNot(sat.cls.asInstanceOf[CName])
       }
       else
         Some(creq)
@@ -315,10 +325,11 @@ case class ClassReqs (
 
 class MapRequirementsBuilder[T <: CReq[T]] {
   private var lists = Seq[ListBuffer[T]]()
-  private var newreqs = Map[Condition.MergeKey, ListBuffer[T]]()
+  private var newreqs = Map[(Type, Condition.MergeKey), ListBuffer[T]]()
   private var cons = Seq[Constraint]()
   def addReq(req: T) = {
-    val key = req.cond.mergeKey(req.cls)
+    val mkey = req.cond.mergeKey
+    val key = (req.cls, mkey)
     newreqs.get(key) match {
       case None =>
         val buf = ListBuffer(req)
@@ -328,7 +339,7 @@ class MapRequirementsBuilder[T <: CReq[T]] {
         val reqCond = req.cond
         val oreq = oreqs(0)
         val oreqCond = oreq.cond
-        if (key.needsMerge(reqCond, oreqCond)) {
+        if (mkey.needsMerge(reqCond, oreqCond)) {
 //          val mergeCond = key.merge(reqCond, oreqCond)
           oreqs += req
 //          val c = req.assert(oreq, mergeCond)
