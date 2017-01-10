@@ -4,7 +4,7 @@ import constraints.fjava.CSubst.CSubst
 import constraints.fjava.{Type, _}
 import Condition.trueCond
 import constraints.CVar
-import incremental.Util
+import incremental.{IncHashedSet, Util}
 import incremental.fjava.{CName, UCName}
 
 import scala.collection.mutable.ListBuffer
@@ -391,7 +391,7 @@ class MapRequirementsBuilder[T <: CReq[T]] {
 
       val mergeCond = if (headcond.isInstanceOf[Condition]) {
         val headcond_ = headcond.asInstanceOf[Condition]
-        var sameGroundAlternatives = Set[CName]()
+        var sameGroundAlternatives = IncHashedSet.empty[CName]
         buf.foreach { c =>
           val cond = c.cond.asInstanceOf[Condition]
           sameGroundAlternatives ++= cond.sameGroundAlternatives
@@ -405,12 +405,12 @@ class MapRequirementsBuilder[T <: CReq[T]] {
       }
       else {
         val headcond_ = headcond.asInstanceOf[ConditionOther]
-        var othersGroundSameGround = ListBuffer.empty[CName]
+        var othersGroundSameGround = IncHashedSet.empty[CName]
         buf.foreach { c =>
           val c_ = c.cond.asInstanceOf[ConditionOther]
           othersGroundSameGround ++= c_.cond.sameGroundAlternatives
         }
-        val other = Condition(headcond_.cond.notGround, headcond_.cond.notVar, othersGroundSameGround.toSet, headcond_.cond.sameVar)
+        val other = Condition(headcond_.cond.notGround, headcond_.cond.notVar, othersGroundSameGround, headcond_.cond.sameVar)
         new ConditionOther(headcond_.cls, other)
       }
 

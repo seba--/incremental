@@ -3,7 +3,8 @@ package incremental
 import constraints.State
 import constraints.Statistics.Statistics
 
-import scala.collection.mutable
+import scala.collection.{GenTraversableOnce, mutable}
+import scala.util.hashing.MurmurHash3
 
 /**
  * Created by seba on 06/11/14.
@@ -61,3 +62,82 @@ class MyBuilder[K,V] extends mutable.Builder[((K, V), V), Map[K, V]] {
   def result() = res
 }
 
+object IncHashedSet {
+  def empty[T]: IncHashedSet[T] = {
+    val set = Set.empty[T]
+    new IncHashedSet[T](set, new IncrementalUnorderedHash())
+  }
+  def apply[T]() = empty[T]
+  def apply[T](t: T) = empty[T] + t
+
+  class IncrementalUnorderedHash(val a: Int = 0, val b: Int = 0, val n: Int = 0) {
+    def +(x: Any): IncrementalUnorderedHash = {
+      val h = x.##
+      val newa = a + h
+      val newb = b ^ h
+      val newn = n + 1
+      new IncrementalUnorderedHash(newa, newb, newn)
+    }
+
+    def ++(other: IncrementalUnorderedHash) = {
+      val newa = a + other.a
+      val newb = b ^ other.b
+      val newn = n + other.n
+      new IncrementalUnorderedHash(newa, newb, newn)
+    }
+
+    def -(x: Any): IncrementalUnorderedHash = {
+      val h = x.##
+      val newa = a - h
+      val newb = b ^ h
+      val newn = n - 1
+      new IncrementalUnorderedHash(newa, newb, newn)
+    }
+
+    override def hashCode(): Int = {
+      var h = MurmurHash3.setSeed
+      h = MurmurHash3.mix(h, a)
+      h = MurmurHash3.mix(h, b)
+      MurmurHash3.finalizeHash(h, n)
+    }
+  }
+}
+
+class IncHashedSet[T](val set: Set[T], private val hash: IncHashedSet.IncrementalUnorderedHash) {
+  def +[T1 <: T](t: T1): IncHashedSet[T] = new IncHashedSet(set + t, hash + t)
+  def ++[T1 <: T](other: IncHashedSet[T1]): IncHashedSet[T] = new IncHashedSet(set ++ other.set, hash ++ other.hash)
+  def -[T1 <: T](t: T1): IncHashedSet[T] = new IncHashedSet(set - t, hash - t)
+  def isEmpty: Boolean = set.isEmpty
+  def contains(t: T): Boolean = set.contains(t)
+  def foreach(f: T => Unit): Unit = set.foreach(f)
+  def mkString(sep: String): String = set.mkString(sep)
+
+  def map[B](f: T => B): IncHashedSet[B] = {
+    val builder = Set.newBuilder[B]
+    var hash = new IncHashedSet.IncrementalUnorderedHash()
+    for (t <- set) {
+      val b = f(t)
+      builder += b
+      hash += b
+    }
+    new IncHashedSet(builder.result(), hash)
+  }
+
+  def flatMap(f: T => GenTraversableOnce[T]): IncHashedSet[T] = {
+    val builder = Set.newBuilder[T]
+    var hash = new IncHashedSet.IncrementalUnorderedHash()
+    for (t <- set;
+         newt <- f(t)) {
+      builder += newt
+      hash += newt
+    }
+    new IncHashedSet(builder.result(), hash)
+  }
+
+  override def hashCode(): Int = hash.hashCode()
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case that: IncHashedSet[_] => set == that.set
+    case _ => false
+  }
+}
