@@ -69,6 +69,7 @@ object IncHashedSet {
   }
   def apply[T]() = empty[T]
   def apply[T](t: T) = empty[T] + t
+  def fromCol[T](ts: Iterable[T]) = ts.foldLeft(empty[T])(_+_)
 
   class IncrementalUnorderedHash(val a: Int = 0, val b: Int = 0, val n: Int = 0) {
     def +(x: Any): IncrementalUnorderedHash = {

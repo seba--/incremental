@@ -253,7 +253,7 @@ case class ClassReqs (
     if (crs1.isEmpty)
       return (crs2, Seq())
 
-    Util.loop[Map[Symbol, Seq[T]], T, Constraint](addRequirementMap)(crs1, crs2.values.toStream.flatten)
+    Util.loop[Map[Symbol, Seq[T]], T, Constraint](addRequirementMap)(crs1, crs2.toStream.map(_._2).flatten)
   }
 
   def addRequirement[T <: CReq[T]](crs: Seq[T], req: T): (Seq[T], Seq[Constraint]) = {
@@ -356,17 +356,28 @@ case class ClassReqs (
   }
 }
 
+object MapRequirementsBuilder {
+  class Key(val t: Type, val mk: MergeKey) {
+    override val hashCode: Int = t.hashCode + 31*mk.hashCode
+
+    override def equals(obj: scala.Any): Boolean = obj match {
+      case other: Key => t == other.t && mk == other.mk
+      case _ => false
+    }
+
+  }
+}
 class MapRequirementsBuilder[T <: CReq[T]] {
-  private var lists = Seq[ListBuffer[T]]()
-  private var newreqs = Map[(Type, MergeKey), ListBuffer[T]]()
+  private var lists = ListBuffer[ListBuffer[T]]()
+  private var newreqs = Map[MapRequirementsBuilder.Key, ListBuffer[T]]()
   private var cons = Seq[Constraint]()
   def addReq(req: T) = {
     val mkey = req.cond.mergeKey
-    val key = (req.cls, mkey)
+    val key = new MapRequirementsBuilder.Key(req.cls, mkey)
     newreqs.get(key) match {
       case None =>
         val buf = ListBuffer(req)
-        lists +:= buf
+        lists += buf
         newreqs += (key -> buf)
       case Some(oreqs) => {
         val oreq = oreqs(0)
