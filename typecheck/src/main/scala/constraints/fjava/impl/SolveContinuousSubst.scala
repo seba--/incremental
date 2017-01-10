@@ -3,9 +3,10 @@ package constraints.fjava.impl
 
 import constraints.{CTermBase, CVar, Statistics}
 import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{UCName, CName}
+import incremental.fjava.{CName, UCName}
 import constraints.fjava._
 import incremental.Util
+import incremental.fjava.earlymerge.Conditional
 
 import scala.collection.generic.CanBuildFrom
 
@@ -73,7 +74,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
           else newBounds = newBounds + (t -> lt)
       }
 
-      var current = SolveContinuousSubstCS(this.substitution, newBounds, this._notyet, this.never, this.extend)
+      var current = _notyet.foldLeft(copy(_notyet = Seq()))((cs, c) => c.solve(cs))
       var stepsWithoutChange = 0
       while (!current._notyet.isEmpty) {
         val next = current._notyet.head
@@ -129,7 +130,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       false
 
 
-  def addUpperBound(t1: Type, t2: Type) =
+  def addUpperBound(t1: Type, t2: Type): SolveContinuousSubstCS =
     if (t1 == t2)
       this
     else if (isSubtype(t1, t2))
@@ -159,10 +160,13 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
   = it.map(u => (u, f(u).subst(substitution)))
 
-  def propagate =
-    Util.timed(state -> Statistics.constraintSolveTime) {
-      _notyet.foldLeft(copy(substitution = Map(), _notyet = Seq()))((cs, c) => c.solve(cs)).trySolve
-    }
+  def propagate = {
+    val newNotyet = _notyet.map(_.subst(substitution))
+    SolveContinuousSubstCS(Map(), bounds, newNotyet, never, extend)
+  }
+//    Util.timed(state -> Statistics.constraintSolveTime) {
+//      _notyet.foldLeft(copy(substitution = Map(), _notyet = Seq()))((cs, c) => c.solve(cs)).trySolve
+//    }
 
   def solved(s: CSubst): SolveContinuousSubstCS = {
     var mysubst = this.substitution.mapValues(x => x.subst(s)).view.force

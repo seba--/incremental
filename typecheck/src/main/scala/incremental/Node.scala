@@ -28,6 +28,7 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   private var _size = sumSize(kidsArg)
   private var _typ: T = _
   private var _valid = false
+  private var parent: Node_[T] = _
 
   def height = _height
 
@@ -38,14 +39,24 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
     _typ = t
     _valid = true
   }
-  def invalidate: Unit = {
+  def invalidate(): Unit = {
     _typ = null.asInstanceOf[T]
     _valid = false
     _kids foreach (_.invalidate)
+    invalidateParents()
+  }
+
+  private def invalidateParents(): Unit = {
+    var current = this
+    while (current.parent != null) {
+      current = current.parent
+      current._valid = false
+    }
   }
 
   private val _kids: Array[Node_[T]] = Array(kidsArg:_*)
-  private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
+  private var availableKidTypes: Seq[Boolean] = _kids map (_.typ != null)
+  _kids foreach { _.parent = this }
 
   object kids {
     def apply(i: Int) = _kids(i)
@@ -58,6 +69,8 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       _kids(i) = ee
       _height = maxHeight(_kids)
       _size = sumSize(_kids)
+      ee.parent = Node_.this
+      invalidateParents()
     }
     def seq: Seq[Node_[T]] = _kids
   }
@@ -84,8 +97,12 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   }
 
   def visitUninitialized(f: Node_[T] => Boolean): Boolean = {
+    if (_valid)
+      return false
+    if (_kids.isEmpty)
+      return f(this)
     val hasSubchange = _kids.foldLeft(false)((changed, k) =>  k.visitUninitialized(f) || changed)
-    if (!valid || hasSubchange)
+    if (!_valid || hasSubchange)
       f(this)
     else
       false

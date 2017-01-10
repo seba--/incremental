@@ -101,7 +101,7 @@ trait CReq[T <: CReq[T]] {
       if (same.isEmpty)
         Seq(diff.get)
       else
-        Seq(diff.get, same.get)
+        Seq(diff.get, same.get) // TODO keep the two reqs together to improve merge behavior (yielding a single unconditional constraint)
     }
   }
 }

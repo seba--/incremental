@@ -190,7 +190,6 @@ class Condition(
       res
     }
 
-
   def uvars: Set[CVar[Type]] = notVar.set.map(_.x) ++ sameVar.set.map(_.x)
 
   override def toString: String = {
@@ -304,7 +303,10 @@ class Conditional(val cons: Constraint, val cls: Type, val cond: ConditionTrait)
 
   override def subst(s: CSubst): Constraint = {
     val cls_ = cls.subst(s)
-    Conditional(cons.subst(s), cls_, cond.subst(cls_, s).getOrElse(Condition.trueCond))
+    cond.subst(cls_, s) match {
+      case None => cons.subst(s)
+      case Some(cond_) => Conditional(cons.subst(s), cls_, cond_)
+    }
   }
 
   override def uvars: Set[CVar[Type]] = cons.uvars ++ cls.uvars ++ cond.uvars
@@ -321,7 +323,7 @@ class Conditional(val cons: Constraint, val cls: Type, val cond: ConditionTrait)
 }
 object Conditional {
   def apply(cons: Constraint, cls: Type, cond: ConditionTrait): Constraint =
-    if (cond == Condition.trueCond)
+    if (Condition.trueCond == cond)
       cons
     else
       new Conditional(cons, cls, cond)

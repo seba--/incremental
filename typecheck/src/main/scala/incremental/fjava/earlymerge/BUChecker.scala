@@ -310,7 +310,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     var newcctx = cctx
     var newreqs = reqs
     var lastSubst: CSubst = Map()
-    while (!newcons.isEmpty) {
+    var atLeastOnce = finalize && cons.isEmpty
+
+    while (!newcons.isEmpty || atLeastOnce) {
+      atLeastOnce = false
       newcs = newcs.addNewConstraints(newcons)
       if (finalize)
         newcs = newcs.tryFinalize.asInstanceOf[CS]
