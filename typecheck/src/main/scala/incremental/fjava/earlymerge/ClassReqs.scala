@@ -42,7 +42,7 @@ trait CReq[T <: CReq[T]] {
     }
     else
       cond.asInstanceOf[Condition].alsoSame(cls, n) map (withCond(_))
-  
+
   def alsoSame(n: UCName): Option[T] = cond.asInstanceOf[Condition].alsoSame(cls, n) map (withCond(_))
 
   def satisfyExt(sub: CName, sup: CName): Seq[T] = {
@@ -405,16 +405,13 @@ class MapRequirementsBuilder[T <: CReq[T]] {
       }
       else {
         val headcond_ = headcond.asInstanceOf[ConditionOther]
-        var othersGroundSameGround = Map[CName, ListBuffer[CName]]()
+        var othersGroundSameGround = ListBuffer.empty[CName]
         buf.foreach { c =>
-          val cond = c.cond.asInstanceOf[ConditionOther]
-          if (othersGroundSameGround.isEmpty)
-            othersGroundSameGround = cond.others.mapValues(c => ListBuffer.empty ++= c.sameGroundAlternatives)
-          else
-            othersGroundSameGround.foreach { case (key, cts) => cts ++= cond.others(key).sameGroundAlternatives }
+          val c_ = c.cond.asInstanceOf[ConditionOther]
+          othersGroundSameGround ++= c_.cond.sameGroundAlternatives
         }
-        val others = headcond_.others.map { case (key, cn) => key -> new Condition(cn.notGround, cn.notVar, othersGroundSameGround(key).toSet, cn.sameVar) }
-        new ConditionOther(others)
+        val other = Condition(headcond_.cond.notGround, headcond_.cond.notVar, othersGroundSameGround.toSet, headcond_.cond.sameVar)
+        new ConditionOther(headcond_.cls, other)
       }
 
       seq +:= head.withCond(mergeCond)
