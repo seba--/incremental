@@ -208,19 +208,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
         case Some(t1) => newcons = t1.compatibleWith(t2) +: newcons
       }
     }
-    SolveContinuousSubstCS(mysubst, bounds, this._notyet, this.never, this.extend)
-//    val cs = init.addNewConstraints(newcons)
-////    val cs = this.extend.foldLeft(init) { case (cs, (t, tsuper)) =>
-////      val t2 = t.subst(s)
-////      val tsuper2 = tsuper.subst(s)
-////        cs.extend.get(t2.asInstanceOf[GroundType]) match {
-////          case Some(up) => Equal(tsuper, up).solve(cs)
-////          case None => cs
-////    }
-//    val extendedCS = bounds.foldLeft(cs) { case (cs, (t,ts)) =>
-//      ts.foldLeft(cs) { case (cs, tsuper) => cs.addUpperBound(t.subst(s), tsuper.subst(s))}
-//    }
-//    extendedCS
+    SolveContinuousSubstCS(mysubst, bounds, this._notyet, this.never, this.extend).addNewConstraints(newcons)
   }
 
 }
