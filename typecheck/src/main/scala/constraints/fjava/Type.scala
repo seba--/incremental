@@ -23,6 +23,7 @@ trait Type extends CTerm[Type] {
 
 trait GroundType extends Type {
   final override def isGround = true
+  final override def subst(s: CSubst) = this
 }
 
 

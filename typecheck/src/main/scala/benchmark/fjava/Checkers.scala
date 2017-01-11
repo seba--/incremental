@@ -18,7 +18,7 @@ object Checkers extends App {
 
   lazy val buEarlyCont: TypeChecker[_] = new earlymerge.BUCheckerFactory(SolveContinuousSubst).makeChecker
 
-  val prog = Trees.intAcumPrevSuperHierarchy(10, 5, 2)(Trees.Unique)
+  val prog = Trees.intAcumPrevSuperHierarchy(20, 5, 2)(Trees.Unique)
 
 //  println(prog)
 
@@ -34,7 +34,7 @@ object Checkers extends App {
   println()
   var count = 0
   var time = 0.0
-  for (i <- 1 to 10) {
+  for (i <- 1 to 3) {
     count += 1
 
     prog.kids(1).kids(0).invalidate

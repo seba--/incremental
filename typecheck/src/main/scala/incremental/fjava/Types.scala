@@ -43,7 +43,6 @@ case class CName(x: Symbol) extends GroundType {
   def freeTVars = Set()
   def normalize = this
   def occurs(x2: CVar[_]) = x == x2
-  def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other.subst(cs.substitution))
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
     case CName(`x`) => cs
@@ -61,7 +60,6 @@ case object ProgramOK extends GroundType {
   def freeTVars = Set()
   def normalize = this
   def occurs(x2: CVar[_]) = false
-  def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = ???
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = if (other == this) cs else cs.never(Equal(this, other))
   def uvars = Set()
@@ -71,7 +69,6 @@ case object ClassOK extends GroundType {
   def freeTVars = Set()
   def normalize = this
   def occurs(x2: CVar[_]) = false
-  def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = this.unify(other, cs)
   def uvars = Set()
@@ -81,7 +78,6 @@ case object MethodOK extends GroundType {
   def freeTVars = Set()
   def normalize = this
   def occurs(x2: CVar[_]) = false
-  def subst(cs: CSubst) = this
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other.unify(this, cs)
   def uvars = Set()
