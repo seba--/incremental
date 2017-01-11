@@ -11,7 +11,6 @@ import scala.collection.mutable.ListBuffer
 
 trait CReq[T <: CReq[T]] {
   def self: T
-  def cloned(): T
   val cls: Type
   def withCls(t: Type, newcond: ConditionTrait): T
   val cond: ConditionTrait
@@ -19,8 +18,6 @@ trait CReq[T <: CReq[T]] {
   def assert(sat: CReq[T]): Option[Constraint] = alsoSame(sat.cls.asInstanceOf[CName]).flatMap(c2 => this.assert(sat, c2.cond))
   def assert(other: CReq[T], cond: ConditionTrait): Option[Constraint]
   def subst(s: CSubst): Option[T]
-  var paired: Option[T] = None
-
   def withCond(cond: ConditionTrait): T
 
   def alsoNot(n: CName): Option[T] =
@@ -103,13 +100,7 @@ trait CReq[T <: CReq[T]] {
       if (same.isEmpty)
         Seq(diff.get)
       else {
-        var req1 = diff.get
-        if (this eq req1) req1 = cloned()
-        var req2 = same.get
-        if (this eq req2) req2 = cloned()
-        req1.paired = Some(req2)
-        req2.paired = Some(req1)
-        Seq(req1, req2) // TODO keep the two reqs together to improve merge behavior (yielding a single unconditional constraint)
+        Seq(diff.get, same.get) // TODO keep the two reqs together to improve merge behavior (yielding a single unconditional constraint)
       }
     }
   }
@@ -117,7 +108,6 @@ trait CReq[T <: CReq[T]] {
 
 case class ExtCReq(cls: Type, ext: Type, cond: ConditionTrait = trueCond) extends CReq[ExtCReq] {
   def self = this
-  override def cloned() = copy()
   def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[ExtCReq]) = true
   def assert(other: CReq[ExtCReq], cond: ConditionTrait) = if (ext == other.self.ext) None else Some(Conditional(Equal(ext, other.self.ext), cls, cond))
@@ -129,7 +119,6 @@ case class ExtCReq(cls: Type, ext: Type, cond: ConditionTrait = trueCond) extend
 }
 case class CtorCReq(cls: Type, args: Seq[Type], cond: ConditionTrait = trueCond) extends CReq[CtorCReq] {
   def self = this
-  override def cloned() = copy()
   def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[CtorCReq]) = true
   def assert(other: CReq[CtorCReq], cond: ConditionTrait) = if (args == other.self.args) None else Some(Conditional(AllEqual(args, other.self.args), cls, cond))
@@ -144,7 +133,6 @@ trait Named {
 }
 case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = trueCond) extends CReq[FieldCReq] with Named {
   def self = this
-  override def cloned() = copy()
   def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[FieldCReq]): Boolean = name == other.self.name
   def assert(other: CReq[FieldCReq], cond: ConditionTrait) = if (typ == other.self.typ) None else Some(Conditional(Equal(typ, other.self.typ), cls, cond))
@@ -156,7 +144,6 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
 }
 case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, optionallyDefined: Boolean = false, cond: ConditionTrait = trueCond) extends CReq[MethodCReq] with Named {
   def self = this
-  override def cloned() = copy()
   def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
   def assert(other: CReq[MethodCReq], cond: ConditionTrait) = if (ret == other.self.ret && params == other.self.params) None else Some(Conditional(AllEqual(ret +: params, other.self.ret +: other.self.params), cls, cond))
