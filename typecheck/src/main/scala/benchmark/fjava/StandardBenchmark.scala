@@ -36,8 +36,8 @@ class StandardBenchmarkClass extends Bench.LocalTime {
     measureT("BU-Early-Cont", buEarlyCont)(trees)
   }
 
-//  measureCheckers(Trees.intAcumSuperHierarchyTrees)
-//  measureCheckers(Trees.intAcumPrevHierarchyTrees)
+  measureCheckers(Trees.intAcumSuperHierarchyTrees)
+  measureCheckers(Trees.intAcumPrevHierarchyTrees)
   measureCheckers(Trees.intAcumPrevSuperHierarchyTrees)
 }
 

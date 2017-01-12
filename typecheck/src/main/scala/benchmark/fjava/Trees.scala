@@ -4,7 +4,8 @@ import incremental.Node._
 import incremental.fjava._
 import org.scalameter.api.Gen
 import org.scalameter.picklers.Implicits.intPickler
-import org.scalameter.picklers.Pickler
+
+import Predef.{$conforms => _, _}
 
 import scala.collection.immutable.ListMap
 
@@ -22,6 +23,8 @@ object Trees {
     * @param path path to current subhierarchy
     */
   type MkMethods = Seq[Int] => Seq[Node]
+
+  type MkClassWrap = Node => Node
 
   /**
     * @return true if the path refers to a root class (which subclasses Object)
@@ -63,7 +66,7 @@ object Trees {
     * @param height height of each subhierarchy
     * @param branching subclass branching factor within subhierarchies
     */
-  def hierarchy(roots: Int, height: Int, branching: Int)(implicit mkFields: MkFields, mkMethods: MkMethods): Node = {
+  def hierarchy(roots: Int, height: Int, branching: Int)(implicit mkFields: MkFields, mkMethods: MkMethods, mkClassWrap: MkClassWrap): Node = {
     val rootClasses = for (rootID <- 0 until roots)
       yield subhierarchy(height, branching, Seq(rootID))
     ProgramM(Seq(), rootClasses)
@@ -74,7 +77,7 @@ object Trees {
     * @param branching subclass branching factor within subhierarchies
     * @param path path to current subhierarchy
     */
-  def subhierarchy(height: Int, branching: Int, path: Seq[Int])(implicit mkFields: MkFields, mkMethods: MkMethods): Node = {
+  def subhierarchy(height: Int, branching: Int, path: Seq[Int])(implicit mkFields: MkFields, mkMethods: MkMethods, mkClassWrap: MkClassWrap): Node = {
     val fields = mkFields(path)
     val superfields = {
       var prefix = 1
@@ -86,10 +89,10 @@ object Trees {
       }
       fields
     }
-    val cls = ClassDec(
+    val cls = mkClassWrap(ClassDec(
       Seq(cname(path), csuper(path), Ctor(superfields, fields), fields.toSeq),
       mkMethods(path)
-    )
+    ))
 
     if (height < 1)
       ProgramM()
@@ -127,6 +130,7 @@ object Trees {
 
   val noFields: MkFields = path => ListMap()
   val noMethods: MkMethods = path => Seq()
+  val noClassWrap: MkClassWrap = cls => cls
 
   /**
     * Generates a class hierarchy where
@@ -147,6 +151,8 @@ object Trees {
         )
       )
     }
+
+    implicit val mkClassWrap = noClassWrap
 
     val prog = hierarchy(roots, height, branching)
     ProgramM(prog, Classes.NatClasses)
@@ -182,6 +188,8 @@ object Trees {
       )
     }
 
+    implicit val mkClassWrap = noClassWrap
+
     val prog = hierarchy(roots, height, branching)
     ProgramM(prog, Classes.NatClasses)
   }
@@ -216,12 +224,14 @@ object Trees {
       )
     }
 
+    implicit val mkClassWrap: MkClassWrap = noClassWrap // cls => ProgramM(cls, Classes.NatClasses)
+
     val prog = hierarchy(roots, height, branching)
-    ProgramM(prog, Classes.NatClasses)
+    ProgramM(prog, Classes.NatClasses.cloned)
   }
 
 
-  val rootss = Gen.enumeration("roots")(10)//(10, 20, 40)
+  val rootss = Gen.enumeration("roots")(10, 20, 40)
   val heightss = Gen.enumeration("heights")(5)
   val branchings = Gen.enumeration("branching")(2)
   val configs = Gen.enumeration[Int]("naming")(Unique.value, Mirrored.value, Overriding.value, MirroredOverriding.value)

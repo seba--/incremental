@@ -151,6 +151,8 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       s"$kind$typString($substring)"
     }
   }
+
+  def cloned: Node_[T] = new Node_(kind, lits, kidsArg.map(_.cloned))
 }
 
 object Node {
