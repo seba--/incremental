@@ -29,11 +29,8 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
     val (satisfiedOther, cons3) = other.addFacts(this.cfacts)
     val (satisfiedOtherExt, cons4) = satisfiedOther.addExtFacts(this.extFacts)
     val (mergedReqs, cons5) = satisfiedThisExt.creqs.merge(satisfiedOtherExt.creqs)
-    val cons = cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
-    val dcons = cons.distinct
-    if (cons.size != dcons.size)
-      println("WARNING merge")
-    (satisfiedThisExt.withCReqs(mergedReqs), cons)
+    val newcons = cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
+    (satisfiedThisExt.withCReqs(mergedReqs), newcons)
   }
 
   def addFact(fact: ClassFact): (ClassContext, Seq[Constraint]) = fact match {

@@ -6,29 +6,52 @@ import constraints.fjava.CSubst.CSubst
 import incremental.fjava.{CName, UCName}
 import constraints.fjava._
 import incremental.Util
-import incremental.fjava.earlymerge.Conditional
+import incremental.fjava.earlymerge.{Condition, ConditionOther, Conditional}
 
 import scala.collection.generic.CanBuildFrom
 
 object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] with Serializable {
-  def freshConstraintSystem = SolveContinuousSubstCS(Map(), Map(), Seq(), Seq(), Map())
+  def freshConstraintSystem = SolveContinuousSubstCS(Map(), Map(), Map(), Seq(), Map())
 }
 
-case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType]) extends ConstraintSystem[SolveContinuousSubstCS] {
+case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Map[ConditionOther, Seq[Constraint]], never: Seq[Constraint], extend: Map[GroundType, GroundType]) extends ConstraintSystem[SolveContinuousSubstCS] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
   def state = SolveContinuousSubst.state.value
 
   def notyet = {
-    var cons = _notyet
+    var cons: Seq[Constraint] = _notyet.flatMap {
+      case (cond, cons) => cons.map(Conditional(_, cond.cls, cond.cond))
+    }.toSeq
     for ((t, tbnds) <- bounds; bound <- tbnds) {
       cons = Subtype(t, bound) +: cons
     }
     cons
   }
 
-  def notyet(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, c +: _notyet, never, extend)
+  def extendNotyet(cond: ConditionOther, c: Constraint, notyet: Map[ConditionOther, Seq[Constraint]]): Map[ConditionOther, Seq[Constraint]] =
+    notyet.get(cond) match {
+      case None => notyet + (cond -> Seq(c))
+      case Some(seq) => notyet + (cond -> (c +: seq))
+    }
+
+  def extendNotyet(cond: ConditionOther, cons: Seq[Constraint], notyet: Map[ConditionOther, Seq[Constraint]]): Map[ConditionOther, Seq[Constraint]] =
+    notyet.get(cond) match {
+      case None => notyet + (cond -> cons)
+      case Some(seq) => notyet + (cond -> (seq ++ cons))
+    }
+
+  def notyet(c: Constraint) = {
+    val c_ = c.asInstanceOf[Conditional]
+    val condOther =
+      if (c_.cond.isInstanceOf[Condition])
+        ConditionOther(c_.cls, c_.cond.asInstanceOf[Condition]).asInstanceOf[ConditionOther]
+      else
+        c_.cond.asInstanceOf[ConditionOther]
+    val newNotyet = extendNotyet(condOther, c_.cons, _notyet)
+    SolveContinuousSubstCS(substitution, bounds, newNotyet, never, extend)
+  }
   def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, _notyet, c +: never, extend)
 
   def mergeSubsystem(that: SolveContinuousSubstCS) = {
@@ -76,22 +99,24 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
         else newBounds = newBounds + (newlow -> lt)
       }
 
-      var current = _notyet.foldLeft(copy(bounds = newBounds, _notyet = Seq()))((cs, c) => c.solve(cs))
-      var stepsWithoutChange = 0
-      while (!current._notyet.isEmpty) {
-        val next = current._notyet.head
-        val rest = current._notyet.tail
-        current = SolveContinuousSubstCS(current.substitution, current.bounds, rest, current.never, current.extend)
-        current = next.solve(current)
-
-        if (current._notyet.size == rest.size + 1) {
-          stepsWithoutChange += 1
-          if (stepsWithoutChange > rest.size + 1)
-            return current
-        }
-        else
-          stepsWithoutChange = 0
-      }
+      var current = _notyet.foldLeft(copy(bounds = newBounds, _notyet = Map()))((cs, cons) =>
+        cons._2.foldLeft(cs)((cs, c) => Conditional(c, cons._1.cls, cons._1.cond).solve(cs))
+      )
+//      var stepsWithoutChange = 0
+//      while (!current._notyet.isEmpty) {
+//        val next = current._notyet.head
+//        val rest = current._notyet.tail
+//        current = SolveContinuousSubstCS(current.substitution, current.bounds, rest, current.never, current.extend)
+//        current = next.solve(current)
+//
+//        if (current._notyet.size == rest.size + 1) {
+//          stepsWithoutChange += 1
+//          if (stepsWithoutChange > rest.size + 1)
+//            return current
+//        }
+//        else
+//          stepsWithoutChange = 0
+//      }
       current
     }
 
@@ -181,15 +206,20 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
         }
     }
     val newNever = never.map(_.subst(substitution))
-    var newNotyet = Seq[Constraint]()
+
+    var newNotyet = Map[ConditionOther, Seq[Constraint]]()
     var now = Seq[Constraint]()
-    _notyet.foreach { c =>
-      val c_ = c.subst(substitution)
-      if (c_.isInstanceOf[Conditional])
-        newNotyet +:= c_
-      else
-        now +:= c_
+    _notyet.foreach { case (cond, cons) =>
+      cond.subst(null, substitution) match {
+        case None => // condition failed, discard constraints
+        case Some(cond_) =>
+          if (Condition.trueCond == cond_)
+            now ++= cons.map(_.subst(substitution))
+          else
+            newNotyet = extendNotyet(cond_.asInstanceOf[ConditionOther], cons.map(_.subst(substitution)), newNotyet)
+      }
     }
+
     val cs = SolveContinuousSubstCS(Map(), newBounds, newNotyet, newNever, extend)
     if (now.isEmpty)
       cs
