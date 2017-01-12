@@ -4,10 +4,11 @@ import constraints.fjava.CSubst.CSubst
 import constraints.fjava.{Type, _}
 import Condition.trueCond
 import constraints.CVar
-import incremental.{IncHashedSet, Util}
+import incremental.{Cell, IncHashedSet, Util}
 import incremental.fjava.{CName, UCName}
 
 import scala.collection.mutable.ListBuffer
+import scala.ref.Reference
 
 trait CReq[T <: CReq[T]] {
   def self: T
@@ -376,27 +377,44 @@ object MapRequirementsBuilder {
   }
 }
 class MapRequirementsBuilder[T <: CReq[T]] {
-  private var lists = ListBuffer[ListBuffer[T]]()
-  private var newreqs = Map[MapRequirementsBuilder.Key, ListBuffer[T]]()
+  private var lists = ListBuffer[(T, Cell[Set[Constraint]], Cell[IncHashedSet[CName]])]()
+  private var newreqs = Map[MapRequirementsBuilder.Key, (T, Cell[Set[Constraint]], Cell[IncHashedSet[CName]])]()
   private var cons = Seq[Constraint]()
   def addReq(req: T) = {
     val mkey = req.cond.mergeKey
     val key = new MapRequirementsBuilder.Key(req.cls, mkey)
     newreqs.get(key) match {
       case None =>
-        val buf = ListBuffer(req)
-        lists += buf
-        newreqs += (key -> buf)
-      case Some(oreqs) => {
-        val oreq = oreqs(0)
+        val trueCons = Cell(Set[Constraint]())
+        val set =
+          if (req.cond.isInstanceOf[Condition]) req.cond.asInstanceOf[Condition].sameGroundAlternatives
+          else req.cond.asInstanceOf[ConditionOther].cond.sameGroundAlternatives
+        val refset = Cell(set)
+        val v = (req, trueCons, refset)
+        lists += v
+        newreqs += (key -> v)
+      case Some((oreq, trueCons, set)) => {
         val oreqCond = oreq.cond
         if (mkey.needsMerge(oreqCond)) {
-          oreqs += req
+          if (oreqCond.isInstanceOf[Condition])
+            set.ref = set.ref ++ req.cond.asInstanceOf[Condition].sameGroundAlternatives
+          else
+            set.ref = set.ref ++ req.cond.asInstanceOf[ConditionOther].cond.sameGroundAlternatives
+
+          val c = req.assert(oreq, trueCond)
+          if (!c.isEmpty) {
+//            if (trueCons.contains(c.get))
+//              println("WARNING 1")
+            trueCons.ref = trueCons.ref + c.get
+          }
         }
         else if (req != oreq) {
           val c = req.assert(oreq, req.cond)
-          if (!c.isEmpty)
+          if (!c.isEmpty) {
+//            if (trueCons.contains(c.get))
+//              println("WARNING 2")
             cons +:= c.get
+          }
         }
       }
     }
@@ -404,40 +422,22 @@ class MapRequirementsBuilder[T <: CReq[T]] {
 
   def getRequirements: Seq[T] = {
     var seq = Seq[T]()
-    lists.foreach { buf =>
-      val head = buf(0)
-      val headcond = head.cond
+    lists.foreach { case (oreq, trueCons, sameGroundAlternatives) =>
+      val oreqCond = oreq.cond
 
-      val mergeCond = if (headcond.isInstanceOf[Condition]) {
-        val headcond_ = headcond.asInstanceOf[Condition]
-        var sameGroundAlternatives = IncHashedSet.empty[CName]
-        buf.foreach { c =>
-          val cond = c.cond.asInstanceOf[Condition]
-          sameGroundAlternatives ++= cond.sameGroundAlternatives
-        }
-        Condition(
-          headcond_.notGround,
-          headcond_.notVar,
-          sameGroundAlternatives,
-          headcond_.sameVar
-        )
+      val mergeCond = if (oreqCond.isInstanceOf[Condition]) {
+        val headcond_ = oreqCond.asInstanceOf[Condition]
+        Condition(headcond_.notGround, headcond_.notVar, sameGroundAlternatives.ref, headcond_.sameVar)
       }
       else {
-        val headcond_ = headcond.asInstanceOf[ConditionOther]
-        var othersGroundSameGround = IncHashedSet.empty[CName]
-        buf.foreach { c =>
-          val c_ = c.cond.asInstanceOf[ConditionOther]
-          othersGroundSameGround ++= c_.cond.sameGroundAlternatives
-        }
-        val other = Condition(headcond_.cond.notGround, headcond_.cond.notVar, othersGroundSameGround, headcond_.cond.sameVar)
-        new ConditionOther(headcond_.cls, other)
+        val headcond_ = oreqCond.asInstanceOf[ConditionOther]
+        val other = Condition(headcond_.cond.notGround, headcond_.cond.notVar, sameGroundAlternatives.ref, headcond_.cond.sameVar)
+        ConditionOther(headcond_.cls, other)
       }
 
-      seq +:= head.withCond(mergeCond)
-      buf.foreach{ req =>
-        val c = req.assert(head, mergeCond)
-        if (!c.isEmpty)
-          cons +:= c.get
+      seq +:= oreq.withCond(mergeCond)
+      trueCons.ref.foreach { c =>
+        cons +:= Conditional(c, oreq.cls, mergeCond)
       }
     }
     seq

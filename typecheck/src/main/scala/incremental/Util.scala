@@ -143,3 +143,5 @@ class IncHashedSet[T](val set: Set[T], private val hash: IncHashedSet.Incrementa
     case _ => false
   }
 }
+
+case class Cell[T](var ref: T)

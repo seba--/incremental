@@ -29,7 +29,11 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
     val (satisfiedOther, cons3) = other.addFacts(this.cfacts)
     val (satisfiedOtherExt, cons4) = satisfiedOther.addExtFacts(this.extFacts)
     val (mergedReqs, cons5) = satisfiedThisExt.creqs.merge(satisfiedOtherExt.creqs)
-    (satisfiedThisExt.withCReqs(mergedReqs), cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5)
+    val cons = cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
+    val dcons = cons.distinct
+    if (cons.size != dcons.size)
+      println("WARNING merge")
+    (satisfiedThisExt.withCReqs(mergedReqs), cons)
   }
 
   def addFact(fact: ClassFact): (ClassContext, Seq[Constraint]) = fact match {
@@ -65,15 +69,28 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
   def addExtFact(cls: CName, sup: CName) = {
     var top = getTopExtends(sup)
 
-    val (crs, cons) = creqs.satisfyCReq(ExtCReq(cls, top), creqs.exts)
-    val newFields = creqs.fields.mapValues(set => set.flatMap(_.satisfyExt(cls, top))).view.force
-//    println(newFields)
-    val newMethods = creqs.methods.mapValues(set => set.flatMap(_.satisfyExt(cls, top))).view.force
-//    println(newMethods)
-    val newOptMethods = creqs.optMethods.mapValues(set => set.flatMap(_.satisfyExt(cls, top))).view.force
-//    println(newOptMethods)
+    val (crs, cons1) = creqs.satisfyCReq(ExtCReq(cls, top), creqs.exts)
+    val (newFields, cons2) = addExtFactMap(creqs.fields, cls, top)
+    val (newMethods, cons3) = addExtFactMap(creqs.methods, cls, top)
+    val (newOptMethods, cons4) = addExtFactMap(creqs.optMethods, cls, top)
     val cctx = ClassContext(creqs.copy(exts = crs, fields = newFields, methods = newMethods, optMethods = newOptMethods), cfacts, extFacts + (cls -> sup))
-    (cctx, cons)
+    (cctx, cons1 ++ cons2 ++ cons3 ++ cons4)
+  }
+
+  def addExtFactMap[T <: CReq[T] with Named](crs: Map[Symbol, Seq[T]], cls: CName, top: CName): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
+    var cons = Seq[Constraint]()
+    val newcrs = crs.mapValues { reqs =>
+      val builder = new MapRequirementsBuilder[T]
+      for (req <- reqs;
+           newreq <- req.satisfyExt(cls, top)) {
+        builder.addReq(newreq)
+      }
+      val res = builder.getRequirements
+      cons ++= builder.getConstraints
+      res
+    }
+
+    (newcrs.view.force, cons)
   }
 
   def addFacts(facts: Iterable[ClassFact]): (ClassContext, Seq[Constraint]) =

@@ -3,6 +3,7 @@ package incremental.fjava.earlymerge
 import constraints.Statistics
 import constraints.fjava.CSubst.CSubst
 import constraints.fjava._
+import constraints.fjava.impl.SolveContinuousSubstCS
 import incremental.fjava._
 import incremental.Node._
 import incremental.{Node_, Util}
@@ -34,6 +35,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     Util.timed(localState -> Statistics.typecheckTime) {
       root.visitUninitialized { e =>
         val (t, reqs, cctx, cons) = typecheckStep(e)
+        if (!cons.isEmpty)
+          println(cons.mkString("[","\n,","]"))
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem(res.typ._4))
         val csPre = if (e.kind != ClassDec) subcs else {
           // add inheritance to constraint system
@@ -43,6 +46,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         }
 
         val (newt, newreqs, newcctx, newcs) = substFix(t, reqs, cctx, cons, csPre, false)
+//        println(newcs.asInstanceOf[SolveContinuousSubstCS]._notyet.dropRight(csPre.asInstanceOf[SolveContinuousSubstCS]._notyet.size))
         e.typ = (newt, newreqs, newcctx, newcs.propagate)
         true
       }
