@@ -18,9 +18,9 @@ object Checkers extends App {
 
   lazy val buEarlyCont: TypeChecker[_] = new earlymerge.BUCheckerFactory(SolveContinuousSubst).makeChecker
 
-  val roots = 10
+  val roots = 40
   val height = 5
-  val prog = Trees.intAcumPrevSuperHierarchy(roots, height, 2)(Trees.Unique)
+  val prog = Trees.intAcumPrevHierarchy(roots, height, 2)(Trees.Mirrored)
 
 //  println(prog)
 

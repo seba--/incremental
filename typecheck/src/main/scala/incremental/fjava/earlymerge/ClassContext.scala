@@ -52,34 +52,37 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
       (cctx, cons1 ++ cons2)
   }
 
-  def getTopExtends(cls: CName): CName = {
+  def getExtendsChain(sub: CName, cls: CName): Seq[(CName, CName)] = {
     var top = cls
+    var tail = Seq((sub, cls))
     while (true)
       extFacts.get(top) match {
-        case None => return top
-        case Some(newtop) =>
+        case None => return tail.reverse
+        case Some(newtop) => {
+          tail = (top, newtop) +: tail
           top = newtop
+        }
       }
     ???
   }
 
   def addExtFact(cls: CName, sup: CName) = {
-    var top = getTopExtends(sup)
+    var chain = getExtendsChain(cls, sup)
 
-    val (crs, cons1) = creqs.satisfyCReq(ExtCReq(cls, top), creqs.exts)
-    val (newFields, cons2) = addExtFactMap(creqs.fields, cls, top)
-    val (newMethods, cons3) = addExtFactMap(creqs.methods, cls, top)
-    val (newOptMethods, cons4) = addExtFactMap(creqs.optMethods, cls, top)
+    val (crs, cons1) = Util.loop[Seq[ExtCReq], (CName, CName), Constraint]((exts, ext) => creqs.satisfyCReq(ExtCReq(ext._1, ext._2), exts))(creqs.exts, chain)
+    val (newFields, cons2) = addExtFactMap(creqs.fields, chain)
+    val (newMethods, cons3) = addExtFactMap(creqs.methods, chain)
+    val (newOptMethods, cons4) = addExtFactMap(creqs.optMethods, chain)
     val cctx = ClassContext(creqs.copy(exts = crs, fields = newFields, methods = newMethods, optMethods = newOptMethods), cfacts, extFacts + (cls -> sup))
     (cctx, cons1 ++ cons2 ++ cons3 ++ cons4)
   }
 
-  def addExtFactMap[T <: CReq[T] with Named](crs: Map[Symbol, Seq[T]], cls: CName, top: CName): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
+  def addExtFactMap[T <: CReq[T] with Named](crs: Map[Symbol, Seq[T]], chain: Seq[(CName, CName)]): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
     var cons = Seq[Constraint]()
     val newcrs = crs.mapValues { reqs =>
       val builder = new MapRequirementsBuilder[T]
       for (req <- reqs;
-           newreq <- req.satisfyExt(cls, top)) {
+           newreq <- req.satisfyExt(chain)) {
         builder.addReq(newreq)
       }
       val res = builder.getRequirements
