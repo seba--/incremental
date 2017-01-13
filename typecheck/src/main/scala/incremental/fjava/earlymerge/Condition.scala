@@ -133,7 +133,7 @@ class Condition(
       if (sameGroundAlternatives.contains(ct))
         None
       else
-        return None
+        Some(this)
     }
     else
       Some(new Condition(notGround + ct, notVar, sameGroundAlternatives, sameVar))

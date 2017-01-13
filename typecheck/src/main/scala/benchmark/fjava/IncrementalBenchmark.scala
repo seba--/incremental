@@ -9,7 +9,7 @@ import incremental.fjava.TypeChecker
 /**
   * Standard execution, not parallel, not incremental
   */
-class StandardBenchmarkClass extends Bench.OfflineReport {
+class IncrementalBenchmarkClass extends Bench.OfflineReport {
 
   val opts = org.scalameter.api.Context(
     exec.jvmflags -> (List("-server", "-XX:CompileThreshold=100") ++ Settings("jvmopts"))
@@ -24,13 +24,16 @@ class StandardBenchmarkClass extends Bench.OfflineReport {
   def measureT(name: String, checker: TypeChecker[_])(trees: Gen[(Node, Long)]): Unit = {
     measure method (name) in {
       using(trees).
-        setUp { _._1.invalidate }.
+        setUp { case (tree, size) =>
+          checker.typecheck(tree)
+          tree.kids(1).kids(0).invalidate
+        }.
         in { case (tree, size) => checker.typecheck(tree) }
     }
   }
 
   def measureCheckers(trees: Gen[(Node, Long)]): Unit = {
-    measureT("DU", du)(trees)
+//    measureT("DU", du)(trees)
 //    measureT("BU-End", buEnd)(trees)
 //    measureT("BU-Cont", buCont)(trees)
     measureT("BU-Early-Cont", buEarlyCont)(trees)
@@ -41,10 +44,10 @@ class StandardBenchmarkClass extends Bench.OfflineReport {
   measureCheckers(Trees.intAcumPrevSuperHierarchyTrees)
 }
 
-object StandardBenchmark {
+object IncrementalBenchmark {
   def main(args: Array[String]): Unit = {
-    val scalameterArgs = Array("-CresultDir", "./benchmark/fjava")
-    new StandardBenchmarkClass().main(scalameterArgs)
+    val scalameterArgs = Array("-CresultDir", "./benchmark/fjava-incremental")
+    new IncrementalBenchmarkClass().main(scalameterArgs)
   }
 }
 
