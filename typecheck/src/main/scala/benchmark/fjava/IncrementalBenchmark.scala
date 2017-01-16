@@ -39,9 +39,9 @@ class IncrementalBenchmarkClass extends Bench.OfflineReport {
     measureT("BU-Early-Cont", buEarlyCont)(trees)
   }
 
-  measureCheckers(Trees.intAcumSuperHierarchyTrees)
-  measureCheckers(Trees.intAcumPrevHierarchyTrees)
-  measureCheckers(Trees.intAcumPrevSuperHierarchyTrees)
+  measureCheckers(Trees.intAccumSuperHierarchyTrees)
+  measureCheckers(Trees.intAccumPrevHierarchyTrees)
+  measureCheckers(Trees.intAccumPrevSuperHierarchyTrees)
 }
 
 object IncrementalBenchmark {

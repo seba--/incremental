@@ -139,7 +139,7 @@ object Trees {
     *    in the superclass and adds its field value to the result
     *  - all fields and methods have distinct names (no overriding)
     */
-  def intAcumSuperHierarchy(roots: Int, height: Int, branching: Int)(implicit config: Config): Node = {
+  def intAccumSuperHierarchy(roots: Int, height: Int, branching: Int)(implicit config: Config): Node = {
     implicit val mkFields: MkFields = path =>
       ListMap(fname(path) -> CName('Nat))
 
@@ -202,7 +202,7 @@ object Trees {
     *    in the prev-root class and in the superclass and adds its field value to the result
     *  - all fields and methods have distinct names (no overriding)
     */
-  def intAcumPrevSuperHierarchy(roots: Int, height: Int, branching: Int)(implicit config: Config): Node = {
+  def intAccumPrevSuperHierarchy(roots: Int, height: Int, branching: Int)(implicit config: Config): Node = {
     implicit val mkFields: MkFields = path => {
       val prevField = prevRoot(path) match {
         case None => Seq()
@@ -236,15 +236,15 @@ object Trees {
   val branchings = Gen.enumeration("branching")(2)
   val configs = Gen.enumeration[Int]("naming")(Unique.value, Mirrored.value, Overriding.value, MirroredOverriding.value)
 
-  val intAcumSuperHierarchyTrees = for
+  val intAccumSuperHierarchyTrees = for
       { roots <- rootss
         heights <- heightss
         branching <- branchings
         configValue <- configs;
         config = Config.fromValue(configValue) }
-    yield intAcumSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
+    yield intAccumSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
 
-  val intAcumPrevHierarchyTrees = for
+  val intAccumPrevHierarchyTrees = for
       { roots <- rootss
         heights <- heightss
         branching <- branchings
@@ -252,11 +252,11 @@ object Trees {
         config = Config.fromValue(configValue) }
   yield intAcumPrevHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
 
-  val intAcumPrevSuperHierarchyTrees = for
+  val intAccumPrevSuperHierarchyTrees = for
       { roots <- rootss
         heights <- heightss
         branching <- branchings
         configValue <- configs;
         config = Config.fromValue(configValue) }
-    yield intAcumPrevSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
+    yield intAccumPrevSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
 }
