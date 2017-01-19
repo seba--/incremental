@@ -3,7 +3,7 @@ package incremental.fjava.earlymerge
 import constraints.Statistics
 import constraints.fjava.CSubst.CSubst
 import constraints.fjava._
-import constraints.fjava.impl.SolveContinuousSubstCS
+import constraints.fjava.impl.SolveContinuousSubstCSEarlyMerge
 import incremental.fjava._
 import incremental.Node._
 import incremental.{Node_, Util}

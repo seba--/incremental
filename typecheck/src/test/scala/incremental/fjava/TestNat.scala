@@ -97,8 +97,8 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: Typ
 //      val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, actual.right)
 
-      val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
-        Equal(expected, actual.left.get).solve(SolveContinuousSubst.freshConstraintSystem).tryFinalize
+      val sol = SolveContinuousSubstLateMerge.state.withValue(checker.csFactory.state.value) {
+        Equal(expected, actual.left.get).solve(SolveContinuousSubstLateMerge.freshConstraintSystem).tryFinalize
       }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
@@ -112,11 +112,11 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: Typ
 
   typecheckTest("Nat ok", ProgramM(Nat))(ProgramOK)
 
-//  // without Zero knowing Succ, the class fails to check
-//  typecheckTestError("Zero ok", Zero)
-//
-//  // Succ refers to Nat and should fail to check
-//  typecheckTestError("Succ ok", Succ)
+  // without Zero knowing Succ, the class fails to check
+  typecheckTestError("Zero ok", Zero)
+
+  // Succ refers to Nat and should fail to check
+  typecheckTestError("Succ ok", Succ)
 
   // Taking all classes into consideration, checking should succeed
   typecheckTest("{Nat, Zero, Succ} ok", ProgramM(Nat, Zero, Succ))(ProgramOK)
@@ -125,6 +125,6 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: Typ
 
 class TestDUSolveEndNat extends TestNat("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveEnd))
-class TestBUSolveContinuousSubstNat extends TestNat("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuousSubstNat extends TestNat("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubstLateMerge))
 
-class TestBUEarlySolveContinuousSubstNat extends TestNat("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubst))
+class TestBUEarlySolveContinuousSubstNat extends TestNat("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubstEarlyMerge))

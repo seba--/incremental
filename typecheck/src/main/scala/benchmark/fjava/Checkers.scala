@@ -1,7 +1,7 @@
 package benchmark.fjava
 
 import constraints.Statistics
-import constraints.fjava.impl.{SolveContinuousSubst, SolveEnd}
+import constraints.fjava.impl.{SolveContinuousSubstEarlyMerge, SolveContinuousSubstLateMerge, SolveContinuousSubstLateMerge$, SolveEnd}
 import incremental.fjava.{DUCheckerFactory, TypeChecker, earlymerge}
 import incremental.fjava.latemerge.BUCheckerFactory
 
@@ -11,12 +11,12 @@ import incremental.fjava.latemerge.BUCheckerFactory
 object Checkers extends App {
 
   lazy val du: TypeChecker[_] = new DUCheckerFactory(SolveEnd).makeChecker
-  lazy val duCont: TypeChecker[_] = new DUCheckerFactory(SolveContinuousSubst).makeChecker
+  lazy val duCont: TypeChecker[_] = new DUCheckerFactory(SolveContinuousSubstLateMerge).makeChecker
 
   lazy val buEnd: TypeChecker[_] = new BUCheckerFactory(SolveEnd).makeChecker
-  lazy val buCont: TypeChecker[_] = new BUCheckerFactory(SolveContinuousSubst).makeChecker
+  lazy val buCont: TypeChecker[_] = new BUCheckerFactory(SolveContinuousSubstLateMerge).makeChecker
 
-  lazy val buEarlyCont: TypeChecker[_] = new earlymerge.BUCheckerFactory(SolveContinuousSubst).makeChecker
+  lazy val buEarlyCont: TypeChecker[_] = new earlymerge.BUCheckerFactory(SolveContinuousSubstEarlyMerge).makeChecker
 
   val roots = 40
   val height = 5

@@ -10,15 +10,15 @@ import incremental.fjava.earlymerge.{Condition, ConditionOther, Conditional}
 
 import scala.collection.generic.CanBuildFrom
 
-object SolveContinuousSubst extends ConstraintSystemFactory[SolveContinuousSubstCS] with Serializable {
-  def freshConstraintSystem = SolveContinuousSubstCS(Map(), Map(), Map(), Seq(), Map())
+object SolveContinuousSubstEarlyMerge extends ConstraintSystemFactory[SolveContinuousSubstCSEarlyMerge] with Serializable {
+  def freshConstraintSystem = SolveContinuousSubstCSEarlyMerge(Map(), Map(), Map(), Seq(), Map())
 }
 
-case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Map[ConditionOther, Seq[Constraint]], never: Seq[Constraint], extend: Map[GroundType, GroundType]) extends ConstraintSystem[SolveContinuousSubstCS] {
+case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Map[ConditionOther, Seq[Constraint]], never: Seq[Constraint], extend: Map[GroundType, GroundType]) extends ConstraintSystem[SolveContinuousSubstCSEarlyMerge] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
-  def state = SolveContinuousSubst.state.value
+  def state = SolveContinuousSubstEarlyMerge.state.value
 
   def notyet = {
     var cons: Seq[Constraint] = _notyet.flatMap {
@@ -50,15 +50,15 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       else
         c_.cond.asInstanceOf[ConditionOther]
     val newNotyet = extendNotyet(condOther, c_.cons, _notyet)
-    SolveContinuousSubstCS(substitution, bounds, newNotyet, never, extend)
+    SolveContinuousSubstCSEarlyMerge(substitution, bounds, newNotyet, never, extend)
   }
-  def never(c: Constraint) = SolveContinuousSubstCS(substitution, bounds, _notyet, c +: never, extend)
+  def never(c: Constraint) = SolveContinuousSubstCSEarlyMerge(substitution, bounds, _notyet, c +: never, extend)
 
-  def mergeSubsystem(that: SolveContinuousSubstCS) = {
+  def mergeSubsystem(that: SolveContinuousSubstCSEarlyMerge) = {
     var msubst = substitution ++ that.substitution
     var mnotyet = _notyet ++ that._notyet
     var mnever = never ++ that.never
-    val init = SolveContinuousSubstCS(msubst, this.bounds, mnotyet, mnever, this.extend)
+    val init = SolveContinuousSubstCSEarlyMerge(msubst, this.bounds, mnotyet, mnever, this.extend)
     val extendedCS = that.extend.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
     that.bounds.foldLeft(extendedCS) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
@@ -80,7 +80,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     }
   }
 
-  def tryFinalize: SolveContinuousSubstCS =
+  def tryFinalize: SolveContinuousSubstCSEarlyMerge =
     Util.timed(state -> Statistics.finalizeTime) {
       var newBounds = Map[Type, Set[Type]]()
       var lt = Set[Type]()
@@ -120,7 +120,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       current
     }
 
-  def trySolve: SolveContinuousSubstCS = this
+  def trySolve: SolveContinuousSubstCSEarlyMerge = this
 
   def extendz(t1 : GroundType, t2:GroundType) = {
     if (t1 == t2 || isSubtype(t2, t1))
@@ -141,7 +141,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
   }
 
   private def extendMap(t1: GroundType, t2: GroundType) =
-    SolveContinuousSubstCS(this.substitution, this.bounds, this._notyet, this.never, this.extend + (t1 -> t2))
+    SolveContinuousSubstCSEarlyMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend + (t1 -> t2))
 
   def isSubtype(t1 : Type, t2 : Type): Boolean =
     if (t1 == t2)
@@ -159,7 +159,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       false
 
 
-  def addUpperBound(t1: Type, t2: Type): SolveContinuousSubstCS =
+  def addUpperBound(t1: Type, t2: Type): SolveContinuousSubstCSEarlyMerge =
     if (isSubtype(t1, t2))
       this
     else (t1, t2) match {
@@ -175,7 +175,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
 
   private def extendBound(t1: Type, t2: Type) = {
     val t1bnds = bounds.getOrElse(t1, Set[Type]())
-    SolveContinuousSubstCS(this.substitution, bounds + (t1 -> (t1bnds + t2)), this._notyet, this.never, this.extend)
+    SolveContinuousSubstCSEarlyMerge(this.substitution, bounds + (t1 -> (t1bnds + t2)), this._notyet, this.never, this.extend)
   }
 
   def shouldApplySubst: Boolean = true
@@ -187,7 +187,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
     (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
   = it.map(u => (u, f(u).subst(substitution)))
 
-  def propagate: SolveContinuousSubstCS = {
+  def propagate: SolveContinuousSubstCSEarlyMerge = {
     if (substitution.isEmpty)
       return this
 
@@ -220,7 +220,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       }
     }
 
-    val cs = SolveContinuousSubstCS(Map(), newBounds, newNotyet, newNever, extend)
+    val cs = SolveContinuousSubstCSEarlyMerge(Map(), newBounds, newNotyet, newNever, extend)
     if (now.isEmpty)
       cs
     else
@@ -229,7 +229,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
       }
   }
 
-  def solved(s: CSubst): SolveContinuousSubstCS = {
+  def solved(s: CSubst): SolveContinuousSubstCSEarlyMerge = {
     var mysubst = this.substitution.mapValues(x => x.subst(s)).view.force
     var newcons = Seq[Constraint]()
     for ((x, t2) <- s) {
@@ -238,7 +238,7 @@ case class SolveContinuousSubstCS(substitution: CSubst, bounds: Map[Type, Set[Ty
         case Some(t1) => newcons = t1.compatibleWith(t2) +: newcons
       }
     }
-    SolveContinuousSubstCS(mysubst, bounds, this._notyet, this.never, this.extend).addNewConstraints(newcons)
+    SolveContinuousSubstCSEarlyMerge(mysubst, bounds, this._notyet, this.never, this.extend).addNewConstraints(newcons)
   }
 
 }

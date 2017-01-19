@@ -46,8 +46,8 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
   }
 
   override def tryFinalize =
-    SolveContinuousSubst.state.withValue(state) {
-      val cs = notyet.foldLeft(SolveContinuousSubstCS(Map(), Map(), Map(), never, extend))((cs, c) => c.solve(cs)).trySolve
+    SolveContinuousSubstLateMerge.state.withValue(state) {
+      val cs = notyet.foldLeft(SolveContinuousSubstCSLateMerge(Map(), Map(), Seq(), never, extend))((cs, c) => c.solve(cs)).trySolve
       cs.tryFinalize
     }
 
