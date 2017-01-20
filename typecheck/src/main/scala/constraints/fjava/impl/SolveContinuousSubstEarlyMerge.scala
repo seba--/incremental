@@ -82,43 +82,38 @@ case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Ty
 
   def tryFinalize: SolveContinuousSubstCSEarlyMerge =
     Util.timed(state -> Statistics.finalizeTime) {
-      var newBounds = Map[Type, Set[Type]]()
-      var lt = Set[Type]()
-      for ((low, ups) <- this.bounds){
-        val newlow = low.subst(substitution)
-        val newups = ups.map(_.subst(substitution))
-        lt = newups
-        if (newlow.isGround && extend.contains(newlow.asInstanceOf[GroundType])) {
-          newups.foreach { f =>
-            if (isSubtype(newlow, f))
-              lt = lt - f
-            else lt
-          }
-        }
-        if (lt.isEmpty) newBounds = newBounds
-        else newBounds = newBounds + (newlow -> lt)
-      }
-
-      var current = _notyet.foldLeft(copy(bounds = newBounds, _notyet = Map()))((cs, cons) =>
-        cons._2.foldLeft(cs)((cs, c) => Conditional(c, cons._1.cls, cons._1.cond).solve(cs))
-      )
-//      var stepsWithoutChange = 0
-//      while (!current._notyet.isEmpty) {
-//        val next = current._notyet.head
-//        val rest = current._notyet.tail
-//        current = SolveContinuousSubstCS(current.substitution, current.bounds, rest, current.never, current.extend)
-//        current = next.solve(current)
-//
-//        if (current._notyet.size == rest.size + 1) {
-//          stepsWithoutChange += 1
-//          if (stepsWithoutChange > rest.size + 1)
-//            return current
-//        }
-//        else
-//          stepsWithoutChange = 0
-//      }
-      current
+      tryFinalize(0)
     }
+
+  def tryFinalize(steps: Int): SolveContinuousSubstCSEarlyMerge = {
+    var newBounds = Map[Type, Set[Type]]()
+    var lt = Set[Type]()
+    for ((low, ups) <- this.bounds){
+      val newlow = low.subst(substitution)
+      val newups = ups.map(_.subst(substitution))
+      lt = newups
+      if (newlow.isGround && (extend.contains(newlow.asInstanceOf[GroundType]) || newlow == CName('Object))) {
+        newups.foreach { f =>
+          if (isSubtype(newlow, f))
+            lt = lt - f
+          else lt
+        }
+      }
+      if (lt.isEmpty) newBounds = newBounds
+      else newBounds = newBounds + (newlow -> lt)
+    }
+
+    var newcs = _notyet.foldLeft(copy(bounds = newBounds, _notyet = Map()))((cs, cons) =>
+      cons._2.foldLeft(cs)((cs, c) => Conditional(c, cons._1.cls, cons._1.cond).solve(cs))
+    )
+
+    val startSize = notyet.size
+    val endSize = newcs.notyet.size
+    if (endSize > 0 && endSize < startSize)
+      newcs.tryFinalize(steps+1)
+    else
+      newcs
+  }
 
   def trySolve: SolveContinuousSubstCSEarlyMerge = this
 

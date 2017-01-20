@@ -71,7 +71,7 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
       val newlow = low.subst(substitution)
       val newups = ups.map(_.subst(substitution))
       lt = newups
-      if (newlow.isGround && extend.contains(newlow.asInstanceOf[GroundType])) {
+      if (newlow.isGround && (extend.contains(newlow.asInstanceOf[GroundType]) || newlow == CName('Object))) {
         newups.foreach { f =>
           if (isSubtype(newlow, f))
             lt = lt - f
