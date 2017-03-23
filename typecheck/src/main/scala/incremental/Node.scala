@@ -142,6 +142,11 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       false
   }
 
+  def visitAll(f: Node_[T] => Unit): Unit = {
+    _kids.foreach(f)
+    f(this)
+  }
+
   override def toString = {
     kind.toString(this).getOrElse {
       val subs = lits.map(_.toString) ++ _kids.map(_.toString)

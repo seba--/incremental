@@ -193,6 +193,8 @@ case class ClassReqs (
                        methods: Map[Symbol, Seq[MethodCReq]] = Map(),
                        optMethods: Map[Symbol, Seq[MethodCReq]] = Map()) {
 
+  def size = currentCls.size + exts.size + ctorsGround.size + ctorsVar.size + fields.size + methods.size + optMethods.size
+
   override def toString =
     s"ClassReqs(current=$currentCls, ext=$exts, ctorParams=${ctorsGround ++ ctorsVar}, fields=$fields, methods=$methods, optMethods=$optMethods)"
 

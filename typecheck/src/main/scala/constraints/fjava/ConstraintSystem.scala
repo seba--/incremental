@@ -23,4 +23,6 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def isSolvable: Boolean = never.isEmpty
 
   def tryFinalize: ConstraintSystem[_]
+
+  def size: Int
 }

@@ -5,11 +5,18 @@ import _root_.benchmark.pcf.Settings
 import incremental.Node.Node
 import Checkers._
 import incremental.fjava.TypeChecker
+import org.scalameter.Measurer
 
 /**
   * Standard execution, not parallel, not incremental
   */
-class StandardBenchmarkClass extends Bench.OfflineReport {
+class StandardBenchmarkClass(memory: Boolean) extends Bench.OfflineReport {
+
+  override def measurer: Measurer[Double] =
+    if (memory)
+      new Measurer.MemoryFootprint with Measurer.OutlierElimination[Double]
+    else
+      super.measurer
 
   val opts = org.scalameter.api.Context(
     exec.jvmflags -> (List("-server", "-XX:CompileThreshold=100") ++ Settings("jvmopts"))
@@ -43,8 +50,11 @@ class StandardBenchmarkClass extends Bench.OfflineReport {
 
 object StandardBenchmark {
   def main(args: Array[String]): Unit = {
-    val scalameterArgs = Array("-CresultDir", "./benchmark/fjava")
-    new StandardBenchmarkClass().main(scalameterArgs)
+    val memory = if (args.size > 0) args(0) == "memory" else false
+    if (memory) println(s"Measuring memory footprint") else println("Measuring wallclock runtime")
+    val memsuffix = if (memory) "-memory" else ""
+    val scalameterArgs = Array("-CresultDir", "./benchmark/fjava-nonincremental" + memsuffix)
+    new StandardBenchmarkClass(memory).main(scalameterArgs)
   }
 }
 

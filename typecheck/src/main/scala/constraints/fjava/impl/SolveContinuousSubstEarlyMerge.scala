@@ -18,6 +18,8 @@ case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Ty
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
+  def size = substitution.size + bounds.size + _notyet.size + never.size + extend.size
+
   def state = SolveContinuousSubstEarlyMerge.state.value
 
   def notyet = {

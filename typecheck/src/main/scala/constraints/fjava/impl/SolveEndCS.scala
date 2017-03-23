@@ -15,6 +15,8 @@ object SolveEnd extends ConstraintSystemFactory[SolveEndCS] with Serializable {
 case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType]) extends ConstraintSystem[SolveEndCS] {
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
+  def size = notyet.size + never.size + extend.size
+
   def state = SolveEnd.state.value
 
   def substitution = CSubst.empty

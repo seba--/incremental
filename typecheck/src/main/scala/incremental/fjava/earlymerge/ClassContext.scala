@@ -15,6 +15,7 @@ case class MethodFact(cls: CName, name: Symbol, params: Seq[CName], ret: CName) 
  * Invariant: All cfacts have been used to satisfy requirements in creqs.
  */
 case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] = Seq(), extFacts: Map[CName, CName] = Map()) {
+  def size = creqs.size + cfacts.size + extFacts.size
 
   def subst(s: CSubst): (ClassContext, Seq[Constraint]) = {
     val (newcreqs, cons) = creqs.subst(s)
