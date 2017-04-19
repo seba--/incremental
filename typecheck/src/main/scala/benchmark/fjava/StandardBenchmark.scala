@@ -24,12 +24,16 @@ class StandardBenchmarkClass extends Bench.OfflineReport {
   def measureT(name: String, checker: TypeChecker[_])(trees: Gen[(Node, Long)]): Unit = {
     measure method (name) in {
       using(trees).
-        setUp { _._1.invalidate }.
+        setUp { case (tree, size) =>
+          tree.invalidate
+          checker.prepare(tree)
+        }.
         in { case (tree, size) => checker.typecheck(tree) }
     }
   }
 
   def measureCheckers(trees: Gen[(Node, Long)]): Unit = {
+    measureT("JAVAC", javac)(trees)
     measureT("DU", du)(trees)
 //    measureT("BU-End", buEnd)(trees)
 //    measureT("BU-Cont", buCont)(trees)

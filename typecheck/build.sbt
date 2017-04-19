@@ -27,6 +27,8 @@ libraryDependencies += "com.typesafe.akka" % "akka-actor_2.11" % "2.3.16"
 
 libraryDependencies += "com.github.scopt" % "scopt_2.11" % "3.5.0"
 
+fork in Test := true
+
 fork in run := true
 
 connectInput in run := true
@@ -34,7 +36,6 @@ connectInput in run := true
 javaOptions in run ++= Seq("-Xmx4096m", "-Xms2048m")
 
 testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
-
 
 
 //import com.typesafe.sbt.SbtStartScript

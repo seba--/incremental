@@ -113,15 +113,17 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: Typ
   typecheckTest("Nat ok", ProgramM(Nat))(ProgramOK)
 
   // without Zero knowing Succ, the class fails to check
-  typecheckTestError("Zero ok", Zero)
+  typecheckTestError("Zero ok", ProgramM(Zero))
 
   // Succ refers to Nat and should fail to check
-  typecheckTestError("Succ ok", Succ)
+  typecheckTestError("Succ ok", ProgramM(Succ))
 
   // Taking all classes into consideration, checking should succeed
   typecheckTest("{Nat, Zero, Succ} ok", ProgramM(Nat, Zero, Succ))(ProgramOK)
 
 }
+
+class TestJavacNat extends TestNat("JAVAC", new JavacCheckerFactory(SolveEnd))
 
 class TestDUSolveEndNat extends TestNat("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveEnd))
