@@ -7,12 +7,12 @@ import nat.Nat;
 import nat.Succ;
 import nat.Zero;
 
-public class Node {
-    public Node() {}
+public class RBNode {
+    public RBNode() {}
 
     public /*abstract*/ Nat data() { return new Zero(); }
-    public /*abstract*/ Node left() { return new Nil(); }
-    public /*abstract*/ Node right() { return new Nil(); }
+    public /*abstract*/ RBNode left() { return new RBNil(); }
+    public /*abstract*/ RBNode right() { return new RBNil(); }
     public /*abstract*/ Color color() { return new Color(new False()); }
 
     public /*abstract*/ Bool isNil() { return new False(); }
@@ -29,13 +29,13 @@ public class Node {
                                         () -> right().find(id))));
     }
 
-    public Node insert(Nat id) {
+    public RBNode insert(Nat id) {
         return insertAux(id).withBlackColor();
     }
 
-    public Inner insertAux(Nat id) {
-        return (Inner) isNil().ifTrue(
-                () -> new Inner(new Color(new True()), id, this, this),
+    public RBInner insertAux(Nat id) {
+        return (RBInner) isNil().ifTrue(
+                () -> new RBInner(new Color(new True()), id, this, this),
                 () -> id.lessThan(data()).ifTrue(
                         () -> balance(color(), data(), left().insertAux(id), right()),
                         () -> id.greaterThan(data()).ifTrue(
@@ -46,17 +46,17 @@ public class Node {
         );
     }
 
-    public Inner balance(Color c, Nat data, Node left, Node right) {
-        return (Inner) isBlackLRedLRed(c, left, right).ifTrue(
-                    () -> new Inner(
+    public RBInner balance(Color c, Nat data, RBNode left, RBNode right) {
+        return (RBInner) isBlackLRedLRed(c, left, right).ifTrue(
+                    () -> new RBInner(
                             new Color(new True()),
                             left.data(),
-                            new Inner(
+                            new RBInner(
                                     new Color(new False()),
                                     left.left().data(),
                                     left.left().left(),
                                     left.left().right()),
-                            new Inner(
+                            new RBInner(
                                     new Color(new False()),
                                     data,
                                     left.right(),
@@ -64,15 +64,15 @@ public class Node {
                             )
                     ),
          () -> isBlackLRedRRed(c, left, right).ifTrue(
-                        () -> new Inner(
+                        () -> new RBInner(
                                 new Color(new True()),
                                 left.right().data(),
-                                new Inner(
+                                new RBInner(
                                         new Color(new False()),
                                         left.data(),
                                         left.left(),
                                         left.right().left()),
-                                new Inner(
+                                new RBInner(
                                         new Color(new False()),
                                         data,
                                         left.right().right(),
@@ -80,15 +80,15 @@ public class Node {
                                 )
                         ),
          () -> isBlackRRedLRed(c, left, right).ifTrue(
-                 () -> new Inner(
+                 () -> new RBInner(
                          new Color(new True()),
                          right.left().data(),
-                         new Inner(
+                         new RBInner(
                                  new Color(new False()),
                                  data,
                                  left,
                                  right.left().left()),
-                         new Inner(
+                         new RBInner(
                                  new Color(new False()),
                                  right.data(),
                                  right.left().right(),
@@ -96,44 +96,44 @@ public class Node {
                          )
                  ),
          () -> isBlackRRedRRed(c, left, right).ifTrue(
-                 () -> new Inner(
+                 () -> new RBInner(
                          new Color(new True()),
                          right.data(),
-                         new Inner(
+                         new RBInner(
                                  new Color(new False()),
                                  data,
                                  left,
                                  right.left()),
-                         new Inner(
+                         new RBInner(
                                  new Color(new False()),
                                  right.right().data(),
                                  right.right().left(),
                                  right.right().right()
                          )
                  ),
-         () -> new Inner(c, data, left, right)
+         () -> new RBInner(c, data, left, right)
          ))));
     }
 
-    public Bool isBlackLRedLRed(Color c, Node left, Node right) {
+    public Bool isBlackLRedLRed(Color c, RBNode left, RBNode right) {
         return c.isBlack()
                 .and(left.color().isRed())
                 .and(left.left().color().isRed());
     }
 
-    public Bool isBlackLRedRRed(Color c, Node left, Node right) {
+    public Bool isBlackLRedRRed(Color c, RBNode left, RBNode right) {
         return c.isBlack()
                 .and(left.color().isRed())
                 .and(left.right().color().isRed());
     }
 
-    public Bool isBlackRRedLRed(Color c, Node left, Node right) {
+    public Bool isBlackRRedLRed(Color c, RBNode left, RBNode right) {
         return c.isBlack()
                 .and(right.color().isRed())
                 .and(right.left().color().isRed());
     }
 
-    public Bool isBlackRRedRRed(Color c, Node left, Node right) {
+    public Bool isBlackRRedRRed(Color c, RBNode left, RBNode right) {
         return c.isBlack()
                 .and(right.color().isRed())
                 .and(right.right().color().isRed());

@@ -5,8 +5,8 @@ import bool.True;
 import nat.Nat;
 import nat.Zero;
 
-public class Nil extends Node {
-    public Nil() {
+public class BSTNil extends BSTNode {
+    public BSTNil() {
         super();
     }
 
@@ -16,12 +16,12 @@ public class Nil extends Node {
     }
 
     @Override
-    public Node left() {
+    public BSTNode left() {
         return this;
     }
 
     @Override
-    public Node right() {
+    public BSTNode right() {
         return this;
     }
 

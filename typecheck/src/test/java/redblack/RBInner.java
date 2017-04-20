@@ -4,12 +4,12 @@ import bool.Bool;
 import bool.False;
 import nat.Nat;
 
-public class Inner extends Node {
+public class RBInner extends RBNode {
     public Nat data;
-    public Node left;
-    public Node right;
+    public RBNode left;
+    public RBNode right;
     public Color color;
-    public Inner(Color color, Nat data, Node left, Node right) {
+    public RBInner(Color color, Nat data, RBNode left, RBNode right) {
         super();
         this.data = data;
         this.left = left;
@@ -23,12 +23,12 @@ public class Inner extends Node {
     }
 
     @Override
-    public Node left() {
+    public RBNode left() {
         return this.left;
     }
 
     @Override
-    public Node right() {
+    public RBNode right() {
         return this.right;
     }
 
@@ -42,7 +42,7 @@ public class Inner extends Node {
         return new False();
     }
 
-    public Node withBlackColor() {
-        return new Inner(new Color(new False()), data(), left(), right());
+    public RBNode withBlackColor() {
+        return new RBInner(new Color(new False()), data(), left(), right());
     }
 }
