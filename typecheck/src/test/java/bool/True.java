@@ -23,11 +23,6 @@ public class True extends Bool {
     }
 
     @Override
-    public Bool equalB(Bool that) {
-        return that;
-    }
-
-    @Override
     public Object ifTrue(Block thn, Block els) {
         return thn.execute();
     }
