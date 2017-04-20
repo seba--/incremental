@@ -1,4 +1,4 @@
-package bst;
+package redblack;
 
 import bool.True;
 import nat.Nat;
@@ -12,7 +12,7 @@ public class Test {
         else throw new IllegalArgumentException();
     }
 
-    public static Node mkBST(int... is) {
+    public static Node mkRedBlack(int... is) {
         Node current = new Nil();
         for (int i : is) {
             current = current.insert(mkNat(i));
@@ -38,9 +38,9 @@ public class Test {
 
 
     public static void main(String[] args) {
-        Node bst = mkBST(5, 7, 3, 1, 9, 4, 6, 11, 12, 13, 14, 15, 16, 17, 18);
-        System.out.println(toString(bst));
-        System.out.println("size = " + toString(bst.size()));
-        System.out.println("height = " + toString(bst.height()));
+        Node tree = mkRedBlack(5, 7, 3, 1, 9, 4, 6, 11, 12, 13, 14, 15, 16, 17, 18);
+        System.out.println(toString(tree));
+        System.out.println("size = " + toString(tree.size()));
+        System.out.println("height = " + toString(tree.height()));
     }
 }
