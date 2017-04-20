@@ -4,11 +4,11 @@ import bool.Bool;
 import bool.False;
 import nat.Nat;
 
-public class Inner extends Node {
+public class BSTInner extends BSTNode {
     public Nat data;
-    public Node left;
-    public Node right;
-    public Inner(Nat data, Node left, Node right) {
+    public BSTNode left;
+    public BSTNode right;
+    public BSTInner(Nat data, BSTNode left, BSTNode right) {
         super();
         this.data = data;
         this.left = left;
@@ -21,12 +21,12 @@ public class Inner extends Node {
     }
 
     @Override
-    public Node left() {
+    public BSTNode left() {
         return this.left;
     }
 
     @Override
-    public Node right() {
+    public BSTNode right() {
         return this.right;
     }
 

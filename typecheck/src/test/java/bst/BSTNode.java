@@ -6,11 +6,11 @@ import nat.Nat;
 import nat.Succ;
 import nat.Zero;
 
-public class Node {
-    public Node() {}
+public class BSTNode {
+    public BSTNode() {}
     public /*abstract*/ Nat data() { return new Zero(); }
-    public /*abstract*/ Node left() { return new Nil(); }
-    public /*abstract*/ Node right() { return new Nil(); }
+    public /*abstract*/ BSTNode left() { return new BSTNil(); }
+    public /*abstract*/ BSTNode right() { return new BSTNil(); }
     public /*abstract*/ Bool isNil() { return new False(); }
     public Bool isNonNil() {
         return isNil().not();
@@ -25,31 +25,31 @@ public class Node {
                                         () -> right().find(id))));
     }
 
-    public Node insert(Nat id) {
-        return (Node) isNil().ifTrue(
-                () -> new Inner(id, this, this),
+    public BSTNode insert(Nat id) {
+        return (BSTNode) isNil().ifTrue(
+                () -> new BSTInner(id, this, this),
                 () -> id.lessThan(data())
                         .ifTrue(
-                                () -> new Inner(data(), left().insert(id), right()),
-                                () -> new Inner(data(), left(), right().insert(id))
+                                () -> new BSTInner(data(), left().insert(id), right()),
+                                () -> new BSTInner(data(), left(), right().insert(id))
                         )
                 );
     }
 
-    public Node delete(Nat id) {
-        return (Node) isNil().ifTrue(
+    public BSTNode delete(Nat id) {
+        return (BSTNode) isNil().ifTrue(
                 () -> this,
                 () -> data().equal(id).ifTrue(
                         () -> left().isNil().ifTrue(
                                 () -> right(),
                                 () -> right().isNil().ifTrue(
                                         () -> left(),
-                                        () -> new Inner(right().min(), left(), right().withoutMin())
+                                        () -> new BSTInner(right().min(), left(), right().withoutMin())
                                 )
                         ),
                         () -> id.lessThan(data()).ifTrue(
-                                () -> new Inner(data(), left().delete(id), right()),
-                                () -> new Inner(data(), left(), right().delete(id))
+                                () -> new BSTInner(data(), left().delete(id), right()),
+                                () -> new BSTInner(data(), left(), right().delete(id))
                         )
                 )
         );
@@ -65,16 +65,16 @@ public class Node {
         );
     }
 
-    public Node withoutMin() {
-        return (Node) isNonNil().ifTrue(
+    public BSTNode withoutMin() {
+        return (BSTNode) isNonNil().ifTrue(
                 () -> left().isNonNil().ifTrue(
-                        () -> new Inner(data(), left().withoutMin(), right()),
+                        () -> new BSTInner(data(), left().withoutMin(), right()),
                         () -> right().isNonNil().ifTrue(
                                 () -> right(),
-                                () -> new Nil()
+                                () -> new BSTNil()
                         )
                 ),
-                () -> new Nil()
+                () -> new BSTNil()
         );
     }
 
