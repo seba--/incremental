@@ -8,6 +8,8 @@ abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Ser
       Some(e.kids.seq)
     else
       None
+
+  def toString(e: Node_[_]): Option[String] = None
 }
 
 class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) extends Serializable {
@@ -26,6 +28,7 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   private var _size = sumSize(kidsArg)
   private var _typ: T = _
   private var _valid = false
+  private var parent: Node_[T] = _
 
   def height = _height
 
@@ -36,14 +39,24 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
     _typ = t
     _valid = true
   }
-  def invalidate: Unit = {
+  def invalidate(): Unit = {
     _typ = null.asInstanceOf[T]
     _valid = false
     _kids foreach (_.invalidate)
+    invalidateParents()
+  }
+
+  private def invalidateParents(): Unit = {
+    var current = this
+    while (current.parent != null) {
+      current = current.parent
+      current._valid = false
+    }
   }
 
   private val _kids: Array[Node_[T]] = Array(kidsArg:_*)
-  private var availableKidTypes: Seq[Boolean] = kidsArg map (_.typ != null)
+  private var availableKidTypes: Seq[Boolean] = _kids map (_.typ != null)
+  _kids foreach { _.parent = this }
 
   object kids {
     def apply(i: Int) = _kids(i)
@@ -56,6 +69,8 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
       _kids(i) = ee
       _height = maxHeight(_kids)
       _size = sumSize(_kids)
+      ee.parent = Node_.this
+      invalidateParents()
     }
     def seq: Seq[Node_[T]] = _kids
   }
@@ -82,8 +97,12 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   }
 
   def visitUninitialized(f: Node_[T] => Boolean): Boolean = {
+    if (_valid)
+      return false
+    if (_kids.isEmpty)
+      return f(this)
     val hasSubchange = _kids.foldLeft(false)((changed, k) =>  k.visitUninitialized(f) || changed)
-    if (!valid || hasSubchange)
+    if (!_valid || hasSubchange)
       f(this)
     else
       false
@@ -124,12 +143,16 @@ class Node_[T](val kind: NodeKind, val lits: Seq[Lit], kidsArg: Seq[Node_[T]]) e
   }
 
   override def toString = {
-    val subs = lits.map(_.toString) ++ _kids.map(_.toString)
-    val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail
-    val substring = subssep.foldLeft("")(_+_)
-    val typString = "" //if(typ == null) "" else "@{" + typ.asInstanceOf[Tuple3[_,_,_]]._1 "}"
-    s"$kind$typString($substring)"
+    kind.toString(this).getOrElse {
+      val subs = lits.map(_.toString) ++ _kids.map(_.toString)
+      val subssep = if (subs.isEmpty) subs else subs.flatMap(s => Seq(", ", s)).tail
+      val substring = subssep.foldLeft("")(_ + _)
+      val typString = "" //if(typ == null) "" else "@{" + typ.asInstanceOf[Tuple3[_,_,_]]._1 "}"
+      s"$kind$typString($substring)"
+    }
   }
+
+  def cloned: Node_[T] = new Node_(kind, lits, kidsArg.map(_.cloned))
 }
 
 object Node {
@@ -172,7 +195,7 @@ object SyntaxChecking {
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]])
   }
 
-  class SyntaxCheckOps(f: NodeKind => SyntaxChecker) {
+  class SyntaxCheckOps(f: NodeKind => SyntaxChecker) extends Serializable {
     def orElse(g: NodeKind => SyntaxChecker) = (k: NodeKind) => new AlternativeSyntax(k, f, g)
   }
 

@@ -3,6 +3,7 @@ package incremental.fjava
 import constraints.fjava._
 import constraints.fjava.impl._
 import incremental.Node._
+import incremental.fjava.latemerge.{BUChecker, BUCheckerFactory}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 import scala.collection.immutable.ListMap
@@ -10,8 +11,8 @@ import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/29/15.
  */
-class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
-  val checker: BUChecker[CS] = checkerFactory.makeChecker
+class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
@@ -20,14 +21,14 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
       val ev = e
       val actual = checker.typecheck(ev)
 
-      val typ = ev.withType[checker.Result].typ._1
-      val req = ev.withType[checker.Result].typ._2
-      val creq = ev.withType[checker.Result].typ._3
-      val cons = ev.withType[checker.Result].typ._4
+//      val typ = ev.withType[checker.Result].typ._1
+//      val req = ev.withType[checker.Result].typ._2
+//      val creq = ev.withType[checker.Result].typ._3
+//      val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, actual.right)
 
-      val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
-        Equal(expected, actual.left.get).solve(SolveContinuousSubst.freshConstraintSystem).tryFinalize      }
+      val sol = SolveContinuousSubstLateMerge.state.withValue(checker.csFactory.state.value) {
+        Equal(expected, actual.left.get).solve(SolveContinuousSubstLateMerge.freshConstraintSystem).tryFinalize      }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
@@ -46,11 +47,10 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         CName('Object), 'not, Seq(),
         New(CName('Bool))), // dummy body, will be overwritten by subclasses
       MethodDec(
-        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
+        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)),
         New(CName('Object))) // dummy body, will be overwritten by subclasses
     )
   )
-  typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
 
   val True = ClassDec(
     Seq(CName('True), CName('Bool), Ctor(ListMap(), ListMap()),
@@ -60,8 +60,8 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         CName('Object), 'not, Seq(),
         New(CName('False))),
       MethodDec(
-        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)),
-        Var('then))
+        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)),
+        Var('vthen))
     )
   )
   val False = ClassDec(
@@ -72,10 +72,12 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
         CName('Object), 'not, Seq(),
         New(CName('True))),
       MethodDec(
-        CName('Object), 'ifTrue, Seq('then -> CName('Object), 'else -> CName('Object)), //was bool, found the erroe by hte cons solver :)
-        Var('else))
+        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)), //was bool, found the erroe by hte cons solver :)
+        Var('velse))
     )
   )
+
+  typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
 
   // without True knowing False (and vice versa), the class fails to check
   typecheckTestError("True ok", True)
@@ -85,6 +87,8 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
   typecheckTest("{Boolean, True, False} ok", ProgramM(Bool, True, False))(ProgramOK)
 }
 
+class TestDUSolveEndBoolean extends TestBoolean("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestBUSolveEndBoolean extends TestBoolean("BUSolveEnd", new BUCheckerFactory(SolveEnd))
-class TestBUSolveContinuousSubstBoolean extends TestBoolean("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuousSubstBoolean extends TestBoolean("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubstLateMerge))
 
+class TestBUEarlySolveContinuousSubstBoolean extends TestBoolean("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubstEarlyMerge))

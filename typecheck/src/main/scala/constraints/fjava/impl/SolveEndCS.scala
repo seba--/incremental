@@ -8,7 +8,7 @@ import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
 
-object SolveEnd extends ConstraintSystemFactory[SolveEndCS] {
+object SolveEnd extends ConstraintSystemFactory[SolveEndCS] with Serializable {
   def freshConstraintSystem = SolveEndCS(Seq(), Seq(), Map())
 }
 
@@ -20,8 +20,8 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
   def substitution = CSubst.empty
 
   def solved(s: CSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
-  def notyet(c: Constraint) = SolveEndCS(notyet :+ c, never, extend)
-  def never(c: Constraint) = SolveEndCS(notyet, never :+ c, extend)
+  def notyet(c: Constraint) = SolveEndCS(c +: notyet, never, extend)
+  def never(c: Constraint) = SolveEndCS(notyet, c +: never, extend)
 
   def mergeSubsystem(that: SolveEndCS) =
     Util.timed(state -> Statistics.mergeSolutionTime) {
@@ -34,7 +34,7 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
   def addNewConstraint(c: Constraint) = {
     state += Statistics.constraintCount -> 1
     Util.timed(state -> Statistics.constraintSolveTime) {
-      SolveEndCS(notyet :+ c, never, extend)
+      SolveEndCS(c +: notyet, never, extend)
     }
   }
 
@@ -46,8 +46,8 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
   }
 
   override def tryFinalize =
-    SolveContinuousSubst.state.withValue(state) {
-      val cs = notyet.foldLeft(SolveContinuousSubstCS(Map(), Map(), Seq(), never, extend))((cs, c) => c.solve(cs)).trySolve
+    SolveContinuousSubstLateMerge.state.withValue(state) {
+      val cs = notyet.foldLeft(SolveContinuousSubstCSLateMerge(Map(), Map(), Seq(), never, extend))((cs, c) => c.solve(cs)).trySolve
       cs.tryFinalize
     }
 

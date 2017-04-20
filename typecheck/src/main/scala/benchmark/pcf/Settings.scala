@@ -14,5 +14,5 @@ object Settings {
     p
   }
 
-  def apply(key: String): String = prop.getProperty(key)
+  def apply(key: String): List[String] = prop.getProperty(key).split(" ").toList
 }

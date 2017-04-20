@@ -3,6 +3,7 @@ package incremental.fjava
 import constraints.fjava._
 import constraints.fjava.impl._
 import incremental.Node._
+import incremental.fjava.latemerge.{BUChecker, BUCheckerFactory}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 import scala.collection.immutable.ListMap
@@ -10,8 +11,8 @@ import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/29/15.
  */
-class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
-  val checker: BUChecker[CS] = checkerFactory.makeChecker
+class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
@@ -20,14 +21,14 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
       val ev = e
       val actual = checker.typecheck(ev)
 
-      val typ = ev.withType[checker.Result].typ._1
-      val req = ev.withType[checker.Result].typ._2
-      val creq = ev.withType[checker.Result].typ._3
-      val cons = ev.withType[checker.Result].typ._4
+//      val typ = ev.withType[checker.Result].typ._1
+//      val req = ev.withType[checker.Result].typ._2
+//      val creq = ev.withType[checker.Result].typ._3
+//      val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, actual.right)
 
-      val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
-        Equal(expected, actual.left.get).solve(SolveContinuousSubst.freshConstraintSystem).tryFinalize
+      val sol = SolveContinuousSubstLateMerge.state.withValue(checker.csFactory.state.value) {
+        Equal(expected, actual.left.get).solve(SolveContinuousSubstLateMerge.freshConstraintSystem).tryFinalize
       }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
@@ -119,5 +120,11 @@ class TestPerson[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: 
   typecheckTest("{ProfTitle, Professor, Person, Title, Student, NoTitle} ok", ProgramM(ProfTitle, Professor, Person, Title, Student, NoTitle))(ProgramOK)
 }
 
+class TestJavacPerson extends TestPerson("JAVAC", new JavacCheckerFactory(SolveEnd))
+
+class TestDUSolveEndPerson extends TestPerson("DUSolveEnd", new DUCheckerFactory(SolveEnd))
+
 class TestBUSolveEndPerson extends TestPerson("BUSolveEnd", new BUCheckerFactory(SolveEnd))
-class TestBUSolveContinuousSubstPerson extends TestPerson("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuousSubstPerson extends TestPerson("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubstLateMerge))
+
+class TestBUEarlySolveContinuousSubstPerson extends TestPerson("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubstEarlyMerge))

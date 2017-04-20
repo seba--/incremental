@@ -4,6 +4,7 @@ import constraints.CVar
 import constraints.fjava._
 import constraints.fjava.impl._
 import incremental.Node._
+import incremental.fjava.latemerge.{BUChecker, BUCheckerFactory}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 import scala.collection.immutable.ListMap
@@ -11,8 +12,8 @@ import scala.collection.immutable.ListMap
 /**
  * Created by lirakuci on 3/29/15.
  */
-class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: BUCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
-  val checker: BUChecker[CS] = checkerFactory.makeChecker
+class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: TypeCheckerFactory[CS]) extends FunSuite with BeforeAndAfterEach {
+  val checker: TypeChecker[CS] = checkerFactory.makeChecker
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
@@ -26,22 +27,20 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       val ev = if (e.kind != ProgramM) e else ProgramM(Seq(), e.kids.seq ++ nats.all :+ strings.string)
       val actual = checker.typecheck(ev)
 
-      val typ = ev.withType[checker.Result].typ._1
-      val req = ev.withType[checker.Result].typ._2
-      val creq = ev.withType[checker.Result].typ._3
-      val cons = ev.withType[checker.Result].typ._4
+//      val typ = ev.withType[checker.Result].typ._1
+//      val req = ev.withType[checker.Result].typ._2
+//      val creq = ev.withType[checker.Result].typ._3
+//      val cons = ev.withType[checker.Result].typ._4
       assert(actual.isLeft, actual.right)
 
-      val sol = SolveContinuousSubst.state.withValue(checker.csFactory.state.value) {
-        Equal(expected, actual.left.get).solve(SolveContinuousSubst.freshConstraintSystem).tryFinalize      }
+      val sol = SolveContinuousSubstLateMerge.state.withValue(checker.csFactory.state.value) {
+        Equal(expected, actual.left.get).solve(SolveContinuousSubstLateMerge.freshConstraintSystem).tryFinalize      }
       assert(sol.isSolved, s"Expected $expected but got ${actual.left.get}. Match failed with ${sol.unsolved}")
     }
 
   def typecheckTestError(desc: String, e: => Node) =
     test(s"$classdesc: Type check $desc") {
       val actual = checker.typecheck(e)
-      if (desc == "Class C, Tnum foo(x TNum){return 1+1}, TNum bar(){return foo();} ")
-        print()
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 
@@ -64,9 +63,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTestError(" (new Pair(first)).first : Int", FieldAcc('f, New(CName('Pair), Var('f)))) //(UCName(CVar('Int)))
 
 
-  typecheckTestError("'void m(x, y) ", MethodDec(Seq(CName('void), 'm, Seq(('x, UCName(CVar('x))), ('y, UCName(CVar('y))))),
+  typecheckTestError("'void m(x, y) ", MethodDec(Seq(CName('void), 'm, Seq(('x, CName('Tx)), ('y, CName('Ty)))),
     Seq(New(CName('Object)))))//(CName('Object))
-  typecheckTestError("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void), 'm, Seq(('c, UCName(CVar('c))))),
+  typecheckTestError("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void), 'm, Seq(('c, CName('Tc)))),
     Seq(Invk(Seq('m), Seq(Var('e0), Var('c)))))) // recoursive call, so it is correct
   typecheckTestError("void m() {New Pair first}", MethodDec(Seq(CName('void), 'm, Seq()), Seq(Invk(Seq('setfst),
     Seq(New(CName('Pair), Var('first)), Var('first))))))//(CName('Pair))
@@ -93,7 +92,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 //  typecheckTestFJ("Int getX(x: Int) {(new Nr).getX(x): Int} ", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
     //Seq(Invk(Seq('getX), Seq(New(CName('Nr)), Var('x))))))(CName('Nr))
 
-  typecheckTestError("Int getX(x: Int) {(new Number).gX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, UCName(CVar('Int))))),
+  typecheckTestError("Int getX(x: Int) {(new Number).gX(x): Int}", MethodDec(Seq(CName('Int), 'getX, Seq(('x, CName('Int)))),
     Seq(Invk(Seq('gX), Seq(New(CName('Number)), Var('x))))))//(CName('Number))
 
   typecheckTestError("Int getX(x: Int) {(new Number(x)).getX(x): Int} ", MethodDec(Seq(CName('Int), 'getX, Seq()),
@@ -323,5 +322,8 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
 }
 
+class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
-class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubstLateMerge))
+
+class TestBUEarlySolveContinuousSubstCorrectness extends TestCorrectness("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubstEarlyMerge))

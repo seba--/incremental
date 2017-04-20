@@ -4,7 +4,7 @@ name := "typecheck"
 
 version := "1.0"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 
 parallelExecution in Test := false
 
@@ -21,11 +21,13 @@ resolvers += "Sonatype OSS Snapshots" at
 
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.10"
+libraryDependencies += "com.storm-enroute" % "scalameter_2.11" % "0.8.2"
 
-libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.6"
+libraryDependencies += "com.typesafe.akka" % "akka-actor_2.11" % "2.3.16"
 
-libraryDependencies += "com.github.scopt" %% "scopt" % "3.3.0"
+libraryDependencies += "com.github.scopt" % "scopt_2.11" % "3.5.0"
+
+fork in Test := true
 
 fork in run := true
 
@@ -34,3 +36,8 @@ connectInput in run := true
 javaOptions in run ++= Seq("-Xmx4096m", "-Xms2048m")
 
 testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
+
+
+//import com.typesafe.sbt.SbtStartScript
+
+//seq(SbtStartScript.startScriptForClassesSettings: _*)

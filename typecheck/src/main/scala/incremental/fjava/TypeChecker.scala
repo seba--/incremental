@@ -2,6 +2,7 @@ package incremental.fjava
 
 import constraints.fjava._
 import incremental.MyBuilder
+import incremental.Node.Node
 import incremental.systemf.UVar
 
 import scala.collection.generic.CanBuildFrom
@@ -24,6 +25,7 @@ abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeC
 
   def freshCName() = UCName(freshSymbol("C$"))
 
+  def prepare(e: Node): Unit = {}
 }
 
 trait TypeCheckerFactory[CS <: ConstraintSystem[CS]] {

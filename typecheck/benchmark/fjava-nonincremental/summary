@@ -1,0 +1,164 @@
+:::Summary of regression test results - Accepter():::
+Test group: DU
+- DU.Test-0 measurements:
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 19.61 ms, ci = <18.14 ms, 21.08 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 18.51 ms, ci = <14.59 ms, 22.43 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 13.81 ms, ci = <10.43 ms, 17.19 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 14.38 ms, ci = <10.40 ms, 18.37 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 66.91 ms, ci = <60.17 ms, 73.65 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 65.97 ms, ci = <63.48 ms, 68.46 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 42.22 ms, ci = <40.22 ms, 44.22 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 44.16 ms, ci = <42.39 ms, 45.94 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 275.01 ms, ci = <265.11 ms, 284.91 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 292.11 ms, ci = <277.95 ms, 306.26 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 157.49 ms, ci = <146.94 ms, 168.03 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 169.43 ms, ci = <160.55 ms, 178.31 ms>, significance = 1.0E-10)
+
+Test group: BU-Early-Cont
+- BU-Early-Cont.Test-1 measurements:
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 242.09 ms, ci = <233.77 ms, 250.41 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 178.75 ms, ci = <171.37 ms, 186.14 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 73.08 ms, ci = <69.62 ms, 76.55 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 70.34 ms, ci = <68.82 ms, 71.86 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 832.62 ms, ci = <805.56 ms, 859.67 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 543.59 ms, ci = <525.84 ms, 561.34 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 182.59 ms, ci = <176.36 ms, 188.82 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 172.74 ms, ci = <168.35 ms, 177.13 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 3117.73 ms, ci = <3020.43 ms, 3215.03 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 1860.18 ms, ci = <1809.44 ms, 1910.91 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 513.44 ms, ci = <501.49 ms, 525.39 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 481.07 ms, ci = <469.33 ms, 492.80 ms>, significance = 1.0E-10)
+
+Test group: DU
+- DU.Test-2 measurements:
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 24.91 ms, ci = <19.65 ms, 30.17 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 22.18 ms, ci = <16.80 ms, 27.56 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 16.29 ms, ci = <11.58 ms, 21.00 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 15.20 ms, ci = <12.51 ms, 17.90 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 69.34 ms, ci = <67.21 ms, 71.48 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 70.38 ms, ci = <67.86 ms, 72.91 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 48.08 ms, ci = <42.09 ms, 54.07 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 50.05 ms, ci = <43.47 ms, 56.63 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 308.78 ms, ci = <277.81 ms, 339.75 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 318.66 ms, ci = <280.29 ms, 357.02 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 175.35 ms, ci = <164.37 ms, 186.34 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 193.55 ms, ci = <179.28 ms, 207.81 ms>, significance = 1.0E-10)
+
+Test group: BU-Early-Cont
+- BU-Early-Cont.Test-3 measurements:
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 266.72 ms, ci = <256.53 ms, 276.91 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 203.49 ms, ci = <196.17 ms, 210.82 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 104.21 ms, ci = <101.95 ms, 106.47 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 105.67 ms, ci = <103.84 ms, 107.51 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 913.22 ms, ci = <880.48 ms, 945.95 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 627.64 ms, ci = <606.94 ms, 648.35 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 279.66 ms, ci = <262.03 ms, 297.30 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 275.13 ms, ci = <270.90 ms, 279.35 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 3402.28 ms, ci = <3268.94 ms, 3535.63 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 2136.42 ms, ci = <2071.79 ms, 2201.05 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 840.14 ms, ci = <821.29 ms, 859.00 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 816.16 ms, ci = <777.32 ms, 854.99 ms>, significance = 1.0E-10)
+
+Test group: DU
+- DU.Test-4 measurements:
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 24.72 ms, ci = <19.24 ms, 30.20 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 22.49 ms, ci = <18.51 ms, 26.48 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 14.89 ms, ci = <12.77 ms, 17.01 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 16.23 ms, ci = <11.46 ms, 20.99 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 72.76 ms, ci = <65.30 ms, 80.22 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 72.08 ms, ci = <69.73 ms, 74.44 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 49.63 ms, ci = <45.30 ms, 53.96 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 50.66 ms, ci = <48.61 ms, 52.71 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 304.41 ms, ci = <287.84 ms, 320.99 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 321.86 ms, ci = <309.95 ms, 333.78 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 185.49 ms, ci = <175.23 ms, 195.74 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 204.06 ms, ci = <191.13 ms, 217.00 ms>, significance = 1.0E-10)
+
+Test group: BU-Early-Cont
+- BU-Early-Cont.Test-5 measurements:
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 375.25 ms, ci = <341.57 ms, 408.94 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 307.94 ms, ci = <281.93 ms, 333.95 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 193.36 ms, ci = <189.68 ms, 197.04 ms>, significance = 1.0E-10)
+  - at roots -> 10, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 195.75 ms, ci = <191.16 ms, 200.33 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 1396.65 ms, ci = <1375.25 ms, 1418.05 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 1106.60 ms, ci = <1057.59 ms, 1155.61 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 714.24 ms, ci = <700.22 ms, 728.26 ms>, significance = 1.0E-10)
+  - at roots -> 20, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 722.18 ms, ci = <688.82 ms, 755.54 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 0: passed
+    (mean = 6318.69 ms, ci = <6243.76 ms, 6393.63 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 1: passed
+    (mean = 5014.12 ms, ci = <4932.85 ms, 5095.40 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 2: passed
+    (mean = 3601.44 ms, ci = <3529.40 ms, 3673.48 ms>, significance = 1.0E-10)
+  - at roots -> 40, heights -> 5, branching -> 2, naming -> 3: passed
+    (mean = 3579.90 ms, ci = <3512.68 ms, 3647.12 ms>, significance = 1.0E-10)
+
+Summary: 6 tests passed, 0 tests failed.

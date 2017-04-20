@@ -10,15 +10,50 @@ import scala.collection.immutable.ListMap
 
 abstract class Toplevel(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 
-case object ProgramM extends NodeKind(_ => ProgramSyntax)
-
-case object ClassDec extends Toplevel(_ => ClassSyntax)
-case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CName]) {
-  def allArgTypes: Seq[CName] = superParams.values.toList ++ fields.values
+case object ProgramM extends NodeKind(_ => ProgramSyntax) {
+  override def toString(e: Node_[_]): Option[String] = {
+    Some(e.kids.seq.mkString("{", "\n", "}"))
+  }
 }
 
-case object FieldDec extends Toplevel(_ => FieldSyntax)
-case object MethodDec extends Toplevel(_ => MethodSyntax)
+case object ClassDec extends Toplevel(_ => ClassSyntax) {
+  override def toString(e: Node_[_]): Option[String] = {
+    val name = e.lits(0)
+    val sup = e.lits(1)
+
+    val indent = "  "
+    val ctor = e.lits(2).toString
+    val fields = e.lits(3).asInstanceOf[Seq[(Symbol, CName)]].map { case (field, typ) => s"val ${field.name}: $typ" }
+    val methods: Seq[Node_[_]] = e.kids.seq
+
+    Some(s"class $name extends $sup {\n$indent$ctor\n${fields.mkString(indent, "\n"+indent, "\n")}\n${methods.mkString(indent, "\n"+indent, "\n")}\n}")
+  }
+}
+
+case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CName]) {
+  val allArgTypes: Seq[CName] = superParams.values.toList ++ fields.values
+
+  override def toString: String = {
+    val sparams = superParams.map { case (param, typ) => s"$param: $typ" }.mkString(", ")
+    val tparams = fields.map { case (param, typ) => s"$param: $typ" }.mkString(", ")
+    s"def init($sparams | $tparams) { /* initialization code */ }"
+  }
+}
+
+case object FieldDec extends Toplevel(_ => FieldSyntax) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"val ${e.lits(0).asInstanceOf[Symbol].name}: ${e.lits(1)}")
+}
+case object MethodDec extends Toplevel(_ => MethodSyntax) {
+  override def toString(e: Node_[_]): Option[String] = {
+    val ret = e.lits(0)
+    val name = e.lits(1).asInstanceOf[Symbol].name
+    val params = e.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map { case (param, typ) => s"${param.name}: $typ" }
+    Some(
+      s"def $name(${params.mkString(", ")}): $ret {" +
+      s"  ${e.kids(0)}" +
+      s"}")
+  }
+}
 
 abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 object Exp {
@@ -26,14 +61,27 @@ object Exp {
 }
 import Exp._
 
-case object Var  extends Exp(simple(Seq(classOf[Symbol])))
-case object FieldAcc extends Exp(simple(Seq(classOf[Symbol]), cExp))
-case object New extends Exp(_ => NewSyntax)
-case object UCast extends Exp(simple(Seq(classOf[CName]),cExp))
-case object Invk extends Exp(_ =>InvkSyntax)
-case object TClass extends Exp(simple(cExp))
-case object DCast extends Exp(simple(cExp))
-case object SCast extends Exp(simple(cExp))
+case object Var extends Exp(simple(Seq(classOf[Symbol]))) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"${e.lits(0).asInstanceOf[Symbol].name}")
+}
+case object FieldAcc extends Exp(simple(Seq(classOf[Symbol]), cExp)) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"${e.kids(0)}.${e.lits(0).asInstanceOf[Symbol].name}")
+}
+case object New extends Exp(_ => NewSyntax) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"new ${e.lits(0)}(${e.kids.seq.mkString(", ")})")
+}
+case object UCast extends Exp(simple(Seq(classOf[CName]),cExp)) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"(${e.lits(0)}) ${e.kids(0)}")
+}
+case object Invk extends Exp(_ => InvkSyntax) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"${e.kids(0)}.${e.lits(0).asInstanceOf[Symbol].name}(${e.kids.seq.tail.mkString(", ")})")
+}
+case object DCast extends Exp(simple(cExp)) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"(${e.lits(0)}) ${e.kids(0)}")
+}
+case object SCast extends Exp(simple(cExp)) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"(${e.lits(0)}) ${e.kids(0)}")
+}
 
 object InvkSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
@@ -41,7 +89,6 @@ object InvkSyntax extends SyntaxChecking.SyntaxChecker(Invk) {
       error(s"Method name should be a symbol, but found ${(!(lits(0).isInstanceOf[Symbol]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
-
   }
 }
 
@@ -121,7 +168,7 @@ object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
     if (!lits(2).isInstanceOf[Seq[_]])
       error(s"Expected parameter list, but got ${lits(2)}")
     val params = lits(2).asInstanceOf[Seq[_]]
-    for (i <- 0 until params.size by 2) {
+    for (i <- 0 until params.size) {
       val nametype = params(i)
       if (!nametype.isInstanceOf[(_, _)])
         error(s"Expected name/type pair, but got $nametype")
@@ -146,8 +193,9 @@ object ProgramSyntax extends SyntaxChecking.SyntaxChecker(ProgramM) {
     if (lits.nonEmpty)
       error(s"No literals expected")
 
-    if (kids.exists(_.kind != ClassDec))
-      error(s"All children of a program must be class declarations, but found ${kids.filter(_.kind != ClassDec)}")
+    kids.foreach( k =>
+      assert(k.kind == ClassDec || k.kind == ProgramM)
+    )
   }
 }
 
