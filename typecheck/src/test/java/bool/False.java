@@ -23,6 +23,11 @@ public class False extends Bool {
     }
 
     @Override
+    public Bool equalB(Bool that) {
+        return that.not();
+    }
+
+    @Override
     public Object ifTrue(Block thn, Block els) {
         return els.execute();
     }
