@@ -1,16 +1,17 @@
 package bst;
 
 import bool.Bool;
+import bool.False;
 import nat.Nat;
 import nat.Succ;
 import nat.Zero;
 
-public abstract class Node {
+public class Node {
     public Node() {}
-    public abstract Nat data();
-    public abstract Node left();
-    public abstract Node right();
-    public abstract Bool isNil();
+    public /*abstract*/ Nat data() { return new Zero(); }
+    public /*abstract*/ Node left() { return new Nil(); }
+    public /*abstract*/ Node right() { return new Nil(); }
+    public /*abstract*/ Bool isNil() { return new False(); }
     public Bool isNonNil() {
         return isNil().not();
     }
