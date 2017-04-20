@@ -34,10 +34,10 @@ class StandardBenchmarkClass extends Bench.OfflineReport {
 
   def measureCheckers(trees: Gen[(Node, Long)]): Unit = {
     measureT("JAVAC", javac)(trees)
-    measureT("DU", du)(trees)
+//    measureT("DU", du)(trees)
 //    measureT("BU-End", buEnd)(trees)
 //    measureT("BU-Cont", buCont)(trees)
-    measureT("BU-Early-Cont", buEarlyCont)(trees)
+//    measureT("BU-Early-Cont", buEarlyCont)(trees)
   }
 
   measureCheckers(Trees.intAccumSuperHierarchyTrees)
