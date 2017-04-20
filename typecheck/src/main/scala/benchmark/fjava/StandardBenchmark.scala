@@ -47,4 +47,3 @@ object StandardBenchmark {
     new StandardBenchmarkClass().main(scalameterArgs)
   }
 }
-

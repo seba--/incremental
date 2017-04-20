@@ -43,14 +43,21 @@ case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CNa
 case object FieldDec extends Toplevel(_ => FieldSyntax) {
   override def toString(e: Node_[_]): Option[String] = Some(s"val ${e.lits(0).asInstanceOf[Symbol].name}: ${e.lits(1)}")
 }
+
+case object VarDec extends Toplevel(_ => VarSyntax) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"val ${e.lits(0).asInstanceOf[Symbol].name}: ${e.lits(1)}")
+}
+
 case object MethodDec extends Toplevel(_ => MethodSyntax) {
   override def toString(e: Node_[_]): Option[String] = {
     val ret = e.lits(0)
     val name = e.lits(1).asInstanceOf[Symbol].name
     val params = e.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map { case (param, typ) => s"${param.name}: $typ" }
+    val localVars = e.lits(3).asInstanceOf[Seq[(Symbol, CName)]].map { case (vars, typ) => s" ${vars.name}: $typ" }
     Some(
       s"def $name(${params.mkString(", ")}): $ret {" +
-      s"  ${e.kids(0)}" +
+      s"${localVars.mkString(", ")}" +
+      s"  ${e.kids.seq}" +
       s"}")
   }
 }
@@ -64,6 +71,11 @@ import Exp._
 case object Var extends Exp(simple(Seq(classOf[Symbol]))) {
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.lits(0).asInstanceOf[Symbol].name}")
 }
+
+case object Stmt extends Exp(simple(Seq(classOf[Symbol]))) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"${e.lits(0).asInstanceOf[Symbol].name} = ${e.kids(0)}")
+}
+
 case object FieldAcc extends Exp(simple(Seq(classOf[Symbol]), cExp)) {
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.kids(0)}.${e.lits(0).asInstanceOf[Symbol].name}")
 }
@@ -152,10 +164,29 @@ object FieldSyntax extends SyntaxChecking.SyntaxChecker(FieldDec) {
   }
 }
 
+object VarSyntax extends SyntaxChecking.SyntaxChecker(VarDec) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
+    if (kids.nonEmpty)
+      error(s"Expected no kids but got $kids")
+
+    for (i <- 0 until lits.size by 2) {
+      val name = lits(i)
+      if (i + 1 >= lits.size)
+        error(s"Var $name misses annotated type")
+      val typ = lits(i+1)
+      if (!name.isInstanceOf[Symbol])
+        error(s"Expected var name of type Symbol but got $name")
+      if (!typ.isInstanceOf[Type])
+        error(s"Expected var type of type Type but got $typ")
+    }
+  }
+}
+
+
 object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]){
 
-    if (lits.size != 3)
+    if (lits.size != 4)
       error(s"Wrong number of arguments. Expected Method(return, name, params), but got $lits")
 
     if (!(lits(0).isInstanceOf[CName]))

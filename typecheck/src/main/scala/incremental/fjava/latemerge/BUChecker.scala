@@ -75,6 +75,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val X = freshCName()
       (X, Map(x -> X), ClassReqs(), Seq())
 
+    case Stmt =>
+      val x = e.lits(0).asInstanceOf[Symbol]
+      val (t, reqs, creqs, _) = e.kids(0).typ
+      val X = freshCName()
+      (t, reqs, creqs, Seq(Equal(X, t)))
+
     case FieldAcc =>
       val f = e.lits(0).asInstanceOf[Symbol] //symbol
       val (t, reqs, creqs, _) = e.kids(0).typ //subsol
@@ -153,21 +159,34 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val retT = e.lits(0).asInstanceOf[CName] // return type
       val m = e.lits(1).asInstanceOf[Symbol] // method name
       val params = e.lits(2).asInstanceOf[Seq[(Symbol, Type)]]
+      val localVars = e.lits(3).asInstanceOf[Seq[(Symbol ,Type)]]
 
-      val (bodyT, bodyReqs, bodyCreqs, _) = e.kids(0).typ
+      var reqss = Seq[Reqs]()
+      var creqss = Seq[ClassReqs]()
+      var cons = Seq[Constraint]()
+      var bodyT = List[Type]()
+      // handle all methods, satisfying current-class reqs
+      for (i <- 0 until e.kids.seq.size) {
+        val (t, req, creq, _) = e.kids(i).typ
+        bodyT  +:= t
+        reqss = reqss :+ req
+        creqss = creqss :+ creq
+      }
+
+      val (creqs, mccons) = mergeCReqMaps(creqss)
+      val (reqs, mrcons) = mergeReqMaps(reqss)
 
       val Uc = freshCName() // current class
       val Ud = freshCName() // current super class
 
-      var restReqs = bodyReqs
-      var cons = Seq[Constraint]()
+      var restReqs = reqs
 
       // body type is subtype of declared return type
-      cons = Subtype(bodyT, retT) +: cons
+      cons = Subtype(bodyT.toList.head, retT) +: cons
 
       // remove params and 'this from body requirements
-      for ((x, xC) <- params :+ ('this, Uc)) {
-        bodyReqs.get(x) match {
+      for ((x, xC) <- params ++ localVars :+ ('this, Uc)) {
+        reqs.get(x) match {
           case None =>
           case Some(typ) =>
             restReqs = restReqs - x
@@ -175,10 +194,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         }
       }
 
-      val (creqs1, extendCons) = bodyCreqs.copy(currentClass = Some(Uc)).merge(ExtCReq(Uc, Ud).lift)
+      val (creqs1, extendCons) = creqs.copy(currentClass = Some(Uc)).merge(ExtCReq(Uc, Ud).lift)
       val (creqs2, condCons) = creqs1.merge(MethodCReq(Ud, m, params.map(_._2), retT).liftOpt)
 
-      (MethodOK, restReqs, creqs2, cons ++ extendCons ++ condCons)
+      (MethodOK, restReqs, creqs2, cons ++ mccons ++ mrcons ++ extendCons ++ condCons)
 
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]
