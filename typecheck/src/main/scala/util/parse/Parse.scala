@@ -1,9 +1,15 @@
 package util.parse
 
-
+import incremental._
 import com.github.javaparser.JavaParser
 import better.files._
-import com.github.javaparser.ast.{Node => ParseNode}
+import com.github.javaparser.ast.`type`.ClassOrInterfaceType
+import com.github.javaparser.ast.body.{ClassOrInterfaceDeclaration, ConstructorDeclaration, FieldDeclaration, MethodDeclaration}
+import com.github.javaparser.ast.expr._
+import com.github.javaparser.ast.{Node => ParseNode, _}
+import com.github.javaparser.ast.stmt._
+
+import scala.collection.immutable.Queue
 
 
 /**
@@ -15,11 +21,41 @@ object Parse extends App {
 }
 
 
-class MyVisitor extends NodeVisitor with FoldVisitor[Int] with PrintlnVisitor {
-  def init(): Int = 0
+class MyVisitor extends NodeVisitor with FoldVisitor[Queue[Node.Node]] with PrintlnVisitor {
+  type Q = Queue[Node.Node] 
 
-  def fold(n: ParseNode, s: Int): Int = {
-    println(s)
-    s + 1
+  def init(): Q = Queue()
+
+  def fold(n: ParseNode, q: Q): Q = n match {
+    case im: ImportDeclaration =>
+      q
+    case c: ClassOrInterfaceDeclaration =>
+      q
+    case ctor: ConstructorDeclaration =>
+      q
+    case supr: ExplicitConstructorInvocationStmt =>
+      q
+    case fd: FieldDeclaration =>
+      q
+    case md: MethodDeclaration =>
+      q
+    case nu: ObjectCreationExpr =>
+      q
+    case ret: ReturnStmt =>
+      q
+    case point: FieldAccessExpr =>
+      q
+    case asgn: AssignExpr =>
+      q
+    case call: MethodCallExpr =>
+      q
+    case lam: LambdaExpr =>
+      q
+    case cast: CastExpr =>
+      q
+    case self: ThisExpr =>
+      q
+    case _ =>
+      q
   }
 }
