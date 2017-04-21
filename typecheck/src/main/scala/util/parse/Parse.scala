@@ -1,5 +1,7 @@
 package util.parse
 
+import java.util
+
 import incremental._
 import com.github.javaparser.JavaParser
 import better.files._
@@ -10,7 +12,8 @@ import com.github.javaparser.ast.{Node => ParseNode, _}
 import com.github.javaparser.ast.stmt._
 
 import scala.collection.immutable.Queue
-
+import java.util.{List => JList}
+import incremental.fjava._
 
 /**
   * Created by oliver on 20.04.17.
@@ -18,44 +21,55 @@ import scala.collection.immutable.Queue
 object Parse extends App {
   val cu = JavaParser.parse(File("src/main/java/redblack/RBNode.java").toJava)
   cu.accept(new MyVisitor, ())
+  println(cu.accept(new JavaToFJ, ()))
 }
 
 
-class MyVisitor extends NodeVisitor with FoldVisitor[Queue[Node.Node]] with PrintlnVisitor {
-  type Q = Queue[Node.Node] 
 
-  def init(): Q = Queue()
+class JavaToFJ extends NodeListVisitor[Node.Node] {
+  import collection.JavaConverters._
+  import collection.immutable.Seq
+  type L = JList[Node.Node]
 
-  def fold(n: ParseNode, q: Q): Q = n match {
-    case im: ImportDeclaration =>
-      q
+  def jlist(n: Node.Node): L = {
+    val res = new util.ArrayList[Node.Node]
+    res.add(n)
+    res
+  }
+
+  def join(n: ParseNode, l: L): L = n match {
+    //    case im: ImportDeclaration =>
+    //      q
     case c: ClassOrInterfaceDeclaration =>
-      q
+      l
     case ctor: ConstructorDeclaration =>
-      q
+      l
     case supr: ExplicitConstructorInvocationStmt =>
-      q
+      l
     case fd: FieldDeclaration =>
-      q
+      l
     case md: MethodDeclaration =>
-      q
+      l
     case nu: ObjectCreationExpr =>
-      q
+      l
     case ret: ReturnStmt =>
-      q
+      l
     case point: FieldAccessExpr =>
-      q
+      l
     case asgn: AssignExpr =>
-      q
+      l
     case call: MethodCallExpr =>
-      q
+      l
     case lam: LambdaExpr =>
-      q
+      l
     case cast: CastExpr =>
-      q
+      l
     case self: ThisExpr =>
-      q
+      l
     case _ =>
-      q
+      l
   }
 }
+
+
+class MyVisitor extends NodeVisitor with PrintlnVisitor
