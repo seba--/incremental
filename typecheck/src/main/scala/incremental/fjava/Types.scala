@@ -55,6 +55,9 @@ case class CName(x: Symbol) extends GroundType {
 
   override val hashCode: Int = x.hashCode()
 }
+case object CName {
+  def apply(s: String): CName = CName(Symbol(s))
+}
 
 case object ProgramOK extends GroundType {
   def freeTVars = Set()

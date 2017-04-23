@@ -3,17 +3,17 @@ package util.parse
 import java.util
 
 import incremental._
-import com.github.javaparser.JavaParser
+import com.github.javaparser.{JavaParser, ParseException}
 import better.files._
-import com.github.javaparser.ast.`type`.ClassOrInterfaceType
-import com.github.javaparser.ast.body.{ClassOrInterfaceDeclaration, ConstructorDeclaration, FieldDeclaration, MethodDeclaration}
+import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
-import com.github.javaparser.ast.{Node => ParseNode, _}
 import com.github.javaparser.ast.stmt._
 
-import scala.collection.immutable.Queue
-import java.util.{List => JList}
+import scala.collection.immutable.ListMap
+import com.github.javaparser.ast.{CompilationUnit, NodeList}
 import incremental.fjava._
+
+import scala.collection.mutable
 
 /**
   * Created by oliver on 20.04.17.
@@ -21,53 +21,134 @@ import incremental.fjava._
 object Parse extends App {
   val cu = JavaParser.parse(File("src/main/java/redblack/RBNode.java").toJava)
   cu.accept(new MyVisitor, ())
-  println(cu.accept(new JavaToFJ, ()))
+  println(JavaToFJ(cu))
 }
 
-
-
-class JavaToFJ extends NodeListVisitor[Node.Node] {
+object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
   import collection.JavaConverters._
   import collection.immutable.Seq
-  type L = JList[Node.Node]
+  import Node._
 
-  def jlist(n: Node.Node): L = {
-    val res = new util.ArrayList[Node.Node]
-    res.add(n)
-    res
+  type S[T] = collection.immutable.Seq[T]
+  
+  def apply(cu: CompilationUnit): Seq[Node] = {
+    val types = cu.getTypes.iterator.asScala
+    val classes = types map {
+      case clazz: ClassOrInterfaceDeclaration =>
+        val flds = fields(clazz)
+        ClassDec(CName(clazz.getNameAsString),
+                 superClass(clazz),
+                 ctor(clazz, flds),
+                 flds,
+                 methods(clazz))
+    }
+    classes.to[S]
   }
 
-  def join(n: ParseNode, l: L): L = n match {
-    //    case im: ImportDeclaration =>
-    //      q
-    case c: ClassOrInterfaceDeclaration =>
-      l
-    case ctor: ConstructorDeclaration =>
-      l
-    case supr: ExplicitConstructorInvocationStmt =>
-      l
-    case fd: FieldDeclaration =>
-      l
-    case md: MethodDeclaration =>
-      l
-    case nu: ObjectCreationExpr =>
-      l
-    case ret: ReturnStmt =>
-      l
-    case point: FieldAccessExpr =>
-      l
-    case asgn: AssignExpr =>
-      l
-    case call: MethodCallExpr =>
-      l
-    case lam: LambdaExpr =>
-      l
-    case cast: CastExpr =>
-      l
-    case self: ThisExpr =>
-      l
-    case _ =>
-      l
+  def fields(clazz: ClassOrInterfaceDeclaration): Seq[(Symbol, CName)] = {
+    val fields = for {decl <- clazz.getFields.asScala
+                      field <- decl.getVariables.asScala}
+                 yield (Symbol(field.getNameAsString),
+                        CName(field.getType.asString))
+    fields.to[S]
+  }
+
+  def methods(clazz: ClassOrInterfaceDeclaration): Seq[Node] = {
+    val parseMethods = clazz.getMethods.asScala
+    val methods = parseMethods map { m =>
+      val name = Symbol(m.getNameAsString)
+      val returnType = CName(m.getType.asString)
+      val ps = params(m.getParameters)
+      val body = m.getBody.get.getStatement(0) match {
+        case ret: ReturnStmt =>
+          expr(ret.getExpression.get)
+      }
+      MethodDec(returnType, name, ps, body)
+    }
+    methods.to[S]
+  }
+
+  def params(ps: NodeList[Parameter]): Seq[(Symbol, CName)] = ps.asScala.map( p =>
+    (Symbol(p.getNameAsString), CName(p.getType.asString))
+  ).to[S]
+
+
+  def expr(e: Expression): Node = {
+    Var('x) //TODO
+  }
+
+  def superClass(clazz: ClassOrInterfaceDeclaration): CName = {
+    val supers = clazz.getExtendedTypes
+    if (supers.isEmpty)
+      CName('Object)
+    else
+      CName(Symbol(supers.get(0).getNameAsString))
+  }
+
+  def checkArgsCorrespond(params: ListMap[Symbol, CName], args: mutable.Buffer[Expression]): Boolean = {
+    params.size == args.size && params.zip(args).forall {
+      case ((x,_), e: NameExpr) =>
+        e.getNameAsString == x.name
+      case _ => false
+    }
+  }
+
+  /**
+    * Extractor that matches statements of the form 'this.x = y'.
+    */
+  object FieldInitialization {
+    def unapply(s: Statement): Option[(Symbol, Symbol)] = s match {
+      case e: ExpressionStmt =>
+        e.getExpression match {
+          case asgn: AssignExpr =>
+            asgn.getTarget match {
+              case fa: FieldAccessExpr =>
+                if (fa.getScope.isPresent && fa.getScope.get.isInstanceOf[ThisExpr]) {
+                  asgn.getValue match {
+                    case n: NameExpr =>
+                      Some(Symbol(fa.getNameAsString), Symbol(n.getNameAsString))
+                    case _ => None
+                  }
+                }
+                else None
+              case _ => None
+            }
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+  
+  def ctor(clazz: ClassOrInterfaceDeclaration, fields: Seq[(Symbol, CName)]): Ctor = {
+    if (clazz.getDefaultConstructor.isPresent) {
+      val ctor = clazz.getDefaultConstructor.get
+      val ps = ListMap(params(ctor.getParameters):_*)
+      var body = ctor.getBody.getStatements.asScala
+      //check for optional super call as first body statement
+      val nsuper = body.headOption match {
+        case Some(supr: ExplicitConstructorInvocationStmt) =>
+          val n = supr.getArguments.size
+          val superparams = ps.take(n)
+          val args = supr.getArguments.asScala
+          if (!checkArgsCorrespond(superparams, args))
+            throw new ParseException(s"Constructor parameters $superparams do not match super arguments $args")
+          body = body.tail
+          n
+        case _ => 0
+      }
+      //rest of ctor body statements must assign remaining parameters to fields in their definition order
+      if (body.size != fields.size)
+        throw new ParseException(s"Constructor $ctor of class ${clazz.getNameAsString} must initialize all declared fields")
+      val bodyOk = (fields zip body).corresponds(ps.drop(nsuper).toSeq) {
+        case (((field1, _), FieldInitialization(field2, x)), (y, _)) =>
+          field1 == field2 && field2 == x && x == y
+        case _ => false
+      }
+      if (!bodyOk)
+        throw new ParseException(s"Constructor $ctor of class ${clazz.getNameAsString}: Names, number and order of field parameters must match field declarations")
+      Ctor(ps.take(nsuper), ps.drop(nsuper))
+    }
+    else Ctor(ListMap(), ListMap())
   }
 }
 

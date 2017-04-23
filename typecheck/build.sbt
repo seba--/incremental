@@ -31,6 +31,8 @@ libraryDependencies += "com.github.scopt" % "scopt_2.11" % "3.5.0"
 
 libraryDependencies += "com.github.pathikrit" %% "better-files" % "2.17.1"
 
+//libraryDependencies += "org.scala-lang.modules" %% "scala-java8-compat" % "0.8.0"
+
 fork in Test := true
 
 fork in run := true
