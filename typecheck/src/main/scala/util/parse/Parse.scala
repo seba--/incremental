@@ -28,6 +28,7 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
   import collection.JavaConverters._
   import collection.immutable.Seq
   import Node._
+  import scala.compat.java8.OptionConverters._
 
   type S[T] = collection.immutable.Seq[T]
   
@@ -62,6 +63,8 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
       val body = m.getBody.get.getStatement(0) match {
         case ret: ReturnStmt =>
           expr(ret.getExpression.get)
+        case _ =>
+          throw new ParseException(s"Method $name in class ${clazz.getNameAsString}: Method bodies must consist of a single return statement")
       }
       MethodDec(returnType, name, ps, body)
     }
@@ -73,8 +76,26 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
   ).to[S]
 
 
-  def expr(e: Expression): Node = {
-    Var('x) //TODO
+  def expr(e: Expression): Node = e match {
+    case nu: ObjectCreationExpr =>
+      val args = nu.getArguments.asScala.map(expr).to[S]
+      New(CName(nu.getType.getNameAsString), args:_*)
+    case cast: CastExpr =>
+      SCast(CName(cast.getType.asString), expr(cast.getExpression)) //TODO correct AST class?
+    case lambda: LambdaExpr => ???
+
+    case fa: FieldAccessExpr =>
+      val receiver = fa.getScope.asScala.map(expr).getOrElse(Var('this))
+      FieldAcc(Symbol(fa.getNameAsString), receiver)
+    case mc: MethodCallExpr =>
+      val receiver = mc.getScope.asScala.map(expr).getOrElse(Var('this))
+      val args = mc.getArguments.asScala.map(expr)
+      args.prepend(receiver)
+      Invk(Symbol(mc.getNameAsString), args.to[S]:_*)
+    case name: NameExpr =>
+      Var(Symbol(name.getNameAsString))
+    case _ =>
+      throw new ParseException(s"Unsupported expression $e")
   }
 
   def superClass(clazz: ClassOrInterfaceDeclaration): CName = {
@@ -103,14 +124,15 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
           case asgn: AssignExpr =>
             asgn.getTarget match {
               case fa: FieldAccessExpr =>
-                if (fa.getScope.isPresent && fa.getScope.get.isInstanceOf[ThisExpr]) {
-                  asgn.getValue match {
-                    case n: NameExpr =>
-                      Some(Symbol(fa.getNameAsString), Symbol(n.getNameAsString))
-                    case _ => None
-                  }
+                fa.getScope.asScala match {
+                  case Some(_: ThisExpr) =>
+                    asgn.getValue match {
+                      case n: NameExpr =>
+                        Some(Symbol(fa.getNameAsString), Symbol(n.getNameAsString))
+                      case _ => None
+                    }
+                  case _ => None
                 }
-                else None
               case _ => None
             }
           case _ => None
