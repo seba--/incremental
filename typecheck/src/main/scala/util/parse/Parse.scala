@@ -82,7 +82,7 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
       args.prepend(CName(nu.getType.getNameAsString))
       New(args:_*)
     case cast: CastExpr =>
-      SCast(CName(cast.getType.asString), expr(cast.getExpression)) //TODO correct AST class?
+      DCast(CName(cast.getType.asString), expr(cast.getExpression)) //TODO correct AST class?
     case lambda: LambdaExpr => Var('x) //TODO
 
     case fa: FieldAccessExpr =>
