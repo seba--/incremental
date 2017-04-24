@@ -30,5 +30,15 @@ object Interpolators {
       }
       ProgramM(JavaToFJ(JavaParser.parse(buf.toString)):_*)
     }
+    def jclass(args: Any*): Node = {
+      val strings = sc.parts.iterator
+      val expressions = args.iterator
+      var buf = new StringBuffer(strings.next)
+      while(strings.hasNext) {
+        buf append expressions.next
+        buf append strings.next
+      }
+      JavaToFJ(JavaParser.parse(buf.toString)).head
+    }
   }
 }

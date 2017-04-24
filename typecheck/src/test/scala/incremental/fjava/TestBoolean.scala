@@ -5,6 +5,7 @@ import constraints.fjava.impl._
 import incremental.Node._
 import incremental.fjava.latemerge.{BUChecker, BUCheckerFactory}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
+import util.parse.Interpolators._
 
 import scala.collection.immutable.ListMap
 
@@ -39,43 +40,43 @@ class TestBoolean[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory:
     }
 
 
-  val Bool = ClassDec(
-    Seq(CName('Bool), CName('Object), Ctor(ListMap(), ListMap()),
-      Seq()), // no fields
-    Seq(
-      MethodDec(
-        CName('Object), 'not, Seq(),
-        New(CName('Bool))), // dummy body, will be overwritten by subclasses
-      MethodDec(
-        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)),
-        New(CName('Object))) // dummy body, will be overwritten by subclasses
-    )
-  )
+  val Bool =
+    jclass"""
+       class Bool {
+         Object not() {
+           return new Bool();
+         }
+         Object ifTrue(Object vthen, Object velse) {
+           return new Object();
+         }
+       }
+      """
 
-  val True = ClassDec(
-    Seq(CName('True), CName('Bool), Ctor(ListMap(), ListMap()),
-      Seq()), // no fields
-    Seq(
-      MethodDec(
-        CName('Object), 'not, Seq(),
-        New(CName('False))),
-      MethodDec(
-        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)),
-        Var('vthen))
-    )
-  )
-  val False = ClassDec(
-    Seq(CName('False), CName('Bool),Ctor(ListMap(), ListMap()),
-      Seq()), // no fields
-    Seq(
-      MethodDec(
-        CName('Object), 'not, Seq(),
-        New(CName('True))),
-      MethodDec(
-        CName('Object), 'ifTrue, Seq('vthen -> CName('Object), 'velse -> CName('Object)), //was bool, found the erroe by hte cons solver :)
-        Var('velse))
-    )
-  )
+  val True =
+    jclass"""
+       class True extends Bool {
+         Object not() {
+           return new False();
+         }
+
+         Object ifTrue(Object vthen, Object velse) {
+           return vthen;
+         }
+       }
+      """
+
+  val False =
+    jclass"""
+       class False extends Bool {
+         Object not() {
+           return new True();
+         }
+
+         Object ifTrue(Object vthen, Object velse) {
+           return velse;
+         }
+       }
+      """
 
   typecheckTest("Bool ok", ProgramM(Bool))(ProgramOK)
 
