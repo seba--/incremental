@@ -1,6 +1,7 @@
 package util.parse
 
 import com.github.javaparser.ParseException
+import com.github.javaparser.ast.`type`.Type
 import com.github.javaparser.ast.body.{ClassOrInterfaceDeclaration, Parameter}
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.{ExplicitConstructorInvocationStmt, ExpressionStmt, ReturnStmt, Statement}
@@ -26,22 +27,26 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
   def apply(cu: CompilationUnit): Seq[Node] = {
     val types = cu.getTypes.iterator.asScala
     val classes = types map {
-      case clazz: ClassOrInterfaceDeclaration =>
-        val flds = fields(clazz)
-        ClassDec(CName(clazz.getNameAsString),
-                 superClass(clazz),
-                 ctor(clazz, flds),
-                 flds,
-                 methods(clazz))
+      case c: ClassOrInterfaceDeclaration =>
+        clazz(c)
     }
     classes.to[S]
+  }
+
+  def clazz(c: ClassOrInterfaceDeclaration): Node = {
+    val flds = fields(c)
+    ClassDec(CName(c.getNameAsString),
+             superClass(c),
+             ctor(c, flds),
+             flds,
+             methods(c))
   }
 
   def fields(clazz: ClassOrInterfaceDeclaration): Seq[(Symbol, CName)] = {
     val fields = for {decl <- clazz.getFields.asScala
                       field <- decl.getVariables.asScala}
                  yield (Symbol(field.getNameAsString),
-                        CName(field.getType.asString))
+                        desugar(field.getType))
     fields.to[S]
   }
 
@@ -49,7 +54,7 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
     val parseMethods = clazz.getMethods.asScala
     val methods = parseMethods map { m =>
       val name = Symbol(m.getNameAsString)
-      val returnType = CName(m.getType.asString)
+      val returnType = desugar(m.getType)
       val ps = params(m.getParameters)
       val body = m.getBody.get.getStatement(0) match {
         case ret: ReturnStmt =>
@@ -63,22 +68,31 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
   }
 
   def params(ps: NodeList[Parameter]): Seq[(Symbol, CName)] = ps.asScala.map( p =>
-    (Symbol(p.getNameAsString), CName(p.getType.asString))
+    (Symbol(p.getNameAsString), desugar(p.getType))
   ).to[S]
 
+  def desugar(t: Type): CName = {
+    val res = Symbol(t.asString)
+    CName(res match {
+      case 'Block => 'Object
+      case x => x
+    })
+  }
 
   def expr(e: Expression): Node = e match {
     case nu: ObjectCreationExpr =>
       val args: mutable.Buffer[Any] = nu.getArguments.asScala.map(expr)
-      args.prepend(CName(nu.getType.getNameAsString))
+      args.prepend(desugar(nu.getType))
       New(args:_*)
     case cast: CastExpr =>
-      DCast(CName(cast.getType.asString), expr(cast.getExpression)) //TODO correct AST class?
-    case lambda: LambdaExpr => Var('x) //TODO
-
+      DCast(desugar(cast.getType), expr(cast.getExpression))
+    case lambda: LambdaExpr =>
+      expr(lambda.getExpressionBody.asScala.get)
     case fa: FieldAccessExpr =>
       val receiver = fa.getScope.asScala.map(expr).getOrElse(Var('this))
       FieldAcc(Symbol(fa.getNameAsString), receiver)
+    case mc: MethodCallExpr if mc.getNameAsString == "execute" =>
+      mc.getScope.asScala.map(expr).getOrElse(Var('this))
     case mc: MethodCallExpr =>
       val receiver = mc.getScope.asScala.map(expr).getOrElse(Var('this))
       val args: mutable.Buffer[Any] = mc.getArguments.asScala.map(expr)
@@ -87,8 +101,10 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
       Invk(args:_*)
     case name: NameExpr =>
       Var(Symbol(name.getNameAsString))
+    case self: ThisExpr =>
+      Var('this)
     case _ =>
-      throw new ParseException(s"Unsupported expression $e")
+      throw new ParseException(s"Unsupported expression ${e.getClass.getSimpleName}: $e")
   }
 
   def superClass(clazz: ClassOrInterfaceDeclaration): CName = {
@@ -96,7 +112,7 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
     if (supers.isEmpty)
       CName('Object)
     else
-      CName(Symbol(supers.get(0).getNameAsString))
+      desugar(supers.get(0))
   }
 
   def checkArgsCorrespond(params: ListMap[Symbol, CName], args: mutable.Buffer[Expression]): Boolean = {
@@ -111,7 +127,7 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
     * Extractor that matches statements of the form 'this.x = y'.
     */
   object FieldInitialization {
-    import util.CastsToOption._
+    import util.CastToOption._
     def unapply(s: Statement): Option[(Symbol, Symbol)] =
       for {
         e <- s.as[ExpressionStmt]

@@ -9,8 +9,6 @@ import better.files._
   */
 object Parse extends App {
   val cu = JavaParser.parse(File("src/main/java/redblack/RBNode.java").toJava)
-  cu.accept(new MyVisitor, ())
+  cu.accept(new NodeVisitor with PrintlnVisitor, ())
   println(JavaToFJ(cu))
 }
-
-class MyVisitor extends NodeVisitor with PrintlnVisitor

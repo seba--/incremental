@@ -3,7 +3,7 @@ package util
 /**
   * Created by oliver on 24.04.17.
   */
-object CastsToOption {
+object CastToOption {
   /**
     * Wraps casts into Option. Enables more idiomatic for-comprehensions when
     * nesting casts.
