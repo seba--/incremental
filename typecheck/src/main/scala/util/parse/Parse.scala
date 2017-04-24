@@ -78,20 +78,22 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
 
   def expr(e: Expression): Node = e match {
     case nu: ObjectCreationExpr =>
-      val args = nu.getArguments.asScala.map(expr).to[S]
-      New(CName(nu.getType.getNameAsString), args:_*)
+      val args: mutable.Buffer[Any] = nu.getArguments.asScala.map(expr)
+      args.prepend(CName(nu.getType.getNameAsString))
+      New(args:_*)
     case cast: CastExpr =>
       SCast(CName(cast.getType.asString), expr(cast.getExpression)) //TODO correct AST class?
-    case lambda: LambdaExpr => ???
+    case lambda: LambdaExpr => Var('x) //TODO
 
     case fa: FieldAccessExpr =>
       val receiver = fa.getScope.asScala.map(expr).getOrElse(Var('this))
       FieldAcc(Symbol(fa.getNameAsString), receiver)
     case mc: MethodCallExpr =>
       val receiver = mc.getScope.asScala.map(expr).getOrElse(Var('this))
-      val args = mc.getArguments.asScala.map(expr)
+      val args: mutable.Buffer[Any] = mc.getArguments.asScala.map(expr)
       args.prepend(receiver)
-      Invk(Symbol(mc.getNameAsString), args.to[S]:_*)
+      args.prepend(Symbol(mc.getNameAsString))
+      Invk(args:_*)
     case name: NameExpr =>
       Var(Symbol(name.getNameAsString))
     case _ =>

@@ -76,10 +76,10 @@ case object UCast extends Exp(simple(Seq(classOf[CName]),cExp)) {
 case object Invk extends Exp(_ => InvkSyntax) {
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.kids(0)}.${e.lits(0).asInstanceOf[Symbol].name}(${e.kids.seq.tail.mkString(", ")})")
 }
-case object DCast extends Exp(simple(cExp)) {
+case object DCast extends Exp(simple(Seq(classOf[CName]),cExp)) {
   override def toString(e: Node_[_]): Option[String] = Some(s"(${e.lits(0)}) ${e.kids(0)}")
 }
-case object SCast extends Exp(simple(cExp)) {
+case object SCast extends Exp(simple(Seq(classOf[CName]),cExp)) {
   override def toString(e: Node_[_]): Option[String] = Some(s"(${e.lits(0)}) ${e.kids(0)}")
 }
 
