@@ -5,16 +5,16 @@ import bool.False;
 import nat.Nat;
 
 public class RBInner extends RBNode {
+    public Color color;
     public Nat data;
     public RBNode left;
     public RBNode right;
-    public Color color;
     public RBInner(Color color, Nat data, RBNode left, RBNode right) {
         super();
+        this.color = color;
         this.data = data;
         this.left = left;
         this.right = right;
-        this.color = color;
     }
 
     @Override

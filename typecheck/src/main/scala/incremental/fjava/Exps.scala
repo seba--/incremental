@@ -34,8 +34,8 @@ case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CNa
   val allArgTypes: Seq[CName] = superParams.values.toList ++ fields.values
 
   override def toString: String = {
-    val sparams = superParams.map { case (param, typ) => s"$param: $typ" }.mkString(", ")
-    val tparams = fields.map { case (param, typ) => s"$param: $typ" }.mkString(", ")
+    val sparams = superParams.map { case (param, typ) => s"${param.name}: $typ" }.mkString(", ")
+    val tparams = fields.map { case (param, typ) => s"${param.name}: $typ" }.mkString(", ")
     s"def init($sparams | $tparams) { /* initialization code */ }"
   }
 }

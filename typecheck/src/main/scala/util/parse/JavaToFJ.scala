@@ -2,7 +2,7 @@ package util.parse
 
 import com.github.javaparser.ParseException
 import com.github.javaparser.ast.`type`.Type
-import com.github.javaparser.ast.body.{ClassOrInterfaceDeclaration, Parameter}
+import com.github.javaparser.ast.body.{BodyDeclaration, ClassOrInterfaceDeclaration, ConstructorDeclaration, Parameter}
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.{ExplicitConstructorInvocationStmt, ExpressionStmt, ReturnStmt, Statement}
 import com.github.javaparser.ast.{CompilationUnit, NodeList}
@@ -35,10 +35,10 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
 
   def clazz(c: ClassOrInterfaceDeclaration): Node = {
     val flds = fields(c)
-    ClassDec(CName(c.getNameAsString),
-             superClass(c),
-             ctor(c, flds),
-             flds,
+    ClassDec(Seq(CName(c.getNameAsString),
+                 superClass(c),
+                 ctor(c, flds),
+                 flds),
              methods(c))
   }
 
@@ -131,7 +131,7 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
     def unapply(s: Statement): Option[(Symbol, Symbol)] =
       for {
         e <- s.as[ExpressionStmt]
-        asgn <- e.as[AssignExpr]
+        asgn <- e.getExpression.as[AssignExpr]
         fa <- asgn.getTarget.as[FieldAccessExpr]
         rcv <- fa.getScope.asScala
         _ <- rcv.as[ThisExpr]
@@ -140,8 +140,9 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
   }
 
   def ctor(clazz: ClassOrInterfaceDeclaration, fields: Seq[(Symbol, CName)]): Ctor = {
-    if (clazz.getDefaultConstructor.isPresent) {
-      val ctor = clazz.getDefaultConstructor.get
+    val mctor = clazz.getMembers.iterator().asScala.find(_.isInstanceOf[ConstructorDeclaration])
+    if (mctor.isDefined) {
+      val ctor = mctor.get.asInstanceOf[ConstructorDeclaration] // clazz.getDefaultConstructor.get
       val ps = ListMap(params(ctor.getParameters):_*)
       var body = ctor.getBody.getStatements.asScala
       //check for optional super call as first body statement
@@ -161,7 +162,11 @@ object JavaToFJ extends (CompilationUnit => Seq[Node.Node]) {
         throw new ParseException(s"Constructor $ctor of class ${clazz.getNameAsString} must initialize all declared fields")
       val bodyOk = (fields zip body).corresponds(ps.drop(nsuper).toSeq) {
         case (((field1, _), FieldInitialization(field2, x)), (y, _)) =>
-          field1 == field2 && field2 == x && x == y
+          val r = field1 == field2 && field2 == x && x == y
+          if (!r)
+            throw new ParseException(s"Constructor $ctor of class ${clazz.getNameAsString}: Expected assignment of $field1 by parameter $y through statement `this.$field2 = $x`")
+          else
+            true
         case _ => false
       }
       if (!bodyOk)
