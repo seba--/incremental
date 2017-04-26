@@ -8,7 +8,7 @@ import incremental.fjava.ProgramM
 /**
   * Created by oliver on 20.04.17.
   */
-object Parse extends App {
+object Parse {
 
   lazy val prog: Node = {
     val dir = "src" / "main" / "java"
@@ -22,7 +22,6 @@ object Parse extends App {
     ProgramM(nodes.toSeq: _*)
   }
 
-  
 //  val cu = JavaParser.parse(File("src/main/java/redblack/RBNode.java").toJava)
 //  cu.accept(new NodeVisitor with PrintlnVisitor, ())
 //  println(JavaToFJ(cu))
