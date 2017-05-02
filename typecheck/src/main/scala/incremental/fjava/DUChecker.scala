@@ -33,7 +33,7 @@ case class FieldCT(cls: Type, field: Symbol, typ: Type) extends CTcls[FieldCT] {
   def self = this
   def subst(s: CSubst) = FieldCT(cls, field, typ)
 }
-case class MethodCT(cls: Type, name: Symbol, params: List[Type], ret: Type) extends CTcls[MethodCT] {
+case class MethodCT(cls: Type, name: Symbol, params: Seq[Type], ret: Type) extends CTcls[MethodCT] {
   def self = this
  def subst(s: CSubst) = MethodCT(cls, name,  params, ret)
 }
@@ -89,7 +89,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
   }
 
-  def mtype(m : Symbol, cls : Type, ct: CT): Option[List[Type]] = {
+  def mtype(m : Symbol, cls : Type, ct: CT): Option[Seq[Type]] = {
     val posMTyp = ct.methods.find(ftyp => (ftyp.name == m) && (ftyp.cls == cls) )
     posMTyp match {
       case None => ct.ext.find(extD => extD.cls == cls)  match {
@@ -301,7 +301,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val methods = cls.kids.seq
 
         val newMethods = methods.map { mtyp =>
-          MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(2).asInstanceOf[List[(Symbol, CName)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )}
+          MethodCT(cname, mtyp.lits(1).asInstanceOf[Symbol],mtyp.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2), mtyp.lits(0).asInstanceOf[CName] )}
        //  ctxNew = ctx + (CURRENT_CLASS -> cname) + ('this -> c) + ('other -> CName('Zero))
         ctNew = CT(ctNew.ext + ExtCT(cname, sup), ctNew.ctorParams + CtorCT(cname, ctor.superParams.values.toList ++ ctor.fields.values.toList ), ctNew.fields ++ fields.map(ftyp => FieldCT(cname, ftyp._1, ftyp._2)) , ctNew.methods ++ newMethods )
       }

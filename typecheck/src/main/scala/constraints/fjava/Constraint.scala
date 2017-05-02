@@ -2,6 +2,7 @@ package constraints.fjava
 
 import constraints.CVar
 import constraints.fjava.CSubst.CSubst
+import incremental.fjava.{CName, UCName}
 import incremental.fjava.latemerge.Condition
 
 trait Constraint {
@@ -37,7 +38,11 @@ case class Equal(expected: Type, actual: Type) extends Constraint {
 }
 
 case class NotEqual(expected: Type, actual: Type) extends Constraint {
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.never(Equal(expected, actual))
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = (expected, actual) match {
+    case _ if expected.isGround && actual.isGround => if (expected != actual) cs.solved(Map()) else cs.never(this)
+    case (UCName(x), UCName(y)) if x == y => cs.never(this)
+    case (UCName(_), _) | (_, UCName(_)) => cs.notyet(this)
+  }
 
   override def subst(s: CSubst): Constraint = NotEqual(expected.subst(s), actual.subst(s))
 

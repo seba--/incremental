@@ -40,9 +40,10 @@ class StandardBenchmarkClass extends Bench.OfflineReport {
 //    measureT("BU-Early-Cont", buEarlyCont)(trees)
   }
 
-  measureCheckers(Trees.intAccumSuperHierarchyTrees)
-  measureCheckers(Trees.intAccumPrevHierarchyTrees)
-  measureCheckers(Trees.intAccumPrevSuperHierarchyTrees)
+//  measureCheckers(Trees.intAccumSuperHierarchyTrees)
+//  measureCheckers(Trees.intAccumPrevHierarchyTrees)
+//  measureCheckers(Trees.intAccumPrevSuperHierarchyTrees)
+  measureCheckers(Trees.purelyFunctionalDataStructures)
 }
 
 object StandardBenchmark {

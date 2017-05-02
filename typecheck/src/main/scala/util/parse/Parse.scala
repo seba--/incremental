@@ -10,7 +10,7 @@ import incremental.fjava.ProgramM
   */
 object Parse {
 
-  lazy val prog: Node = {
+  lazy val prog: (Node, Long) = {
     val dir = "src" / "main" / "java"
     val nodes = dir.glob("**/*.java").filter(f => !f.nameWithoutExtension.endsWith("Test") && f.nameWithoutExtension != "Block").flatMap { f =>
       println(f.path)
@@ -19,7 +19,7 @@ object Parse {
       fj.write(nodes.mkString("\n\n"))
       nodes
     }
-    ProgramM(nodes.toSeq: _*)
+    ProgramM(nodes.toSeq:_*) -> nodes.size
   }
 
 //  val cu = JavaParser.parse(File("src/main/java/redblack/RBNode.java").toJava)

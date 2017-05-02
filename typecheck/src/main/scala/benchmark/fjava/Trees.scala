@@ -4,9 +4,9 @@ import incremental.Node._
 import incremental.fjava._
 import org.scalameter.api.Gen
 import org.scalameter.picklers.Implicits.intPickler
+import util.parse.Parse
 
 import Predef.{$conforms => _, _}
-
 import scala.collection.immutable.ListMap
 
 /**
@@ -259,4 +259,8 @@ object Trees {
         configValue <- configs;
         config = Config.fromValue(configValue) }
     yield intAccumPrevSuperHierarchy(roots, heights, branching)(config) -> hierarchySize(roots, heights, branching)
+
+  def purelyFunctionalDataStructures = for
+    { size <- Gen.single("Size")(Parse.prog._2.toInt) }
+  yield Parse.prog
 }
