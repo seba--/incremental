@@ -4,7 +4,9 @@ import org.scalameter.api._
 import _root_.benchmark.pcf.Settings
 import incremental.Node.Node
 import Checkers._
+import _root_.benchmark.fjava.Trees.{Config, MirroredOverriding}
 import incremental.fjava.TypeChecker
+import org.scalameter.Parameters
 
 /**
   * Standard execution, not parallel, not incremental
@@ -28,16 +30,16 @@ class StandardBenchmarkClass extends Bench.OfflineReport {
           tree.invalidate
           checker.prepare(tree)
         }.
-        in { case (tree, size) => checker.typecheck(tree) }
+        in { case (tree, size) => checker.typecheck(tree);println("ok") }
     }
   }
 
   def measureCheckers(trees: Gen[(Node, Long)]): Unit = {
     measureT("JAVAC", javac)(trees)
-//    measureT("DU", du)(trees)
+    measureT("DU", du)(trees)
 //    measureT("BU-End", buEnd)(trees)
 //    measureT("BU-Cont", buCont)(trees)
-//    measureT("BU-Early-Cont", buEarlyCont)(trees)
+    measureT("BU-Early-Cont", buEarlyCont)(trees)
   }
 
 //  measureCheckers(Trees.intAccumSuperHierarchyTrees)
@@ -50,6 +52,7 @@ object StandardBenchmark {
   def main(args: Array[String]): Unit = {
     val scalameterArgs = Array("-CresultDir", "./benchmark/fjava")
     new StandardBenchmarkClass().main(scalameterArgs)
+//    buEarlyCont.typecheck(Trees.intAccumPrevSuperHierarchy(10, 5, 2)(MirroredOverriding))
   }
 }
 

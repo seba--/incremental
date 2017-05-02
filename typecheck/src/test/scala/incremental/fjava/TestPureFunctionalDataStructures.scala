@@ -35,8 +35,9 @@ class TestPurelyFunctionalDataStructures[CS <: ConstraintSystem[CS]](classdesc: 
 }
 
 
+class TestJavacSolveEndPurelyFunctionalDataStructures extends TestPurelyFunctionalDataStructures("JavacSolveEnd", new JavacCheckerFactory(SolveEnd))
 class TestDUSolveEndPurelyFunctionalDataStructures extends TestPurelyFunctionalDataStructures("DUSolveEnd", new DUCheckerFactory(SolveEnd))
-class TestBUSolveEndPurelyFunctionalDataStructures extends TestPurelyFunctionalDataStructures("BUSolveEnd", new BUCheckerFactory(SolveEnd))
-class TestBUSolveContinuousSubstPurelyFunctionalDataStructures extends TestPurelyFunctionalDataStructures("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubstLateMerge))
+//class TestBUSolveEndPurelyFunctionalDataStructures extends TestPurelyFunctionalDataStructures("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+//class TestBUSolveContinuousSubstPurelyFunctionalDataStructures extends TestPurelyFunctionalDataStructures("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubstLateMerge))
 
 class TestBUEarlySolveContinuousSubstPurelyFunctionalDataStructures extends TestPurelyFunctionalDataStructures("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubstEarlyMerge))

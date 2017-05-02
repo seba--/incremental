@@ -213,7 +213,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (t, cs) = typecheckRec(e.kids(0), ctx, ct)
       val c = e.lits(0).asInstanceOf[CName]
 
-      (c, Seq(Subtype(c.asInstanceOf[Type], t), NotEqual(c,  t)), Seq(cs))
+      (c, Seq(Subtype(c.asInstanceOf[Type], t)), Seq(cs)) //, NotEqual(c,  t)), Seq(cs))
 
     case SCast =>
       val (t, cs) = typecheckRec(e.kids(0), ctx, ct)

@@ -136,7 +136,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (t, reqs, cctx, _) = e.kids(0).typ
       val c = e.lits(0).asInstanceOf[CName]
 
-      (c, reqs, cctx, Seq(Subtype(c, t), NotEqual(c, t)))
+      (c, reqs, cctx, Seq(Subtype(c, t))) //, NotEqual(c, t)))
 
     case SCast =>
       val (t, reqs, cctx, _) = e.kids(0).typ

@@ -58,8 +58,9 @@ case class Never(c: Constraint) extends Constraint {
 }
 
 case class AllEqual(expected: Seq[Type], actual: Seq[Type]) extends Constraint {
-//  if (expected.nonEmpty && expected.toString.contains("C$137"))
-//    println(s"WARNING $this")
+  if (expected.toString().contains("BSTNode") && actual.toString().contains("RBNode"))
+    println(s"WARNING $this")
+
 
   def subst(s: CSubst) = AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
 

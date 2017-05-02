@@ -202,9 +202,9 @@ case class ClassReqs (
     val (ctorGroundX, ctorVarX, cons1) = substCtors(s, ctorsGround, ctorsVar)
     val (fieldX, cons2) = substMapSeq(s, fields)
     val (methodX, cons3) = substMapSeq(s, methods)
-    val (optMethodX, cons4) = substMapSeq(s, optMethods)
+    val optMethodX = substOptMapSeq(s, optMethods)
     val crs = ClassReqs(currentX, extX, ctorGroundX, ctorVarX, fieldX, methodX, optMethodX)
-    (crs, cons1 ++ cons2 ++ cons3 ++ cons4)
+    (crs, cons1 ++ cons2 ++ cons3)
   }
 
   def substCtors(s: CSubst, ground: Seq[CtorCReq], vars: Seq[CtorCReq]): (Seq[CtorCReq], Seq[CtorCReq], Seq[Constraint]) = {
@@ -238,9 +238,9 @@ case class ClassReqs (
     var res = Map[Symbol, Seq[T]]()
     var cons = Seq[Constraint]()
 
-    m.foreach { case (sym, set) =>
+    m.foreach { case (sym, reqs) =>
       val builder = new MapRequirementsBuilder[T]
-      for (req <- set;
+      for (req <- reqs;
            sreq <- req.subst(s))
         builder.addReq(sreq)
       res += sym -> builder.getRequirements
@@ -249,6 +249,10 @@ case class ClassReqs (
 
     (res, cons)
   }
+
+  def substOptMapSeq[T <: CReq[T] with Named](s: CSubst, m: Map[Symbol, Seq[T]]): Map[Symbol, Seq[T]] =
+    m.mapValues( reqs => reqs.flatMap(_.subst(s)) ).view.force
+
 
   def isEmpty =
     currentCls.isEmpty &&
@@ -265,8 +269,8 @@ case class ClassReqs (
     val (ctorVarX, cons2v) = merge(ctorsVar, crs.ctorsVar)
     val (fieldsX, cons3) = mergeMap(fields, crs.fields)
     val (methodsX, cons4) = mergeMap(methods, crs.methods)
-    val (optMethodsX, cons5) = mergeMap(optMethods, crs.optMethods)
-    val cons = cons0.toSeq ++ cons1 ++ cons2g ++ cons2v ++ cons3 ++ cons4 ++ cons5
+    val optMethodsX = mergeOptMap(optMethods, crs.optMethods)
+    val cons = cons0.toSeq ++ cons1 ++ cons2g ++ cons2v ++ cons3 ++ cons4
     (ClassReqs(currentX, extX.distinct, ctorGroundX, ctorVarX, fieldsX, methodsX, optMethodsX), cons)
   }
 
@@ -282,6 +286,13 @@ case class ClassReqs (
       return (crs2, Seq())
 
     Util.loop[Map[Symbol, Seq[T]], T, Constraint](addRequirementMap)(crs1, crs2.toStream.map(_._2).flatten)
+  }
+
+  private def mergeOptMap[T <: CReq[T] with Named](crs1: Map[Symbol, Seq[T]], crs2: Map[Symbol, Seq[T]]): Map[Symbol, Seq[T]] = {
+    if (crs1.isEmpty)
+      return crs2
+
+    crs2.toStream.map(_._2).flatten.foldLeft(crs1)((crs, req) => addRequirementOptMap(crs, req))
   }
 
   def addRequirement[T <: CReq[T]](crs: Seq[T], req: T): (Seq[T], Seq[Constraint]) = {
@@ -350,10 +361,19 @@ case class ClassReqs (
     val seq = crs.getOrElse(req.name,
       return (crs + (req.name -> Seq(req)), Seq()))
 
-    val (newReqs, cons) = addRequirement(seq,req)
+    val (newReqs, cons) = addRequirement(seq, req)
     (crs + (req.name -> newReqs), cons)
   }
 
+  def addRequirementOptMap[T <: CReq[T] with Named](crs: Map[Symbol, Seq[T]], req: T): Map[Symbol, Seq[T]] = {
+    val seq = crs.getOrElse(req.name,
+      return crs + (req.name -> Seq(req)))
+
+    if (seq.contains(req))
+      crs
+    else
+      crs + (req.name -> (req +: seq))
+  }
 
   def satisfyCReq[T <: CReq[T]](sat: T, crs: Seq[T]): (Seq[T], Seq[Constraint]) = {
     // sat.cls is ground and sat.cond is trueCond
