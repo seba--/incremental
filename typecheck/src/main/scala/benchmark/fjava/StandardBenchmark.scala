@@ -52,7 +52,6 @@ object StandardBenchmark {
   def main(args: Array[String]): Unit = {
     val scalameterArgs = Array("-CresultDir", "./benchmark/fjava")
     new StandardBenchmarkClass().main(scalameterArgs)
-//    buEarlyCont.typecheck(Trees.intAccumPrevSuperHierarchy(10, 5, 2)(MirroredOverriding))
   }
 }
 

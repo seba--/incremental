@@ -286,7 +286,7 @@ abstract class DUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var classes = Seq[Node_[Result]]()
       def findClasses(node: Node_[Result]): Unit = {
         if (node.kind == ProgramM)
-          node.kids.seq.map(findClasses)
+          node.kids.seq.foreach(findClasses)
         else if (node.kind == ClassDec)
           classes = node +: classes
       }
