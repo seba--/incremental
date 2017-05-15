@@ -7,6 +7,10 @@ import javax.tools.ToolProvider
 
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.tools.javac.api.{JavacTaskImpl, JavacTool}
+import com.sun.tools.javac.main.JavaCompiler
+import com.sun.tools.javac.tree.JCTree
+import com.sun.tools.javac.tree.JCTree.{JCClassDecl, JCCompilationUnit}
+import com.sun.tools.javac.util.ListBuffer
 import constraints.fjava.{ConstraintSystem, ConstraintSystemFactory, Type}
 import incremental.Node.Node
 
@@ -68,10 +72,30 @@ abstract class JavacChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] 
     compilationTask.parse()
     compilationTask
   }
-
+  
   def checkSourceFiles(compilationTask: JavacTaskImpl): Iterable[_ <: Element] = {
-    val result = compilationTask.analyze().asScala
-    result
+    //This is an adaption of JavacTaskImpl.analyze that just performs the attribute phase, which is sufficient for type checking
+    val compiler = JavaCompiler.instance(compilationTask.getContext)
+    compilationTask.enter(null)
+    val results = new ListBuffer[Element]()
+    try {
+      val queue = compiler.attribute(compiler.todo).asScala
+      for (env <- queue) {
+        if (env.tree.getTag() == JCTree.Tag.CLASSDEF) {
+          val cdef = env.tree.asInstanceOf[JCClassDecl]
+          if (cdef.sym != null)
+            results.append(cdef.sym)
+        }
+        else if (env.tree.getTag() == JCTree.Tag.TOPLEVEL) {
+          val unit = env.tree.asInstanceOf[JCCompilationUnit]
+          if (unit.packge != null)
+            results.append(unit.packge)
+        }
+      }
+    } finally {
+      compiler.log.flush()
+    }
+    results.asScala
   }
 
 
