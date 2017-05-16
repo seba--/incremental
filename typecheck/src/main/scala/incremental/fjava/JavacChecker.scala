@@ -70,12 +70,12 @@ abstract class JavacChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] 
     val classes = util.Arrays.asList[String]()
     val compilationTask = compiler.getTask(null, fileManager, null, options, classes, compilationUnits).asInstanceOf[JavacTaskImpl]
     compilationTask.parse()
-    compilationTask.enter(null)
     compilationTask
   }
   
   def checkSourceFiles(compilationTask: JavacTaskImpl): Iterable[_ <: Element] = {
     //This is an adaption of JavacTaskImpl.analyze that just performs the attribute phase, which is sufficient for type checking
+    compilationTask.enter(null)
     val compiler = JavaCompiler.instance(compilationTask.getContext)
     var results = Vector[Element]()
     try {
