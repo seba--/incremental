@@ -70,32 +70,32 @@ abstract class JavacChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] 
     val classes = util.Arrays.asList[String]()
     val compilationTask = compiler.getTask(null, fileManager, null, options, classes, compilationUnits).asInstanceOf[JavacTaskImpl]
     compilationTask.parse()
+    compilationTask.enter(null)
     compilationTask
   }
   
   def checkSourceFiles(compilationTask: JavacTaskImpl): Iterable[_ <: Element] = {
     //This is an adaption of JavacTaskImpl.analyze that just performs the attribute phase, which is sufficient for type checking
     val compiler = JavaCompiler.instance(compilationTask.getContext)
-    compilationTask.enter(null)
-    val results = new ListBuffer[Element]()
+    var results = Vector[Element]()
     try {
       val queue = compiler.attribute(compiler.todo).asScala
       for (env <- queue) {
         if (env.tree.getTag() == JCTree.Tag.CLASSDEF) {
           val cdef = env.tree.asInstanceOf[JCClassDecl]
           if (cdef.sym != null)
-            results.append(cdef.sym)
+            results = results :+ cdef.sym
         }
         else if (env.tree.getTag() == JCTree.Tag.TOPLEVEL) {
           val unit = env.tree.asInstanceOf[JCCompilationUnit]
           if (unit.packge != null)
-            results.append(unit.packge)
+            results = results :+ unit.packge
         }
       }
     } finally {
       compiler.log.flush()
     }
-    results.asScala
+    results
   }
 
 
