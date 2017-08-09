@@ -1,9 +1,9 @@
 package constraints.fjavaMO.impl
 
 import constraints.{CTermBase, CVar, Statistics}
-import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{UCName, CName}
-import constraints.fjava._
+import constraints.fjavaMO.CSubst.CSubst
+import incremental.fjavaMO.{UCName, CName}
+import constraints.fjavaMO._
 import incremental.Util
 
 import scala.collection.generic.CanBuildFrom
@@ -87,6 +87,13 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
     else
       false
 
+  def isAllSubtype(t1 : Seq[Type], t2 : Seq[Type]): Boolean = {
+    var res = true
+    for (i <- 0 until t1.length)
+      if (!isSubtype(t1(i), t2(i)))
+        res = false
+    res
+  }
 
   def addUpperBound(t1: Type, t2: Type) = throw new UnsupportedOperationException(s"SolveEnd cannot handle new bounds $t1<:$t2")
 

@@ -3,7 +3,7 @@ package incremental.fjavaMO.earlymerge
 import constraints.fjavaMO.CSubst.CSubst
 import constraints.fjavaMO.{Constraint, Equal, Type}
 import incremental.Util
-import incremental.fjava.CName
+import incremental.fjavaMO.CName
 
 
 sealed trait ClassFact

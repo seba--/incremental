@@ -4,7 +4,7 @@ import constraints.Statistics
 import constraints.fjavaMO.CSubst.CSubst
 import constraints.fjavaMO._
 import constraints.fjavaMO.impl.SolveContinuousSubstCSEarlyMerge
-import incremental.fjava._
+import incremental.fjavaMO._
 import incremental.Node._
 import incremental.{Node_, Util}
 

@@ -3,7 +3,7 @@ package constraints.fjavaMO
 import java.util.concurrent.atomic.AtomicInteger
 
 import constraints.{CVar, GenBase}
-import incremental.fjava.UCName
+import incremental.fjavaMO.UCName
 
 class Gen extends GenBase {
   private var _pos: Set[CVar[_]] = Set()

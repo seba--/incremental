@@ -1,9 +1,9 @@
 package constraints.fjavaMO
 
 import constraints.CVar
-import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{CName, UCName}
-import incremental.fjava.latemerge.Condition
+import constraints.fjavaMO.CSubst.CSubst
+import incremental.fjavaMO.{CName, UCName}
+import incremental.fjavaMO.latemerge.Condition
 
 trait Constraint {
   def subst(s: CSubst): Constraint
@@ -20,6 +20,52 @@ case class Subtype(lower: Type, upper: Type) extends Constraint {
 
   override def uvars = lower.uvars ++ upper.uvars
 }
+
+case class AllSubtypel(expected: Seq[Type], actual: Seq[Type]) extends Constraint {
+  if (expected.toString().contains("BSTNode") && actual.toString().contains("RBNode"))
+    println(s"WARNING $this")
+
+  def subst(s: CSubst) = AllEqual(expected, actual)
+
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
+    if (expected.size != actual.size)
+      cs.never(this)
+    else {
+      var newcs = cs
+      for (i <- 0 until expected.size)
+        newcs = expected(i).subtype(actual(i), newcs)
+      newcs
+    }
+  }
+
+  override def uvars = Set()
+}
+
+case class MinSel(cvar: Seq[Type], setT: Seq[Seq[Type]], lowerB: Seq[Type]) extends Constraint {
+
+  def subst(s: CSubst) = MinSel(cvar.map(_.subst(s)), setT, lowerB)
+
+  def minsel(setT: Seq[Seq[Type]], lowerB:  Seq[Type]) : Seq[Type] = {
+    val len = lowerB.length
+    var res =  Seq.fill(len)(CName('Object))
+    for (i <- 0 until setT.size)
+        if isSubtype()
+      res
+  }
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
+    if (cvar.size != lowerB.size)
+      cs.never(this)
+    else {
+      var newcs = cs
+      for (i <- 0 until cvar.size)
+        newcs = cvar(i).unify(minsel(setT,lowerB)(i), newcs)
+      newcs
+    }
+  }
+
+  override def uvars = Set() ++ cvar.flatMap(_.uvars)
+}
+
 
 case class NotSubtype(lower: Type, upper: Type) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = cs.never(this)

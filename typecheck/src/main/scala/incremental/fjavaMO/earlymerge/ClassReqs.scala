@@ -5,7 +5,7 @@ import constraints.fjavaMO.{Type, _}
 import Condition.trueCond
 import constraints.CVar
 import incremental.{Cell, IncHashedSet, Util}
-import incremental.fjava.{CName, UCName}
+import incremental.fjavaMO.{CName, UCName}
 
 import scala.collection.mutable.ListBuffer
 import scala.ref.Reference

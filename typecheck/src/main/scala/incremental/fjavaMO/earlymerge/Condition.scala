@@ -3,7 +3,7 @@ package incremental.fjavaMO.earlymerge
 import constraints.CVar
 import constraints.fjavaMO.CSubst.CSubst
 import constraints.fjavaMO.{Constraint, ConstraintSystem, Type}
-import incremental.fjava.{CName, UCName}
+import incremental.fjavaMO.{CName, UCName}
 import incremental.IncHashedSet
 
 object Condition {

@@ -1,7 +1,7 @@
 package constraints.fjavaMO
 
 import constraints.State
-import constraints.fjava.CSubst.CSubst
+import constraints.fjavaMO.CSubst.CSubst
 
 abstract class ConstraintSystemFactory[CS <: ConstraintSystem[CS]] extends constraints.ConstraintSystemFactory[Gen, Constraint, CS] {
   def freshState = new State(new Gen)

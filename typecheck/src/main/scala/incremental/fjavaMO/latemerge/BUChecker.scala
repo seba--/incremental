@@ -4,7 +4,7 @@ import constraints.Statistics
 import constraints.fjavaMO.CSubst.CSubst
 import constraints.fjavaMO._
 import incremental.Node._
-import incremental.fjava._
+import incremental.fjavaMO._
 import incremental.{Node_, Util}
 
 
@@ -87,25 +87,27 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (te, reqs0, creqs0,  _) = e.kids(0).typ
       val Uret = freshCName()
 
-      var cons = Seq[Constraint]()
+     // var cons = Seq[Constraint]()
       var reqss: Seq[Reqs] = Seq(reqs0)
       var creqss: Seq[ClassReqs] = Seq(creqs0)
+      var paramsT = Seq[Type]()
       var params = Seq[Type]()
 
       for (i <- 1 until e.kids.seq.size) {
         val (ti, subreqs, subcreqs, _) = e.kids(i).typ
         val U = freshCName()
+        paramsT = paramsT :+ ti
         params = params :+ U
-        cons = cons :+ Subtype(ti, U)
+        //cons = cons :+ Subtype(ti, U)
         reqss = reqss :+ subreqs
         creqss = creqss :+ subcreqs
       }
 
       val (mreqs, mcons) = mergeReqMaps(reqss)
       val (creqs, cCons) = mergeCReqMaps(creqss)
-      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params, Uret).lift)
+      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params ++ paramsT, Uret).lift)
 
-      (Uret, mreqs, mcreqs, mcons ++ cCons ++ mcCons ++ cons)
+      (Uret, mreqs, mcreqs, mcons ++ cCons ++ mcCons )//++ cons)
 
     case New =>
       val c = e.lits(0).asInstanceOf[CName]
@@ -176,9 +178,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
 
       val (creqs1, extendCons) = bodyCreqs.copy(currentClass = Some(Uc)).merge(ExtCReq(Uc, Ud).lift)
-      val (creqs2, condCons) = creqs1.merge(MethodCReq(Ud, m, params.map(_._2), retT).liftOpt)
+      //val (creqs2, condCons) = creqs1.merge(MethodCReq(Ud, m, params.map(_._2), retT).liftOpt)
 
-      (MethodOK, restReqs, creqs2, cons ++ extendCons ++ condCons)
+      (MethodOK, restReqs, creqs1, cons ++ extendCons )// ++ condCons)
 
     case ClassDec =>
       val c = e.lits(0).asInstanceOf[CName]

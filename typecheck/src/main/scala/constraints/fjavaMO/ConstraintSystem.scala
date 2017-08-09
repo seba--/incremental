@@ -1,6 +1,6 @@
 package constraints.fjavaMO
 
-import constraints.fjava.CSubst.CSubst
+import constraints.fjavaMO.CSubst.CSubst
 
 
 abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]

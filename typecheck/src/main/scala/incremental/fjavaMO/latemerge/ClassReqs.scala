@@ -4,7 +4,7 @@ import Condition.trueCond
 import constraints.CVar
 import constraints.fjavaMO.CSubst.CSubst
 import constraints.fjavaMO._
-import incremental.fjava.CName
+import incremental.fjavaMO.CName
 
 trait CReq[T <: CReq[T]] {
   def self: T
@@ -59,14 +59,15 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
   def lift = ClassReqs(fields = Set(this))
   def withCond(c: Condition) = copy(cond = c)
 }
+//TODO Declare as tuples (params, paramsT)
 case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, optionallyDefined: Boolean = false, cond: Condition = trueCond) extends CReq[MethodCReq] {
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
-  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(cls, cond, AllEqual(params :+ ret, other.self.params :+ other.self.ret))
+  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(cls, cond, AllEqual(params.drop(params.length/2) :+ ret, other.self.params :+ other.self.ret))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
-    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _))
+    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.drop(params.length/2).map(_.subst(s)), ret.subst(s), optionallyDefined, _))
   }
   def liftOpt = ClassReqs(optMethods = Set(this))
   def lift = ClassReqs(methods = Set(this))

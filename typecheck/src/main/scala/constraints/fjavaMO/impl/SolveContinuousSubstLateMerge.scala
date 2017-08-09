@@ -1,11 +1,11 @@
 package constraints.fjavaMO.impl
 
 import constraints.{CTermBase, CVar, Statistics}
-import constraints.fjava.CSubst.CSubst
-import incremental.fjava.{CName, UCName}
-import constraints.fjava._
+import constraints.fjavaMO.CSubst.CSubst
+import incremental.fjavaMO.{CName, UCName}
+import constraints.fjavaMO._
 import incremental.Util
-import incremental.fjava.latemerge.{Condition, Conditional}
+import incremental.fjavaMO.latemerge.{Condition, Conditional}
 
 import scala.collection.generic.CanBuildFrom
 
