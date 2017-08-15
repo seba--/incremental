@@ -44,10 +44,10 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
       SolveEndCS(notyet ++ cons, never, extend)
     }
   }
-
+//TODO Lira check this again if for minsel should be empty map or smth else
   override def tryFinalize =
     SolveContinuousSubstLateMerge.state.withValue(state) {
-      val cs = notyet.foldLeft(SolveContinuousSubstCSLateMerge(Map(), Map(), Seq(), never, extend))((cs, c) => c.solve(cs)).trySolve
+      val cs = notyet.foldLeft(SolveContinuousSubstCSLateMerge(Map(), Map(), Seq(), never, extend, Map() ))((cs, c) => c.solve(cs)).trySolve
       cs.tryFinalize
     }
 
@@ -87,15 +87,18 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
     else
       false
 
-  def isAllSubtype(t1 : Seq[Type], t2 : Seq[Type]): Boolean = {
-    var res = true
-    for (i <- 0 until t1.length)
-      if (!isSubtype(t1(i), t2(i)))
-        res = false
-    res
-  }
+//  def isAllSubtype(t1 : Seq[Type], t2 : Seq[Type]): Boolean = {
+//    var res = true
+//    for (i <- 0 until t1.length)
+//      if (!isSubtype(t1(i), t2(i)))
+//        res = false
+//    res
+//  }
 
   def addUpperBound(t1: Type, t2: Type) = throw new UnsupportedOperationException(s"SolveEnd cannot handle new bounds $t1<:$t2")
+
+  //TODO lira see this again
+  def addMinSel(cvar: Seq[Type], seqT: Seq[Type]) = throw new UnsupportedOperationException(s"Ambiguities found")
 
   def shouldApplySubst: Boolean = false
 

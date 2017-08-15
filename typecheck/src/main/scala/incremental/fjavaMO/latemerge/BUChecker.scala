@@ -36,6 +36,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (t, reqs, creqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem(res.typ._4))
         val csPre = subcs addNewConstraints cons
+        val csM = if (e.kind != MethodDec) csPre else {
+          val m = e.lits(1).asInstanceOf[Symbol]
+          val seqM = creqs.methods.toSeq
+          for (i <- 0 until seqM.length ) {
+            if (seqM(i).name == m)
+              csPre.addMinSel(seqM(i).params, e.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2))//TODO lira add the bound for minsel separated from params
+            else
+              csPre
+            csPre
+          }
+      //TODO Lira add the minimal selction stuff, we need to update the set of overloaded params
+        }
         val cs = if (e.kind != ClassDec) csPre else {
           // add inheritance to constraint system
           val c = e.lits(0).asInstanceOf[CName]

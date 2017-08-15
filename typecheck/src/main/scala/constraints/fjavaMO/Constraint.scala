@@ -13,57 +13,31 @@ trait Constraint {
   def uvars: Set[CVar[Type]]
 }
 
+//TODO lira see this again
+case class MinSelC(seqCV: Seq[Type], actual: Seq[Type], bound : Seq[Type]) extends Constraint {
+  def subst(s: CSubst) =  this //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
+
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.addMinSel(seqCV, actual)
+//  {
+//    if (expected.size != actual.size)
+//      cs.never(this)
+//    else {
+//      var newcs = cs
+//      for (i <- 0 until expected.size)
+//        newcs = expected(i).unify(actual(i), newcs)
+//      newcs
+//    }
+//  }
+
+  override def uvars = Set() //++ expected.flatMap(_.uvars) ++ actual.flatMap(_.uvars)
+}
+
 case class Subtype(lower: Type, upper: Type) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS): CS = lower.subtype(upper, cs)
 
   override def subst(s: CSubst): Constraint = Subtype(lower.subst(s), upper.subst(s))
 
   override def uvars = lower.uvars ++ upper.uvars
-}
-
-case class AllSubtypel(expected: Seq[Type], actual: Seq[Type]) extends Constraint {
-  if (expected.toString().contains("BSTNode") && actual.toString().contains("RBNode"))
-    println(s"WARNING $this")
-
-  def subst(s: CSubst) = AllEqual(expected, actual)
-
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
-    if (expected.size != actual.size)
-      cs.never(this)
-    else {
-      var newcs = cs
-      for (i <- 0 until expected.size)
-        newcs = expected(i).subtype(actual(i), newcs)
-      newcs
-    }
-  }
-
-  override def uvars = Set()
-}
-
-case class MinSel(cvar: Seq[Type], setT: Seq[Seq[Type]], lowerB: Seq[Type]) extends Constraint {
-
-  def subst(s: CSubst) = MinSel(cvar.map(_.subst(s)), setT, lowerB)
-
-  def minsel(setT: Seq[Seq[Type]], lowerB:  Seq[Type]) : Seq[Type] = {
-    val len = lowerB.length
-    var res =  Seq.fill(len)(CName('Object))
-    for (i <- 0 until setT.size)
-        if isSubtype()
-      res
-  }
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
-    if (cvar.size != lowerB.size)
-      cs.never(this)
-    else {
-      var newcs = cs
-      for (i <- 0 until cvar.size)
-        newcs = cvar(i).unify(minsel(setT,lowerB)(i), newcs)
-      newcs
-    }
-  }
-
-  override def uvars = Set() ++ cvar.flatMap(_.uvars)
 }
 
 
