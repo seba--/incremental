@@ -71,6 +71,8 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
 
   def tryFinalize(steps: Int): SolveContinuousSubstCSLateMerge = {
     var newBounds = Map[Type, Set[Type]]()
+    var newMinsel = Map[Seq[Type], Seq[Seq[Type]]]()
+    var seqT = Set[Seq[Type]]()
     var lt = Set[Type]()
     for ((low, ups) <- this.bounds) {
       val newlow = low.subst(substitution)
@@ -86,10 +88,23 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
       if (lt.isEmpty) newBounds = newBounds
       else newBounds = newBounds + (newlow -> lt)
     }
-    //    for ((cvar, setT ) <- this.minsel){
-    //
-    //    }
-    val newcs = _notyet.foldLeft(copy(bounds = newBounds, _notyet = Seq()))((cs, cons) => cons.solve(cs))
+
+    val newcs1 = _notyet.foldLeft(copy(bounds = newBounds, _notyet = Seq()))((cs, cons) => cons.solve(cs))
+
+    for ((bnd, sup) <- this.minsel) {
+      seqT = sup.toSet
+         sup.foreach { f =>
+          if (isMinsel(bnd, f))
+            seqT = seqT -  f
+          else lt
+        }
+
+      if (seqT.isEmpty) newMinsel = newMinsel
+      else newMinsel = newMinsel + (bnd -> seqT)
+    }
+
+    val newcs = _notyet.foldLeft(copy(minsel = newMinsel, _notyet = Seq()))((cs, newcs1) => newcs1.solve(cs))
+
 
     val startSize = notyet.size
     val endSize = newcs.notyet.size
@@ -146,6 +161,13 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
         res = false
     res
   }
+
+  //TODO lira detect ambiguities
+  def ifMinsel(setT: Seq[Seq[Type]], lowerB: Seq[Type]): Boolean =
+    if (minsel(setT, lowerB) == Seq.fill(lowerB.length)(CName('Object)))
+      false
+    else
+      true
 
   def minsel(setT: Seq[Seq[Type]], lowerB: Seq[Type]): Seq[Type] = {
     val len = lowerB.length
