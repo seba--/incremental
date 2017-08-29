@@ -60,15 +60,15 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
   def withCond(c: Condition) = copy(cond = c)
 }
 //TODO Declare as tuples (params, paramsT) Lira
-case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, optionallyDefined: Boolean = false, cond: Condition = trueCond) extends CReq[MethodCReq] {
+case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, multype : Set[Seq[Type]] , optionallyDefined: Boolean = false, cond: Condition = trueCond) extends CReq[MethodCReq] {
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
   var cons = Seq[Constraint]()
-  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(cls, cond, MinSelC(params.dropRight(params.length/2), other.self.params, params.drop(params.length/2)) )// Equal(ret, other.self.ret))
+  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(cls, cond, MinSelC(params, other.self.params, multype)) )// Equal(ret, other.self.ret))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
-    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.drop(params.length/2).map(_.subst(s)), ret.subst(s), optionallyDefined, _))
+    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), multype, optionallyDefined, _))
   }
   def liftOpt = ClassReqs(optMethods = Set(this))
   def lift = ClassReqs(methods = Set(this))

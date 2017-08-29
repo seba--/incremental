@@ -17,7 +17,7 @@ trait Constraint {
 case class MinSelC(seqCV: Seq[Type], actual: Seq[Type], bound : Seq[Type]) extends Constraint {
   def subst(s: CSubst) =  this //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
 
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.addMinSel(seqCV, actual)
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.addMinSel(seqCV, actual, bound)
 //  {
 //    if (expected.size != actual.size)
 //      cs.never(this)

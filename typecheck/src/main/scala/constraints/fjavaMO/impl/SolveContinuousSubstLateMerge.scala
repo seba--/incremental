@@ -13,7 +13,7 @@ object SolveContinuousSubstLateMerge extends ConstraintSystemFactory[SolveContin
   def freshConstraintSystem = SolveContinuousSubstCSLateMerge(Map(), Map(), Seq(), Seq(), Map(), Map())
 }
 
-case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType], minsel: Map[Seq[Type], Seq[Seq[Type]]]) extends ConstraintSystem[SolveContinuousSubstCSLateMerge] {
+case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType], minsel: Map[Seq[Type], (Seq[Seq[Type]], Seq[Type])]) extends ConstraintSystem[SolveContinuousSubstCSLateMerge] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
@@ -94,7 +94,7 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
     for ((bnd, sup) <- this.minsel) {
       seqT = sup.toSet
          sup.foreach { f =>
-          if (isMinsel(bnd, f))
+          if (isMinsel(sup, f.))
             seqT = seqT -  f
           else lt
         }
@@ -163,7 +163,7 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
   }
 
   //TODO lira detect ambiguities
-  def ifMinsel(setT: Seq[Seq[Type]], lowerB: Seq[Type]): Boolean =
+  def isMinsel(setT: Seq[Seq[Type]], lowerB: Seq[Type]): Boolean =
     if (minsel(setT, lowerB) == Seq.fill(lowerB.length)(CName('Object)))
       false
     else
@@ -190,14 +190,14 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
     }
   }
 //TODO lira encounter the case when it is not all CNAME or other corner cases
-    def addMinSel(cvar1 : Seq[Type], seqT : Seq[Type]) : SolveContinuousSubstCSLateMerge =
+    def addMinSel(cvar1 : Seq[Type], seqT : Seq[Type], bound: Seq[Type]) : SolveContinuousSubstCSLateMerge =
       if (cvar1.length == seqT.length )
         this
       else
-        extendMinSel(cvar1, seqT)
+        extendMinSel(cvar1, seqT, bound)
 
-  private def extendMinSel(cvar1: Seq[Type], seqT: Seq[Type]) = {
-  val var1 = minsel.getOrElse(cvar1, Seq[Seq[Type]]())
+  private def extendMinSel(cvar1: Seq[Type], seqT: Seq[Type], bound : Seq[Type]) = {
+  val var1 = minsel.getOrElse(cvar1, (Seq[Seq[Type]], Seq[Type])())
   SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, minsel + (cvar1 -> (var1 :+ seqT)))
 }
 

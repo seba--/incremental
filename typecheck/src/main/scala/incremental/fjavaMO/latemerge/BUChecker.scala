@@ -41,7 +41,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           val seqM = creqs.methods.toSeq
           for (i <- 0 until seqM.length ) {
             if (seqM(i).name == m)
-              csPre.addMinSel(seqM(i).params, e.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2))//TODO lira add the bound for minsel separated from params
+              csPre.addMinSel(seqM(i).params.dropRight((seqM(i).params.length-1)/2), e.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),seqM(i).params.drop((seqM(i).params.length-1)/2))//TODO lira add the bound for minsel separated from params
             else
               csPre
             csPre
@@ -108,8 +108,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       for (i <- 1 until e.kids.seq.size) {
         val (ti, subreqs, subcreqs, _) = e.kids(i).typ
         val U = freshCName()
-        paramsT = paramsT :+ ti
-        params = params :+ U
+        params = params :+ ti
         //cons = cons :+ Subtype(ti, U)
         reqss = reqss :+ subreqs
         creqss = creqss :+ subcreqs
@@ -117,7 +116,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mreqs, mcons) = mergeReqMaps(reqss)
       val (creqs, cCons) = mergeCReqMaps(creqss)
-      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params ++ paramsT, Uret).lift)
+      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params, Uret, Set()).lift)
 
       (Uret, mreqs, mcreqs, mcons ++ cCons ++ mcCons )//++ cons)
 
@@ -247,7 +246,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val ctor = cls.lits(2).asInstanceOf[Ctor]
         val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
         val methods = cls.kids.seq
-
+//TODO lira see again if I addd the infor in the set or just keep it as e requirement
         val (creqs1, cons1) = restCReqs.satisfyCtor(CtorCReq(cname, ctor.allArgTypes))
         val (creqs2, cons2) = creqs1.many(_.satisfyField, fields map (f => FieldCReq(cname, f._1, f._2)))
         val (creqs3, cons3) = creqs2.many(_.satisfyMethod,
@@ -255,7 +254,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             cname,
             m.lits(1).asInstanceOf[Symbol],
             m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
-            m.lits(0).asInstanceOf[Type])))
+            m.lits(0).asInstanceOf[Type],
+            Set())))
         val (creqs4, cons4) = creqs3.satisfyExtends(ExtCReq(cname, sup))
 
         restCReqs = creqs4
