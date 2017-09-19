@@ -36,18 +36,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (t, reqs, creqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem(res.typ._4))
         val csPre = subcs addNewConstraints cons
-        val csM = if (e.kind != MethodDec) csPre else {
-          val m = e.lits(1).asInstanceOf[Symbol]
-          val seqM = creqs.methods.toSeq
-          for (i <- 0 until seqM.length ) {
-            if (seqM(i).name == m)
-              csPre.addMinSel(seqM(i).params.dropRight((seqM(i).params.length-1)/2), e.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),seqM(i).params.drop((seqM(i).params.length-1)/2))//TODO lira add the bound for minsel separated from params
-            else
-              csPre
-            csPre
-          }
-      //TODO Lira add the minimal selction stuff, we need to update the set of overloaded params
-        }
+//        val csM = if (e.kind != MethodDec) csPre else {
+//          val m = e.lits(1).asInstanceOf[Symbol]
+//          val seqM = creqs.methods.toSeq
+//          for (i <- 0 until seqM.length ) {
+//            if (seqM(i).name == m)
+//              csPre.addMinSel(seqM(i).params.dropRight((seqM(i).params.length-1)/2), e.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),seqM(i).params.drop((seqM(i).params.length-1)/2))//TODO lira add the bound for minsel separated from params
+//            else
+//              csPre
+//            csPre
+//          }
+//      //TODO Lira add the minimal selction stuff, we need to update the set of overloaded params
+//        }
         val cs = if (e.kind != ClassDec) csPre else {
           // add inheritance to constraint system
           val c = e.lits(0).asInstanceOf[CName]
@@ -102,7 +102,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
      // var cons = Seq[Constraint]()
       var reqss: Seq[Reqs] = Seq(reqs0)
       var creqss: Seq[ClassReqs] = Seq(creqs0)
-      var paramsT = Seq[Type]()
       var params = Seq[Type]()
 
       for (i <- 1 until e.kids.seq.size) {
@@ -116,7 +115,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mreqs, mcons) = mergeReqMaps(reqss)
       val (creqs, cCons) = mergeCReqMaps(creqss)
-      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params, Uret, Set()).lift)
+      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params, Uret).lift)
 
       (Uret, mreqs, mcreqs, mcons ++ cCons ++ mcCons )//++ cons)
 
@@ -249,19 +248,22 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 //TODO lira see again if I addd the infor in the set or just keep it as e requirement
         val (creqs1, cons1) = restCReqs.satisfyCtor(CtorCReq(cname, ctor.allArgTypes))
         val (creqs2, cons2) = creqs1.many(_.satisfyField, fields map (f => FieldCReq(cname, f._1, f._2)))
-        val (creqs3, cons3) = creqs2.many(_.satisfyMethod,
-          methods map (m => MethodCReq(
-            cname,
-            m.lits(1).asInstanceOf[Symbol],
-            m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
-            m.lits(0).asInstanceOf[Type],
-            Set())))
+        val (creq3, cons3) =  for (i <- 0 until methods.groupBy(_.lits(1)).size - 1 ) {
+          creqs2.many(_.satisfyMO,
+            methods.groupBy(_.lits(1))(i)._2 map (m => MethodCReq(
+              cname,
+              m.lits(1).asInstanceOf[Symbol],
+              m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
+              m.lits(0).asInstanceOf[Type]
+            )))
+        }
         val (creqs4, cons4) = creqs3.satisfyExtends(ExtCReq(cname, sup))
 
         restCReqs = creqs4
         removeCons = removeCons ++ cons1 ++ cons2 ++ cons3 ++ cons4
       }
 
+      println(s"The set of requirements is $removeCons")
 
       (ProgramOK, mreqs, restCReqs, mcons ++ mrcons ++ removeCons)
 

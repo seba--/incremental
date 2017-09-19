@@ -10,7 +10,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def notyet: Seq[Constraint]
   def never: Seq[Constraint]
 
-  def addMinSel(cvar : Seq[Type], seqT: Seq[Type], bound : Seq[Type]): CS
+  def addMinSel(cvar : Seq[Type], seqT: Seq[Type]): CS
   def addUpperBound(t1: Type, t2: Type): CS
   def extendz(t1: GroundType, t2: GroundType): CS
   def solved(s: CSubst): CS

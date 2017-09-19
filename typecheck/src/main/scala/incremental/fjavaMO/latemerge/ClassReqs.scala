@@ -35,6 +35,7 @@ case class ExtCReq(cls: Type, ext: Type, cond: Condition = trueCond) extends CRe
   def lift = ClassReqs(ext = Set(this))
   def withCond(c: Condition) = copy(cond = c)
 }
+
 case class CtorCReq(cls: Type, args: Seq[Type], cond: Condition = trueCond) extends CReq[CtorCReq] {
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
@@ -59,21 +60,23 @@ case class FieldCReq(cls: Type, field: Symbol, typ: Type, cond: Condition = true
   def lift = ClassReqs(fields = Set(this))
   def withCond(c: Condition) = copy(cond = c)
 }
-//TODO Declare as tuples (params, paramsT) Lira
-case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, multype : Set[Seq[Type]] , optionallyDefined: Boolean = false, cond: Condition = trueCond) extends CReq[MethodCReq] {
+
+case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type , optionallyDefined: Boolean = false, cond: Condition = trueCond) extends CReq[MethodCReq] {
   def self = this
   def withCls(t: Type, newcond: Condition) = copy(cls=t, cond=newcond)
-  def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
+  def canMerge(other: CReq[MethodCReq]): Boolean =  (name == other.self.name) && (params.length == other.self.params.length)
   var cons = Seq[Constraint]()
-  def assert(other: CReq[MethodCReq], cond: Condition) = Conditional(cls, cond, MinSelC(params, other.self.params, multype)) )// Equal(ret, other.self.ret))
+  def assert(other: CReq[MethodCReq], cond: Condition) =
+    Conditional(cls, cond, MinSelC( params :+ ret, other.self.params :+ other.self.ret))// Equal(ret, other.self.ret))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
-    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), multype, optionallyDefined, _))
+    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _))
   }
   def liftOpt = ClassReqs(optMethods = Set(this))
   def lift = ClassReqs(methods = Set(this))
   def withCond(c: Condition) = copy(cond = c)
 }
+
 case class CurrentClassCReq(cls: Type) extends CReq[CurrentClassCReq] {
   override def self: CurrentClassCReq = this
   override def withCls(t: Type, newcond: Condition): CurrentClassCReq = throw new UnsupportedOperationException
@@ -186,12 +189,20 @@ case class ClassReqs (
     val (extX, cons1) = merge(ext, crs.ext)
     val (ctorX, cons2) = merge(ctorParams, crs.ctorParams)
     val (fieldsX, cons3) = merge(fields, crs.fields)
-    val (methodsX, cons4) = merge(methods, crs.methods)
+    val (methodsX, cons4) = mergeM(methods, crs.methods)
     val (optMethodsX, cons5) = merge(optMethods, crs.optMethods)
     val cons = cons0.toSeq ++ cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
     (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
   }
 
+  private def mergeM[T <: CReq[T]](crs1: Set[T], crs2: Set[T]): (Set[T], Seq[Constraint]) = {
+    if (crs1.isEmpty)
+      return (crs2, Seq())
+    else if (crs2.isEmpty)
+      return (crs1, Seq())
+    else
+      return (crs1 ++ crs2 , Seq())
+  }
   private def merge[T <: CReq[T]](crs1: Set[T], crs2: Set[T]): (Set[T], Seq[Constraint]) = {
     if (crs1.isEmpty)
       return (crs2, Seq())
@@ -248,6 +259,25 @@ case class ClassReqs (
     // ext.cls == req.cls
     val same = req.alsoSame(ext.cls).map(_.withCls(ext.ext))
     Seq(diff, same).flatten
+  }
+
+  def satisfyMO(method: MethodCReq): (ClassReqs, Seq[Constraint]) = {
+    val (creqs1, cons1) = satisfyCReqMO[MethodCReq](method, methods, x=>copy(methods=x))
+    (creqs1, cons1 )
+  }
+
+
+  private def satisfyCReqMO[T <: CReq[T]](creq1: T, crs: Set[T], make: Set[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
+    var cons = Seq[Constraint]()
+    val newcrs = crs flatMap (creq2 =>
+      if (creq1.canMerge(creq2)) {
+        creq1.assert(creq2) foreach (c => cons = cons :+ c)
+        Some(creq1)
+      }
+      else
+        Some(creq2)
+      )
+    (make(newcrs), cons)
   }
 
   private def satisfyCReq[T <: CReq[T]](creq1: T, crs: Set[T], make: Set[T] => ClassReqs): (ClassReqs, Seq[Constraint]) = {
