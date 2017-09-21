@@ -251,14 +251,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         var cons = Seq[Constraint]()
         var cres = creqs2
         val m = methods.groupBy(_.lits(1)).values.toList
-        println(s"methods groupded $m")
         for (i <- 0 until m.size) {
           val prove = m(i)
-          println(s"last method  $prove")
-
           if ( m(i).size == 1) {
-            println(s"methods groupded $m")
-
             val (creqs3, cons3) = cres.satisfyMethod(MethodCReq(
               cname,
               m(i).last.lits(1).asInstanceOf[Symbol],
@@ -269,10 +264,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             cons = cons ++ cons3
           }
           else {
-            println(s"methods groupded $m")
-
             val (creqs3, cons3) = cres.many(_.satisfyMO,
-              m(i) map (m => MethodCReq(
+              m(i).slice(0, m(i).size - 1 ) map (m => MethodCReq(
                 cname,
                 m.lits(1).asInstanceOf[Symbol],
                 m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
@@ -297,8 +290,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         restCReqs = creqs4
         removeCons = removeCons ++ cons1 ++ cons2  ++ cons4 ++ cons
       }
-
-      println(s"The set of requirements is $removeCons")
 
       (ProgramOK, mreqs, restCReqs, mcons ++ mrcons ++ removeCons)
 
