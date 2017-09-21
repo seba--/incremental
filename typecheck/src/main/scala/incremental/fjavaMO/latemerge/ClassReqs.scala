@@ -272,7 +272,7 @@ case class ClassReqs (
     val newcrs = crs flatMap (creq2 =>
       if (creq1.canMerge(creq2)) {
         creq1.assert(creq2) foreach (c => cons = cons :+ c)
-        Some(creq1)
+        Some(creq2)
       }
       else
         Some(creq2)

@@ -248,19 +248,54 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 //TODO lira see again if I addd the infor in the set or just keep it as e requirement
         val (creqs1, cons1) = restCReqs.satisfyCtor(CtorCReq(cname, ctor.allArgTypes))
         val (creqs2, cons2) = creqs1.many(_.satisfyField, fields map (f => FieldCReq(cname, f._1, f._2)))
-        val (creq3, cons3) =  for (i <- 0 until methods.groupBy(_.lits(1)).size - 1 ) {
-          creqs2.many(_.satisfyMO,
-            methods.groupBy(_.lits(1))(i)._2 map (m => MethodCReq(
-              cname,
-              m.lits(1).asInstanceOf[Symbol],
-              m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
-              m.lits(0).asInstanceOf[Type]
-            )))
-        }
-        val (creqs4, cons4) = creqs3.satisfyExtends(ExtCReq(cname, sup))
+        var cons = Seq[Constraint]()
+        var cres = creqs2
+        val m = methods.groupBy(_.lits(1)).values.toList
+        println(s"methods groupded $m")
+        for (i <- 0 until m.size) {
+          val prove = m(i)
+          println(s"last method  $prove")
 
+          if ( m(i).size == 1) {
+            println(s"methods groupded $m")
+
+            val (creqs3, cons3) = cres.satisfyMethod(MethodCReq(
+              cname,
+              m(i).last.lits(1).asInstanceOf[Symbol],
+              m(i).last.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
+              m(i).last.lits(0).asInstanceOf[Type]
+            ))
+            cres = creqs3
+            cons = cons ++ cons3
+          }
+          else {
+            println(s"methods groupded $m")
+
+            val (creqs3, cons3) = cres.many(_.satisfyMO,
+              m(i) map (m => MethodCReq(
+                cname,
+                m.lits(1).asInstanceOf[Symbol],
+                m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
+                m.lits(0).asInstanceOf[Type]
+              )))
+            cres = creqs3
+            cons = cons ++ cons3
+          }
+          val (creqs3, cons3) = cres.satisfyMethod(MethodCReq(
+            cname,
+            m(i).last.lits(1).asInstanceOf[Symbol],
+            m(i).last.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
+            m(i).last.lits(0).asInstanceOf[Type]
+          ))
+          cres = creqs3
+          cons = cons ++ cons3
+        }
+
+
+
+        val (creqs4, cons4) = cres.satisfyExtends(ExtCReq(cname, sup))
         restCReqs = creqs4
-        removeCons = removeCons ++ cons1 ++ cons2 ++ cons3 ++ cons4
+        removeCons = removeCons ++ cons1 ++ cons2  ++ cons4 ++ cons
       }
 
       println(s"The set of requirements is $removeCons")
