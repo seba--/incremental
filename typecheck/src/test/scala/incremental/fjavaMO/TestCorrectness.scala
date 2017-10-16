@@ -75,9 +75,6 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
       MethodDec(Seq(CName('String), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
 
-  typecheckTestFJ("{C int foo() {this.bar()}, int bar() {this.foo()}} ok", ProgramM(MutualRec))(ProgramOK)
-
-  //TODO Lira not covering yet the return type, so far only the minsel for param types, but not ret type
   typecheckTestError("{C string foo() {this.bar()}, int bar() {this.foo()}}ok", ProgramM(WMutualRec))
 
   val mutS1 = ClassDec(Seq(CName('C1), CName('C2),Ctor(ListMap(), ListMap()), Seq()),

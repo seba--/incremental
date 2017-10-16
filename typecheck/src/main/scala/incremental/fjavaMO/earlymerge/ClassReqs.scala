@@ -112,7 +112,6 @@ trait CReq[T <: CReq[T]] {
           this.withCls(sup, supCond)
         }
       }
-
     if (diff.isEmpty) {
       if (same.isEmpty)
         Seq()
@@ -164,8 +163,9 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
     cond.subst(cls_, s) map (FieldCReq(cls_, name, typ.subst(s), _, cons.map(_.subst(s))))
   }
   def withCond(c: ConditionTrait, cons: Set[Constraint]) = copy(cond = c, cons = cons)
-}
-case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, optionallyDefined: Boolean = false, cond: ConditionTrait = trueCond, cons: Set[Constraint] = Set()) extends CReq[MethodCReq] with Named {
+
+
+  case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, minselSet: Map[Type, Set[Seq[Type]]], flagMinsel: Boolean = false, optionallyDefined: Boolean = false, cond: ConditionTrait = trueCond, cons: Set[Constraint] = Set()) extends CReq[MethodCReq] with Named {
   def self = this
   def withCls(t: Type, newcond: ConditionTrait) = copy(cls=t, cond=newcond)
   def canMerge(other: CReq[MethodCReq]): Boolean = name == other.self.name
@@ -173,7 +173,7 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     val newcons = cons.map(_.subst(s))
-    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _, newcons))
+    cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), Map(), flagMinsel, optionallyDefined, _, newcons))
   }
   def withCond(c: ConditionTrait, cons: Set[Constraint]) = {
     if (trueCond==c && cons.nonEmpty)
@@ -181,8 +181,6 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, opt
     copy(cond = c, cons = cons)
   }
 }
-
-
 
 case class ClassReqs (
                        currentCls: Option[Type] = None,
@@ -420,6 +418,7 @@ object MapRequirementsBuilder {
 
   }
 }
+
 class MapRequirementsBuilder[T <: CReq[T]] {
   private var lists = ListBuffer[(T, Cell[Set[Constraint]], Cell[IncHashedSet[CName]])]()
   private var listsOther = ListBuffer[(T, Cell[Set[Constraint]], Cell[IncHashedSet[CName]])]()
