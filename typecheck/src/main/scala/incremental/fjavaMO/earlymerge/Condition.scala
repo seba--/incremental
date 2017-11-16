@@ -1,6 +1,7 @@
 package incremental.fjavaMO.earlymerge
 
 import constraints.CVar
+import constraints.fjavaMO.GroundType
 import constraints.fjavaMO.CSubst.CSubst
 import constraints.fjavaMO.{Constraint, ConstraintSystem, Type}
 import incremental.fjavaMO.{CName, UCName}
@@ -289,6 +290,55 @@ class ConditionMergeKey(val c: Condition) extends MergeKey {
 }
 
 
+
+class ConditionalMinSel(val cons: Constraint, val cls: Type, val cond: ConditionTrait) extends Constraint {
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = {
+    val cls_ = cls.subst(cs.substitution)
+    if (cls_.isGround) {
+      if (cs.isCompleteH(cls_.asInstanceOf[GroundType])) //try to solve
+        cond.subst(cls_, cs.substitution) match {
+          case None => cs // discard this constraint because condition is false
+          case Some(cond_) if Condition.trueCond == cond_ => cons.solve(cs)
+          case Some(cond_) => cs.notyet(new Conditional(cons.subst(cs.substitution), cls_, cond_))
+        }
+        else cs // do nothing hierarchy not complete
+    }
+    else
+    cond.subst(cls_, cs.substitution) match {
+      case None => cs // discard this constraint because condition is false
+      case Some(cond_) if Condition.trueCond == cond_ => cons.solve(cs)
+      case Some(cond_) => cs.notyet(new Conditional(cons.subst(cs.substitution), cls_, cond_))
+    }
+  }
+
+  override def subst(s: CSubst): Constraint = {
+    val cls_ = cls.subst(s)
+    cond.subst(cls_, s) match {
+      case None => cons.subst(s)
+      case Some(cond_) => Conditional(cons.subst(s), cls_, cond_)
+    }
+  }
+
+  override def uvars: Set[CVar[Type]] = cons.uvars ++ cls.uvars ++ cond.uvars
+
+  override def toString: String = s"Conditional($cons, $cls, $cond)"
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case other: Conditional =>
+      (cons == other.cons) && (cls == other.cls) && (cond == other.cond)
+    case _ => false
+  }
+
+  override lazy val hashCode: Int = cons.hashCode + 31*cls.hashCode + 61*cond.hashCode
+}
+
+object ConditionalMinSel {
+  def apply(cons: Constraint, cls: Type, cond: ConditionTrait): Constraint =
+    if (Condition.trueCond == cond)
+      cons
+    else
+      new Conditional(cons, cls, cond)
+}
 
 
 class Conditional(val cons: Constraint, val cls: Type, val cond: ConditionTrait) extends Constraint {

@@ -157,6 +157,13 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
     res
   }
 
+  def isCompleteH(cls :GroundType) : Boolean = {
+    var sType = this.extend.getOrElse(cls, CName("OObject"))
+    if (sType == CName("OObject")) false
+    else if (sType == CName("Object")) true
+    else  isCompleteH(sType)
+  }
+
   def isMinsel(lowerB: Seq[Type], setT: Set[Seq[Type]]): Boolean =
     if (minselB(lowerB, setT).head == Seq(CName('Object)))
       false

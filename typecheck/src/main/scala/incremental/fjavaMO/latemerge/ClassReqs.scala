@@ -67,7 +67,7 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type , op
   def canMerge(other: CReq[MethodCReq]): Boolean =  (name == other.self.name) && (params.length == other.self.params.length)
   var cons = Seq[Constraint]()
   def assert(other: CReq[MethodCReq], cond: Condition) =
-    Conditional(cls, cond, MinSelC( params :+ ret, other.self.params :+ other.self.ret))// Equal(ret, other.self.ret))
+    Conditional(cls, cond, MinSelC( ret +: params, other.self.ret +: other.self.params ))// Equal(ret, other.self.ret))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
     cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), optionallyDefined, _))
@@ -194,6 +194,7 @@ case class ClassReqs (
     val cons = cons0.toSeq ++ cons1 ++ cons2 ++ cons3 ++ cons4 ++ cons5
     (ClassReqs(currentX, extX, ctorX, fieldsX, methodsX, optMethodsX), cons)
   }
+
 
   private def mergeM[T <: CReq[T]](crs1: Set[T], crs2: Set[T]): (Set[T], Seq[Constraint]) = {
     if (crs1.isEmpty)

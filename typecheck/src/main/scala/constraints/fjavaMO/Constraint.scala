@@ -14,12 +14,13 @@ trait Constraint {
 }
 
 //TODO lira see this again
-case class MinSelC(seqCV: Seq[Type], actual: Seq[Type]) extends Constraint {
-  def subst(s: CSubst) =  MinSelC(seqCV.map(_.subst(s)) , actual) //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
+case class MinSelC(instatiatedParams: Seq[Type], givenParams : Seq[Type]) extends Constraint {
+  //MinSelC(invkClass : Type, instatiatedParams: Seq[Type], setMinsel: Map[Type, Set[Seq[Type]]]
+  def subst(s: CSubst) =  MinSelC(instatiatedParams.map(_.subst(s)), givenParams ) //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
 
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.addMinSel(seqCV, actual)
+  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.addMinSel(instatiatedParams, givenParams)
 
-  override def uvars = Set() ++ seqCV.flatMap(_.uvars)
+  override def uvars = Set() ++ instatiatedParams.flatMap(_.uvars)
 }
 
 case class Subtype(lower: Type, upper: Type) extends Constraint {
