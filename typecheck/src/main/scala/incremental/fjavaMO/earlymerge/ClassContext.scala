@@ -46,8 +46,8 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
       (cctx, cons)
 
     case MethodFact(cls, name, params, ret) =>
-      val (crsMethods, cons1) = creqs.satisfyCReqMap(MethodCReq(cls, name, params, ret), creqs.methods)
-      val (crsOptMethods, cons2) = creqs.satisfyCReqMap(MethodCReq(cls, name, params, ret), creqs.optMethods)
+      val (crsMethods, cons1) = creqs.satisfyCReqMap(MethodCReq(cls, name, params, ret, Map(), Set() ), creqs.methods)
+      val (crsOptMethods, cons2) = creqs.satisfyCReqMap(MethodCReq(cls, name, params, ret, Map(), Set()), creqs.optMethods)
       val cctx = ClassContext(creqs.copy(methods = crsMethods, optMethods = crsOptMethods), fact +: cfacts, extFacts)
       (cctx, cons1 ++ cons2)
   }

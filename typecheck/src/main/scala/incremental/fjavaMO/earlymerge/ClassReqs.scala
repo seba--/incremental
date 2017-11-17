@@ -171,7 +171,7 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
   def withCond(c: ConditionTrait, cons: Set[Constraint]) = copy(cond = c, cons = cons)
 }
 
-  case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, minselSet: Map[Type, Set[Seq[Type]]], currentMinsel : Set[Seq[Type]], flagMinsel: Boolean = false, optionallyDefined: Boolean = false, cond: ConditionTrait = trueCond, cons: Set[Constraint] = Set()) extends CReq[MethodCReq] with Named {
+  case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, minselSet: Map[Type, Set[Seq[Type]]], currentMinsel : Set[Seq[Type]], optionallyDefined: Boolean = false, cond: ConditionTrait = trueCond, cons: Set[Constraint] = Set()) extends CReq[MethodCReq] with Named {
     def self = this//maybe add the receiver, we might need when req changes receiver at extends clauses
 
     def withCls(t: Type, newcond: ConditionTrait) = copy(cls = t, cond = newcond)
@@ -188,7 +188,7 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
     def subst(s: CSubst) = {
       val cls_ = cls.subst(s)
       val newcons = cons.map(_.subst(s))
-      cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), Map(), Set(), flagMinsel, optionallyDefined, _, newcons))
+      cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), minselSet, currentMinsel, optionallyDefined, _, newcons))
     }
 
     def withCond(c: ConditionTrait, cons: Set[Constraint]) = {
@@ -421,6 +421,114 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
       else
         (crs + (sat.name -> newcrs), cons)
     }
+
+
+    def isMinsel(lowerB: Seq[Type], setT: Set[Seq[Type]]): Boolean =
+      if (minselB(lowerB, setT).head == Seq(CName('Object)))
+        false
+      else
+        true
+
+    def minselB(params: Seq[Type], bounds: Set[Seq[Type]]): Seq[Type] = {
+      LUB(minS(matchB(params, bounds)), matchB(params, bounds) )
+    }
+    //TODO lira encounter the case when it is not all CNAME or other corner cases
+
+
+    def matchB(params : Seq[Type], bounds: Set[Seq[Type]]) : Set[Seq[Type]] = {
+      var m = Seq[Seq[Type]]()
+      for (i <- 0 until bounds.toSeq.length)
+        if (isMinsel(params, bounds)
+          m = m :+ bounds.toSeq(i)
+          m.toSet
+    }
+
+    def minS(setM : Set[Seq[Type]]) : Set[Seq[Type]] = {
+      var minSet = Set[Seq[Type]]()
+      minSet = setM
+      for (i <- 0 until setM.toSeq.length)
+        for (j <- i+1 until minSet.toSeq.length)
+          if (isAllSubtype(setM.toSeq(i), minSet.toSeq(j)))
+            minSet
+          else if (isAllSubtype(minSet.toSeq(j), setM.toSeq(i))) {
+            minSet = minSet - setM.toSeq(i)
+            minS(minSet) }
+          else minSet
+      minSet
+    }
+    def UB(setC: Set[Seq[Type]], bounds : Set[Seq[Type]]) : Set[Seq[Type]] = {
+      var res = Set[Seq[Type]]()
+      for (i <- 0 until bounds.toSeq.length)
+        if (setC.forall(b => isAllSubtype(bounds.toSeq(i), b)))
+          res = res + bounds.toSeq(i)
+      res
+    }
+
+    def LUB(setC : Set[Seq[Type]], bounds : Set[Seq[Type]]) : Seq[Type] = {
+      var S = Set[Seq[Type]]()
+      S = minS(UB(setC, bounds))
+      if (S.isEmpty)
+        Seq(CName('Object))
+      else if (S.size == 1)
+        S.head
+      else LUB(S, bounds)
+    }
+
+    def addMinselS[T <: CReq[T] with Named](sat : MethodCReq, crs : Map[Symbol, Set[MethodCReq]]): Map[Symbol, Set[MethodCReq]] = {
+      val set =crs.getOrElse(sat.name,
+        return crs)
+
+      var newcrs = set.flatMap(creq =>
+        if (sat.canMerge(creq)) {
+          Some(creq)
+        // Some(creq.copy(cls = creq.cls, name = creq.name, params =  = creq.params, ret = creq.ret, minselSet = creq.minselSet, false, currentMinsel = creq.currentMinsel, cond = creq.cond))
+        }
+
+        else Some(creq)
+      )
+
+      if (newcrs.isEmpty)
+        crs
+      else
+        (crs + (sat.name -> newcrs))
+    }
+
+    def addMinselA(cls : Type, sats: Iterable[MethodCReq], crs : Map[Symbol, Set[MethodCReq]]): Map[Symbol, Set[MethodCReq]] = {
+      val setM = sats.groupBy[Symbol](_.name)
+      var newcrs = crs
+      for ( (m, seqM) <- setM) {
+        var bounds = seqM.foldLeft[Set[Seq[Type]]](Set())(_ + _.params )
+        var mreqs = crs.getOrElse(m, Set())
+        if (mreqs.isEmpty)
+          mreqs
+        else
+          for (mreq <- mreqs) {
+            var minselNew = minselB(mreq.params, bounds)
+
+          }
+
+        }
+    }
+    def satisfyCReqMapMO[T <: CReq[T] with Named](sat: T, crs: Map[Symbol, Seq[T]]): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
+      val set = crs.getOrElse(sat.name,
+        return (crs, Seq()))
+
+      var cons = Seq[Constraint]()
+      val newcrs = set.flatMap(creq =>
+        if (sat.canMerge(creq)) {
+          cons ++= creq.assert(sat)
+          Some(creq)
+        }
+        else
+          Some(creq)
+      )
+      if (newcrs.isEmpty)
+        (crs - sat.name, cons)
+      else
+        (crs + (sat.name -> newcrs), cons)
+    }//maybe we do not need this at all becasue we can collect all methods of a class, we know we are insdie a class and
+    // apply satisfy only at thelast method grouped by name
+
   }
 
   object MapRequirementsBuilder {
