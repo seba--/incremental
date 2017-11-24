@@ -143,6 +143,46 @@ case class ClassContext(creqs: ClassReqs = ClassReqs(), cfacts: Seq[ClassFact] =
     case Some(t) => (withCReqs(creqs.copy(currentCls = None)), Seq(Equal(t, cls)))
   }
 
+//  def addMinselS[T <: CReq[T] with Named](cls : Type, sat : MethodCReq, crs : Map[Symbol, Set[MethodCReq]]): Map[Symbol, Set[MethodCReq]] = {
+//    val set =crs.getOrElse(sat.name,
+//      return crs)
+//
+//    var newcr = sat
+//    var newcrs = set.flatMap(creq =>
+//      if (sat.canMerge(creq)) {
+//        var newminSelset = creq.minselSet.getOrElse(sat.cls, Set())
+//        Some(newcr.copy(cls = creq.cls, name = creq.name, params  = creq.params, ret = creq.ret, minselSet = creq.minselSet - sat.cls + (sat.cls -> (newminSelset + sat.params)),  currentMinsel = creq.currentMinsel, cond = creq.cond))
+//      }
+//
+//      else Some(creq)
+//    )
+//
+//    if (newcrs.isEmpty)
+//      crs
+//    else
+//      (crs + (sat.name -> newcrs))
+//  }
+
+  def addMinselA(cls : Type, sats: Seq[MethodFact]): ClassContext = {
+    val setM = sats.groupBy[Symbol](_.name)
+    var newcrs = creqs
+    for ((m, satM) <- setM) {
+      var bounds = satM.foldLeft[Set[Seq[Type]]](Set())(_ + _.params)
+      var mreqs = creqs.methods.getOrElse(m, Set())
+      if (mreqs.isEmpty)
+        newcrs
+      else
+        for (mreq <- mreqs) {
+          var newmreq = mreq
+          //TODO include in the minsel also the cls, to compare it againts the cls of the mreq(sould be super type)
+          newmreq.copy(cls = mreq.cls, name = mreq.name, params = mreq.params, ret = mreq.ret, minselSet = mreq.minselSet + (cls -> bounds), currentMinsel = mreq.currentMinsel, cond = mreq.cond)
+        }
+    }
+    val cctx = ClassContext(creqs.copy(methods = creqs.methods, optMethods = creqs.optMethods), cfacts, extFacts)
+
+    cctx
+  }
+
   private def withCReqs(newcreqs: ClassReqs): ClassContext = this.copy(creqs = newcreqs)
 }
 

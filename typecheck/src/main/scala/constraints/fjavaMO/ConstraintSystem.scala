@@ -11,7 +11,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
   def never: Seq[Constraint]
 
   def isCompleteH(cls : GroundType) : Boolean
-  def isAllSubtype(params: Seq[Type], bound : Seq[Type]) : Boolean
+  def isSubtype(t1 : Type, t2 : Type) : Boolean
   def addMinSel(cvar : Seq[Type], seqT: Seq[Type]): CS
   def addUpperBound(t1: Type, t2: Type): CS
   def extendz(t1: GroundType, t2: GroundType): CS

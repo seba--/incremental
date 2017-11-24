@@ -41,6 +41,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           val c = e.lits(0).asInstanceOf[CName]
           val sup = e.lits(1).asInstanceOf[CName]
           subcs.extendz(c, sup)
+          //calculate minsel for each method and add it to the minselSet of the requirements
         }
 
         val (newt, newreqs, newcctx, newcs) = substFix(t, reqs, cctx, cons, csPre, false)
@@ -99,7 +100,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mreqs, mcons) = mergeReqMaps(reqss)
       val (mCctx, cCons) = mergeClassContexts(cctxs)
-      val (mcCctx, mcCons) = mCctx.addRequirement(MethodCReq(te, m, params, Uret))
+      val (mcCctx, mcCons) = mCctx.addRequirement(MethodCReq(te, m, params, Uret,  Map(), Set()))
 
       (Uret, mreqs, mcCctx, mcons ++ cCons ++ mcCons ++ cons)
 
@@ -174,7 +175,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (cctx1, currentCons) = bodyCctx.addCurrentClassRequirement(Uc)
       val (cctx2, extendCons) = cctx1.addRequirements(Seq(
         ExtCReq(Uc, Ud),
-        MethodCReq(Ud, m, params.map(_._2), retT, true)))
+        MethodCReq(Ud, m, params.map(_._2), retT, Map(), Set(),  true)))
 
       (MethodOK, restReqs, cctx2, cons ++ currentCons ++ extendCons)
 
@@ -208,15 +209,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       // add facts
       val (cctxFact1, factCons1) = cctx3.addFact(CtorFact(c, ctor.allArgTypes))
       val (cctxFact2, factCons2) = cctxFact1.addFacts(fields.map(f => FieldFact(c, f._1, f._2)))
-      val (cctxFact3, factCons3) = cctxFact2.addFacts(methods.map(m =>
+      val cctxFact3 = cctxFact2.addMinselA(c, methods.map(m =>
         MethodFact(c,
           m.lits(1).asInstanceOf[Symbol],
           m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
           m.lits(0).asInstanceOf[CName])))
-      val (cctxFact4, factCons4) = cctxFact3.addExtFact(c, sup)
+      val (cctxFact4, factCons3) = cctxFact3.addFacts(methods.map(m =>
+        MethodFact(c,
+          m.lits(1).asInstanceOf[Symbol],
+          m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
+          m.lits(0).asInstanceOf[CName])))
+      val (cctxFact5, factCons4) = cctxFact4.addExtFact(c, sup)
 
       val newcons = (fieldInitCons +: mccons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 ++ factCons4
-      (c, reqs, cctxFact4, newcons)
+      (c, reqs, cctxFact5, newcons)
 
     case ProgramM =>
 

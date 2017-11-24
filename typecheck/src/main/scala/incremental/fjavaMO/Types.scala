@@ -33,7 +33,6 @@ case class UCName(x: CVar[Type]) extends Type {
     else
       cs.addUpperBound(this.subst(cs.substitution), other.subst(cs.substitution))
 
-
   def uvars = Set(x)
 
   override val hashCode: Int = x.x.hashCode()

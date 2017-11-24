@@ -16,6 +16,7 @@ trait Type extends CTerm[Type] {
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
 
   def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS
+  def isSubtypeM[CS <: ConstraintSystem[CS]](other: Type, cs: CS): Boolean = cs.isSubtype(this, other)
 
 
   def compatibleWith(t2: Type) = Equal(this, t2)

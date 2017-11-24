@@ -208,7 +208,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       // add facts
       val (cctxFact1, factCons1) = cctx3.addFact(CtorFact(c, ctor.allArgTypes))
       val (cctxFact2, factCons2) = cctxFact1.addFacts(fields.map(f => FieldFact(c, f._1, f._2)))
-
       val (cctxFact3, factCons3) = cctxFact2.addFacts(methods.map(m =>
         MethodFact(c,
           m.lits(1).asInstanceOf[Symbol],
