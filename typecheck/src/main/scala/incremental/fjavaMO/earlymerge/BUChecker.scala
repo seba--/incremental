@@ -42,7 +42,15 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           val sup = e.lits(1).asInstanceOf[CName]
           subcs.extendz(c, sup)
           //calculate minsel for each method and add it to the minselSet of the requirements
+          val methods = e.kids.seq
+          val (cctxFact4, factCons3) = cctx.addFacts(methods.map(m =>
+            MethodFact(c,
+              m.lits(1).asInstanceOf[Symbol],
+              m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
+              m.lits(0).asInstanceOf[CName])))
+
         }
+
 
         val (newt, newreqs, newcctx, newcs) = substFix(t, reqs, cctx, cons, csPre, false)
         e.typ = (newt, newreqs, newcctx, newcs.propagate)
@@ -100,7 +108,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (mreqs, mcons) = mergeReqMaps(reqss)
       val (mCctx, cCons) = mergeClassContexts(cctxs)
-      val (mcCctx, mcCons) = mCctx.addRequirement(MethodCReq(te, m, params, Uret,  Map(), Set()))
+      val (mcCctx, mcCons) = mCctx.addRequirement(MethodCReq(te, m, params, Uret,  Map(), Set(), Set()))
 
       (Uret, mreqs, mcCctx, mcons ++ cCons ++ mcCons ++ cons)
 
@@ -175,7 +183,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (cctx1, currentCons) = bodyCctx.addCurrentClassRequirement(Uc)
       val (cctx2, extendCons) = cctx1.addRequirements(Seq(
         ExtCReq(Uc, Ud),
-        MethodCReq(Ud, m, params.map(_._2), retT, Map(), Set(),  true)))
+        MethodCReq(Ud, m, params.map(_._2), retT, Map(), Set(), Set(),  true)))
 
       (MethodOK, restReqs, cctx2, cons ++ currentCons ++ extendCons)
 
@@ -214,15 +222,15 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           m.lits(1).asInstanceOf[Symbol],
           m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
           m.lits(0).asInstanceOf[CName])))
-      val (cctxFact4, factCons3) = cctxFact3.addFacts(methods.map(m =>
-        MethodFact(c,
-          m.lits(1).asInstanceOf[Symbol],
-          m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
-          m.lits(0).asInstanceOf[CName])))
-      val (cctxFact5, factCons4) = cctxFact4.addExtFact(c, sup)
+//      val (cctxFact4, factCons3) = cctxFact3.addFacts(methods.map(m =>
+//        MethodFact(c,
+//          m.lits(1).asInstanceOf[Symbol],
+//          m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
+//          m.lits(0).asInstanceOf[CName])))
+      val (cctxFact4, factCons3) = cctxFact3.addExtFact(c, sup)
 
-      val newcons = (fieldInitCons +: mccons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 ++ factCons4
-      (c, reqs, cctxFact5, newcons)
+      val newcons = (fieldInitCons +: mccons) ++ mrcons ++ currentCons ++ supCons ++ factCons1 ++ factCons2 ++ factCons3 //++ factCons4
+      (c, reqs, cctxFact4, newcons)
 
     case ProgramM =>
 

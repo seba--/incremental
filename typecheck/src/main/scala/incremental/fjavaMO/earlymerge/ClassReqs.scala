@@ -171,7 +171,7 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
   def withCond(c: ConditionTrait, cons: Set[Constraint]) = copy(cond = c, cons = cons)
 }
 
-  case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, minselSet: Map[Type, Set[Seq[Type]]], currentMinsel : Set[Seq[Type]], optionallyDefined: Boolean = false, cond: ConditionTrait = trueCond, cons: Set[Constraint] = Set()) extends CReq[MethodCReq] with Named {
+case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, minselSet: Map[Type, Set[Seq[Type]]], currentSet: Set[Seq[Type]], currentMinsel : Set[Seq[Type]], optionallyDefined: Boolean = false, cond: ConditionTrait = trueCond, cons: Set[Constraint] = Set()) extends CReq[MethodCReq] with Named {
     def self = this//maybe add the receiver, we might need when req changes receiver at extends clauses
 
     def withCls(t: Type, newcond: ConditionTrait) = copy(cls = t, cond = newcond)
@@ -188,7 +188,7 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
     def subst(s: CSubst) = {
       val cls_ = cls.subst(s)
       val newcons = cons.map(_.subst(s))
-      cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), minselSet, currentMinsel, optionallyDefined, _, newcons))
+      cond.subst(cls_, s) map (MethodCReq(cls_, name, params.map(_.subst(s)), ret.subst(s), minselSet, currentSet,  currentMinsel, optionallyDefined, _, newcons))
     }
 
     def withCond(c: ConditionTrait, cons: Set[Constraint]) = {
@@ -328,6 +328,7 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
             addedReq = true
           }
         }
+
         else if (creq.cls.isGround) {
           // creq.cls is ground but req.cls is not ground (due to previous conditional branch)
           // thus req.cls is compatible with creq as either same or different
@@ -416,129 +417,12 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
         else
           Some(creq)
       )
-      cons.
       if (newcrs.isEmpty)
         (crs - sat.name, cons)
       else
         (crs + (sat.name -> newcrs), cons)
     }
 
-
-    def isMinsel(lowerB: Seq[Type], setT: Set[Seq[Type]]): Boolean =
-      if (minselB(lowerB, setT).head == Seq(CName('Object)))
-        false
-      else
-        true
-
-    def minselB(params: Seq[Type], bounds: Set[Seq[Type]]): Seq[Type] = {
-      LUB(minS(matchB(params, bounds)), matchB(params, bounds) )
-    }
-    //TODO lira encounter the case when it is not all CNAME or other corner cases
-
-
-    def matchB(params : Seq[Type], bounds: Set[Seq[Type]]) : Set[Seq[Type]] = {
-      var m = Seq[Seq[Type]]()
-      for (i <- 0 until bounds.toSeq.length)
-        if (isMinsel(params, bounds)
-          m = m :+ bounds.toSeq(i)
-          m.toSet
-    }
-
-    def minS(setM : Set[Seq[Type]]) : Set[Seq[Type]] = {
-      var minSet = Set[Seq[Type]]()
-      minSet = setM
-      for (i <- 0 until setM.toSeq.length)
-        for (j <- i+1 until minSet.toSeq.length)
-          if (isAllSubtype(setM.toSeq(i), minSet.toSeq(j)))
-            minSet
-          else if (isAllSubtype(minSet.toSeq(j), setM.toSeq(i))) {
-            minSet = minSet - setM.toSeq(i)
-            minS(minSet) }
-          else minSet
-      minSet
-    }
-    def UB(setC: Set[Seq[Type]], bounds : Set[Seq[Type]]) : Set[Seq[Type]] = {
-      var res = Set[Seq[Type]]()
-      for (i <- 0 until bounds.toSeq.length)
-        if (setC.forall(b => isAllSubtype(bounds.toSeq(i), b)))
-          res = res + bounds.toSeq(i)
-      res
-    }
-
-    def LUB(setC : Set[Seq[Type]], bounds : Set[Seq[Type]]) : Seq[Type] = {
-      var S = Set[Seq[Type]]()
-      S = minS(UB(setC, bounds))
-      if (S.isEmpty)
-        Seq(CName('Object))
-      else if (S.size == 1)
-        S.head
-      else LUB(S, bounds)
-    }
-
-    def addMinselS[T <: CReq[T] with Named](sat : MethodCReq, crs : Map[Symbol, Set[MethodCReq]]): Map[Symbol, Set[MethodCReq]] = {
-      val set =crs.getOrElse(sat.name,
-        return crs)
-
-      var newcr = sat
-      var newcrs = set.flatMap(creq =>
-        if (sat.canMerge(creq)) {
-          var newminSelset = creq.minselSet.getOrElse(sat.cls, Set())
-        Some(newcr.copy(cls = creq.cls, name = creq.name, params  = creq.params, ret = creq.ret, minselSet = creq.minselSet - sat.cls + (sat.cls -> (newminSelset + sat.params)),  currentMinsel = creq.currentMinsel, cond = creq.cond))
-        }
-
-        else Some(creq)
-      )
-
-      if (newcrs.isEmpty)
-        crs
-      else
-        (crs + (sat.name -> newcrs))
-    }
-
-    def isAllSubtype[CS <: ConstraintSystem[CS]](t1: Seq[Type], t2: Seq[Type], cs : CS): Boolean = {
-      var res = true
-      for (i <- 0 until t1.length)
-        if (!t1(i).isSubtypeM(t2(i), cs))
-          res = false
-      res
-    }
-
-    def addMinselA(cls : Type, sats: Iterable[MethodCReq]): Map[Symbol, Set[MethodCReq]] = {
-      val setM = sats.groupBy[Symbol](_.name)
-      var newcrs = methods
-      for ((m, satM) <- setM) {
-        var bounds = satM.foldLeft[Set[Seq[Type]]](Set())(_ + _.params)
-        var mreqs = methods.getOrElse(m, Set())
-        if (mreqs.isEmpty)
-          newcrs
-        else
-          for (mreq <- mreqs) {
-            var newmreq = mreq
-            var minselNew = minselB(mreq.params, bounds) //TODO include in the minsel also the cls, to compare it againts the cls of the mreq(sould be super type)
-            newmreq.copy(cls = mreq.cls, name = mreq.name, params = mreq.params, ret = mreq.ret, minselSet = mreq.minselSet + (cls -> bounds), currentMinsel = mreq.currentMinsel, cond = mreq.cond)
-          }
-      }
-      newcrs
-    }
-
-    def calcCMinSel[CS <: ConstraintSystem[CS]](cls : Type, sats: Iterable[MethodCReq], crs : Map[Symbol, Set[MethodCReq]], cs : CS): Map[Symbol, Set[MethodCReq]] = {
-      val setM = sats.groupBy[Symbol](_.name)
-      for ((m, satM) <- setM) {
-        var bounds = satM.foldLeft[Set[Seq[Type]]](Set())(_ + _.params)
-        var mreqs = crs.getOrElse(m, Set())
-        if (mreqs.isEmpty)
-          mreqs
-        else
-          for (mreq <- mreqs) {
-            var newcrs = mreq
-            var minselNew = minselB(mreq.params, bounds) //TODO include in the minsel also the cls, to compare it againts the cls of the mreq(sould be super type)
-            if (mreq.currentMinsel.size == 1 && isAllSubtype(mreq.currentMinsel.head, minselNew, cs))
-              newcrs.copy(cls = mreq.cls, name = mreq.name, params = mreq.params, ret = mreq.ret, minselSet = mreq.minselSet + (cls -> bounds), currentMinsel = mreq.currentMinsel, cond = mreq.cond)
-
-          }
-
-      }
-    }
     //maybe I will not need a specific satisfy for MO because we have other conditions not only the also not,
     // soo the req will not be satisfied until the flag for minsel is true!
     def satisfyCReqMapMO[T <: CReq[T] with Named](sat: T, crs: Map[Symbol, Seq[T]]): (Map[Symbol, Seq[T]], Seq[Constraint]) = {
@@ -561,6 +445,125 @@ case class FieldCReq(cls: Type, name: Symbol, typ: Type, cond: ConditionTrait = 
     }//maybe we do not need this at all becasue we can collect all methods of a class, we know we are insdie a class and
     // apply satisfy only at thelast method grouped by name
 
+
+
+    def isMinsel[CS <: ConstraintSystem[CS]](cls : Type, lowerB: Seq[Type], setT: Map[Type,Set[Seq[Type]]], cs : CS): Boolean =
+      if (minselB(cls,lowerB, setT, cs).head == Seq(CName('Object)))
+        false
+      else
+        true
+
+    def minselB[CS <: ConstraintSystem[CS]](cls : Type, params: Seq[Type], bounds: Map[Type, Set[Seq[Type]]], cs : CS): Seq[Type] = {
+      LUB(minS(matchB(cls, params, bounds, cs), cs), matchB(cls, params, bounds, cs), cs )
+    }
+    //TODO lira encounter the case when it is not all CNAME or other corner cases
+
+    def matchB[CS <: ConstraintSystem[CS]](cls : Type, params : Seq[Type], bounds: Map[Type, Set[Seq[Type]]], cs : CS) : Set[Seq[Type]] = {
+      var mB = Set[Seq[Type]]()
+      for ((sup, setB) <- bounds){
+        if (isAllSubtype(Seq(cls), Seq(sup), cs))
+          if (isMinsel(cls, params, bounds, cs))
+          mB = mB ++ setB
+      }
+          mB
+    }
+
+    def minS[CS <: ConstraintSystem[CS]]( setM : Set[Seq[Type]], cs : CS) : Set[Seq[Type]] = {
+      var minSet = Set[Seq[Type]]()
+      minSet = setM
+      for (i <- 0 until setM.toSeq.length)
+        for (j <- i+1 until minSet.toSeq.length)
+          if (isAllSubtype(setM.toSeq(i), minSet.toSeq(j), cs))
+            minSet
+          else if (isAllSubtype(minSet.toSeq(j), setM.toSeq(i), cs)) {
+            minSet = minSet - setM.toSeq(i)
+            minS(minSet,cs) }
+          else minSet
+      minSet
+    }
+    def UB[CS <: ConstraintSystem[CS]](setC: Set[Seq[Type]], bounds : Set[Seq[Type]], cs : CS) : Set[Seq[Type]] = {
+      var res = Set[Seq[Type]]()
+      for (i <- 0 until bounds.toSeq.length)
+        if (setC.forall(b => isAllSubtype(bounds.toSeq(i), b, cs)))
+          res = res + bounds.toSeq(i)
+      res
+    }
+
+    def LUB[CS <: ConstraintSystem[CS]](setC : Set[Seq[Type]], bounds : Set[Seq[Type]], cs : CS) : Seq[Type] = {
+      var S = Set[Seq[Type]]()
+      S = minS(UB(setC, bounds, cs), cs)
+      if (S.isEmpty)
+        Seq(CName('Object))
+      else if (S.size == 1)
+        S.head
+      else LUB(S, bounds, cs)
+    }
+
+//    def addMinselS[T <: CReq[T] with Named](sat : MethodCReq, crs : Map[Symbol, Set[MethodCReq]]): Map[Symbol, Set[MethodCReq]] = {
+//      val set =crs.getOrElse(sat.name,
+//        return crs)
+//
+//      var newcr = sat
+//      var newcrs = set.flatMap(creq =>
+//        if (sat.canMerge(creq)) {
+//          var newminSelset = creq.minselSet.getOrElse(sat.cls, Set())
+//        Some(newcr.copy(cls = creq.cls, name = creq.name, params  = creq.params, ret = creq.ret, minselSet = creq.minselSet - sat.cls + (sat.cls -> (newminSelset + sat.params)),  currentMinsel = creq.currentMinsel, cond = creq.cond))
+//        }
+//
+//        else Some(creq)
+//      )
+//
+//      if (newcrs.isEmpty)
+//        crs
+//      else
+//        (crs + (sat.name -> newcrs))
+//    }
+
+    def isAllSubtype[CS <: ConstraintSystem[CS]](t1: Seq[Type], t2: Seq[Type], cs : CS): Boolean = {
+      var res = true
+      for (i <- 0 until t1.length)
+        if (!t1(i).isSubtypeM(t2(i), cs))
+          res = false
+      res
+    }
+
+    def addMinselA[CS <: ConstraintSystem[CS]](cls : Type, sats: Iterable[MethodCReq], cs : CS): Map[Symbol, Seq[MethodCReq]] = {
+      val setM = sats.groupBy[Symbol](_.name)
+      var newcrs = methods
+      for ((m, satM) <- setM) {
+        var bounds = satM.foldLeft[Set[Seq[Type]]](Set())(_ + _.params)
+        var mreqs = methods.getOrElse(m, Set())
+        if (mreqs.isEmpty)
+          newcrs
+        else
+          for (mreq <- mreqs) {
+            var newmreq = mreq
+            var minselNew = minselB(cls, mreq.params, Map(cls -> bounds), cs) //TODO include in the minsel also the cls, to compare it againts the cls of the mreq(sould be super type)
+            newmreq.copy(cls = mreq.cls, name = mreq.name, params = mreq.params, ret = mreq.ret, minselSet = mreq.minselSet + (cls -> bounds), currentSet = mreq.currentSet ++ bounds , currentMinsel = mreq.currentMinsel, cond = mreq.cond)
+          }
+      }
+      newcrs
+    }
+
+    def calcCMinSel[CS <: ConstraintSystem[CS]](cls : Type, sats: Iterable[MethodCReq], crs : Map[Symbol, Set[MethodCReq]], cs : CS): Map[Symbol, Seq[MethodCReq]] = {
+      val setM = sats.groupBy[Symbol](_.name)
+      var newcrs = methods
+      for ((m, satM) <- setM) {
+        var bounds = satM.foldLeft[Set[Seq[Type]]](Set())(_ + _.params)
+        var mreqs = crs.getOrElse(m, Set())
+        if (mreqs.isEmpty)
+          mreqs
+        else
+          for (mreq <- mreqs) {
+            var newcrs = mreq
+            var minselNew = minselB(cls ,mreq.params, Map(cls -> bounds), cs) //TODO include in the minsel also the cls, to compare it againts the cls of the mreq(sould be super type)
+            if (mreq.currentMinsel.size == 1 && isAllSubtype(mreq.currentMinsel.head, minselNew, cs))
+              newcrs.copy(cls = mreq.cls, name = mreq.name, params = mreq.params, ret = mreq.ret, minselSet = mreq.minselSet + (cls -> bounds), currentSet = mreq.currentSet ++ bounds , currentMinsel = mreq.currentMinsel, cond = mreq.cond)
+
+          }
+      }
+      newcrs
+    }
   }
 
   object MapRequirementsBuilder {
