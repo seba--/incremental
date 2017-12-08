@@ -453,8 +453,8 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, min
       else
         true
 
-    def minselB[CS <: ConstraintSystem[CS]](cls : Type, params: Seq[Type], bounds: Map[Type, Set[Seq[Type]]], cs : CS): Seq[Type] = {
-      LUB(minS(matchB(cls, params, bounds, cs), cs), matchB(cls, params, bounds, cs), cs )
+    def minselB[CS <: ConstraintSystem[CS]](cls : Type, params: Seq[Type], bounds: Map[Type, Set[Seq[Type]]], cs : CS): Set[Seq[Type]] = {
+      Set(LUB(minS(matchB(cls, params, bounds, cs), cs), matchB(cls, params, bounds, cs), cs))
     }
     //TODO lira encounter the case when it is not all CNAME or other corner cases
 
@@ -538,31 +538,31 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type, min
         else
           for (mreq <- mreqs) {
             var newmreq = mreq
-            var minselNew = minselB(cls, mreq.params, Map(cls -> bounds), cs) //TODO include in the minsel also the cls, to compare it againts the cls of the mreq(sould be super type)
+           // var minselNew = minselB(cls, mreq.params, Map(cls -> bounds), cs) //TODO include in the minsel also the cls, to compare it againts the cls of the mreq(sould be super type)
             newmreq.copy(cls = mreq.cls, name = mreq.name, params = mreq.params, ret = mreq.ret, minselSet = mreq.minselSet + (cls -> bounds), currentSet = mreq.currentSet ++ bounds , currentMinsel = mreq.currentMinsel, cond = mreq.cond)
           }
       }
       newcrs
     }
 
-    def calcCMinSel[CS <: ConstraintSystem[CS]](cls : Type, sats: Iterable[MethodCReq], crs : Map[Symbol, Set[MethodCReq]], cs : CS): Map[Symbol, Seq[MethodCReq]] = {
-      val setM = sats.groupBy[Symbol](_.name)
+    def calcCMinSel[CS <: ConstraintSystem[CS]](cls : Type,crs : Map[Symbol, Seq[MethodCReq]], cs : CS): ClassContext = {
       var newcrs = methods
-      for ((m, satM) <- setM) {
+      for ((m, satM) <- crs) {
         var bounds = satM.foldLeft[Set[Seq[Type]]](Set())(_ + _.params)
-        var mreqs = crs.getOrElse(m, Set())
+        var mreqs = methods.getOrElse(m, Set())
         if (mreqs.isEmpty)
           mreqs
         else
           for (mreq <- mreqs) {
             var newcrs = mreq
             var minselNew = minselB(cls ,mreq.params, Map(cls -> bounds), cs) //TODO include in the minsel also the cls, to compare it againts the cls of the mreq(sould be super type)
-            if (mreq.currentMinsel.size == 1 && isAllSubtype(mreq.currentMinsel.head, minselNew, cs))
-              newcrs.copy(cls = mreq.cls, name = mreq.name, params = mreq.params, ret = mreq.ret, minselSet = mreq.minselSet + (cls -> bounds), currentSet = mreq.currentSet ++ bounds , currentMinsel = mreq.currentMinsel, cond = mreq.cond)
+            if (mreq.currentMinsel.size == 1 && isAllSubtype(mreq.currentMinsel.head, minselNew.head, cs))
+              newcrs.copy(cls = mreq.cls, name = mreq.name, params = mreq.params, ret = mreq.ret, minselSet = mreq.minselSet + (cls -> bounds), currentSet = mreq.currentSet ++ bounds , currentMinsel = minselNew, cond = mreq.cond)
 
           }
       }
-      newcrs
+      val cctx = ClassContext(ClassReqs(currentCls, exts, ctorsGround, ctorsVar, fields, newcrs, optMethods), Seq(), Map())
+      cctx
     }
   }
 

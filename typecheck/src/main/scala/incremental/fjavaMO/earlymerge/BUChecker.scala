@@ -36,23 +36,26 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       root.visitUninitialized { e =>
         val (t, reqs, cctx, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem(res.typ._4))
+        var newctx = cctx
+        var newcons = cons
         val csPre = if (e.kind != ClassDec) subcs else {
           // add inheritance to constraint system
           val c = e.lits(0).asInstanceOf[CName]
           val sup = e.lits(1).asInstanceOf[CName]
-          subcs.extendz(c, sup)
+          val newcctx = cctx.creqs.calcCMinSel(c, cctx.creqs.methods, subcs)
           //calculate minsel for each method and add it to the minselSet of the requirements
           val methods = e.kids.seq
-          val (cctxFact4, factCons3) = cctx.addFacts(methods.map(m =>
+          val (cctxFact4, factCons3) = newcctx.addFacts(methods.map(m =>
             MethodFact(c,
               m.lits(1).asInstanceOf[Symbol],
               m.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),
               m.lits(0).asInstanceOf[CName])))
-
+          newctx = cctxFact4
+          newcons = cons ++ factCons3
+          subcs.extendz(c, sup)
         }
 
-
-        val (newt, newreqs, newcctx, newcs) = substFix(t, reqs, cctx, cons, csPre, false)
+        val (newt, newreqs, newcctx, newcs) = substFix(t, reqs, newctx, newcons, csPre, false)
         e.typ = (newt, newreqs, newcctx, newcs.propagate)
         true
       }
