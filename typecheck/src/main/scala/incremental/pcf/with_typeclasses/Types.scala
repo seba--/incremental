@@ -1,4 +1,4 @@
-package incremental.pcf
+package incremental.pcf.with_typeclasses
 
 import constraints.equality.CSubst
 import constraints.equality.CSubst.CSubst

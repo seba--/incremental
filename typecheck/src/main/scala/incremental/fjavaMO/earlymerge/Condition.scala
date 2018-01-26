@@ -339,7 +339,6 @@ object ConditionalMinSel {
     else
       new Conditional(cons, cls, cond)
 }
-/
 
 class Conditional(val cons: Constraint, val cls: Type, val cond: ConditionTrait) extends Constraint {
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = {

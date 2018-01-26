@@ -20,6 +20,7 @@ trait PolType extends constraints.equality.Type {
 }
 
 case class UVar(x: CVar[Type]) extends PolType {
+  def isGround = false
   def freeTVars = Set()
   def occurs(x2: CVar[_]) = x == x2
   def subst(s: CSubst) = s.hgetOrElse(x, this)
@@ -39,6 +40,7 @@ case class UVar(x: CVar[Type]) extends PolType {
 }
 
 case object TNum extends PolType {
+  def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
@@ -50,6 +52,7 @@ case object TNum extends PolType {
 }
 
 case class TFun(t1: Type, t2: Type) extends PolType {
+  def isGround = true
   def freeTVars = getFreeTVars(t1) ++ getFreeTVars(t2)
   def occurs(x: CVar[_]) = t1.occurs(x) || t2.occurs(x)
   def subst(s: CSubst) = TFun(t1.subst(s), t2.subst(s))
@@ -63,6 +66,7 @@ case class TFun(t1: Type, t2: Type) extends PolType {
 
 
 case class TVar(alpha : Symbol) extends PolType {
+  def isGround = false
   def freeTVars = Set(alpha)
   def occurs(x2: CVar[_]) = alpha == x2
   def subst(s: CSubst) = s.hgetOrElse(CVar[Type](alpha), this)
@@ -78,6 +82,7 @@ case class TVar(alpha : Symbol) extends PolType {
 }
 
 case class TUniv(alpha : Symbol, t : Type) extends PolType {
+  def isGround = true
   def freeTVars = getFreeTVars(t) - alpha
   def occurs(x2: CVar[_]) = t.occurs(x2)
   def subst(s: CSubst) = TUniv(alpha, t.subst(s))
@@ -90,6 +95,7 @@ case class TUniv(alpha : Symbol, t : Type) extends PolType {
 }
 
 case class UUniv(alpha: CVar[Type], t : Type) extends PolType {
+  def isGround = false
   def freeTVars = getFreeTVars(t)
   def occurs(x2: CVar[_]) = alpha == x2 || t.occurs(x2)
   def subst(s : CSubst) = s.hget(alpha) match {

@@ -9,6 +9,7 @@ import incremental.pcf.UVar
  * Created by seba on 15/11/14.
  */
 case class TRecord(fields: Map[Symbol, Type]) extends Type {
+  def isGround = true
   def occurs(x: CVar[_]) = fields.exists(_._2.occurs(x))
   def subst(s: CSubst) = TRecord(fields.mapValues(_.subst(s)))
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {

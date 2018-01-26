@@ -9,6 +9,7 @@ import incremental.pcf.UVar
  * Created by seba on 15/11/14.
  */
 case class TRef(t: Type) extends Type {
+  def isGround = false
   def occurs(x: CVar[_]) = t.occurs(x)
   def subst(s: CSubst) = TRef(t.subst(s))
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
@@ -19,6 +20,7 @@ case class TRef(t: Type) extends Type {
 }
 
 case object TUnit extends Type {
+  def isGround = true
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = TUnit
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
