@@ -100,7 +100,6 @@ object NewSyntax extends SyntaxChecking.SyntaxChecker(New) {
       error(s"Class name should be a CName, but found ${(!(lits(0).isInstanceOf[CName]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
-
   }
 }
 

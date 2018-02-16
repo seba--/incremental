@@ -1,4 +1,4 @@
-package incremental.pcf.with_typeclasses
+package incremental.typeclasses
 
 import constraints.equality._
 import incremental.MyBuilder
@@ -10,6 +10,7 @@ import scala.collection.generic.CanBuildFrom
  */
 abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeChecker[Gen, Constraint, CS] {
   type T = Type
+
   type CSFactory <: ConstraintSystemFactory[CS]
   implicit val csFactory: CSFactory
 

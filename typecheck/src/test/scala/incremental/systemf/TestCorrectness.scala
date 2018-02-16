@@ -7,6 +7,7 @@ import incremental.Node._
 import incremental.Util
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
+
 /**
  * Created by seba on 14/11/14.
  */

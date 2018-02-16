@@ -1,5 +1,3 @@
-
-
 name := "typecheck"
 
 version := "1.0"
@@ -45,5 +43,6 @@ testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
 
 
 //import com.typesafe.sbt.SbtStartScript
+
 
 //seq(SbtStartScript.startScriptForClassesSettings: _*)
