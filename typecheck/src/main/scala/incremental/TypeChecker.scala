@@ -14,12 +14,6 @@ abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] ex
   type CSFactory <: ConstraintSystemFactory[G, C, CS]
   implicit val csFactory: CSFactory
 
-  lazy val localState = csFactory.freshState
-
-  def gen: G = localState.gen
-
-  def freshSymbol[T](prefix: String): CVar[T] = localState.gen.freshSymbol(prefix)
-
   def typecheck(e: Node): Either[T, TError] = {
     localState.resetStats()
     csFactory.state.value = localState
@@ -28,6 +22,12 @@ abstract class TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] ex
 
   protected def typecheckImpl(e: Node): Either[T, TError]
 
+
+  lazy val localState = csFactory.freshState
+
+  def gen: G = localState.gen
+
+  def freshSymbol[T](prefix: String): CVar[T] = localState.gen.freshSymbol(prefix)
 
 }
 

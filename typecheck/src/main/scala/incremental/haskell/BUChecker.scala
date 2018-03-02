@@ -3,14 +3,14 @@ package incremental.haskell
 import constraints.Statistics
 import constraints.equality.CSubst.CSubst
 import constraints.equality._
-import incremental.Node._
-import incremental.{Node_, Util}
-import incremental.typeclasses.Condition.trueCond
-
+import incremental.haskell.Node._
+import incremental.Util
+import incremental.haskell.Condition.trueCond
+import incremental.haskell._
 /**
  * Created by lira on 29/01/18.
  */
-abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
+abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Constraint, CS ] {
 
   import csFactory._
 
@@ -32,14 +32,12 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem res.typ._4)
         val cs = subcs addNewConstraints cons
         var newreq = reqs
-        println(reqs)
           for ((x, vareq) <- reqs) {
             vareq.subst(cs.substitution) match {
               case None => newreq -= x
               case Some(newVR) => newreq += x -> newVR
             }
           }
-        println(newreq)
        // val reqs2 = cs.applyPartialSolutionIt[(Symbol,Type),Map[Symbol,VarReq],Type](reqs, p => p._2)
         e.typ = (cs applyPartialSolution t, newreq, treqs, cs.propagate)
         true
@@ -47,7 +45,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       val (t_, reqs, treqs, cs_) = root.typ
       val cs = cs_.tryFinalize
-      println(cs)
       val t = t_.subst(cs.substitution)
       var newreq = reqs
       for ((x, vareq) <- reqs) {
@@ -69,6 +66,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
   }
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
+
     case Num => (TNum, Map(), Set(), Seq())
     case CFloat => (TFloat, Map(), Set(), Seq())
     case CDouble => (TDouble, Map(), Set(), Seq())
@@ -100,21 +98,143 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val X = freshUVar()
       (X, Map(x -> VarReq(X)), Set(), Seq())
 
-    case App =>
 
+    case GConB =>
+      val name = e.lits(0).asInstanceOf[PolType]
+      var vreqs = Set[Symbol]()
+      var reqs = Seq[Reqs]()
+      for (i <- 0 until e.kids.seq.size){
+        val (t, req, vreq, _) = e.kids.seq(i).typ
+        reqs = reqs :+ req
+        vreqs = vreqs ++ vreq
+      }
+      val (cons, resreq) = mergeReqMaps(reqs)
+
+      (name, resreq, vreqs, cons)
+
+    case GConS =>
+      val name = e.lits(0).asInstanceOf[PolType]
+      var vreqs = Set[Symbol]()
+      var reqs = Seq[Reqs]()
+      for (i <- 0 until e.kids.seq.size){
+        val (t, req, vreq, _) = e.kids.seq(i).typ
+        reqs = reqs :+ req
+        vreqs = vreqs ++ vreq
+      }
+      val (cons, resreq) = mergeReqMaps(reqs)
+
+      (name, resreq, vreqs, cons)
+
+    case GConC =>
+      val name = e.lits(0).asInstanceOf[PolType]
+      var vreqs = Set[Symbol]()
+      var reqs = Seq[Reqs]()
+      for (i <- 0 until e.kids.seq.size){
+        val (t, req, vreq, _) = e.kids.seq(i).typ
+        reqs = reqs :+ req
+        vreqs = vreqs ++ vreq
+      }
+      val (cons, resreq) = mergeReqMaps(reqs)
+
+      (name, resreq, vreqs, cons)
+
+    case Lit =>
+      val (t, reqs, treqs, _) = e.kids(0).typ
+
+      (t, reqs, treqs, Seq())
+
+    case PExp =>
+      val (t, reqs, treqs, _) = e.kids(0).typ
+
+      (t, reqs, treqs, Seq())
+
+    case PSExp =>
+      val (t, reqs, treqs, _) = e.kids(0).typ
+      var creqs = Seq[Reqs]()
+      var treq = treqs
+      for (i <- 0 until e.kids.seq.size){
+        val (t, req, vreq, _) = e.kids.seq(i).typ
+        creqs = creqs :+ req
+        treq = treq ++ vreq
+      }
+      val (cons, resreq) = mergeReqMaps(creqs)
+      val (rcons, rReq) = mergeReqMaps(resreq, reqs)
+
+
+      (t, rReq, treqs, cons ++ rcons)
+
+    case LExp =>
+      val (t, reqs, treqs, _) = e.kids(0).typ
+      var creqs = Seq[Reqs]()
+      var treq = treqs
+      for (i <- 0 until e.kids.seq.size){
+        val (t, req, vreq, _) = e.kids.seq(i).typ
+        creqs = creqs :+ req
+        treq = treq ++ vreq
+      }
+      val (cons, resreq) = mergeReqMaps(creqs)
+      val (rcons, rReq) = mergeReqMaps(resreq, reqs)
+
+      (t, rReq, treqs, cons ++ rcons)
+
+    case NSome =>
       val (t1, reqs1, treqs1, _) = e.kids(0).typ
-      val (t2, reqs2, treqs2, _) = e.kids(1).typ
+      (t1, reqs1, treqs1, Seq())
 
-      val X = freshUVar()
-      val fcons = EqConstraint(TFun(t2, X), t1)
-      val (mcons, mreqs) = mergeReqMaps(reqs1,reqs2)
+    case ASeqExp =>
+      val (t, reqs, treqs, _) = e.kids(0).typ
 
-      (X, mreqs, treqs1 ++ treqs2, mcons :+ fcons)
+      var creq = Seq[Reqs]()
+      var restreqs = treqs
+      var rescons = Seq[Constraint]()
+      if (e.kids.seq.size == 2) {
+        e.kids(1).kind match {
+          case NNone =>
+            rescons = rescons
+            creq = creq
+            restreqs = restreqs
+          case NSome =>
+            val (t1, reqs1, treqs1, _) = e.kids(1).typ
+            rescons = rescons :+ EqConstraint(t, t1)
+            creq = creq :+ reqs1
+            restreqs = restreqs ++ treqs1
+        }
+      }
+      else if (e.kids.seq.size == 3) {
+        e.kids(1).kind match {
+          case NNone =>
+            rescons = rescons
+            creq = creq
+            restreqs = restreqs
+          case NSome =>
+            val (t1, reqs1, treqs1, _) = e.kids(1).typ
+            rescons = rescons :+ EqConstraint(t, t1)
+            creq = creq :+ reqs1
+            restreqs = restreqs ++ treqs1
+        }
+        e.kids(2).kind match {
+          case NNone =>
+            rescons = rescons
+             creq = creq
+            restreqs = restreqs
+          case NSome =>
+            val (t2, reqs2, treqs2, _) = e.kids(2).typ
+            rescons = rescons :+ EqConstraint(t, t2)
+            creq = creq :+ reqs2
+            restreqs = restreqs ++ treqs2
+         }
+      }
+
+      val (cons1, resreq1) = mergeReqMaps(creq)
+      val (cons, resreq) = mergeReqMaps(resreq1, reqs)
+
+      (t, resreq, restreqs, cons1 ++ cons ++ rescons)
+
+      (t, reqs, treqs, Seq())
 
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val (t, reqs, treqs, _) = e.kids(0).typ
-      println(reqs)
 
       reqs.get(x) match {
         case None =>
@@ -131,15 +251,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             val typ = treq.varTyp
             (TFun(treq.varTyp, t), otherReqs, treqs, Seq())
           }
-
-//        case Some(treq) =>
-//          val otherReqs =   reqs - x
-//          if (e.lits.size == 2) {
-//            val X = e.lits(1).asInstanceOf[PolType]
-//            (TFun(treq.varTyp, t), otherReqs, treqs ++ X.freeTVars, Seq(EqConstraint(X, treq.varTyp)))
-//          }
-//          else
-//            (TFun(treq.varTyp, t), otherReqs, treqs, Seq())
       }
 
     case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
@@ -164,7 +275,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       (tfun, restReqs, treqs, Seq())
 
-    case If0 =>
+    case If =>
       val (t1, reqs1, treqs1, _) = e.kids(0).typ
       val (t2, reqs2, treqs2, _) = e.kids(1).typ
       val (t3, reqs3, treqs3, _) = e.kids(2).typ
@@ -175,29 +286,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val body = EqConstraint(t2, t3)
 
       (t2, mreqs, treqs1 ++ treqs2 ++ treqs3, mcons :+ cond :+ body)
-
-    case Fix =>
-      val (t, reqs, treqs, _) = e.kids(0).typ
-      val X = freshUVar()
-      (X, reqs, treqs, Seq(EqConstraint(t, TFun(X, X))))
-
-    case TAbs =>
-      val alpha = e.lits(0).asInstanceOf[Symbol]
-      val (t, reqs, treqs, _) = e.kids(0).typ
-      (TUniv(alpha, t), reqs, treqs - alpha, Seq())
-
-    case TApp =>
-      val (t1, reqs1, treqs, _) = e.kids(0).typ
-      val t = e.lits(0).asInstanceOf[PolType]
-
-      val Xalpha = freshUVar().x
-      val Xbody = freshUVar()
-      val Xres = freshUVar()
-
-      val ucons = EqConstraint(UUniv(Xalpha, Xbody), t1)
-      val vcons = EqSubstConstraint(Xbody, Xalpha.x, true, t, Xres) // Xbody[Xalpha:=t] == Xres
-
-      (Xres, reqs1, treqs ++ t.freeTVars, Seq(ucons, vcons))
 
     case Let =>
       val u =  e.lits(0).asInstanceOf[Symbol]
@@ -214,20 +302,18 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         // rescons :+= EqConstraint(t1, treq.varTyp)
       }
      val (resreq, cCons) = removeReq((u, t1), otherReqs)
-      //println(rescons)
-     // println(cCons)
       (t2,resreq, treq1 ++ treq2, rescons ++ cCons)
 
-    case Inst =>
-      val o =  e.lits(0).asInstanceOf[Symbol]
-      val t = e.lits(1).asInstanceOf[PolType]
-      val (t1, reqs1, treq1, _) = e.kids(0).typ
-      val (t2, reqs2,treq2, _) = e.kids(1).typ
-      val (cons, mreq) = mergeReqMaps(reqs1, reqs2)
-
-      val resreq = satisfyReq((o, t), mreq)
-
-      (t2, resreq, treq1 ++ treq2, cons :+ EqConstraint(t, t1))
+//    case InstDec =>
+//      val o =  e.lits(0).asInstanceOf[Symbol]
+//      val t = e.lits(1).asInstanceOf[PolType]
+//      val (t1, reqs1, treq1, _) = e.kids(0).typ
+//      val (t2, reqs2,treq2, _) = e.kids(1).typ
+//      val (cons, mreq) = mergeReqMaps(reqs1, reqs2)
+//
+//      val resreq = satisfyReq((o, t), mreq)
+//
+//      (t2, resreq, treq1 ++ treq2, cons :+ EqConstraint(t, t1))
   }
 
   private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
@@ -302,7 +388,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     }
 }
 
-case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[CS] {
+case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[Gen, Constraint,CS] {
   def makeChecker = new BUChecker[CS] {
     type CSFactory = factory.type
     implicit val csFactory: CSFactory = factory

@@ -1,7 +1,7 @@
-package incremental
+package incremental.haskell
 
-import Node._
-import incremental.SyntaxChecking.SyntaxCheck
+import incremental.haskell.Node._
+import incremental.haskell.SyntaxChecking.SyntaxCheck
 
 abstract class NodeKind(val syntaxcheck: SyntaxChecking.SyntaxCheck) extends Serializable {
   def unapplySeq(e: Node_[_]): Option[Seq[Node_[_]]] =
@@ -172,7 +172,7 @@ object Node {
 //    def apply(e: Node, sub: Node*): Node = new Node_[Any](k, scala.Seq(), e +: Seq(sub:_*))
     def apply(lits: Seq[Lit], sub: Seq[Node]): Node = new Node_[Any](k, lits, sub)
     def apply(as: Any*): Node = {
-      val (kids, lits) = as.partition(_.isInstanceOf[Node_[_]])
+      val (kids, lits) = as.partition(_.isInstanceOf[Node_[_]]) // TODO See this Node_[_]
       new Node_[Any](k, lits, kids.asInstanceOf[Seq[Node]])
     }
   //def apply(l1: Lit, l2: Lit, l3: Lit, l4: Lit, sub: Node*): Node = new Node_[Any](k, scala.Seq(l1, l2, l3, l4), Seq(sub:_*))
@@ -183,6 +183,10 @@ object Node {
   def simple(kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, Seq(), Seq(kidTypes:_*))
   def simple(litTypes: Seq[Class[_]], kidTypes: Class[_ <: NodeKind]*) = (k: NodeKind) => new SyntaxChecking.KidTypesLitTypesSyntax(k, litTypes, Seq(kidTypes:_*))
   implicit def makeSyntaxCheckOps(f: SyntaxChecking.SyntaxCheck) = new SyntaxChecking.SyntaxCheckOps(f)
+
+  def sequence(kidChecks: SyntaxCheck*) = (k: NodeKind) => new SyntaxChecking.KidChecksLitTypesSyntaxChecking(k, Seq(), Seq(kidChecks:_*))
+  def sequence(litTypes: Seq[Class[_]], kidChecks: SyntaxCheck*) = (k: NodeKind) => new SyntaxChecking.KidChecksLitTypesSyntaxChecking(k, litTypes, Seq(kidChecks:_*))
+
 }
 
 object SyntaxChecking {
@@ -194,6 +198,7 @@ object SyntaxChecking {
     }
     def error(msg: String) = throw new SyntaxError(k, msg)
     def check[T](lits: Seq[Lit], kids: Seq[Node_[T]])
+    def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck])
   }
 
   class SyntaxCheckOps(f: NodeKind => SyntaxChecker) extends Serializable {
@@ -201,7 +206,14 @@ object SyntaxChecking {
   }
 
   class IgnoreSyntax(k: NodeKind) extends SyntaxChecker(k) {
-    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) = {}
+    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
+//      kids match {
+//        case k: Seq[Node_[T]] => {}
+//        case s: Seq[SyntaxCheck] => {}
+//      }
+    }
+    def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+
   }
 
   case class KidTypesLitTypesSyntax(k: NodeKind, litTypes: Seq[Class[_]], kidTypes: Seq[Class[_ <: NodeKind]]) extends SyntaxChecker(k) {
@@ -220,20 +232,43 @@ object SyntaxChecking {
         if (!litTypes(i).isInstance(lits(i)))
           error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
     }
+
+    def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+  }
+
+  case class KidChecksLitTypesSyntaxChecking(k: NodeKind, litTypes: Seq[Class[_]], kidChecks: Seq[SyntaxCheck]) extends SyntaxChecker(k) {
+    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {}
+    def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {
+      if (kids.size != kidChecks.size)
+        error(s"Expected ${kidChecks.size} subexpressions but found ${kids.size} subexpressions")
+
+      for (i <- 0 until kids.size){
+       if (!(kidChecks(i) == kids(i)))
+         error(s"Expected ${kidChecks(i)} subexpressions but found ${kids(i)} subexpressions")
+        /// kidChecks(i).apply(kids(i).check(kids(i).lits, kids(i).kids.seq))
+      }
+
+      if (lits.size != litTypes.size)
+        error(s"Expected ${litTypes.size} literals but found ${lits.size} literals")
+
+      for (i <- 0 until lits.size)
+        if (!litTypes(i).isInstance(lits(i)))
+          error(s"Expected literal of ${litTypes(i)} at position $i but found ${lits(i)} of ${lits(i).getClass}")
+    }
   }
 
   case class AlternativeSyntax(k: NodeKind, f: NodeKind => SyntaxChecker, g: NodeKind => SyntaxChecker) extends SyntaxChecker(k) {
-    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-      try {
-        f(k).check(lits, kids)
-      } catch {
-        case e1: SyntaxError => try {
-          g(k).check(lits, kids)
-        } catch {
-          case e2: SyntaxError => error(s"Alternative syntax failed \n\t${e1.msg}\nor\n\t${e2.msg})")
+    def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
+          try {
+            f(k).check(lits, kids)
+          } catch {
+            case e1: SyntaxError => try {
+              g(k).check(lits, kids)
+            } catch {
+              case e2: SyntaxError => error(s"Alternative syntax failed \n\t${e1.msg}\nor\n\t${e2.msg})")
+            }
+          }
         }
-      }
-    }
-   }
-
+    def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+  }
 }

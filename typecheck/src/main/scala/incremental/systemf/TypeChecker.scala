@@ -2,6 +2,7 @@ package incremental.systemf
 
 import constraints.equality._
 import incremental.MyBuilder
+import incremental.Node.Node
 
 import scala.collection.generic.CanBuildFrom
 

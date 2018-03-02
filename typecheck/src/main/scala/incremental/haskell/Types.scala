@@ -38,6 +38,19 @@ case class UVar(x: CVar[Type]) extends PolType {
     }
 }
 
+case object TData extends PolType {
+  def isGround = true
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TNum => cs
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+
 case object TNum extends PolType {
   def isGround = true
   def freeTVars = Set()

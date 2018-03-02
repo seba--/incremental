@@ -2,6 +2,7 @@ package incremental.pcf.with_subtyping
 
 import constraints.subtype._
 import incremental.MyBuilder
+import incremental.Node.Node
 
 import scala.collection.generic.CanBuildFrom
 
@@ -18,7 +19,10 @@ abstract class TypeChecker[CS <: ConstraintSystem[CS]] extends incremental.TypeC
     def apply = new MyBuilder
     def apply(from: Iterable[(K,V)]) = from.foldLeft(new MyBuilder[K,V])((b, p) => b += ((p) -> p._2))
   }
+
 }
+
+
 
 trait TypeCheckerFactory[CS <: ConstraintSystem[CS]] {
   def makeChecker: TypeChecker[CS]
