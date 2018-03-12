@@ -73,6 +73,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
     case CInt => (TInt, Map(), Set(), Seq())
     case CChar => (TChar, Map(), Set(), Seq())
 
+
     case op if op == Add || op == Mul =>
       val (t1, reqs1, treqs1, _) = e.kids(0).typ
       val (t2, reqs2, treqs2, _) = e.kids(1).typ
@@ -100,7 +101,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
 
 
     case GConB =>
-      val name = e.lits(0).asInstanceOf[PolType]
+      val name = e.lits(0).asInstanceOf[TData]
       var vreqs = Set[Symbol]()
       var reqs = Seq[Reqs]()
       for (i <- 0 until e.kids.seq.size){
@@ -113,7 +114,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       (name, resreq, vreqs, cons)
 
     case GConS =>
-      val name = e.lits(0).asInstanceOf[PolType]
+      val name = e.lits(0).asInstanceOf[TData]
       var vreqs = Set[Symbol]()
       var reqs = Seq[Reqs]()
       for (i <- 0 until e.kids.seq.size){
@@ -126,7 +127,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       (name, resreq, vreqs, cons)
 
     case GConC =>
-      val name = e.lits(0).asInstanceOf[PolType]
+      val name = e.lits(0).asInstanceOf[TData]
       var vreqs = Set[Symbol]()
       var reqs = Seq[Reqs]()
       for (i <- 0 until e.kids.seq.size){
@@ -230,8 +231,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
 
       (t, resreq, restreqs, cons1 ++ cons ++ rescons)
 
-      (t, reqs, treqs, Seq())
-
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val (t, reqs, treqs, _) = e.kids(0).typ
@@ -304,7 +303,23 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
      val (resreq, cCons) = removeReq((u, t1), otherReqs)
       (t2,resreq, treq1 ++ treq2, rescons ++ cCons)
 
-//    case InstDec =>
+    case Case =>
+      val (t, reqs, treqs, _) = e.kids(0).typ
+      var creqs = Seq[Reqs]()
+      var treq = treqs
+      for (i <- 0 until e.kids.seq.size){
+        val (t, req, vreq, _) = e.kids.seq(i).typ
+        creqs = creqs :+ req
+        treq = treq ++ vreq
+      }
+      val (cons, resreq) = mergeReqMaps(creqs)
+      val (rcons, rReq) = mergeReqMaps(resreq, reqs)
+
+
+      (t, rReq, treqs, cons ++ rcons)
+
+
+    //    case InstDec =>
 //      val o =  e.lits(0).asInstanceOf[Symbol]
 //      val t = e.lits(1).asInstanceOf[PolType]
 //      val (t1, reqs1, treq1, _) = e.kids(0).typ

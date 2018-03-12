@@ -74,11 +74,47 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 //    Inst('zero, TInt, CInt(0), Inst('zero, TDouble, CDouble(0), TMul(Var('zero), CFloat(2)))))
 
 // typecheckTest("[CFloat(0.0)] ",  ASeqExp(Lit(CChar('x)), NNone, NNone))(TFloat)
-  typecheckTestError("[x, .. ] ",ASeqExp(Var('x), NNone, NNone))
-  typecheckTestError("[x, x, .. ] ",ASeqExp(Var('x), NSome(Var('x)), NNone))
 
+  typecheckTestError("x", Var('x))
+
+  typecheckTest("CPoint(1, 2)", GConB(TData('CPoint), Lit(Num(1)), Lit(Num(2))))(TData('CPoint))
+  typecheckTest("CPoint(1.0 , 2.0 )", GConB(TData('CPoint), Lit(CFloat("1.0")), Lit(CFloat("2.0"))))(TData('CPoint))
+
+  typecheckTest("CPoint[1, 2]", GConS(TData('CPoint), Lit(Num(1)), Lit(Num(2))))(TData('CPoint))
+  typecheckTest("CPoint{1, 2}", GConC(TData('CPoint), Lit(Num(1)), Lit(Num(2))))(TData('CPoint))
 
   typecheckTest("Lit(1)", Lit(Num(1)))(TNum)
+  typecheckTest("Lit(1.0)", Lit(CFloat("1.0")))(TFloat)
+  typecheckTest("Lit(1.00)", Lit(CDouble("1.00")))(TDouble)
+  typecheckTest("Lit(2)", Lit(CInt(2)))(TInt)
+  typecheckTest("Lit('a)", Lit(CChar('a)))(TChar)
+
+  typecheckTestError("( Var('x) )", PExp(Var('x)))
+  typecheckTest("( Lit(1) )", PExp(Lit(Num(1))))(TNum)
+
+  typecheckTestError("( Var('x), Var('y) )", PSExp(Var('x), Var('y)))
+  typecheckTestError("( Var('x), Var('y), Lit(1), Lit(2) )", PSExp(Var('x), Var('y), Lit(Num(1)), Lit(Num(2))))
+  typecheckTestError("[ Var('x), Var('y) ]", LExp(Var('x), Var('y)))
+  typecheckTestError("[ Var('x), Var('y), Lit(1), Lit(2) ]", LExp(Var('x), Var('y), Lit(Num(1)), Lit(Num(2))))
+
+  typecheckTest("[a, .. ] ",ASeqExp(CChar('a), NNone, NNone))(TChar)
+  typecheckTest("[a, c, .. ] ",ASeqExp(CChar('a), NSome(CChar('c)), NNone))(TChar)
+  typecheckTest("[a .. f ] ",ASeqExp(CChar('a), NNone, NSome(CChar('f))))(TChar)
+  typecheckTest("[a, c, .. z] ",ASeqExp(CChar('a), NSome(CChar('c)), NSome(CChar('z))))(TChar)
+  typecheckTestError("[a, c, .. 10] ",ASeqExp(CChar('a), NSome(CChar('c)), NSome(Num(10))))
+
+  typecheckTest("[5, .. ] ",ASeqExp(Lit(Num(5)), NNone, NNone))(TNum)
+  typecheckTest("[5, 7, .. ] ",ASeqExp(Lit(Num(5)), NSome(Lit(Num(7))), NNone))(TNum)
+  typecheckTest("[5 .. 15 ] ",ASeqExp(Lit(Num(5)), NNone, NSome(Lit(Num(15)))))(TNum)
+  typecheckTest("[5, 7, .. 25] ",ASeqExp(Lit(Num(5)), NSome(Lit(Num(5))), NSome(Lit(Num(5)))))(TNum)
+  typecheckTestError("[5, 'd, .. 25] ",ASeqExp(Lit(Num(5)), NSome(Lit(CChar('d))), NSome(Lit(Num(5)))))
+
+  typecheckTestError(())
+
+
+
+
+
 }
 
 //class TestDUSolveEndCorrectness extends TestCorrectness("DUSolveEnd", new DUCheckerFactory(SolveEnd))

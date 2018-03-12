@@ -3,6 +3,7 @@ package incremental.haskell
 import incremental.haskell.Node._
 import incremental.haskell.SyntaxChecking.SyntaxCheck
 import incremental.haskell.Exp._
+import incremental.haskell.Literal._
 
 import scala.collection.immutable.ListMap
 
@@ -43,7 +44,7 @@ object OptionKind {
 }
 
 case object NNone extends OptionKind(simple())
-case object NSome extends OptionKind(simple(cExp))
+case object NSome extends OptionKind(simple(cExp) orElse simple(cLit))
 
 
 

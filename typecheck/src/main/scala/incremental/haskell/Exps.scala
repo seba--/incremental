@@ -28,6 +28,7 @@ case object CInt  extends Literal(simple(Seq(classOf[Integer])))
 case object CChar  extends Literal(simple(Seq(classOf[Symbol])))
 
 
+
 abstract class Exp(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 object Exp {
   val cExp = classOf[Exp]
@@ -57,7 +58,7 @@ case object Mul  extends Exp(simple(cExp, cExp))
 case object Var extends Exp(simple(Seq(classOf[Symbol]))) {
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.lits(0).asInstanceOf[Symbol].name}")
 }
-case object GConB extends Exp(_ => GConBSyntax) {
+case object GConB extends Exp(_ => GConBSyntax) { //TODO See again the Types for Cons if it should be a symbol or TData (like CNAME)
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.lits(0)}(${e.kids.seq.mkString(", ")})")
 }
 case object GConS extends Exp(_=> GConSSyntax) {
@@ -71,10 +72,10 @@ case object Lit extends Exp(simple(cLit))
 case object PExp extends Exp(simple(cExp)) {
   override def toString(e: Node_[_]): Option[String] = Some(s"(${e.kids(0)})")
 }
-case object PSExp extends Exp(simple(Seq(cExp))) {
+case object PSExp extends Exp(_ => PSExpSyntax) {
   override def toString(e: Node_[_]): Option[String] = Some(s"(${e.kids.seq.mkString(", ")})")
 }
-case object LExp extends Exp(simple(List(cExp))) {
+case object LExp extends Exp(_ => LExpSyntax) {
   override def toString(e: Node_[_]): Option[String] = Some(s"[${List(e.kids).mkString(", ")}]")
 }
 
@@ -120,7 +121,7 @@ case object LabCon extends Exp(_ => LabConSyntax) {
     Some(s"$con { ${lab.mkString(", ")} }")
   }
 }
-case object  LabExp extends Exp(_ => LabExpSyntax) {
+case object  LabUp extends Exp(_ => LabUpSyntax) {
   override def toString(e: Node_[_]): Option[String] = {
     val aexp = e.kids(0)
     val vars = e.lits(0).asInstanceOf[Seq[Symbol]]
@@ -142,8 +143,8 @@ case object Let extends Exp(simple(cTlevel, cExp)) {
 case object If  extends Exp(simple(cExp, cExp, cExp)) {
   override def toString(e:Node_[_]): Option[String] = Some(s"if ${e.kids(0)}; then ${e.kids(1)}; else ${e.kids(2)}")
 }
-case object Case extends Exp(simple(Seq(cExp))) { //TODO see tis again
-  override def toString(e: Node_[_]): Option[String] = Some(s"case ${e.kids(0)}")
+case object Case extends Exp(_ => CaseSyntax) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"case ${e.kids(0)} of { ${e.kids.seq.drop(1).mkString(", ")} }")
 }
 case object Do extends Exp(simple(Seq(cExp))) { // TODO see this again
   override def toString(e: Node_[_]): Option[String] = Some(s"do { ${e.kids.seq.mkString(", ")} }")
@@ -161,7 +162,7 @@ object LabConSyntax extends SyntaxChecking.SyntaxChecker(LabCon) {
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 
 }
-object LabExpSyntax extends SyntaxChecking.SyntaxChecker(LabExp) {
+object LabUpSyntax extends SyntaxChecking.SyntaxChecker(LabUp) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if (!((kids.size - 1)  == lits.size))
       error(s"Number of variables does not match the number of expressions. ${kids.size -1} != ${lits.size}")
@@ -192,8 +193,8 @@ object GConBSyntax extends SyntaxChecking.SyntaxChecker(GConB) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
       if (lits.size != 1)
         error(s"Wrong number of literals. Expected one literal, got $lits")
-      if (!lits(0).isInstanceOf[PolType]) //TODO Should be Data Type, instead of PolType
-        error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[PolType]))}")
+      if (!lits(0).isInstanceOf[TData]) //TODO Should be Data Type, instead of PolType
+        error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TData]))}")
       if (kids.exists(!_.kind.isInstanceOf[Exp]))
        error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
   }
@@ -204,8 +205,8 @@ object GConSSyntax extends SyntaxChecking.SyntaxChecker(GConS) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if (lits.size != 1)
       error(s"Wrong number of literals. Expected one literal, got $lits")
-    if (!lits(0).isInstanceOf[Symbol])
-      error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[Symbol]))}")
+    if (!lits(0).isInstanceOf[TData])
+      error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TData]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
   }
@@ -216,13 +217,37 @@ object GConCSyntax extends SyntaxChecking.SyntaxChecker(GConC) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if (lits.size != 1)
       error(s"Wrong number of literals. Expected one literal, got $lits")
-    if (!lits(0).isInstanceOf[Symbol])
-      error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[Symbol]))}")
+    if (!lits(0).isInstanceOf[TData])
+      error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TData]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
   }
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 
+}
+object PSExpSyntax extends SyntaxChecking.SyntaxChecker(PSExp) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if (kids.exists(!_.kind.isInstanceOf[Exp]))
+      error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
+  }
+  def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+}
+object LExpSyntax extends SyntaxChecking.SyntaxChecker(LExp) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if (kids.exists(!_.kind.isInstanceOf[Exp]))
+      error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
+  }
+  def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+}
+
+object CaseSyntax extends SyntaxChecking.SyntaxChecker(Case) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if (!(kids(0).kind.isInstanceOf[Exp]))
+      error(s"Expected first kid an expression but got ${kids(0).kind}")
+//    if (kids.exists(!_.kind.isInstanceOf[Exp]))
+//      error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
+  }
+  def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 }
 
 //object ThisSyntax extends SyntaxChecking.SyntaxChecker(Let) {
