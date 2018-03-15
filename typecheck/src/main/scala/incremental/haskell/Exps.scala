@@ -23,7 +23,7 @@ object Literal {
 }
 case object Num  extends Literal(simple(Seq(classOf[Integer])))
 case object CFloat  extends Literal(simple(Seq(classOf[String])))
-case object CDouble  extends Literal(simple(Seq(classOf[String])))
+case object CReal  extends Literal(simple(Seq(classOf[String])))
 case object CInt  extends Literal(simple(Seq(classOf[Integer])))
 case object CChar  extends Literal(simple(Seq(classOf[Symbol])))
 
@@ -72,7 +72,7 @@ case object Lit extends Exp(simple(cLit))
 case object PExp extends Exp(simple(cExp)) {
   override def toString(e: Node_[_]): Option[String] = Some(s"(${e.kids(0)})")
 }
-case object PSExp extends Exp(_ => PSExpSyntax) {
+case object TupleExp extends Exp(_ => TupleExpSyntax) {
   override def toString(e: Node_[_]): Option[String] = Some(s"(${e.kids.seq.mkString(", ")})")
 }
 case object LExp extends Exp(_ => LExpSyntax) {
@@ -131,8 +131,19 @@ case object  LabUp extends Exp(_ => LabUpSyntax) {
   }
 }
 
-case object Abs extends Exp(simple(Seq(cPat), cExp)){
+import incremental.haskell.Apat._
+case object Abs extends Exp(_ => AbsSyntax){
   override def toString(e: Node_[_]): Option[String] = Some(s"\ ${e.kids.seq.dropRight(1).mkString(", ")} -> ${e.kids.seq.last}")
+}
+object AbsSyntax extends SyntaxChecking.SyntaxChecker(Abs) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if (kids.seq.dropRight(1).exists(!_.kind.isInstanceOf[Apat]))
+      error(s"All kids must be of sort apat, but found ${kids.filter(!_.kind.isInstanceOf[Apat])}")
+    if (!kids.last.isInstanceOf[Exp]) {
+
+    }
+  }
+  def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 }
 //case object Let extends Exp((simple(Seq(classOf[Symbol]), cExp, cExp) orElse simple(Seq(classOf[Symbol], classOf[PolType]), cExp, cExp))){ // Exp (_ => LetSyntax)
 case object Let extends Exp(simple(cTlevel, cExp)) {
@@ -193,8 +204,8 @@ object GConBSyntax extends SyntaxChecking.SyntaxChecker(GConB) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
       if (lits.size != 1)
         error(s"Wrong number of literals. Expected one literal, got $lits")
-      if (!lits(0).isInstanceOf[TData]) //TODO Should be Data Type, instead of PolType
-        error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TData]))}")
+      if (!lits(0).isInstanceOf[TCon]) //TODO Should be Data Type, instead of PolType
+        error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TCon]))}")
       if (kids.exists(!_.kind.isInstanceOf[Exp]))
        error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
   }
@@ -205,8 +216,8 @@ object GConSSyntax extends SyntaxChecking.SyntaxChecker(GConS) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if (lits.size != 1)
       error(s"Wrong number of literals. Expected one literal, got $lits")
-    if (!lits(0).isInstanceOf[TData])
-      error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TData]))}")
+    if (!lits(0).isInstanceOf[TCon])
+      error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TCon]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
   }
@@ -217,15 +228,15 @@ object GConCSyntax extends SyntaxChecking.SyntaxChecker(GConC) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if (lits.size != 1)
       error(s"Wrong number of literals. Expected one literal, got $lits")
-    if (!lits(0).isInstanceOf[TData])
-      error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TData]))}")
+    if (!lits(0).isInstanceOf[TCon])
+      error(s"Constructor name should be a Symbol, but found ${(!(lits(0).isInstanceOf[TCon]))}")
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
   }
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 
 }
-object PSExpSyntax extends SyntaxChecking.SyntaxChecker(PSExp) {
+object TupleExpSyntax extends SyntaxChecking.SyntaxChecker(TupleExp) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")

@@ -77,25 +77,28 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTestError("x", Var('x))
 
-  typecheckTest("CPoint(1, 2)", GConB(TData('CPoint), Lit(Num(1)), Lit(Num(2))))(TData('CPoint))
-  typecheckTest("CPoint(1.0 , 2.0 )", GConB(TData('CPoint), Lit(CFloat("1.0")), Lit(CFloat("2.0"))))(TData('CPoint))
+  typecheckTest("CPoint(1, 2)", GConB(TCon('CPoint), Lit(Num(1)), Lit(Num(2))))(TCon('CPoint))
+  typecheckTest("CPoint(1.0 , 2.0 )", GConB(TCon('CPoint), Lit(CFloat("1.0")), Lit(CFloat("2.0"))))(TCon('CPoint))
 
-  typecheckTest("CPoint[1, 2]", GConS(TData('CPoint), Lit(Num(1)), Lit(Num(2))))(TData('CPoint))
-  typecheckTest("CPoint{1, 2}", GConC(TData('CPoint), Lit(Num(1)), Lit(Num(2))))(TData('CPoint))
+  typecheckTest("CPoint[1, 2]", GConS(TCon('CPoint), Lit(Num(1)), Lit(Num(2))))(TCon('CPoint))
+  typecheckTest("CPoint{1, 2}", GConC(TCon('CPoint), Lit(Num(1)), Lit(Num(2))))(TCon('CPoint))
 
-  typecheckTest("Lit(1)", Lit(Num(1)))(TNum)
-  typecheckTest("Lit(1.0)", Lit(CFloat("1.0")))(TFloat)
-  typecheckTest("Lit(1.00)", Lit(CDouble("1.00")))(TDouble)
-  typecheckTest("Lit(2)", Lit(CInt(2)))(TInt)
-  typecheckTest("Lit('a)", Lit(CChar('a)))(TChar)
+  typecheckTest("Lit(1)", Lit(Num(1)))(TVar('x$10))
+  typecheckTest("Lit(1.0)", Lit(CFloat("1.0")))(TVar('x$11))
+  typecheckTest("Lit(1.00)", Lit(CReal("1.00")))(TVar('x$12))
+  typecheckTest("Lit(2)", Lit(CInt(2)))(TVar('x$13))
+  typecheckTest("Lit('a)", Lit(CChar('a)))(ClassH('Char))
 
   typecheckTestError("( Var('x) )", PExp(Var('x)))
-  typecheckTest("( Lit(1) )", PExp(Lit(Num(1))))(TNum)
+  typecheckTest("( Lit(1) )", PExp(Lit(Num(1))))(TVar('x$15))
 
-  typecheckTestError("( Var('x), Var('y) )", PSExp(Var('x), Var('y)))
-  typecheckTestError("( Var('x), Var('y), Lit(1), Lit(2) )", PSExp(Var('x), Var('y), Lit(Num(1)), Lit(Num(2))))
+  typecheckTestError("( Var('x), Var('y) )", TupleExp(Var('x), Var('y)))
+  typecheckTestError("( Var('x), Var('y), Lit(1), Lit(2) )", TupleExp(Var('x), Var('y), Lit(Num(1)), Lit(Num(2))))
+  typecheckTest("(  Lit('a), Lit('b) )", TupleExp(Lit(CChar('a)), Lit(CChar('b))))(TupleH(List(ClassH('Char),ClassH('Char))))
+  typecheckTest("(  Lit('a), Lit('b), Lit(1) )", TupleExp(Lit(CChar('a)), Lit(CChar('b)), Lit(Num(1))))(TupleH(List(ClassH('Char),ClassH('Char), TVar('x$22))))
   typecheckTestError("[ Var('x), Var('y) ]", LExp(Var('x), Var('y)))
-  typecheckTestError("[ Var('x), Var('y), Lit(1), Lit(2) ]", LExp(Var('x), Var('y), Lit(Num(1)), Lit(Num(2))))
+  typecheckTest("[ Lit('a), Lit('b), Lit('c)]", LExp(Lit(CChar('a)), Lit(CChar('b)), Lit(CChar('c))))(ListH(ClassH('Char)))
+
 
   typecheckTest("[a, .. ] ",ASeqExp(CChar('a), NNone, NNone))(TChar)
   typecheckTest("[a, c, .. ] ",ASeqExp(CChar('a), NSome(CChar('c)), NNone))(TChar)
@@ -108,11 +111,6 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("[5 .. 15 ] ",ASeqExp(Lit(Num(5)), NNone, NSome(Lit(Num(15)))))(TNum)
   typecheckTest("[5, 7, .. 25] ",ASeqExp(Lit(Num(5)), NSome(Lit(Num(5))), NSome(Lit(Num(5)))))(TNum)
   typecheckTestError("[5, 'd, .. 25] ",ASeqExp(Lit(Num(5)), NSome(Lit(CChar('d))), NSome(Lit(Num(5)))))
-
-  typecheckTestError(())
-
-
-
 
 
 }

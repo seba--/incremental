@@ -18,41 +18,70 @@ trait PolType extends constraints.equality.Type {
       Set()
 }
 
-case class UVar(x: CVar[Type]) extends PolType {
-  def isGround = false
-  def freeTVars = Set()
-  def occurs(x2: CVar[_]) = x == x2
-  def subst(s: CSubst) = s.hgetOrElse(x, this)
-  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
-    if (other == this) cs
-    else cs.substitution.hget(x) match {
-      case Some(t) => t.unify(other, cs)
-      case None =>
-        val t = other.subst(cs.substitution)
-        if (this == t)
-          cs
-        else if (t.occurs(x))
-          cs.never(EqConstraint(this, t))
-        else
-          cs.solved(CSubst(x -> t))
-    }
-}
 
-case class TData(x: Symbol) extends PolType {
+case class ClassH(x: Symbol) extends Type {
   def isGround = true
-
   def freeTVars = Set()
-
   def occurs(x2: CVar[_]) = x == x2
-
   def subst(s: CSubst) = this
-
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
-    case TData(`x`) => cs
+    case ClassH(`x`) => cs
     case UVar(_) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
+case class TCon(x: Symbol) extends PolType {
+  def isGround = true
+  def freeTVars = Set()
+  def occurs(x2: CVar[_]) = x == x2
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
+    case TCon(`x`) => cs
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+case class SeqH(elem: Type) extends PolType {
+
+  def isGround = true
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = elem == x
+  def subst(s: CSubst) = SeqH(elem.subst(s))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
+    case SeqH(elems2) => cs
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+case class ListH(elem: Type) extends PolType {
+
+  def isGround = true
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = elem == x
+  def subst(s: CSubst) = SeqH(elem.subst(s))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
+    case SeqH(elems2) => cs
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+case class TupleH(elems: List[Type]) extends PolType {
+  def isGround = true
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = elems.exists(_.occurs(x))
+  def subst(s: CSubst) = TupleH(elems.map(_.subst(s)))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = other match {
+    case TupleH(elems2) => cs
+    case UVar(_) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+
+//TODO I do not know how to express tuple (when the return type it should be a tuple, or an immutable list with differnt types)
 
 case object TNum extends PolType {
   def isGround = true
@@ -89,17 +118,18 @@ case object TInt extends PolType {
     case _ => cs.never(EqConstraint(this, other))
   }
 }
-case object TDouble extends PolType {
+case object TReal extends PolType {
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
-    case TDouble => cs
+    case TReal => cs
     case UVar(x) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
+
 case object TChar extends PolType {
   def isGround = true
   def freeTVars = Set()
@@ -110,6 +140,26 @@ case object TChar extends PolType {
     case UVar(x) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
+}
+
+case class UVar(x: CVar[Type]) extends PolType {
+  def isGround = false
+  def freeTVars = Set()
+  def occurs(x2: CVar[_]) = x == x2
+  def subst(s: CSubst) = s.hgetOrElse(x, this)
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
+    if (other == this) cs
+    else cs.substitution.hget(x) match {
+      case Some(t) => t.unify(other, cs)
+      case None =>
+        val t = other.subst(cs.substitution)
+        if (this == t)
+          cs
+        else if (t.occurs(x))
+          cs.never(EqConstraint(this, t))
+        else
+          cs.solved(CSubst(x -> t))
+    }
 }
 
 case class TFun(t1: Type, t2: Type) extends PolType {

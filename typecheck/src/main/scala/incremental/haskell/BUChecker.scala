@@ -16,11 +16,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
 
   type TError = String
 
+  type Context = Map[ClassH, (TVar, Seq[TypeH])]
+
   type Reqs = Map[Symbol, VarReq]
 
   type TReqs = Set[Symbol]
 
-  type StepResult = (Type, Map[Symbol,VarReq], TReqs, Seq[Constraint])
+  type StepResult = (Type,  Map[Symbol,VarReq], TReqs, Seq[Constraint])
   type Result = (Type, Map[Symbol,VarReq], TReqs, CS)
 
   def typecheckImpl(e: Node): Either[Type, TError] = {
@@ -42,7 +44,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
         e.typ = (cs applyPartialSolution t, newreq, treqs, cs.propagate)
         true
       }
-
       val (t_, reqs, treqs, cs_) = root.typ
       val cs = cs_.tryFinalize
       val t = t_.subst(cs.substitution)
@@ -66,13 +67,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
   }
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
-
-    case Num => (TNum, Map(), Set(), Seq())
-    case CFloat => (TFloat, Map(), Set(), Seq())
-    case CDouble => (TDouble, Map(), Set(), Seq())
-    case CInt => (TInt, Map(), Set(), Seq())
-    case CChar => (TChar, Map(), Set(), Seq())
-
 
     case op if op == Add || op == Mul =>
       val (t1, reqs1, treqs1, _) = e.kids(0).typ
@@ -99,9 +93,30 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       val X = freshUVar()
       (X, Map(x -> VarReq(X)), Set(), Seq())
 
+    case Num =>
+      val t = freshTVar()
+      val contx: Context = Map(ClassH('Num) -> (t, Seq()))
+      (t, Map(), Set(), Seq())
+    case CFloat =>
+      val t = freshTVar()
+      val contx: Context = Map(ClassH('Fractional) -> (t, Seq()))
+      (t, Map(), Set(), Seq())
+    case CReal =>
+      val t = freshTVar()
+      val contx: Context = Map(ClassH('Real) -> (t, Seq()))
+      (t, Map(), Set(), Seq())
+    case CInt =>
+      val t = freshTVar()
+      val contx: Context = Map(ClassH('Num) -> (t, Seq()))
+      (t, Map(), Set(), Seq())
+    case CChar =>
+      val contx: Context = Map()
+      (ClassH('Char), Map(), Set(), Seq())
+
+
 
     case GConB =>
-      val name = e.lits(0).asInstanceOf[TData]
+      val name = e.lits(0).asInstanceOf[TCon]
       var vreqs = Set[Symbol]()
       var reqs = Seq[Reqs]()
       for (i <- 0 until e.kids.seq.size){
@@ -114,7 +129,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       (name, resreq, vreqs, cons)
 
     case GConS =>
-      val name = e.lits(0).asInstanceOf[TData]
+      val name = e.lits(0).asInstanceOf[TCon]
       var vreqs = Set[Symbol]()
       var reqs = Seq[Reqs]()
       for (i <- 0 until e.kids.seq.size){
@@ -127,7 +142,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       (name, resreq, vreqs, cons)
 
     case GConC =>
-      val name = e.lits(0).asInstanceOf[TData]
+      val name = e.lits(0).asInstanceOf[TCon]
       var vreqs = Set[Symbol]()
       var reqs = Seq[Reqs]()
       for (i <- 0 until e.kids.seq.size){
@@ -149,26 +164,27 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
 
       (t, reqs, treqs, Seq())
 
-    case PSExp =>
+    case TupleExp =>
       val (t, reqs, treqs, _) = e.kids(0).typ
       var creqs = Seq[Reqs]()
       var treq = treqs
-      for (i <- 0 until e.kids.seq.size){
+      var tuph = List(t)
+      for (i <- 1 until e.kids.seq.size){
         val (t, req, vreq, _) = e.kids.seq(i).typ
+        tuph = tuph :+ t
         creqs = creqs :+ req
         treq = treq ++ vreq
       }
       val (cons, resreq) = mergeReqMaps(creqs)
       val (rcons, rReq) = mergeReqMaps(resreq, reqs)
 
-
-      (t, rReq, treqs, cons ++ rcons)
+      (TupleH(tuph), rReq, treqs, cons ++ rcons)
 
     case LExp =>
       val (t, reqs, treqs, _) = e.kids(0).typ
       var creqs = Seq[Reqs]()
       var treq = treqs
-      for (i <- 0 until e.kids.seq.size){
+      for (i <- 1 until e.kids.seq.size){
         val (t, req, vreq, _) = e.kids.seq(i).typ
         creqs = creqs :+ req
         treq = treq ++ vreq
@@ -176,7 +192,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       val (cons, resreq) = mergeReqMaps(creqs)
       val (rcons, rReq) = mergeReqMaps(resreq, reqs)
 
-      (t, rReq, treqs, cons ++ rcons)
+      (ListH(t), rReq, treqs, cons ++ rcons)
 
     case NSome =>
       val (t1, reqs1, treqs1, _) = e.kids(0).typ
@@ -184,7 +200,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
 
     case ASeqExp =>
       val (t, reqs, treqs, _) = e.kids(0).typ
-
       var creq = Seq[Reqs]()
       var restreqs = treqs
       var rescons = Seq[Constraint]()
@@ -229,7 +244,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       val (cons1, resreq1) = mergeReqMaps(creq)
       val (cons, resreq) = mergeReqMaps(resreq1, reqs)
 
-      (t, resreq, restreqs, cons1 ++ cons ++ rescons)
+      (SeqH(t), resreq, restreqs, cons1 ++ cons ++ rescons)
 
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
@@ -303,23 +318,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
      val (resreq, cCons) = removeReq((u, t1), otherReqs)
       (t2,resreq, treq1 ++ treq2, rescons ++ cCons)
 
-    case Case =>
-      val (t, reqs, treqs, _) = e.kids(0).typ
-      var creqs = Seq[Reqs]()
-      var treq = treqs
-      for (i <- 0 until e.kids.seq.size){
-        val (t, req, vreq, _) = e.kids.seq(i).typ
-        creqs = creqs :+ req
-        treq = treq ++ vreq
-      }
-      val (cons, resreq) = mergeReqMaps(creqs)
-      val (rcons, rReq) = mergeReqMaps(resreq, reqs)
+   // case Case =>
 
-
-      (t, rReq, treqs, cons ++ rcons)
-
-
-    //    case InstDec =>
+//    case InstDec =>
 //      val o =  e.lits(0).asInstanceOf[Symbol]
 //      val t = e.lits(1).asInstanceOf[PolType]
 //      val (t1, reqs1, treq1, _) = e.kids(0).typ

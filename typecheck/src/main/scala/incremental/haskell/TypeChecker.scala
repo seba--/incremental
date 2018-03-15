@@ -41,7 +41,7 @@ abstract class  TypeChecker[G <: GenBase, C, CS <: ConstraintSystem[G, C, CS]] e
 
   def freshUVar() = UVar(freshSymbol("x$"))
 
-
+  def freshTVar() = TVar(freshSymbol("x$").x)
 
 }
 
