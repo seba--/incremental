@@ -146,11 +146,8 @@ object AbsSyntax extends SyntaxChecking.SyntaxChecker(Abs) {
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 }
 //case object Let extends Exp((simple(Seq(classOf[Symbol]), cExp, cExp) orElse simple(Seq(classOf[Symbol], classOf[PolType]), cExp, cExp))){ // Exp (_ => LetSyntax)
-case object Let extends Exp(simple(cTlevel, cExp)) {
-  override def toString(e: Node_[_]): Option[String] = {
-    Some(s"Let ${e.kids(0)} in ${e.kids(1)}")
-  }
-}
+case object Let extends Exp(_ => LetSyntax)
+
 case object If  extends Exp(simple(cExp, cExp, cExp)) {
   override def toString(e:Node_[_]): Option[String] = Some(s"if ${e.kids(0)}; then ${e.kids(1)}; else ${e.kids(2)}")
 }
@@ -251,12 +248,25 @@ object LExpSyntax extends SyntaxChecking.SyntaxChecker(LExp) {
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 }
 
+object LetSyntax extends SyntaxChecking.SyntaxChecker(Let) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if (!(kids.seq.last.kind.isInstanceOf[Exp]))
+      error(s"Expected the IN expr of sort expression but got ${kids.seq.last.kind}")
+    if (kids.dropRight(1).exists(!_.kind.isInstanceOf[Decl]))
+      error(s"All kids must be of sort Decl, but found ${kids.dropRight(1).filter(!_.kind.isInstanceOf[Decl])}")
+  }
+  def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+}
+
+import incremental.haskell.Alternative._
 object CaseSyntax extends SyntaxChecking.SyntaxChecker(Case) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
     if (!(kids(0).kind.isInstanceOf[Exp]))
       error(s"Expected first kid an expression but got ${kids(0).kind}")
-//    if (kids.exists(!_.kind.isInstanceOf[Exp]))
-//      error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
+    if (kids.seq.size == 1)
+      error(s"Case expresion should have at elast one alternative but found None")
+    if (kids.drop(1).exists(!_.kind.isInstanceOf[Alternative]))
+      error(s"All kids must be of sort Alt, but found ${kids.drop(1).filter(!_.kind.isInstanceOf[Alternative])}")
   }
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 }

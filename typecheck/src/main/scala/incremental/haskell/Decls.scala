@@ -146,7 +146,7 @@ object TypeSyntax extends SyntaxChecking.SyntaxChecker(FunType) {
   override def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
     if (lits.size == 1 && !(lits(0).isInstanceOf[Btype]))
       error(s"Expectd a type application but got ${lits(0)}")
-    if (lits.size == 2 && !(lits(1).isInstanceOf[PolType]))
+    if (lits.size == 2 && !(lits(1).isInstanceOf[HaskellType]))
       error(s"Expectd a polymorphic but got ${lits(1)}")
   }
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
@@ -346,15 +346,14 @@ object RhsA {
 }
 
 import incremental.haskell.DeclsA._
-case object Rhs extends RhsA(simple(cExp) orElse (simple(decls, cExp))) {
+case object Rhs extends RhsA(sequence(simple())) {
   override def toString(e: Node_[_]): Option[String] = {
-    if (e.lits.size == 0)
+    if (e.kids.seq.size == 1)
       Some(s" = ${e.kids(0)}")
     else
-      Some(s" = ${e.kids(0)} where ${e.lits(0)}") //TODO See again if the DECL in where clause is a lit or a kid (since it is a declaration)
+      Some(s" = ${e.kids(0)} where {${e.kids.seq.drop(1).mkString("; ")} }") //TODO See again if the DECL in where clause is a lit or a kid (since it is a declaration)
   }
 }
-
 
 //=================================================================================================
 
@@ -476,9 +475,13 @@ abstract class DeclsA(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Declarati
 object DeclsA {
   val decls = classOf[DeclsA]
 }
-abstract class Decl(syntaxcheck: SyntaxChecking.SyntaxCheck) extends CdeclsA(syntaxcheck)
+abstract class Decl(syntaxcheck: SyntaxChecking.SyntaxCheck) extends DeclsA(syntaxcheck)
 object Decl {
   val decl = classOf[Decl]
+}
+
+case object VarDecl extends Decl(simple(Seq(classOf[Symbol]), cExp)) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"${e.lits(0)} = ${e.kids(0)}")
 }
 
 case object Decls extends DeclsA(_ => DeclsSyntax)
@@ -526,7 +529,7 @@ case object TypeSig extends Gendecl(_ => TypeSigSyntax){
 }
 object TypeSigSyntax extends SyntaxChecking.SyntaxChecker(TypeSig){
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    if (lits.size == 2 && (!(lits(0).isInstanceOf[Symbol]) || !(lits(1).isInstanceOf[TypeH])))
+    if (lits.size == 2 && (!(lits(0).isInstanceOf[Symbol]) || !(lits(1).isInstanceOf[HaskellType])))
       error(s"Type signature expects a variable and a type but got ${lits(0)} or ${lits(1)}")
   }
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}

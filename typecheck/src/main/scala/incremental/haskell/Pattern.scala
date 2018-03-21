@@ -61,7 +61,10 @@ case object LabPat extends Apat(_ => LPatSyntax){
     Some(s"${e.kids(0)} { ${lab.mkString(", ")} }")
   }
 }
-case object LitPat extends Apat(simple(cExp))
+
+import incremental.haskell.Literal._
+
+case object LitP extends Apat(simple(cLit))
 
 case object WildCPat extends Apat(simple(cExp)) // TODO see this again
 

@@ -22,10 +22,10 @@ object Alternative {
 
 case object Alt extends Alternative(_ => AlternativeSyntax) {
   override def toString(e: Node_[_]): Option[String] = {
-    if (e.kids.seq == 2 && e.lits.size == 0 )
+    if (e.kids.seq == 2 )
       Some(s"${e.kids(0)} ->  ${e.kids(1)}")
     else
-      Some(s"${e.kids(0)} => ${e.kids(1)} where { ${e.lits.mkString(", ")} }")
+      Some(s"${e.kids(0)} => ${e.kids(1)} where { ${e.kids.seq.drop(2).mkString(", ")} }")
   }
 }
 
@@ -33,12 +33,14 @@ case object EmptyAlt extends Alternative(simple())
 
 object AlternativeSyntax extends SyntaxChecking.SyntaxChecker(Alt) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
-    if (lits.exists(!_.isInstanceOf[DeclsA]))
-    error(s"All lits of Alt must be of sort Decls, but found ${lits.filter(!_.isInstanceOf[DeclsA])}")
     if (!(kids(0).kind.isInstanceOf[Pat]))
       error(s"Expected first kid an expression but got ${kids(0).kind}")
     if (!(kids(1).kind.isInstanceOf[Exp]))
-      error(s"Expected second kid an expression but got ${kids(1).kind}")  }
+      error(s"Expected second kid an expression but got ${kids(1).kind}")
+    if (kids.drop(2).exists(!_.isInstanceOf[Decl]))
+      error(s"All kids of Alt must be of sort Decl, but found ${kids.seq.drop(2).filter(!_.isInstanceOf[Decl])}")
+
+  }
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 }
 

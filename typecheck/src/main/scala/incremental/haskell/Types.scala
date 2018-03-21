@@ -9,15 +9,14 @@ import constraints.equality._
  * Created by seba on 13/11/14.
  */
 
-trait PolType extends constraints.equality.Type {
+trait HaskellType extends constraints.equality.Type {
   def freeTVars: Set[Symbol]
   def getFreeTVars(t: Type): Set[Symbol] =
-    if (t.isInstanceOf[PolType])
-      t.asInstanceOf[PolType].freeTVars
+    if (t.isInstanceOf[HaskellType])
+      t.asInstanceOf[HaskellType].freeTVars
     else
       Set()
 }
-
 
 case class ClassH(x: Symbol) extends Type {
   def isGround = true
@@ -30,7 +29,7 @@ case class ClassH(x: Symbol) extends Type {
     case _ => cs.never(EqConstraint(this, other))
   }
 }
-case class TCon(x: Symbol) extends PolType {
+case class TCon(x: Symbol) extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x2: CVar[_]) = x == x2
@@ -42,8 +41,7 @@ case class TCon(x: Symbol) extends PolType {
   }
 }
 
-case class SeqH(elem: Type) extends PolType {
-
+case class SeqH(elem: Type) extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = elem == x
@@ -55,8 +53,7 @@ case class SeqH(elem: Type) extends PolType {
   }
 }
 
-case class ListH(elem: Type) extends PolType {
-
+case class ListH(elem: Type) extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = elem == x
@@ -68,7 +65,7 @@ case class ListH(elem: Type) extends PolType {
   }
 }
 
-case class TupleH(elems: List[Type]) extends PolType {
+case class TupleH(elems: List[Type]) extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = elems.exists(_.occurs(x))
@@ -83,7 +80,19 @@ case class TupleH(elems: List[Type]) extends PolType {
 
 //TODO I do not know how to express tuple (when the return type it should be a tuple, or an immutable list with differnt types)
 
-case object TNum extends PolType {
+case object TBool extends HaskellType{
+  def isGround = true
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TBool => cs
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+case object TNum extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
@@ -95,7 +104,7 @@ case object TNum extends PolType {
   }
 }
 
-case object TFloat extends PolType {
+case object TFloat extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
@@ -107,7 +116,7 @@ case object TFloat extends PolType {
   }
 }
 
-case object TInt extends PolType {
+case object TInt extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
@@ -118,7 +127,7 @@ case object TInt extends PolType {
     case _ => cs.never(EqConstraint(this, other))
   }
 }
-case object TReal extends PolType {
+case object TReal extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
@@ -130,7 +139,7 @@ case object TReal extends PolType {
   }
 }
 
-case object TChar extends PolType {
+case object TChar extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
@@ -142,7 +151,7 @@ case object TChar extends PolType {
   }
 }
 
-case class UVar(x: CVar[Type]) extends PolType {
+case class UVar(x: CVar[Type]) extends HaskellType{
   def isGround = false
   def freeTVars = Set()
   def occurs(x2: CVar[_]) = x == x2
@@ -162,7 +171,7 @@ case class UVar(x: CVar[Type]) extends PolType {
     }
 }
 
-case class TFun(t1: Type, t2: Type) extends PolType {
+case class TFun(t1: Type, t2: Type) extends HaskellType{
   def isGround = false
   def freeTVars = getFreeTVars(t1) ++ getFreeTVars(t2)
   def occurs(x: CVar[_]) = t1.occurs(x) || t2.occurs(x)
@@ -176,7 +185,7 @@ case class TFun(t1: Type, t2: Type) extends PolType {
 }
 
 
-case class TVar(alpha : Symbol) extends PolType {
+case class TVar(alpha : Symbol) extends HaskellType{
   def isGround = false
   def freeTVars = Set(alpha)
   def occurs(x2: CVar[_]) = alpha == x2
@@ -192,7 +201,7 @@ case class TVar(alpha : Symbol) extends PolType {
     }
 }
 
-case class TUniv(alpha : Symbol, t : Type) extends PolType {
+case class TUniv(alpha : Symbol, t : Type) extends HaskellType{
   def isGround = false
   def freeTVars = getFreeTVars(t) - alpha
   def occurs(x2: CVar[_]) = t.occurs(x2)
@@ -205,7 +214,7 @@ case class TUniv(alpha : Symbol, t : Type) extends PolType {
   }
 }
 
-case class UUniv(alpha: CVar[Type], t : Type) extends PolType {
+case class UUniv(alpha: CVar[Type], t : Type) extends HaskellType{
   def isGround = false
   def freeTVars = getFreeTVars(t)
   def occurs(x2: CVar[_]) = alpha == x2 || t.occurs(x2)
