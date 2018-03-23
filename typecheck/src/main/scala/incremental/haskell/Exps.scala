@@ -17,15 +17,16 @@ case object Infix extends Exp(_ => InfixSyntax) {
   }
 }
 
-abstract class Literal(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+abstract class Literal(syntaxcheck: SyntaxChecking.SyntaxCheck) extends Exp(syntaxcheck)
 object Literal {
   val cLit = classOf[Literal]
 }
-case object Num  extends Literal(simple(Seq(classOf[Integer])))
-case object CFloat  extends Literal(simple(Seq(classOf[String])))
-case object CReal  extends Literal(simple(Seq(classOf[String])))
 case object CInt  extends Literal(simple(Seq(classOf[Integer])))
+case object CFloat  extends Literal(simple(Seq(classOf[String])))
+case object CDouble  extends Literal(simple(Seq(classOf[String])))
+case object CRational  extends Literal(simple(Seq(classOf[String])))
 case object CChar  extends Literal(simple(Seq(classOf[Symbol])))
+case object CString  extends Literal(simple(Seq(classOf[String])))
 
 
 
@@ -53,6 +54,9 @@ case object TAdd  extends Exp(simple(cExp, cExp))
 case object TMul  extends Exp(simple(cExp, cExp))
 case object Add  extends Exp(simple(cExp, cExp))
 case object Mul  extends Exp(simple(cExp, cExp))
+case object Leq  extends Exp(simple(cExp, cExp)) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"${e.kids(0)} < = ${e.kids(1)}")
+}
 
 
 case object Var extends Exp(simple(Seq(classOf[Symbol]))) {
@@ -154,8 +158,8 @@ case object If  extends Exp(simple(cExp, cExp, cExp)) {
 case object Case extends Exp(_ => CaseSyntax) {
   override def toString(e: Node_[_]): Option[String] = Some(s"case ${e.kids(0)} of { ${e.kids.seq.drop(1).mkString(", ")} }")
 }
-case object Do extends Exp(simple(Seq(cExp))) { // TODO see this again
-  override def toString(e: Node_[_]): Option[String] = Some(s"do { ${e.kids.seq.mkString(", ")} }")
+case object Do extends Exp(_ => DoSyntax) {
+  override def toString(e: Node_[_]): Option[String] = Some(s"do { ${e.kids.seq.dropRight(1).mkString("; ")} ${e.kids.seq.last} }")
 }
 case object FApp extends Exp(sequence(option(simple(cExp)), simple(cExp)))
 
@@ -267,6 +271,16 @@ object CaseSyntax extends SyntaxChecking.SyntaxChecker(Case) {
       error(s"Case expresion should have at elast one alternative but found None")
     if (kids.drop(1).exists(!_.kind.isInstanceOf[Alternative]))
       error(s"All kids must be of sort Alt, but found ${kids.drop(1).filter(!_.kind.isInstanceOf[Alternative])}")
+  }
+  def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+}
+
+object DoSyntax extends SyntaxChecking.SyntaxChecker(Do) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if (!(kids.seq.last.kind.isInstanceOf[Exp]))
+      error(s"Expected the IN expr of sort expression but got ${kids.seq.last.kind}")
+    if (kids.dropRight(1).exists(!_.kind.isInstanceOf[Stmt]))
+      error(s"All kids must be of sort Stmt, but found ${kids.dropRight(1).filter(!_.kind.isInstanceOf[Stmt])}")
   }
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 }

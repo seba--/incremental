@@ -92,13 +92,36 @@ case object TBool extends HaskellType{
   }
 }
 
-case object TNum extends HaskellType{
+case object TChar extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
-    case TNum => cs
+    case TChar => cs
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+case object TString extends HaskellType{
+  def isGround = true
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TString => cs
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+case object TInt extends HaskellType{
+  def isGround = true
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TInt => cs
     case UVar(x) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
@@ -116,40 +139,31 @@ case object TFloat extends HaskellType{
   }
 }
 
-case object TInt extends HaskellType{
+
+case object TDouble extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
-    case TInt => cs
-    case UVar(x) => other.unify(this, cs)
-    case _ => cs.never(EqConstraint(this, other))
-  }
-}
-case object TReal extends HaskellType{
-  def isGround = true
-  def freeTVars = Set()
-  def occurs(x: CVar[_]) = false
-  def subst(s: CSubst) = this
-  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
-    case TReal => cs
+    case TDouble => cs
     case UVar(x) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
 
-case object TChar extends HaskellType{
+case object TRational extends HaskellType{
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
-    case TChar => cs
+    case TRational => cs
     case UVar(x) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
+
 
 case class UVar(x: CVar[Type]) extends HaskellType{
   def isGround = false
@@ -186,7 +200,7 @@ case class TFun(t1: Type, t2: Type) extends HaskellType{
 
 
 case class TVar(alpha : Symbol) extends HaskellType{
-  def isGround = false
+  def isGround = true
   def freeTVars = Set(alpha)
   def occurs(x2: CVar[_]) = alpha == x2
   def subst(s: CSubst) = s.hgetOrElse(CVar[Type](alpha), this)

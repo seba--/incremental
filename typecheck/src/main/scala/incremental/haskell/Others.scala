@@ -44,24 +44,32 @@ object AlternativeSyntax extends SyntaxChecking.SyntaxChecker(Alt) {
   def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
 }
 
-abstract class Statement(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
+abstract class Stmt(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 object Statement {
-  val stmt = classOf[Statement]
+  val stmt = classOf[Stmt]
 }
 
-case object ExpStmt extends Statement(simple(cExp)){
+case object ExpStmt extends Stmt(simple(cExp)){
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.kids(0)} ;")
 }
 
-case object PatStmt extends Statement(simple(pat, cExp)){
+case object PatStmt extends Stmt(simple(pat, cExp)){
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.kids(0)} <- ${e.kids(1)} ;")
 }
 
-case object LetStmt extends Statement(simple(decls)) {
+case object LetStmt extends Stmt(_ => LetStmtSyntax) {
   override def toString(e: Node_[_]): Option[String] = Some(s"let { ${e.lits.mkString(", ")} };")
 }
+object LetStmtSyntax extends SyntaxChecking.SyntaxChecker(LetStmt) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if (kids.exists(!_.kind.isInstanceOf[Decl]))
+      error(s"All kids must be of sort Decl, but found ${kids.filter(!_.kind.isInstanceOf[Decl])}")
+  }
 
-case object EmptyStmt extends Statement(simple()){
+  def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+}
+
+case object EmptyStmt extends Stmt(simple()){
   override def toString(e: Node_[_]): Option[String] = Some(s" ;")
 }
 
