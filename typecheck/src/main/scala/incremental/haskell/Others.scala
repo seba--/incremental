@@ -91,7 +91,7 @@ object Qual {
 case object Generator extends Qual(simple(pat, cExp)){
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.kids(0)} <- ${e.kids(1)}")
 }
-case object LocalGen extends Qual(simple(decls)) {
+case object LocalDec extends Qual(simple(decls)) {
   override def toString(e: Node_[_]): Option[String] = Some(s"let { ${e.lits.mkString(", ")} }")
 }
-case object Guard extends Qual(simple(cExp))
+case object Guard extends Qual(simple(cExp)) // TODO or we should call it filter as int he paper for haskell syntax

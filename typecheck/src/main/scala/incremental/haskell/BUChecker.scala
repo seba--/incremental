@@ -7,6 +7,7 @@ import incremental.haskell.Node._
 import incremental.Util
 import incremental.haskell.Condition.trueCond
 import incremental.haskell._
+
 /**
  * Created by lira on 29/01/18.
  */
@@ -102,8 +103,8 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
 
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
-      val X = freshUVar()
-      ( (Map(), X), Map(x -> VarReq(X)), Set(), Seq())
+      val X = freshSchemaVar()
+      ( (Map(), InstS(X)), Map(x -> VarReq(X)), Set(), Seq())
 
     case CInt=>
       val t = TVar('a)
@@ -271,6 +272,39 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
 
       ((lie, SeqH(t._2)), resreq, restreqs, cons1 ++ cons ++ rescons)
 
+    case ListComp if (e.kids(0).isInstanceOf[Exp]) =>
+      val (t, req, treq, _ ) = e.kids(0).typ
+      var reqs = Seq[Reqs](req)
+      var lies = Seq[LIE](t._1)
+      var tReqs = Set[Symbol]()
+      for (i <- 1 until e.kids.seq.size) {
+        val (t, req, treq, _) = e.kids(i).typ
+        lies = lies :+ t._1
+        reqs = reqs :+ req
+        tReqs = tReqs ++ treq
+      }
+      val (cons, mreq) = mergeReqMaps(reqs)
+      val mlie = mergeLIEMaps(lies)
+
+      ((mlie, ListH(t._2)), mreq, treq ++ tReqs, cons)
+
+    case Generator =>
+      val (tp, reqp, treqp, _) = e.kids(0).typ
+      val (t, req, treq, _) = e.kids(1).typ
+      val typ = t._2.asInstanceOf[ListH]
+
+      val (cons, mreq) = mergeReqMaps(reqp, req)
+      val lie = mergeLIEMaps(tp._1, t._1)
+
+      ((lie, TNone), mreq, treq ++ treqp, cons :+ EqConstraint(tp._2, typ.elem)) // TODO should return nothing => ((lie, None)......)
+   // case LocalDec => // TODO like LetStmt
+
+    case Guard =>
+      val (t, req, treq, _) = e.kids(0).typ
+
+      ((t._1, TNone), req, treq, Seq(EqConstraint(t._2, TBool)))  // TODO should be empty return nothing (Some[Type] => None)
+
+
     case Abs if (e.lits(0).isInstanceOf[Symbol]) =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val (t, reqs, treqs, _) = e.kids(0).typ
@@ -283,12 +317,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
           if (e.lits.size ==2 ) {
             val X = e.lits(1).asInstanceOf[HaskellType]
             val otherReqs = reqs - x //satisfyReq((x, X), reqs)
-            ((t._1, TFun(treq.varTyp, t._2)), otherReqs, treqs ++ X.freeTVars, Seq(EqConstraint(X, treq.varTyp)))
+            ((t._1, TFun(X, t._2)), otherReqs, treqs ++ X.freeTVars, Seq(EqConstraint(X, treq.varTyp)))
           }
           else{
           val otherReqs = reqs - x // satisfyReq((x, treq.varTyp), reqs)
+            val X = freshUVar()
             val typ = treq.varTyp
-            ((t._1, TFun(treq.varTyp, t._2)), otherReqs, treqs, Seq())
+            ((t._1, TFun(X, t._2)), otherReqs, treqs, Seq(EqConstraint(X, treq.varTyp)))
           }
       }
 
@@ -313,6 +348,29 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       }
 
       ((t._1, tfun), restReqs, treqs, Seq())
+
+    case LetPoly =>
+      val x = e.lits(0).asInstanceOf[Symbol]
+      val (t1, req1, treq1, _) = e.kids(0).typ
+      val (t2, req2, treq2, _) = e.kids(1).typ
+
+      var cons = Seq[Constraint]()
+      var reqs = req2
+
+      req2.get(x) match {
+        case None => cons
+        case Some(t) => cons = cons :+ GenConstraint(t.varTyp, t1._2, Map())
+          reqs = reqs - x
+      }
+   //   val cons = GenConstraint(tsvar, t1._2, Map())
+
+      var lie = Seq[LIE]()
+      lie = lie :+ t1._1 :+ t2._1
+      val (rescons, resreq) = mergeReqMaps(reqs, req1)
+      val reslie = mergeLIEMaps(lie)
+      println(rescons ++ cons)
+      ((reslie, t2._2), resreq, treq1 ++ treq2, cons ++ rescons)
+
 
     case Let =>
       val (te, reqsE, treqE,  _) = e.kids.seq.last.typ
@@ -500,7 +558,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       val (mcons, mreq) = mergeReqMaps(reqs)
       val mlie = mergeLIEMaps(lie)
 
-      ((mlie, TupleH(types)), mreq, tReqs, mcons)
+      ((mlie, TNone), mreq, tReqs, mcons)  // TODO or it should be a TupleH(types)
 
 //    case InstDec =>
 //      val o =  e.lits(0).asInstanceOf[Symbol]
@@ -567,7 +625,19 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       wasReqs.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-          mcons = EqConstraint(r1.varTyp, r2.varTyp) +: mcons
+          (r1.varTyp, r2.varTyp) match {
+            case (TSchemaVar(x), r2.varTyp) => mcons = InstConstraint(TSchemaVar(x), r2.varTyp, Seq()) +: mcons
+            case (r1.varTyp, TSchemaVar(x)) => mcons = InstConstraint(TSchemaVar(x), r1.varTyp, Seq()) +: mcons
+            case (TSchema(t, l), r2.varTyp) =>
+              var tsv = Seq[UVar]()
+              l.map(i => tsv = tsv :+ freshUVar())
+              mcons = InstConstraint(TSchema(t, l), r2.varTyp, tsv) +: mcons
+            case (r1.varTyp, TSchema(t, l)) =>
+              var tsv = Seq[UVar]()
+              l.map(i => tsv = tsv :+ freshUVar())
+              mcons = InstConstraint(TSchema(t, l), r1.varTyp, tsv) +: mcons
+            case (_, _) => mcons = EqConstraint(r1.varTyp, r2.varTyp) +: mcons
+          }
           mreqs += x -> r2.withCond(Condition(r1.cond.not ++ r2.cond.not))
       }
     (mcons, mreqs)
@@ -619,6 +689,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
       //      }
       (newcrs, cons)
     }
+
+  def instanstiate(typ: Type) : Type = {
+    typ match {
+      case UVar(x) => UVar(x)
+      case TFun(t1, t2) => TFun(instanstiate(t1), instanstiate(t2))
+      case _ => InstS(typ)
+    }
+  }
 }
 
 case class BUCheckerFactory[CS <: ConstraintSystem[CS]](factory: ConstraintSystemFactory[CS]) extends TypeCheckerFactory[Gen, Constraint,CS] {

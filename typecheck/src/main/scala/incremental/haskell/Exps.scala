@@ -109,8 +109,20 @@ case object ASeqExp extends Exp(sequence(simple(cExp), option(simple(cOpKind)), 
   }
 }
 
+import incremental.haskell.Qual._
+case object ListComp extends Exp(_ => ListCompSyntax)
+object ListCompSyntax extends SyntaxChecking.SyntaxChecker(ListComp) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+    if (kids.seq.size <= 1)
+      error(s"Expected at least two kid but got one or none!")
+    if (!(kids(0).kind.isInstanceOf[Exp]))
+      error(s"Expected first kid an expression but got ${kids(0).kind}")
+    if (kids.drop(1).exists(!_.kind.isInstanceOf[Qual]))
+      error(s"All kids from second must be of sort Qual, but found ${kids.drop(1).filter(!_.kind.isInstanceOf[Qual])}")
+  }
+  def checkC(lits: Seq[Lit], kids: Seq[SyntaxCheck]) {}
+}
 
-case object ListCom
 
 case object LeftSel
 
@@ -151,6 +163,8 @@ object AbsSyntax extends SyntaxChecking.SyntaxChecker(Abs) {
 }
 //case object Let extends Exp((simple(Seq(classOf[Symbol]), cExp, cExp) orElse simple(Seq(classOf[Symbol], classOf[PolType]), cExp, cExp))){ // Exp (_ => LetSyntax)
 case object Let extends Exp(_ => LetSyntax)
+
+case object LetPoly extends Exp(simple(Seq(classOf[Symbol]), cExp, cExp)) // TODO prove, just to see how it works
 
 case object If  extends Exp(simple(cExp, cExp, cExp)) {
   override def toString(e:Node_[_]): Option[String] = Some(s"if ${e.kids(0)}; then ${e.kids(1)}; else ${e.kids(2)}")
