@@ -164,6 +164,7 @@ object AbsSyntax extends SyntaxChecking.SyntaxChecker(Abs) {
 //case object Let extends Exp((simple(Seq(classOf[Symbol]), cExp, cExp) orElse simple(Seq(classOf[Symbol], classOf[PolType]), cExp, cExp))){ // Exp (_ => LetSyntax)
 case object Let extends Exp(_ => LetSyntax)
 
+case object App  extends Exp(simple(cExp, cExp))
 case object LetPoly extends Exp(simple(Seq(classOf[Symbol]), cExp, cExp)) // TODO prove, just to see how it works
 
 case object If  extends Exp(simple(cExp, cExp, cExp)) {

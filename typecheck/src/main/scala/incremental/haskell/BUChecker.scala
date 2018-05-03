@@ -349,6 +349,17 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[Gen, Co
 
       ((t._1, tfun), restReqs, treqs, Seq())
 
+      case App =>
+        val (t1, reqs1, treqs1, _) = e.kids(0).typ
+        val (t2, reqs2, treqs2, _) = e.kids(1).typ
+
+        val X = freshUVar()
+        val fcons = EqConstraint(TFun(t2._2, X), t1._2)
+        val (mcons, mreqs) = mergeReqMaps(reqs1,reqs2)
+        val lie = mergeLIEMaps(t1._1, t2._1)
+
+        ((lie, X), mreqs, treqs1 ++ treqs2, mcons :+ fcons)
+
     case LetPoly =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val (t1, req1, treq1, _) = e.kids(0).typ

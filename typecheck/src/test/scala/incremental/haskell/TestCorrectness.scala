@@ -149,8 +149,9 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("Do Lit('a); Lit(1) Lit('c)", Do(ExpStmt(CChar('a)), ExpStmt(CInt(1)), CChar('c)))(TChar)
   typecheckTest("Do let x = 1; y = 2 Add(x, y)", Do(LetStmt(VarDecl('x, Lit(CInt(1))), VarDecl('y, Lit(CInt(1)))), TAdd(Var('x), Var('y))))(TVar('a))
 
-  typecheckTest("let x = \\ y. y in x", LetPoly('x, Abs('y, Var('y)), Var('x)))(TVar('x))
   typecheckTest("\\y. y ", Abs('x, Var('x)))(TVar('x))
+  typecheckTest("let x = \\ y. y in x", LetPoly('x, Abs('y, Var('y)), Var('x)))(TVar('x))
+  typecheckTest("let x = \\ y. y in x x", LetPoly('x, Abs('y, Var('y)), App(Var('x), Var('x))))(TVar('x))
 
 }
 
