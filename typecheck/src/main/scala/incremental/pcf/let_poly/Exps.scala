@@ -15,6 +15,10 @@ object Exp {
 import Exp._
 
 case object Num extends Exp(simple(Seq(classOf[Integer])))
+case object Float extends Exp(simple(Seq(classOf[Integer])))
+case object Char extends Exp(simple(Seq(classOf[Symbol])))
+case object Bool extends Exp(simple(Seq(classOf[Symbol])))
+case object isLower extends Exp(simple(cExp))
 case object Add extends Exp(simple(cExp, cExp))
 case object Mul extends Exp(simple(cExp, cExp))
 case object Var extends Exp(simple(Seq(classOf[Symbol])))
@@ -35,4 +39,5 @@ case object FunDec extends Decl(simple(Seq(classOf[Symbol], classOf[Symbol]), cE
 
 case object Let extends Exp(simple(cDecl, cExp))
 
+case object VarL extends Exp(simple(Seq(classOf[Symbol])))
 case object LetV extends Exp(simple(Seq(classOf[Symbol]), cExp, cExp))

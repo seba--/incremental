@@ -15,7 +15,7 @@ case class UVar(x: CVar[Type]) extends Type {
   def subst(s: CSubst):Type = s.hgetOrElse(x, this)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
     if (other == this) cs
-    else if (other.isInstanceOf[TSchemaVar]) other.unify(this, cs)
+    else if (other.isInstanceOf[USchema]) other.unify(this, cs)
     else cs.substitution.hget(x) match {
       case Some(t) => t.unify(other, cs)
       case None =>
@@ -36,10 +36,52 @@ case object TNum extends Type {
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case TNum => cs
     case UVar(x) => other.unify(this, cs)
-    case TSchemaVar(x) => other.unify(this, cs)
+    case USchema(x) => other.unify(this, cs)
+    case InstS(typ) => typ.unify(this, cs)
+    case TSchema(typ, lst) => typ.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
+
+case object TFloat extends Type {
+  def isGround = true
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TFloat => cs
+    case UVar(x) => other.unify(this, cs)
+    case USchema(x) => other.unify(this, cs)
+    case InstS(typ) => typ.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+case object TChar extends Type {
+  def isGround = true
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TChar => cs
+    case UVar(x) => other.unify(this, cs)
+    case USchema(x) => other.unify(this, cs)
+    case InstS(typ) => typ.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
+case object TBool extends Type {
+  def isGround = true
+  def occurs(x: CVar[_]) = false
+  def subst(s: CSubst) = this
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TBool => cs
+    case UVar(x) => other.unify(this, cs)
+    case USchema(x) => other.unify(this, cs)
+    case InstS(typ) => typ.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
+
 
 case class TFun(t1: Type, t2: Type) extends Type {
   def isGround = true
@@ -59,6 +101,9 @@ case class TFun(t1: Type, t2: Type) extends Type {
   }
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case TFun(t1_, t2_) => t2.unify(t2_, t1.unify(t1_, cs))
+    case USchema(x) => other.unify(this, cs)
+   // case TSchema(typ, lst) => typ.unify(this, cs)
+   // case InstS(typ) => typ.unify(this, cs)
     case UVar(x) => other.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
@@ -153,6 +198,7 @@ case class InstS(typ : Type) extends Type {
 
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case UVar(x) => other.unify(instFresh(this, cs), cs)
+    case TNum => other.unify(this, cs)
     //case InstS(t2) => instFresh(other, cs).unify((instFresh(this, cs)), cs)
     case _ => cs.never(EqConstraint(this, other))
   }

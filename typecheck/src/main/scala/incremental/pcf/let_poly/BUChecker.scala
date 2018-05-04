@@ -46,6 +46,15 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
     case Num => (TNum, Map(), Seq())
+    case Float => (TFloat, Map(), Seq())
+    case Char => (TChar, Map(), Seq())
+//    case Bool => (TBool, Map(), Seq())
+//    case isLower =>
+//      val (t, reqs, _) = e.kids(0).typ
+//      val cons = EqConstraint(t, TChar)
+//
+//      (TBool, reqs, Seq(cons))
+
     case op if op == Add || op == Mul =>
       val (t1, reqs1, _) = e.kids(0).typ
       val (t2, reqs2, _) = e.kids(1).typ
@@ -56,6 +65,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       (TNum, mreqs, mcons :+ lcons :+ rcons)
     case Var =>
+      val x = e.lits(0).asInstanceOf[Symbol]
+      val X = freshUVar()
+      (X, Map(x -> X), Seq())
+    case VarL =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshUSchema()
       (InstS(X), Map(x -> X), Seq())
@@ -78,8 +91,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           (TFun(X, t), reqs, Seq())
         case Some(treq) =>
           val otherReqs = reqs - x
+          val X = freshUVar()
           if (e.lits.size == 2) {
-            (TFun(treq, t), otherReqs, Seq(EqConstraint(e.lits(1).asInstanceOf[Type], treq)))
+            (TFun(X, t), otherReqs, Seq(EqConstraint(treq, X), EqConstraint(e.lits(1).asInstanceOf[Type], treq)))
           }
           else
             (TFun(treq, t), otherReqs, Seq())
@@ -139,8 +153,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           cons = cons :+ GenConstraint(typ, t1, mreq)
       }
 
-
-      (t2, mreq, cons )
+      (t2, resreq, cons )
 
   }
 
