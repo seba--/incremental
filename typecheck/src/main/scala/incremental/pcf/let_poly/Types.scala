@@ -51,7 +51,7 @@ case object TFloat extends Type {
     case TFloat => cs
     case UVar(x) => other.unify(this, cs)
     case USchema(x) => other.unify(this, cs)
-    case InstS(typ) => typ.unify(this, cs)
+    case TSchema(typ, lts) => typ.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
@@ -64,7 +64,7 @@ case object TChar extends Type {
     case TChar => cs
     case UVar(x) => other.unify(this, cs)
     case USchema(x) => other.unify(this, cs)
-    case InstS(typ) => typ.unify(this, cs)
+    case TSchema(typ, lts) => typ.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
@@ -111,11 +111,23 @@ case class TFun(t1: Type, t2: Type) extends Type {
   override def toString= "TFun" //s"($t1 --> $t2)"
 }
 
-case class TSchema(typ : Type, lTyVar: Seq[UVar]) extends Type{
+case class TSchema(typ : Type, lTyVar: Seq[UVar]) extends Type {
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
-  def subst(s: CSubst) = typ.subst(s)
+  private def occurU(t: Type): Seq[UVar] = {
+    t match {
+      case TNum => Seq()
+      case TChar => Seq()
+      case UVar(x) => Seq(UVar(x))
+      case TFun(t1, t2) => occurU(t1) ++ occurU(t2)
+      case USchema(x) => Seq()
+      case TSchema(t, lt) => Seq()
+    }
+  }
+  def subst(s: CSubst) =
+    if (typ.subst(s).isGround) typ.subst(s)
+    else TSchema(typ.subst(s), occurU(typ.subst(s)) )
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
     case TSchema(t2, ltvar2) => cs
     case USchema(x) => other.unify(this, cs)
@@ -140,7 +152,7 @@ case class USchema(x : CVar[Type]) extends Type{
         else if (t.occurs(x))
           cs.never(EqConstraint(this, t))
         else
-          cs.solved(CSubst(USchema(x).x -> t))
+          cs.solved(CSubst(x -> t))
     }
 }
 

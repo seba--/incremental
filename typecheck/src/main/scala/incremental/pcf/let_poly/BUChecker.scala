@@ -70,8 +70,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (X, Map(x -> X), Seq())
     case VarL =>
       val x = e.lits(0).asInstanceOf[Symbol]
+      val u = freshUVar()
       val X = freshUSchema()
-      (InstS(X), Map(x -> X), Seq())
+      val cons = InstConstraint(u, X)
+      (u, Map(x -> X), Seq(cons))
     case App =>
       val (t1, reqs1, _) = e.kids(0).typ
       val (t2, reqs2, _) = e.kids(1).typ
@@ -96,7 +98,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
             (TFun(X, t), otherReqs, Seq(EqConstraint(treq, X), EqConstraint(e.lits(1).asInstanceOf[Type], treq)))
           }
           else
-            (TFun(treq, t), otherReqs, Seq())
+            (TFun(X, t), otherReqs, Seq(EqConstraint(treq, X)))
       }
     case Abs if (e.lits(0).isInstanceOf[Seq[_]]) =>
       val xs = e.lits(0).asInstanceOf[Seq[Symbol]]
@@ -150,13 +152,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       reqs2.get(X) match {
         case None => cons
         case Some(typ) => resreq = resreq - X
-          cons = cons :+ GenConstraint(typ, t1, mreq)
+          cons = cons :+ GenConstraint(typ, t1, reqs1, reqs2)
       }
-
       (t2, resreq, cons )
-
   }
-
 
 
   private val init: (Seq[Constraint], Reqs) = (Seq(), Map())
@@ -176,7 +175,13 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       wasReqs.get(x) match {
         case None => mreqs += x -> r2
         case Some(r1) =>
-          mcons = EqConstraint(r1, r2) +: mcons
+          (r1, r2) match {
+            case (_, InstS(_)) => mcons = EqConstraint(r1, r2) +: mcons
+            case (InstS(_), _) => mcons = EqConstraint(r1, r2) +: mcons
+            case (InstS(_), InstS(_)) => mcons
+              mreqs += x -> r2
+            case (_ , _) => mcons = EqConstraint(r1, r2) +: mcons
+          }
       }
     (mcons, mreqs)
   }

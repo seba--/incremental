@@ -81,11 +81,35 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTest("let x = 2 in x + 1", LetV('x, Num(2), Add(VarL('x), Num(1))))(TNum)
   typecheckTest("let y = 1 in let x = y in x + 1", LetV('y, Num(1), LetV('x, VarL('y), Add(VarL('x), Num(1)))))(TNum)
+  typecheckTest("let chLen = \\Char. Int in let y = 'a in let x = y in chLen x", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('y, Char('a), LetV('x, VarL('y), App(VarL('chLen), VarL('x))))))(TNum)
+  typecheckTestError("let chLen = \\Char. Int in let y = 1 in let x = y in chLen x", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('y, Num(1), LetV('x, VarL('y), App(VarL('chLen), VarL('x))))))
+  typecheckTestError("let chLen = \\Char. Int in let y = 'a in let x = y in chLen x + x", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('y, Char('a), LetV('x, VarL('y), Add(App(VarL('chLen), VarL('x)), VarL('x))))))
+  typecheckTestError("let chLen = \\Char. Int in let y = 1 in let x = y in chLen x + x", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('y, Num(1), LetV('x, VarL('y), Add(App(VarL('chLen), VarL('x)), VarL('x))))))
   typecheckTestError("let y = 'a' in let x = y in x + 1", LetV('y, Char('a), LetV('x, VarL('y), Add(VarL('x), Num(1)))))
-  typecheckTest("let x = \\y .y in x x", LetV('x, Abs('y, VarL('y)), App(VarL('x), VarL('x))))(TFun(UVar(CVar('x$0)), UVar(CVar('x$0))))
+  typecheckTestError("let x = \\y .y in x x", LetV('x, Abs('y, VarL('y)), App(VarL('x), VarL('x))))
+  typecheckTest("let x = \\a.a in y = x 0 in 1 + y ", LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(0)), Add(VarL('y), Num(1)))))(TNum)
+  typecheckTestError("let x = \\a.a in y = x 'b in 1 + y ", LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(VarL('y), Num(1)))))
+  typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 'b in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), VarL('y))))))(TNum)
+  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(1)), App(VarL('chLen), VarL('y))))))
+  typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y + 1 ", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), Num(1))))))(TNum)
+  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y + y", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), VarL('y))))))
+  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in chLen (ChLen y)", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), App(VarL('chLen), VarL('y)))))))
+
+
+
 
 }
 
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))
+class TestBUSolveContinuouslyCorrectness extends TestCorrectness("BUSolveContinuously", new BUCheckerFactory(SolveContinuously))
