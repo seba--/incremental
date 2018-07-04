@@ -18,6 +18,17 @@ trait PolType extends constraints.equality.Type {
       Set()
 }
 
+case class ConsType(cons : Map[Symbol, TFun], typ : Type) extends PolType {
+  def isGround = false
+  def freeTVars = Set()
+  def occurs(x2: CVar[_]) = false
+  def subst(s: CSubst) = ConsType(cons.mapValues(_.subst(s)), typ.subst(s))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case ConsType(conns1, typ1) => cs
+    case UVar(x) => other.unify(this, cs)
+    case _ => cs.never(EqConstraint(this, other))
+  }
+}
 case class UVar(x: CVar[Type]) extends PolType {
   def isGround = false
   def freeTVars = Set()

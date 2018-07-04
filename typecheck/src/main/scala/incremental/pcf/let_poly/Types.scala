@@ -1,9 +1,9 @@
 package incremental.pcf.let_poly
 
-import constraints.equality.CSubst
-import constraints.equality.CSubst.CSubst
+import constraints.equality_letpoly.CSubst
+import constraints.equality_letpoly.CSubst.CSubst
 import constraints.CVar
-import constraints.equality.{ConstraintSystem, ConstraintSystemFactory, EqConstraint, Type}
+import constraints.equality_letpoly.{ConstraintSystem, ConstraintSystemFactory, EqConstraint, Type}
 
 /**
  * Created by seba on 13/11/14.
@@ -84,7 +84,7 @@ case object TBool extends Type {
 
 
 case class TFun(t1: Type, t2: Type) extends Type {
-  def isGround = true
+  def isGround = t1.isGround && t2.isGround
   def occurs(x: CVar[_]) = t1.occurs(x) || t2.occurs(x)
   def subst(s: CSubst) = {
     var args = List(t1.subst(s))
@@ -111,18 +111,18 @@ case class TFun(t1: Type, t2: Type) extends Type {
   override def toString= "TFun" //s"($t1 --> $t2)"
 }
 
-case class TSchema(typ : Type, lTyVar: Seq[UVar]) extends Type {
+case class TSchema(typ : Type, lTyVar: Set[UVar]) extends Type {
   def isGround = true
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
-  private def occurU(t: Type): Seq[UVar] = {
+  private def occurU(t: Type): Set[UVar] = {
     t match {
-      case TNum => Seq()
-      case TChar => Seq()
-      case UVar(x) => Seq(UVar(x))
+      case TNum => Set()
+      case TChar => Set()
+      case UVar(x) => Set(UVar(x))
       case TFun(t1, t2) => occurU(t1) ++ occurU(t2)
-      case USchema(x) => Seq()
-      case TSchema(t, lt) => Seq()
+      case USchema(x) => Set()
+      case TSchema(t, lt) => Set()
     }
   }
   def subst(s: CSubst) =
@@ -182,7 +182,7 @@ case class InstS(typ : Type) extends Type {
   //    else InstS(typ.subst(s))
 
 
-  def instVar[CS <: ConstraintSystem[CS]](t: UVar, lts: Seq[UVar], cs: CS): Type = {
+  def instVar[CS <: ConstraintSystem[CS]](t: UVar, lts: Set[UVar], cs: CS): Type = {
     if (lts.isEmpty) t
     else {
       if (lts.contains(t))
@@ -191,7 +191,7 @@ case class InstS(typ : Type) extends Type {
     }
   }
 
-  def inst[CS <: ConstraintSystem[CS]](t: Type, lts: Seq[UVar], cs: CS): Type = {
+  def inst[CS <: ConstraintSystem[CS]](t: Type, lts: Set[UVar], cs: CS): Type = {
     t match {
       case UVar(x) => instVar(UVar(x), lts, cs)
       case TFun(t1, t2) => TFun(inst(t1, lts, cs), inst(t2, lts, cs))

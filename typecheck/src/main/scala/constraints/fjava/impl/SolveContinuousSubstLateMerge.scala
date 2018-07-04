@@ -107,7 +107,7 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
               extendMap(t1, t2)
             case Some(t3) =>
               Equal(t2, t3).solve(this)
-         }
+          }
       }
     }
   }
@@ -155,8 +155,8 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
   def applyPartialSolution[CT <: constraints.CTerm[Gen, Constraint, CT]](t: CT) = t.subst(substitution)
 
   def applyPartialSolutionIt[U, C <: Iterable[U], CT <: constraints.CTerm[Gen, Constraint, CT]]
-    (it: C, f: U=>CT)
-    (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
+  (it: C, f: U=>CT)
+  (implicit bf: CanBuildFrom[Iterable[U], (U, CT), C])
   = it.map(u => (u, f(u).subst(substitution)))
 
   def propagate: SolveContinuousSubstCSLateMerge = {

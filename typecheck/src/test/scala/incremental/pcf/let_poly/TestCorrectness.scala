@@ -1,8 +1,8 @@
 package incremental.pcf.let_poly
 
 import constraints.CVar
-import constraints.equality._
-import constraints.equality.impl._
+import constraints.equality_letpoly._
+import constraints.equality_letpoly.impl._
 import incremental.Node._
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
@@ -81,6 +81,7 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   typecheckTest("let x = 2 in x + 1", LetV('x, Num(2), Add(VarL('x), Num(1))))(TNum)
   typecheckTest("let y = 1 in let x = y in x + 1", LetV('y, Num(1), LetV('x, VarL('y), Add(VarL('x), Num(1)))))(TNum)
+  typecheckTestError("let y = 'a in let x = y in x + 1", LetV('y, Char('a), LetV('x, VarL('y), Add(VarL('x), Num(1)))))
   typecheckTest("let chLen = \\Char. Int in let y = 'a in let x = y in chLen x", LetV('chLen, Abs('a, TChar, Num(1)),
     LetV('y, Char('a), LetV('x, VarL('y), App(VarL('chLen), VarL('x))))))(TNum)
   typecheckTestError("let chLen = \\Char. Int in let y = 1 in let x = y in chLen x", LetV('chLen, Abs('a, TChar, Num(1)),
@@ -94,8 +95,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("let x = \\a.a in y = x 0 in 1 + y ", LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(0)), Add(VarL('y), Num(1)))))(TNum)
   typecheckTestError("let x = \\a.a in y = x 'b in 1 + y ", LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(VarL('y), Num(1)))))
   typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 'b in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), VarL('y))))))(TNum)
-  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
+   LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), VarL('y))))))(TNum)
+  typecheckTest("let x = \\a.a in App  x 'b", LetV('x , Abs('a, Var('a)), App(VarL('x), Char('b))))(TChar)
+  typecheckTest("let x = \\a.a in x ", LetV('x , Abs('a, Var('a)), VarL('x)))(TFun(TNum, TNum))
+   typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
     LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(1)), App(VarL('chLen), VarL('y))))))
   typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y + 1 ", LetV('chLen, Abs('a, TChar, Num(1)),
     LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), Num(1))))))(TNum)
@@ -103,8 +106,6 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), VarL('y))))))
   typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in chLen (ChLen y)", LetV('chLen, Abs('a, TChar, Num(1)),
     LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), App(VarL('chLen), VarL('y)))))))
-
-
 
 
 }

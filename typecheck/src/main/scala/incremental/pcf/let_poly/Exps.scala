@@ -2,7 +2,7 @@ package incremental.pcf.let_poly
 
 import incremental.Node._
 import incremental.{NodeKind, SyntaxChecking}
-import constraints.equality._
+import constraints.equality_letpoly._
 
 /**
  * Created by seba on 13/11/14.

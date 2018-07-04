@@ -1,7 +1,7 @@
 package incremental.pcf.let_poly
 
 import constraints.Statistics
-import constraints.equality._
+import constraints.equality_letpoly._
 import incremental.{Node_, Util}
 import incremental.Node.Node
 
@@ -26,6 +26,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (t_, reqs, sol_) = root.typ
       val sol = sol_.tryFinalize
       val t = t_.subst(sol.substitution)
+      println(sol_)
 
       if (!reqs.isEmpty)
         Right(s"Unresolved context requirements $reqs, type $t, unres ${sol.unsolved}")
@@ -140,8 +141,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       (X, reqs, Seq(fixCons))
 
     case LetV =>
-      val (t1, reqs1, _) = e.kids(0).typ
       val (t2, reqs2, _) = e.kids(1).typ
+
+      val (t1, reqs1, _) = e.kids(0).typ
       val X = e.lits(0).asInstanceOf[Symbol]
 
       val (mcons, mreq) = mergeReqMaps(reqs1, reqs2)

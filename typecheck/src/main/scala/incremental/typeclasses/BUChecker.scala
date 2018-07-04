@@ -220,11 +220,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
     case Inst =>
       val o =  e.lits(0).asInstanceOf[Symbol]
+      var cnewReq = Seq[Map[Symbol,Type]]()
       val t = e.lits(1).asInstanceOf[PolType]
       val (t1, reqs1, treq1, _) = e.kids(0).typ
       val (t2, reqs2,treq2, _) = e.kids(1).typ
       val (cons, mreq) = mergeReqMaps(reqs1, reqs2)
+      if (t.isInstanceOf[ConsType]){
 
+      }
       val resreq = satisfyReq((o, t), mreq)
 
       (t2, resreq, treq1 ++ treq2, cons :+ EqConstraint(t, t1))

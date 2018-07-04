@@ -1,6 +1,6 @@
 package incremental.pcf.let_poly
 
-import constraints.equality._
+import constraints.equality_letpoly._
 import incremental.MyBuilder
 import incremental.Node.Node
 
