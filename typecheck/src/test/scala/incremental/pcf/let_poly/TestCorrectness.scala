@@ -79,37 +79,46 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("\\y. y", Abs('y, Var('y)))(TFun(UVar(CVar('x$0)), UVar(CVar('x$0))))
   typecheckTestError("\\x. x x", Abs('x, App(Var('x), Var('x))))
 
-  typecheckTest("let x = 2 in x + 1", LetV('x, Num(2), Add(VarL('x), Num(1))))(TNum)
-  typecheckTest("let y = 1 in let x = y in x + 1", LetV('y, Num(1), LetV('x, VarL('y), Add(VarL('x), Num(1)))))(TNum)
-  typecheckTestError("let y = 'a in let x = y in x + 1", LetV('y, Char('a), LetV('x, VarL('y), Add(VarL('x), Num(1)))))
-  typecheckTest("let chLen = \\Char. Int in let y = 'a in let x = y in chLen x", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('y, Char('a), LetV('x, VarL('y), App(VarL('chLen), VarL('x))))))(TNum)
-  typecheckTestError("let chLen = \\Char. Int in let y = 1 in let x = y in chLen x", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('y, Num(1), LetV('x, VarL('y), App(VarL('chLen), VarL('x))))))
-  typecheckTestError("let chLen = \\Char. Int in let y = 'a in let x = y in chLen x + x", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('y, Char('a), LetV('x, VarL('y), Add(App(VarL('chLen), VarL('x)), VarL('x))))))
-  typecheckTestError("let chLen = \\Char. Int in let y = 1 in let x = y in chLen x + x", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('y, Num(1), LetV('x, VarL('y), Add(App(VarL('chLen), VarL('x)), VarL('x))))))
-  typecheckTestError("let y = 'a' in let x = y in x + 1", LetV('y, Char('a), LetV('x, VarL('y), Add(VarL('x), Num(1)))))
-  typecheckTestError("let x = \\y .y in x x", LetV('x, Abs('y, VarL('y)), App(VarL('x), VarL('x))))
-  typecheckTest("let x = \\a.a in y = x 0 in 1 + y ", LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(0)), Add(VarL('y), Num(1)))))(TNum)
-  typecheckTestError("let x = \\a.a in y = x 'b in 1 + y ", LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(VarL('y), Num(1)))))
-  typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 'b in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
-   LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), VarL('y))))))(TNum)
-  typecheckTest("let x = \\a.a in App  x 'b", LetV('x , Abs('a, Var('a)), App(VarL('x), Char('b))))(TChar)
-  typecheckTest("let x = \\a.a in x ", LetV('x , Abs('a, Var('a)), VarL('x)))(TFun(TNum, TNum))
-   typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(1)), App(VarL('chLen), VarL('y))))))
-  typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y + 1 ", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), Num(1))))))(TNum)
-  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y + y", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), VarL('y))))))
-  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in chLen (ChLen y)", LetV('chLen, Abs('a, TChar, Num(1)),
-    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), App(VarL('chLen), VarL('y)))))))
+//  typecheckTest("let x = 2 in x + 1", LetV('x, Num(2), Add(VarL('x), Num(1))))(TNum)
+//  typecheckTest("let y = 1 in let x = y in x + 1", LetV('y, Num(1), LetV('x, VarL('y), Add(VarL('x), Num(1)))))(TNum)
+//  typecheckTestError("let y = 'a in let x = y in x + 1", LetV('y, Char('a), LetV('x, VarL('y), Add(VarL('x), Num(1)))))
+//  typecheckTest("let chLen = \\Char. Int in let y = 'a in let x = y in chLen x", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('y, Char('a), LetV('x, VarL('y), App(VarL('chLen), VarL('x))))))(TNum)
+//  typecheckTestError("let chLen = \\Char. Int in let y = 1 in let x = y in chLen x", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('y, Num(1), LetV('x, VarL('y), App(VarL('chLen), VarL('x))))))
+//  typecheckTestError("let chLen = \\Char. Int in let y = 'a in let x = y in chLen x + x", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('y, Char('a), LetV('x, VarL('y), Add(App(VarL('chLen), VarL('x)), VarL('x))))))
+//  typecheckTestError("let chLen = \\Char. Int in let y = 1 in let x = y in chLen x + x", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('y, Num(1), LetV('x, VarL('y), Add(App(VarL('chLen), VarL('x)), VarL('x))))))
+//  typecheckTestError("let y = 'a' in let x = y in x + 1", LetV('y, Char('a), LetV('x, VarL('y), Add(VarL('x), Num(1)))))
+//  typecheckTestError("let x = \\y .y in x x", LetV('x, Abs('y, VarL('y)), App(VarL('x), VarL('x))))
+//  typecheckTest("let x = \\a.a in y = x 0 in 1 + y ", LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(0)), Add(VarL('y), Num(1)))))(TNum)
+//  typecheckTestError("let x = \\a.a in y = x 'b in 1 + y ", LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(VarL('y), Num(1)))))
+//  typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 'b in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
+//   LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), VarL('y))))))(TNum)
+//  typecheckTest("let x = \\a.a in App  x 'b", LetV('x , Abs('a, Var('a)), App(VarL('x), Char('b))))(TChar)
+//  typecheckTest("let x = \\a.a in x ", LetV('x , Abs('a, Var('a)), VarL('x)))(TFun(TNum, TNum))
+//   typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(1)), App(VarL('chLen), VarL('y))))))
+//  typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 'b in ChLen y + 1 ", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), Num(1))))))(TNum)
+//  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y + 1 ", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(1)), Add(App(VarL('chLen), VarL('y)), Num(1))))))
+//  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 'b in ChLen y + y", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), VarL('y))))))
+//  typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 'b in chLen (ChLen y)", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), App(VarL('chLen), App(VarL('chLen), VarL('y)))))))
+ typecheckTestError("let chLen = \\ Char. Int in let x = \\a.a in let y = x 1 in ChLen y + Chlen y ", LetV('chLen, Abs('a, TChar, Num(1)),
+    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Num(1)), Add(App(VarL('chLen), VarL('y)), App(VarL('chLen), VarL('y)))))))
+//  typecheckTest("let chLen = \\ Char. Int in let x = \\a.a in let y = x 'b in ChLen y + ChLen y  ", LetV('chLen, Abs('a, TChar, Num(1)),
+//    LetV('x , Abs('a, VarL('a)), LetV('y, App(VarL('x), Char('b)), Add(App(VarL('chLen), VarL('y)), App(VarL('chLen), VarL('y)))))))(TNum)
 
-
+  typecheckTest("List(1, 2, 3)", ListL(Num(1), Num(2), Num(3)))(ListT(TNum))
+  typecheckTestError("List(1, 2, 'a)", ListL(Num(1), Num(2), Char('a)))
+  typecheckTest("Let x = List(1, 2, 3) in x ", LetV('x, ListL(Num(0), Num(1), Num(2)), VarL('x)))(ListT(TNum))
+  typecheckTest("Let l = List('a,'b) in let x = 'c in append l x", LetV('l, ListL(Char('a), Char('b)), LetV('x, Char('c), AppendL(VarL('l), VarL('x)))))(ListT(TChar))
+  typecheckTestError("Let l = List('a,'b) in let x = 1 in append l x", LetV('l, ListL(Char('a), Char('b)), LetV('x, Num(1), AppendL(VarL('l), VarL('x)))))
 }
-
 
 class TestBUSolveEndCorrectness extends TestCorrectness("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 class TestBUSolveContinuousSubstCorrectness extends TestCorrectness("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubst))

@@ -48,19 +48,22 @@ case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint],
     }
 
   def addcompatibleCons(t1 : Type, t2 : Type) = {
+    var cons = Seq[Constraint]()
     var current = this
+    val t1p = t1.subst(substitution)
     compatibleC.get(t1) match {
       case None => current = this.copy(current.substitution, current.notyet, current.never, current.compatibleC + (t1 -> Set(t2)))
       case Some(s2) => current = this.copy(current.substitution, current.notyet, current.never, current.compatibleC + (t1 -> (s2 + t2)))
     }
-    if (t1.isGround) {
+    if (t1p.isGround) {
       current.compatibleC.get(t1) match {
         case None => current
         case Some(typ) =>
           for (i <- 0 until typ.size)
-            EqConstraint(t1, typ.toSeq(i)).solve(current)
-          current
+            cons = cons :+  EqConstraint(t1p, typ.toSeq(i).subst(substitution))
+          current = this.copy(current.substitution, current.notyet ++ cons, current.never, current.compatibleC)
       }
+      current
     }
     else
       current

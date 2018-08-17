@@ -65,6 +65,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (mcons, mreqs) = mergeReqMaps(reqs1, reqs2)
 
       (TNum, mreqs, mcons :+ lcons :+ rcons)
+
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshUVar()
@@ -157,6 +158,28 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
           cons = cons :+ GenConstraint(typ, t1, reqs1, reqs2)
       }
       (t2, resreq, cons )
+
+    case ListL =>
+      var cons = Seq[Constraint]()
+      val (t1, req1, _ ) = e.kids(0).typ
+      var reqs = Seq(req1)
+      for (i <- 1 until e.kids.seq.size) {
+        val (t, req, _) = e.kids.seq(i).typ
+        cons = cons :+ EqConstraint(t1, t)
+        reqs = reqs :+ req
+      }
+      val (mcons, mreq) = mergeReqMaps(reqs)
+
+      (ListT(t1), mreq, cons ++ cons)
+
+    case AppendL =>
+      val (t1, req1, _) = e.kids(0).typ
+      val (t2, req2, _) = e.kids(1).typ
+      val X = freshUVar()
+      val tA = TFun(t1, TFun(t2, X))
+      val (mcon, mreq) = mergeReqMaps(req1, req2)
+      (X, mreq, mcon :+ EqConstraint(X, t1) :+ EqConstraint(X.getTyp, t2))
+
   }
 
 

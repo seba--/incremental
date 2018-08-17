@@ -11,6 +11,7 @@ import constraints.equality_letpoly.{ConstraintSystem, ConstraintSystemFactory, 
 
 case class UVar(x: CVar[Type]) extends Type {
   def isGround = false
+  def getTyp = this
   def occurs(x2: CVar[_]) = x == x2
   def subst(s: CSubst):Type = s.hgetOrElse(x, this)
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) =
@@ -31,6 +32,7 @@ case class UVar(x: CVar[Type]) extends Type {
 
 case object TNum extends Type {
   def isGround = true
+  def getTyp = this
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
@@ -45,6 +47,7 @@ case object TNum extends Type {
 
 case object TFloat extends Type {
   def isGround = true
+  def getTyp = this
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
@@ -56,8 +59,10 @@ case object TFloat extends Type {
   }
 }
 
+
 case object TChar extends Type {
   def isGround = true
+  def getTyp = this
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
@@ -71,6 +76,7 @@ case object TChar extends Type {
 
 case object TBool extends Type {
   def isGround = true
+  def getTyp = this
   def occurs(x: CVar[_]) = false
   def subst(s: CSubst) = this
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
@@ -85,6 +91,7 @@ case object TBool extends Type {
 
 case class TFun(t1: Type, t2: Type) extends Type {
   def isGround = t1.isGround && t2.isGround
+  def getTyp = TFun(t1.getTyp, t2.getTyp)
   def occurs(x: CVar[_]) = t1.occurs(x) || t2.occurs(x)
   def subst(s: CSubst) = {
     var args = List(t1.subst(s))
@@ -113,6 +120,7 @@ case class TFun(t1: Type, t2: Type) extends Type {
 
 case class TSchema(typ : Type, lTyVar: Set[UVar]) extends Type {
   def isGround = true
+  def getTyp = typ.getTyp //TODO how to get the Type for TSchma and relate it to ListT
   def freeTVars = Set()
   def occurs(x: CVar[_]) = false
   private def occurU(t: Type): Set[UVar] = {
@@ -138,6 +146,7 @@ case class TSchema(typ : Type, lTyVar: Set[UVar]) extends Type {
 
 case class USchema(x : CVar[Type]) extends Type{
   def isGround = false
+  def getTyp = this
   def freeTVars = Set()
   def occurs(x2: CVar[_]) = x == x2
   def subst(s: CSubst) = s.hgetOrElse(x, this)
@@ -156,8 +165,29 @@ case class USchema(x : CVar[Type]) extends Type{
     }
 }
 
+case class ListT(typ: Type) extends Type {
+  def isGround = typ.isGround
+  def getTyp : Type = typ
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = typ == x
+  def subst(s: CSubst) = ListT(typ.subst(s))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS =
+    if (other.isGround)
+      other.unify(this.getTyp, cs)
+    else {
+    other match {
+      case ListT(typ2) => typ2.unify(typ, cs)
+      case UVar(_) => other.unify(this, cs)
+      case USchema(_) => other.unify(this, cs)
+      case _ => cs.never(EqConstraint(this, other))
+    }
+  }
+}
+
 case class InstS(typ : Type) extends Type {
   def isGround = false
+
+  def getTyp = typ.getTyp
 
   def freeTVars = Set()
 

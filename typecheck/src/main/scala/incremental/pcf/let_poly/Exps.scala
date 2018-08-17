@@ -1,7 +1,7 @@
 package incremental.pcf.let_poly
 
 import incremental.Node._
-import incremental.{NodeKind, SyntaxChecking}
+import incremental.{NodeKind, Node_, SyntaxChecking}
 import constraints.equality_letpoly._
 
 /**
@@ -26,8 +26,27 @@ case object Abs extends Exp(simple(Seq(classOf[Symbol]), cExp) orElse simple(Seq
 case object App extends Exp(simple(cExp, cExp))
 case object If0 extends Exp(simple(cExp, cExp, cExp))
 case object Fix extends Exp(simple(cExp))
+case object ListL extends Exp(_ => ListLSyntax)
 
+object ListLSyntax extends SyntaxChecking.SyntaxChecker(ListL) {
+  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
+    if (kids.exists(!_.kind.isInstanceOf[Exp]))
+      error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
+  }
+}
 
+case object AppendL extends Exp(simple(cExp, cExp))
+
+//  Exp(_ => AppendLSyntax)
+//
+//object AppendLSyntax extends SyntaxChecking.SyntaxChecker(AppendL) {
+//  def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]): Unit = {
+//    if (kids.size != 2 )
+//      error(s"Extedted to have two kids but got ${kids.size}")
+//    if (kids(0).kind != ListL)
+//      error(s"Expected a list for the Append but got ${kids(0).kind}")
+//  }
+//}
 abstract class Decl(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 object Decl {
   val cDecl = classOf[Decl]

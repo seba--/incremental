@@ -127,6 +127,21 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
       current
   }
 
+//  def checkCompCons  = {
+//    var cons = Seq[Constraint]()
+//    var current = this
+//    for ((t, comS) <- current.compatibleC) {
+//      if (t.isGround) {
+//        for (i <- 0 until comS.size)
+//          cons = cons :+  EqConstraint(t, comS.toSeq(i).subst(substitution))
+//        current = this.copy(current.substitution, current.notyet ++ cons, current.never, current.compatibleC)
+//      }
+//      else current
+//    }
+//    current
+//  }
+
+
   private def trySolve(finalize: Boolean): SolveContinuouslyCS = {
       var current = this
       var stepsWithoutChange = 0
