@@ -36,37 +36,42 @@ case class SolveContinuousSubstCS(substitution: CSubst, notyet: Seq[Constraint],
       val mnotyet = notyet ++ other.notyet
       val mnever = never ++ other.never
       val init = SolveContinuousSubstCS(CSubst.empty, mnotyet, mnever, this.compatibleC)
-      val mcompCS = other.compatibleC.foldLeft(init) { case (cs, (t1, sett2)) => sett2.toSeq.foldLeft(init) { case (_, t2) =>  cs.addcompatibleCons(t1,t2) } } //for (i <- 0 until sett2.toSeq.size) cs.addcompatibleCons(t1, sett2.toSeq(i)) }
-        //      var mcompatibleC = compatibleC
-//      for ((x, typ ) <- other.compatibleC) {
-//        compatibleC.get(x) match {
-//          case None => mcompatibleC += x -> typ
-//          case Some(typ2) => mcompatibleC += x -> (typ ++ typ2)
-//        }
-//      }
+      val mcompCS = other.compatibleC.foldLeft(init) { case (cs, (t1, sett2)) => sett2.toSeq.foldLeft(init) { case (_, t2) =>  cs.addcompatibleCons(t1,t2) } }
     SolveContinuousSubstCS(CSubst.empty, mnotyet, mnever, mcompCS.compatibleC)
     }
 
-  def addcompatibleCons(t1 : Type, t2 : Type) = {
-    var cons = Seq[Constraint]()
-    var current = this
-    val t1p = t1.subst(substitution)
-    compatibleC.get(t1) match {
-      case None => current = this.copy(current.substitution, current.notyet, current.never, current.compatibleC + (t1 -> Set(t2)))
-      case Some(s2) => current = this.copy(current.substitution, current.notyet, current.never, current.compatibleC + (t1 -> (s2 + t2)))
-    }
-    if (t1p.isGround) {
-      current.compatibleC.get(t1) match {
-        case None => current
-        case Some(typ) =>
-          for (i <- 0 until typ.size)
-            cons = cons :+  EqConstraint(t1p, typ.toSeq(i).subst(substitution))
-          current = this.copy(current.substitution, current.notyet ++ cons, current.never, current.compatibleC)
+    def addcompatibleCons(t1: Type, t2: Type) = {
+      var cons = Seq[Constraint]()
+      var current = this
+      val t1p = t1.subst(substitution)
+      compatibleC.get(t1) match {
+        case None => current = this.copy(current.substitution, current.notyet, current.never, current.compatibleC + (t1 -> Set(t2)))
+        case Some(s2) => current = this.copy(current.substitution, current.notyet, current.never, current.compatibleC + (t1 -> (s2 + t2)))
       }
-      current
+      if (t1p.isGround) {
+        current.compatibleC.get(t1) match {
+          case None => current
+          case Some(typ) =>
+            for (i <- 0 until typ.size)
+              cons = cons :+  EqConstraint(t1p, typ.toSeq(i).subst(substitution))
+            current = this.copy(current.substitution, current.notyet ++ cons, current.never, current.compatibleC)
+        }
+        current
+      }
+      else
+        current
     }
-    else
-      current
+
+  def checkCompatibleCons(comp: Map[Type, Set[Type]]): Seq[Constraint] = {
+    var cons = Seq[Constraint]()
+    for ((t, st) <- comp) {
+      val tp = t.subst(substitution)
+      if (tp.isGround) {
+        for (i <- 0 until st.size)
+          cons = cons :+ EqConstraint(tp, st.toSeq(i).subst(substitution))
+      }
+    }
+    cons
   }
 
   def addNewConstraint(c: Constraint) = {

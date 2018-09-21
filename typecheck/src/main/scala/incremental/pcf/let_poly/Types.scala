@@ -41,6 +41,7 @@ case object TNum extends Type {
     case USchema(x) => other.unify(this, cs)
     case InstS(typ) => typ.unify(this, cs)
     case TSchema(typ, lst) => typ.unify(this, cs)
+    case ListT(None) => cs
     case _ => cs.never(EqConstraint(this, other))
   }
 }
@@ -69,7 +70,9 @@ case object TChar extends Type {
     case TChar => cs
     case UVar(x) => other.unify(this, cs)
     case USchema(x) => other.unify(this, cs)
-    case TSchema(typ, lts) => typ.unify(this, cs)
+    case InstS(typ) => typ.unify(this, cs)
+    case TSchema(typ, lst) => typ.unify(this, cs)
+    case ListT(None) => cs
     case _ => cs.never(EqConstraint(this, other))
   }
 }
@@ -127,7 +130,12 @@ case class TSchema(typ : Type, lTyVar: Set[UVar]) extends Type {
     t match {
       case TNum => Set()
       case TChar => Set()
+      case TBool => Set()
       case UVar(x) => Set(UVar(x))
+      case ListT(typ) => typ match {
+        case None => Set()
+        case Some(t) => occurU(t)
+      }
       case TFun(t1, t2) => occurU(t1) ++ occurU(t2)
       case USchema(x) => Set()
       case TSchema(t, lt) => Set()
@@ -165,23 +173,40 @@ case class USchema(x : CVar[Type]) extends Type{
     }
 }
 
-case class ListT(typ: Type) extends Type {
-  def isGround = typ.isGround
-  def getTyp : Type = typ
-  def freeTVars = Set()
-  def occurs(x: CVar[_]) = typ == x
-  def subst(s: CSubst) = ListT(typ.subst(s))
-  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS =
-    if (other.isGround)
-      other.unify(this.getTyp, cs)
-    else {
-    other match {
-      case ListT(typ2) => typ2.unify(typ, cs)
-      case UVar(_) => other.unify(this, cs)
-      case USchema(_) => other.unify(this, cs)
-      case _ => cs.never(EqConstraint(this, other))
-    }
+
+case class ListT(typ: Option[Type]) extends Type {
+  def isGround = typ match {
+    case None => true
+    case Some(t) => t.isGround
   }
+  def getTyp : Type = typ match {
+    case None => this
+    case Some(t) => t
+  }
+  def freeTVars = Set()
+  def occurs(x: CVar[_]) = typ match {
+    case None => false
+    case Some(t) => t ==x
+  }
+
+  def subst(s: CSubst) = typ match {
+    case None => this
+    case Some(t) => ListT(Some(t.subst(s)))
+  }
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS =
+    if (this == ListT(None))
+      cs
+    else {
+      other match {
+        case ListT(typ2) => (typ, typ2) match {
+          case (Some(t1), Some(t2)) => t1.unify(t2, cs)
+          case (_, _) => cs
+        }
+        case UVar(_) => other.unify(this, cs)
+        case USchema(_) => other.unify(this, cs)
+        case _ => cs.never(EqConstraint(this, other))
+      }
+    }
 }
 
 case class InstS(typ : Type) extends Type {

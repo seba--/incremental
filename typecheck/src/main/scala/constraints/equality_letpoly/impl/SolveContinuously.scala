@@ -79,30 +79,13 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
       trySolve(true)
     }
 
-//  def tryFinalize: SolveContinuouslyCS = {
-//    Util.timed(state -> Statistics.finalizeTime) {
-//      tryFinalize(0) //trySolve(True)
+//  def addcompatibleCons(t1: Type, t2 : Type) = {
+//    var newcomp = this.compatibleC
+//    compatibleC.get(t1) match {
+//      case None => newcomp += (t1 -> Set(t2))
+//      case Some(s2) => newcomp += (t1 -> (s2 + t2))
 //    }
-//  }
-//
-//  def tryFinalize(steps: Int): SolveContinuouslyCS = {
-//    var newcons = Seq[Constraint]()
-//    for ((t1, t1Set) <- compatibleC) {
-//      if (t1.subst(substitution).isGround) {
-//        for (i <- 0 until t1Set.size)
-//          newcons = newcons :+ EqConstraint(t1.subst(substitution), t1Set.toSeq(i).subst(substitution))
-//      }
-//      else
-//        newcons
-//    }
-//    val newcs = notyet.foldLeft(copy(substitution =substitution, notyet = Seq(), never = never,  compatibleC = compatibleC))((cs, cons) => cons.solve(cs))
-//
-//    val startSize = notyet.size
-//    val endSize = newcs.notyet.size
-//    if (endSize > 0 && endSize < startSize)
-//      newcs.tryFinalize(steps + 1)
-//    else
-//      newcs
+//    this.copy(this.substitution, this.notyet, this.never, newcomp)
 //  }
 
   def addcompatibleCons(t1: Type, t2: Type) = {
@@ -127,42 +110,54 @@ case class SolveContinuouslyCS(substitution: CSubst, notyet: Seq[Constraint], ne
       current
   }
 
-//  def checkCompCons  = {
-//    var cons = Seq[Constraint]()
-//    var current = this
-//    for ((t, comS) <- current.compatibleC) {
-//      if (t.isGround) {
-//        for (i <- 0 until comS.size)
-//          cons = cons :+  EqConstraint(t, comS.toSeq(i).subst(substitution))
-//        current = this.copy(current.substitution, current.notyet ++ cons, current.never, current.compatibleC)
-//      }
-//      else current
-//    }
-//    current
-//  }
-
+  def checkCompatibleCons(comp: Map[Type, Set[Type]]): Seq[Constraint] = {
+    var cons = Seq[Constraint]()
+    for ((t, st) <- comp) {
+      val tp = t.subst(substitution)
+      if (tp.isGround) {
+        for (i <- 0 until st.size)
+          cons = cons :+ EqConstraint(tp, st.toSeq(i).subst(substitution))
+      }
+    }
+    cons
+  }
 
   private def trySolve(finalize: Boolean): SolveContinuouslyCS = {
       var current = this
       var stepsWithoutChange = 0
       while (!current.notyet.isEmpty) {
-        val next = current.notyet.head
-        val rest = current.notyet.tail
-        current = SolveContinuouslyCS(current.substitution, rest, current.never, current.compatibleC)
+        var cons = Seq[Constraint]()
+        var comp = current.compatibleC
+        for ((t, st) <- comp) {
+          val tp = t.subst(current.substitution)
+          if (tp.isGround) {
+            for (i <- 0 until st.size) {
+              cons = cons :+ EqConstraint(tp, st.toSeq(i).subst(substitution))
+              comp = comp - t
+            }
+          }
+        }
+        val newnotyet = current.notyet ++ cons
+        val next = newnotyet.head
+        val rest = newnotyet.tail
+        current = SolveContinuouslyCS(current.substitution, rest, current.never, comp)
         current =
           if (finalize)
-            next.finalize(current)
+          {
+            val cons = checkCompatibleCons(current.compatibleC)
+            next.finalize(current)}
           else
             next.solve(current)
 
         if (current.notyet.size == rest.size + 1) {
           stepsWithoutChange += 1
           if (stepsWithoutChange > rest.size + 1)
-            return current
+          return current
         }
         else
           stepsWithoutChange = 0
       }
+
       current
     }
 }

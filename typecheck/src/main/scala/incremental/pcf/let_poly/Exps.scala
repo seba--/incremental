@@ -26,16 +26,40 @@ case object Abs extends Exp(simple(Seq(classOf[Symbol]), cExp) orElse simple(Seq
 case object App extends Exp(simple(cExp, cExp))
 case object If0 extends Exp(simple(cExp, cExp, cExp))
 case object Fix extends Exp(simple(cExp))
-case object ListL extends Exp(_ => ListLSyntax)
+case object ListL extends Exp(_ => ListLSyntax) {
+  override def toString(e: Node_[_]): Option[String] = {
+    val elems = e.kids.seq
+    if (elems.isEmpty) Some(s"List()")
+    else Some(s"List(${elems.mkString(", ")})")
+  }
+}
+
+case object LetRec extends Exp(simple(Seq(classOf[Symbol]), cExp, cExp))
+case object IfElse extends Exp(simple(cExp, cExp, cExp))
+case object Match extends Exp(simple(cExp, cExp, cExp))
+case object MatchP extends Exp(simple(cExp, cExp, cExp, cExp))
+case object Error extends Exp(simple(Seq(classOf[String])))
+case object True extends Exp(simple())
+case object False extends Exp(simple())
+
+
+case object AppendE extends Exp(simple(cExp, cExp))
+case object Head extends Exp(simple(cExp))
+case object Last extends Exp(simple(cExp))
+case object Tail extends Exp(simple(cExp))
+case object Init extends Exp(simple(cExp))
+case object ++ extends Exp(simple(cExp, cExp))
+case object +: extends Exp(simple(cExp, cExp))
+case object || extends Exp(simple(cExp, cExp))
+case object && extends Exp(simple(cExp, cExp))
 
 object ListLSyntax extends SyntaxChecking.SyntaxChecker(ListL) {
   def check[T](lits: Seq[Lit], kids: Seq[Node_[T]]) {
-    if (kids.exists(!_.kind.isInstanceOf[Exp]))
+   if (kids.exists(!_.kind.isInstanceOf[Exp]))
       error(s"All kids must be of sort Exp, but found ${kids.filter(!_.kind.isInstanceOf[Exp])}")
   }
 }
 
-case object AppendL extends Exp(simple(cExp, cExp))
 
 //  Exp(_ => AppendLSyntax)
 //
