@@ -41,6 +41,7 @@ case object MatchP extends Exp(simple(cExp, cExp, cExp, cExp))
 case object Error extends Exp(simple(Seq(classOf[String])))
 case object True extends Exp(simple())
 case object False extends Exp(simple())
+case object TupleE extends Exp(simple(cExp, cExp))
 
 
 case object AppendE extends Exp(simple(cExp, cExp))

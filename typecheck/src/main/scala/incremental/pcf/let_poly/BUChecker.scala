@@ -73,11 +73,14 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     case Bool => (TBool, Map(), Seq())
     case True => (TBool, Map(), Seq())
     case False => (TBool, Map(), Seq())
-    //    case isLower =>
-    //      val (t, reqs, _) = e.kids(0).typ
-    //      val cons = EqConstraint(t, TChar)
-    //
-    //      (TBool, reqs, Seq(cons))
+
+    case TupleE =>
+      val (t1, req1, _) = e.kids(0).typ
+      val (t2, req2, _) = e.kids(1).typ
+
+      val (mcons, mreq) = mergeReqMaps(req1, req2)
+
+      (TupleL(t1, t2), mreq, mcons)
 
     case op if op == Add || op == Mul =>
       val (t1, reqs1, _) = e.kids(0).typ
@@ -379,14 +382,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
     for ((x, r2) <- newReqs)
       wasReqs.get(x) match {
         case None => mreqs += x -> r2
-        case Some(r1) =>
-          (r1, r2) match {
-            case (_, InstS(_)) => mcons = EqConstraint(r1, r2) +: mcons
-            case (InstS(_), _) => mcons = EqConstraint(r1, r2) +: mcons
-            case (InstS(_), InstS(_)) => mcons
-              mreqs += x -> r2
-            case (_ , _) => mcons = EqConstraint(r1, r2) +: mcons
-          }
+        case Some(r1) =>  mcons = EqConstraint(r1, r2) +: mcons
       }
     (mcons, mreqs)
   }

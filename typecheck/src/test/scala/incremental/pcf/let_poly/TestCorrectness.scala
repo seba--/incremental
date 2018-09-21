@@ -164,9 +164,13 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("Let head = \\ e.match e error(Empty list) \\h.\\t.h in head(List(1, 2, 3))", LetV('head, Abs('e, Match(Var('e), Error("Empty List"), Abs('h, Abs('t, Var('h))))), App(VarL('head), ListL(Num(1), Num(2)))))(TNum)
   typecheckTest("Let head = \\ e.match e error(Empty list) \\h.\\t.h in head(List())", LetV('head, Abs('e, Match(Var('e), Error("Empty List"), Abs('h, Abs('t, Var('h))))), App(VarL('head), ListL())))(UVar(CVar('a)))
 
+  typecheckTest("Let head = \\ e.match e error(Empty list) \\h.\\t.h in Tuple(head(List(1, 2, 3)), head(List['a,'b,'c]",
+    LetV('head, Abs('e, Match(Var('e), Error("Empty List"), Abs('h, Abs('t, Var('h))))), TupleE(App(VarL('head), ListL(Num(1), Num(2))), App(VarL('head), ListL(Char('a), Char('b))))))(TupleL(TNum, TChar))
+
   //uncons
 
-  typecheckTest("uncons - Let uncons = \\ e. match e List() \\h\\t. in uncons ", LetV('uncons, Abs('e, Match(Var('e), ListL(), Abs('h, Abs('t, Var('e))))), VarL('uncons)))(ListT(Some(UVar(CVar('a)))))
+  typecheckTest("uncons - Let uncons = \\ e. match e List() \\h\\t. in uncons ",
+    LetV('uncons, Abs('e, Match(Var('e), ListL(), Abs('h, Abs('t, TupleE(Var('h), Var('t)))))), VarL('uncons)))(TFun(ListT(Some(UVar(CVar('a)))), TupleL(UVar(CVar('a)), ListT(Some(UVar(CVar('a)))))))
 
   typecheckTest("Let uncons = \\ e. match e List() \\h\\t. in uncons List (1, 2, 3)", LetV('uncons, Abs('e, Match(Var('e), ListL(), Abs('h, Abs('t, Var('e))))), App(VarL('uncons), ListL(Num(1), Num(2), Num(3)))))(ListT(Some(TNum)))
 
@@ -178,12 +182,22 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("Let tail =  \\e. match e (error(Empty list tail )) (\\h. \\t. t)  in tail List(1, 2, 3)",
     LetV('tail, Abs('e, Match(Var('e), Error("Empty List tail"),  Abs('h, Abs('t, Var('t))))), App(VarL('tail), ListL(Num(1), Num(2), Num(3)))))(ListT(Some(TNum)))
 
+  typecheckTest("Let tail =  \\e. match e (error(Empty list tail )) (\\h. \\t. t)  in Tuplr(tail List(1, 2, 3), tail List(a, b, c))",
+    LetV('tail, Abs('e, Match(Var('e), Error("Empty List tail"),  Abs('h, Abs('t, Var('t))))),
+      TupleE(App(VarL('tail), ListL(Num(1), Num(2), Num(3))), App(VarL('tail), ListL(Char('a), Char('b), Char('c))))))(TupleL(ListT(Some(TNum)), ListT(Some(TChar))))
+
   //last
+
+  typecheckTest("last - LetRec last = \\e. matchP e (\\h. h) (\\h .\\t. last t) (error(Empty List last) in last",
+    LetRec('last, Abs('e, MatchP(Var('e), Abs('h, Var('h)), Abs('h, Abs('t, App(Var('last), Var('t)))), Error("Empty List last"))), VarL('last)))(TFun(ListT(Some(UVar(CVar('a)))), UVar(CVar('a))))
 
   typecheckTest("LetRec last = \\e. matchP e (\\h. h) (\\h .\\t. last t) (error(Empty List last) in last List(1, 2, 3)",
     LetRec('last, Abs('e, MatchP(Var('e), Abs('h, Var('h)), Abs('h, Abs('t, App(Var('last), Var('t)))), Error("Empty List last"))), App(VarL('last), ListL(Num(1), Num(2), Num(3)))))(TNum)
 
   //init
+  typecheckTest("init - LetRec init = \\e. matchP e (\\h. List(h)) (\\h \\t init t) (error(Empty List init) in init",
+    LetRec('init, Abs('e, MatchP(Var('e), Abs('h, ListL(Var('h))), Abs('h, Abs('t, App(Var('init), Var('t)))), Error("Empty List init"))), VarL('init)))(TFun(ListT(Some(UVar(CVar('a)))), ListT(Some(UVar(CVar('a))))))
+
   typecheckTest("LetRec init = \\e. matchP e (\\h. List(h)) (\\h \\t init t) (error(Empty List init) in init List(1, 2, 3)",
     LetRec('init, Abs('e, MatchP(Var('e), Abs('h, ListL(Var('h))), Abs('h, Abs('t, App(Var('init), Var('t)))), Error("Empty List init"))), App(VarL('init), ListL(Num(1), Num(2), Num(3)))))(ListT(Some(TNum)))
 
@@ -192,13 +206,21 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     LetV('null, Abs('e, Match(Var('e), True(), Abs('h, Abs('t, False())))), App(VarL('null), ListL(Num(1), Num(2), Num(3)))))(TBool)
 
   //length
-  typecheckTest("LetRec lenAcc = \\e. \\n.  match e  (n) (\\h\\t. App (App lenAcc t) (n + 1)) in Let length = \\e. App (App lenAcc e) 0 in List(a, b)",
+  typecheckTest("length - LetRec lenAcc = \\e. \\n.  match e  (n) (\\h\\t. App (App lenAcc t) (n + 1)) in Let length = \\e. App (App lenAcc e) 0 in length",
+    LetRec('lenAcc, Abs('e, Abs('n, Match(Var('e), Var('n), Abs('h, Abs('t, App(App(Var('lenAcc), Var('t)), Add(Var('n), Num(1)))))))),
+      LetV('length, Abs('e, App(App(VarL('lenAcc), Var('e)), Num(0))), VarL('length))))(TFun(ListT(Some(UVar(CVar('a)))), TNum))
+
+  typecheckTest("LetRec lenAcc = \\e. \\n.  match e  (n) (\\h\\t. App (App lenAcc t) (n + 1)) in Let length = \\e. App (App lenAcc e) 0 in length List(a, b)",
     LetRec('lenAcc, Abs('e, Abs('n, Match(Var('e), Var('n), Abs('h, Abs('t, App(App(Var('lenAcc), Var('t)), Add(Var('n), Num(1)))))))),
       LetV('length, Abs('e, App(App(VarL('lenAcc), Var('e)), Num(0))), App(VarL('length), ListL(Char('a), Char('b))) )))(TNum)
 
+  typecheckTest("LetRec lenAcc = \\e. \\n.  match e  (n) (\\h\\t. App (App lenAcc t) (n + 1)) in Let length = \\e. App (App lenAcc e) 0 in Add(length List(a, b), length List(1, 2, 3))",
+    LetRec('lenAcc, Abs('e, Abs('n, Match(Var('e), Var('n), Abs('h, Abs('t, App(App(Var('lenAcc), Var('t)), Add(Var('n), Num(1)))))))),
+      LetV('length, Abs('e, App(App(VarL('lenAcc), Var('e)), Num(0))), Add(App(VarL('length), ListL(Char('a), Char('b))), App(VarL('length), ListL(Num(1), Num(2), Num(3)))) )))(TNum)
+
   //map
-  typecheckTestError(" LetRec map = \\f\\l.Match l (List()) \\h\\t. f h : map f xs in map ",
-      LetRec('map, Abs('f, Abs('l, Match(Var('l), ListL(), Abs('h, Abs('t, +:(App(Var('f), Var('h)), App(App(VarL('map), Var('f)), Var('t)))))))), VarL('map)))
+  typecheckTest(" LetRec map = \\f\\l.Match l (List()) \\h\\t. f h : map f xs in map ",
+      LetRec('map, Abs('f, Abs('l, Match(Var('l), ListL(), Abs('h, Abs('t, +:(App(Var('f), Var('h)), App(App(VarL('map), Var('f)), Var('t)))))))), VarL('map)))(TFun(TFun(UVar(CVar('a)),UVar(CVar('b))),TFun(ListT(Some(UVar(CVar('a)))), ListT(Some(UVar(CVar('b)))))))
 
   typecheckTest("Let add1 = \\n. 1 + n in LetRec map = \\f\\l.Match l (List()) \\h\\t. f h : map f xs in map add1: Nm -> Num List(1, 2, 3)",
     LetV('add1, Abs('n, Add(Var('n), Num(1))),
@@ -209,10 +231,25 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       LetRec('map, Abs('f, Abs('l, Match(Var('l), ListL(), Abs('h, Abs('t, +:(App(Var('f), VarL('h)), App(App(Var('map), Var('f)), Var('t)))))))),
         App(App(VarL('map),VarL('add1)), ListL(Char('a), Char('b))))))
 
+  typecheckTest("Let add1 = \\n. 1 + n in LetRec map = \\f\\l.Match l (List()) \\h\\t. f h : map f xs in tuple(map add1: Nm -> Num List(1, 2, 3), map appA a -> [a] List(a, b, c)",
+    LetV('add1, Abs('n, Add(Var('n), Num(1))), LetV('appA, Abs('l, +:(Char('a), Var('l))),
+      LetRec('map, Abs('f, Abs('l, Match(Var('l), ListL(), Abs('h, Abs('t, +:(App(Var('f), Var('h)), App(App(VarL('map), Var('f)), Var('t)))))))),
+        TupleE(App(App(VarL('map),VarL('add1)), ListL(Num(1), Num(2), Num(3))), App(App(VarL('map),VarL('appA)), ListL(Char('a), Char('b), Char('c))))))))(TupleL(ListT(Some(TNum)), ListT(Some(TChar))))
+
   //reverse
+  typecheckTest("reverse - LetRec rev = \\l. \\e. Match l Var(e)  \\h. \\t. rev t (x : e) in Let reverse = \\l. rev l []  in reverse ",
+    LetRec('rev, Abs('l, Abs('e , Match(Var('l), Var('e), Abs('h, Abs('t, App(App(VarL('rev), Var('t)), +: (Var('h), Var('e)))))))),
+      LetV('reverse, Abs('l, App(App(VarL('rev), VarL('l)), ListL())), VarL('reverse))))(TFun(ListT(Some(UVar(CVar('a)))), ListT(Some(UVar(CVar('a))))))
+
   typecheckTest("LetRec rev = \\l. \\e. Match l Var(e)  \\h. \\t. rev t (x : e) in Let reverse = \\l. rev l []  in reverse List[1, 2, 3]",
     LetRec('rev, Abs('l, Abs('e , Match(Var('l), Var('e), Abs('h, Abs('t, App(App(VarL('rev), Var('t)), +: (Var('h), Var('e)))))))),
       LetV('reverse, Abs('l, App(App(VarL('rev), VarL('l)), ListL())), App(VarL('reverse), ListL(Num(1), Num(2), Num(3))))))(ListT(Some(TNum)))
+
+  typecheckTest("LetRec rev = \\l. \\e. Match l Var(e)  \\h. \\t. rev t (x : e) in Let reverse = \\l. rev l []  in Tuple(reverse List[1, 2, 3], reverse List['a, 'b, 'c]",
+    LetRec('rev, Abs('l, Abs('e , Match(Var('l), Var('e), Abs('h, Abs('t, App(App(VarL('rev), Var('t)), +: (Var('h), Var('e)))))))),
+      LetV('reverse, Abs('l, App(App(VarL('rev), VarL('l)), ListL())),
+        TupleE(App(VarL('reverse), ListL(Num(1), Num(2), Num(3))), App(VarL('reverse), ListL(Char('a), Char('b), Char('c)))))))(TupleL(ListT(Some(TNum)), ListT(Some(TChar))))
+
 
   //and
   typecheckTest("LetRec and = \\l. Match l True \\h. \\t. h && and t in List(true, false, true",

@@ -45,6 +45,7 @@ case class GenConstraint(ts : Type, t : Type, req1: Map[Symbol, Type], req2: Map
         case None => Set()
         case Some(t) => occurU(t)
       }
+      case TupleL(t1, t2) => occurU(t1) ++ occurU(t2)
       case TFun(t1, t2) => occurU(t1) ++ occurU(t2)
       case USchema(x) => Set()
       case TSchema(t, lt) => Set()
@@ -139,6 +140,23 @@ case class InstConstraint(t1 : Type, t2 : Type) extends Constraint {
                 val typ1 = inst(t1, lts, cs)
                 (typ1._1, typ2._1, typ1._2 ++ typ2._2)
             }
+          }
+        case (ListT(t1s), TupleL(t3, t4)) =>
+          t1s match {
+            case None =>
+              val typ2 = inst(t2, lts, cs)
+              (t1, typ2._1, typ2._2)
+            case Some(t1p) =>
+              val typ1 = inst(t1, lts, cs)
+              val (t3p, b3, cons1) = equalTypesFun(t1p, t3, typ1._1, lts, cs)
+              val (t4p, b4, cons2) = equalTypesFun(t1p, t4, typ1._1, lts, cs)
+              if (b3 || b4) {
+                (ListT(Some(typ1._1)), TupleL(t3p, t4p), typ1._2 ++ cons1 ++ cons2)
+              }
+              else {
+                val (t3s, t4s, cons1) = equalTypes(t3, t4, lts, cs)
+                (typ1._1, TupleL(t3s, t4s), typ1._2 ++ cons1)
+              }
           }
         case (ListT(t1s), t2) =>
           t1s match {

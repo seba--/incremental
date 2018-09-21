@@ -39,7 +39,6 @@ case object TNum extends Type {
     case TNum => cs
     case UVar(x) => other.unify(this, cs)
     case USchema(x) => other.unify(this, cs)
-    case InstS(typ) => typ.unify(this, cs)
     case TSchema(typ, lst) => typ.unify(this, cs)
     case ListT(None) => cs
     case _ => cs.never(EqConstraint(this, other))
@@ -70,7 +69,6 @@ case object TChar extends Type {
     case TChar => cs
     case UVar(x) => other.unify(this, cs)
     case USchema(x) => other.unify(this, cs)
-    case InstS(typ) => typ.unify(this, cs)
     case TSchema(typ, lst) => typ.unify(this, cs)
     case ListT(None) => cs
     case _ => cs.never(EqConstraint(this, other))
@@ -86,7 +84,6 @@ case object TBool extends Type {
     case TBool => cs
     case UVar(x) => other.unify(this, cs)
     case USchema(x) => other.unify(this, cs)
-    case InstS(typ) => typ.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
@@ -136,6 +133,7 @@ case class TSchema(typ : Type, lTyVar: Set[UVar]) extends Type {
         case None => Set()
         case Some(t) => occurU(t)
       }
+      case TupleL(t1, t2) => occurU(t1) ++ occurU(t2)
       case TFun(t1, t2) => occurU(t1) ++ occurU(t2)
       case USchema(x) => Set()
       case TSchema(t, lt) => Set()
@@ -209,64 +207,18 @@ case class ListT(typ: Option[Type]) extends Type {
     }
 }
 
-case class InstS(typ : Type) extends Type {
-  def isGround = false
-
-  def getTyp = typ.getTyp
-
-  def freeTVars = Set()
-
-  def occurs(x2: CVar[_]) = x2 == typ
-
-  def instanti(typ: Type): Type = {
-    if (typ.isGround) typ
-    else {
-      typ match {
-        case UVar(x) => UVar(x)
-        case TFun(t1, t2) => TFun(instanti(t1), instanti(t2))
-        case _ => InstS(typ)
-      }
-    }
-  }
-
-  def subst(s: CSubst) = instanti(typ.subst(s))
-
-  //    if (typ.subst(s).isGround) typ.subst(s)
-  //    else if (typ.subst(s).isInstanceOf[UVar]) typ.subst(s)
-  //    else if (typ.subst(s).isInstanceOf[TFun])
-  //    else InstS(typ.subst(s))
-
-
-  def instVar[CS <: ConstraintSystem[CS]](t: UVar, lts: Set[UVar], cs: CS): Type = {
-    if (lts.isEmpty) t
-    else {
-      if (lts.contains(t))
-        UVar(cs.gen.freshSymbol("x$"))
-      else t
-    }
-  }
-
-  def inst[CS <: ConstraintSystem[CS]](t: Type, lts: Set[UVar], cs: CS): Type = {
-    t match {
-      case UVar(x) => instVar(UVar(x), lts, cs)
-      case TFun(t1, t2) => TFun(inst(t1, lts, cs), inst(t2, lts, cs))
-      case _ => t
-    }
-  }
-
-  def instFresh[CS <: ConstraintSystem[CS]](typ: Type, cs: CS): Type = {
-    typ match {
-      case USchema(x) => InstS(USchema(x))
-      case UVar(x) => UVar(x)
-      case TSchema(t, lts) => inst(t, lts, cs)
-      case _ => typ
-    }
-  }
-
+case class TupleL(t1 : Type, t2: Type) extends Type {
+  def isGround = t1.isGround && t2.isGround
+  def getTyp = this
+  def occurs(x: CVar[_]) = t1 == x || t2 == x
+  def subst(s: CSubst) = TupleL(t1.subst(s), t2.subst(s))
   def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
-    case UVar(x) => other.unify(instFresh(this, cs), cs)
-    case TNum => other.unify(this, cs)
-    //case InstS(t2) => instFresh(other, cs).unify((instFresh(this, cs)), cs)
+    case TupleL(t1p, t2p) =>
+      t1.unify(t1p, cs)
+      t2.unify(t2p, cs)
+    case UVar(x) => other.unify(this, cs)
+    case USchema(x) => other.unify(this, cs)
+    case TSchema(typ, lts) => typ.unify(this, cs)
     case _ => cs.never(EqConstraint(this, other))
   }
 }
