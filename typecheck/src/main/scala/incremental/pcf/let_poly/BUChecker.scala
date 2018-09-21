@@ -82,6 +82,11 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
       (TupleL(t1, t2), mreq, mcons)
 
+    case IsLower =>
+      val (t1, req1, _) = e.kids(0).typ
+
+      (TBool, req1, Seq(EqConstraint(t1, TChar)))
+
     case op if op == Add || op == Mul =>
       val (t1, reqs1, _) = e.kids(0).typ
       val (t2, reqs2, _) = e.kids(1).typ

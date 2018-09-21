@@ -231,10 +231,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       LetRec('map, Abs('f, Abs('l, Match(Var('l), ListL(), Abs('h, Abs('t, +:(App(Var('f), VarL('h)), App(App(Var('map), Var('f)), Var('t)))))))),
         App(App(VarL('map),VarL('add1)), ListL(Char('a), Char('b))))))
 
-  typecheckTest("Let add1 = \\n. 1 + n in LetRec map = \\f\\l.Match l (List()) \\h\\t. f h : map f xs in tuple(map add1: Nm -> Num List(1, 2, 3), map appA a -> [a] List(a, b, c)",
-    LetV('add1, Abs('n, Add(Var('n), Num(1))), LetV('appA, Abs('l, +:(Char('a), Var('l))),
+  typecheckTest("Let add1 = \\n. 1 + n in LetRec map = \\f\\l.Match l (List()) \\h\\t. f h : map f xs in tuple(map add1: Nm -> Num List(1, 2, 3), map appA a -> bool List(a, b, c)",
+    LetV('add1, Abs('n, Add(Var('n), Num(1))), LetV('isLow, Abs('e, IsLower(Var('e))),
       LetRec('map, Abs('f, Abs('l, Match(Var('l), ListL(), Abs('h, Abs('t, +:(App(Var('f), Var('h)), App(App(VarL('map), Var('f)), Var('t)))))))),
-        TupleE(App(App(VarL('map),VarL('add1)), ListL(Num(1), Num(2), Num(3))), App(App(VarL('map),VarL('appA)), ListL(Char('a), Char('b), Char('c))))))))(TupleL(ListT(Some(TNum)), ListT(Some(TChar))))
+        TupleE(App(App(VarL('map),VarL('add1)), ListL(Num(1), Num(2), Num(3))), App(App(VarL('map),VarL('isLow)), ListL(Char('a), Char('b), Char('c))))))))(TupleL(ListT(Some(TNum)), ListT(Some(TBool))))
 
   //reverse
   typecheckTest("reverse - LetRec rev = \\l. \\e. Match l Var(e)  \\h. \\t. rev t (x : e) in Let reverse = \\l. rev l []  in reverse ",
