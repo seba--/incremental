@@ -7,7 +7,7 @@ import constraints.equality._
 
 
 /**
- * Created by seba on 13/11/14.
+ * Created by lira on 22/01/2019.
  */
 
 trait PolType extends constraints.equality.Type {

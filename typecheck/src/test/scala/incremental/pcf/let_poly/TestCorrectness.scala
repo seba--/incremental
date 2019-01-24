@@ -157,6 +157,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     LetRec('++, Abs('l1, Abs('l2, Match(Var('l1), Var('l2), Abs('h, Abs('t, +:(Var('h), App(App(VarL('++), Var('t)), VarL('l2)))))))),
       App(App(VarL('++), ListL(Num(1), Num(2))), ListL(Char('a), Char('b)) )))
 
+  typecheckTest("LetRec ++ = \\l1\\l2. Match l1 (l2) \\h\\t. h +: App(App(++, t), l2) in tuple(App(App(++, List(1,2)), List(3,4)), App(App(++, List(a, b)), List(c, d)))",
+    LetRec('++, Abs('l1, Abs('l2, Match(Var('l1), Var('l2), Abs('h, Abs('t, +:(Var('h), App(App(VarL('++), Var('t)), VarL('l2)))))))),
+      TupleE(App(App(VarL('++), ListL(Num(1), Num(2))), ListL(Num(3), Num(4))), App(App(VarL('++), ListL(Char('a), Char('b))), ListL(Char('c), Char('d))))))(TupleL(ListT(Some(TNum)), ListT(Some(TChar))))
+
  //Head
 
   typecheckTest("head - Let head = \\ e.match e error(Empty list) \\h.\\t.h in head", LetV('head, Abs('e, Match(Var('e), Error("Empty List"), Abs('h, Abs('t, Var('h))))), VarL('head)))(TFun(ListT(Some(UVar(CVar('a)))), UVar(CVar('a))))
@@ -172,9 +176,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
   typecheckTest("uncons - Let uncons = \\ e. match e List() \\h\\t. in uncons ",
     LetV('uncons, Abs('e, Match(Var('e), ListL(), Abs('h, Abs('t, TupleE(Var('h), Var('t)))))), VarL('uncons)))(TFun(ListT(Some(UVar(CVar('a)))), TupleL(UVar(CVar('a)), ListT(Some(UVar(CVar('a)))))))
 
-  typecheckTest("Let uncons = \\ e. match e List() \\h\\t. in uncons List (1, 2, 3)", LetV('uncons, Abs('e, Match(Var('e), ListL(), Abs('h, Abs('t, Var('e))))), App(VarL('uncons), ListL(Num(1), Num(2), Num(3)))))(ListT(Some(TNum)))
+  typecheckTest("Let uncons = \\ e. match e List() \\h\\t. in uncons List (1, 2, 3)",
+    LetV('uncons, Abs('e, Match(Var('e), ListL(), Abs('h, Abs('t, TupleE(Var('h), Var('t)))))), App(VarL('uncons), ListL(Num(1), Num(2), Num(3)))))(TupleL(TNum, ListT(Some(TNum))))
 
-  //tail
+    //tail
 
   typecheckTest("Tail - Let tail =  \\e. match e (error(Empty list tail )) (\\h. \\t. t)  in tail",
     LetV('tail, Abs('e, Match(Var('e), Error("Empty List tail"),  Abs('h, Abs('t, Var('t))))), VarL('tail)))(TFun(ListT(Some(UVar(CVar('a)))), ListT(Some(UVar(CVar('a))))))
