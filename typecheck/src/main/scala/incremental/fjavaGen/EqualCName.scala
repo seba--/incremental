@@ -27,7 +27,7 @@ case class EqualCName(creq1 : FieldCReq, creq2: FieldCReq) extends Constraint {
    else cs.notyet(EqualCName(creq1, creq2))
   }
 
-  def finalize[CS <: ConstraintSystem[CS]](cs: CS) = solve(cs)
+  def finalize[CS <: ConstraintSystem[CS]](cs: CS) =  solve(cs)
 
   def subst(s: CSubst) = {
     (creq1.subst(s), creq2.subst(s)) match {

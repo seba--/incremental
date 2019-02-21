@@ -9,10 +9,10 @@ import incremental.Util
 import scala.collection.generic.CanBuildFrom
 
 object SolveEnd extends ConstraintSystemFactory[SolveEndCS] with Serializable {
-  def freshConstraintSystem = SolveEndCS(Seq(), Seq(), Map())
+  def freshConstraintSystem = SolveEndCS(Seq(), Seq(), Map(), Map())
 }
 
-case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType]) extends ConstraintSystem[SolveEndCS] {
+case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType], tvarBound: Map[Type,Type]) extends ConstraintSystem[SolveEndCS] {
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
   def state = SolveEnd.state.value
@@ -20,34 +20,34 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
   def substitution = CSubst.empty
 
   def solved(s: CSubst) = throw new UnsupportedOperationException(s"SolveEnd cannot handle substitution $s")
-  def notyet(c: Constraint) = SolveEndCS(c +: notyet, never, extend)
-  def never(c: Constraint) = SolveEndCS(notyet, c +: never, extend)
+  def notyet(c: Constraint) = SolveEndCS(c +: notyet, never, extend, tvarBound)
+  def never(c: Constraint) = SolveEndCS(notyet, c +: never, extend, tvarBound)
 
   def mergeSubsystem(that: SolveEndCS) =
     Util.timed(state -> Statistics.mergeSolutionTime) {
       val mnotyet = notyet ++ that.notyet
       val mnever = never ++ that.never
-      val init = SolveEndCS(mnotyet, mnever, this.extend)
+      val init = SolveEndCS(mnotyet, mnever, this.extend, this.tvarBound)
       that.extend.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
     }
 
   def addNewConstraint(c: Constraint) = {
     state += Statistics.constraintCount -> 1
     Util.timed(state -> Statistics.constraintSolveTime) {
-      SolveEndCS(c +: notyet, never, extend)
+      SolveEndCS(c +: notyet, never, extend, tvarBound)
     }
   }
 
   def addNewConstraints(cons: Iterable[Constraint]) = {
     state += Statistics.constraintCount -> cons.size
     Util.timed(state -> Statistics.constraintSolveTime) {
-      SolveEndCS(notyet ++ cons, never, extend)
+      SolveEndCS(notyet ++ cons, never, extend, tvarBound)
     }
   }
 
   override def tryFinalize =
     SolveContinuousSubstLateMerge.state.withValue(state) {
-      val cs = notyet.foldLeft(SolveContinuousSubstCSLateMerge(Map(), Map(), Seq(), never, extend))((cs, c) => c.solve(cs)).trySolve
+      val cs = notyet.foldLeft(SolveContinuousSubstCSLateMerge(Map(), Map(), Seq(), never, extend, tvarBound))((cs, c) => c.solve(cs)).trySolve
       cs.tryFinalize
     }
 
@@ -72,7 +72,21 @@ case class SolveEndCS(notyet: Seq[Constraint], never: Seq[Constraint], extend: M
   }
 
   private def extendMap(t1: GroundType, t2: GroundType) =
-    SolveEndCS(notyet, never, extend + (t1 -> t2))
+    SolveEndCS(notyet, never, extend + (t1 -> t2), tvarBound)
+
+  def tvarBoundAdd(t1s :Seq[Type], t2s:Seq[Type]) = {
+    var csnew = this
+    if (t1s.isEmpty)
+      csnew
+    else {
+      for (i <- 0 until t1s.length)
+        csnew = csnew.extendTvarBound(t1s(i), t2s(i))
+    }
+    csnew
+  }
+
+  def extendTvarBound(t1: Type, t2 : Type) =
+    SolveEndCS(notyet, never, extend, tvarBound + (t1 -> t2))
 
   def isSubtype(t1 : Type, t2 : Type): Boolean =
     if (t2 == CName('Object, Seq()))

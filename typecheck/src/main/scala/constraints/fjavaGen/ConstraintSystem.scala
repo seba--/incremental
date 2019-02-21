@@ -12,6 +12,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
 
   def addUpperBound(t1: Type, t2: Type): CS
   def extendz(t1: GroundType, t2: GroundType): CS
+  def tvarBoundAdd(t1 : Seq[Type], t2: Seq[Type]): CS
   def solved(s: CSubst): CS
  // def solvedFJ( s: CSubst, ext : ExtendD) : CS
   def notyet(c: Constraint): CS

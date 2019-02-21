@@ -93,7 +93,7 @@ case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Conditio
       val n2 = n.subst(s)
       if (cls == n2)
         return None
-      else if (cls.isGround && n2.isGround) // && cls != n2 (implicit)
+      else if (cls.isGround && n2.isGround && cls == n2 )//(implicit)
         None
       else
         Some(n2)
@@ -102,7 +102,7 @@ case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Conditio
       val n2 = n.subst(s)
       if (cls == n2)
         None
-      else if (cls.isGround && n2.isGround) // && cls != n2 (implicit)
+      else if (cls.isGround && n2.isGround && cls == n2 )//(implicit)
         return None
       else
         Some(n2)
@@ -117,16 +117,33 @@ case class Condition(not: Set[Type], same: Set[Type], others: Map[Type, Conditio
     Some(Condition(newnot, newsame, newothers))
   }
 
-  def alsoNot(cls: Type, n: Type): Option[Condition] =
-    if (cls == n || same.contains(n))
-      None
-    else
-      Some(Condition(not + n, same, others))
+  def alsoNot(cls: Type, n: Type): Option[Condition] = {
+    if (cls.isInstanceOf[CName] && n.isInstanceOf[CName]){
+      if (cls.asInstanceOf[CName].x == n.asInstanceOf[CName].x || same.contains(n))
+        None
+      else
+        Some(Condition(not + n, same, others))
+    }
+    else {
+      if (cls == n || same.contains(n))
+        None
+      else
+        Some(Condition(not + n, same, others))
+    }
+  }
   def alsoSame(cls: Type, n: Type): Option[Condition] =
-    if (cls.isGround && n.isGround && cls != n || not.contains(n))
-      None
-    else
-      Some(Condition(not, same + n, others))
+    if (cls.isInstanceOf[CName] && n.isInstanceOf[CName]) {
+      if ( cls.asInstanceOf[CName].x != n.asInstanceOf[CName].x || not.contains(n))
+        None
+      else
+        Some(Condition(not, same + n, others))
+    }
+    else {
+      if (cls.isGround && n.isGround && cls != n || not.contains(n))
+        None
+      else
+        Some(Condition(not, same + n, others))
+    }
   def alsoCond(cls: Type, other: Condition): Option[Condition] =
     if (other.not.contains(cls) || other.not.exists(same.contains(_)) || not.exists(other.same.contains(_)))
       None

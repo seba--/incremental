@@ -10,10 +10,10 @@ import incremental.fjavaGen.earlymerge.{Condition, ConditionOther, Conditional}
 import scala.collection.generic.CanBuildFrom
 
 object SolveContinuousSubstEarlyMerge extends ConstraintSystemFactory[SolveContinuousSubstCSEarlyMerge] with Serializable {
-  def freshConstraintSystem = SolveContinuousSubstCSEarlyMerge(Map(), Map(), Map(), Seq(), Map())
+  def freshConstraintSystem = SolveContinuousSubstCSEarlyMerge(Map(), Map(), Map(), Seq(), Map(), Map())
 }
 
-case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Map[ConditionOther, Seq[Constraint]], never: Seq[Constraint], extend: Map[GroundType, GroundType]) extends ConstraintSystem[SolveContinuousSubstCSEarlyMerge] {
+case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Map[ConditionOther, Seq[Constraint]], never: Seq[Constraint], extend: Map[GroundType, GroundType], tvarBound: Map[Type, Type]) extends ConstraintSystem[SolveContinuousSubstCSEarlyMerge] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
@@ -49,15 +49,15 @@ case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Ty
       else
         c_.cond.asInstanceOf[ConditionOther]
     val newNotyet = extendNotyet(condOther, c_.cons, _notyet)
-    SolveContinuousSubstCSEarlyMerge(substitution, bounds, newNotyet, never, extend)
+    SolveContinuousSubstCSEarlyMerge(substitution, bounds, newNotyet, never, extend, tvarBound)
   }
-  def never(c: Constraint) = SolveContinuousSubstCSEarlyMerge(substitution, bounds, _notyet, c +: never, extend)
+  def never(c: Constraint) = SolveContinuousSubstCSEarlyMerge(substitution, bounds, _notyet, c +: never, extend, tvarBound)
 
   def mergeSubsystem(that: SolveContinuousSubstCSEarlyMerge) = {
     var msubst = substitution ++ that.substitution
     var mnotyet = _notyet ++ that._notyet
     var mnever = never ++ that.never
-    val init = SolveContinuousSubstCSEarlyMerge(msubst, this.bounds, mnotyet, mnever, this.extend)
+    val init = SolveContinuousSubstCSEarlyMerge(msubst, this.bounds, mnotyet, mnever, this.extend, this.tvarBound)
     val extendedCS = that.extend.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
     that.bounds.foldLeft(extendedCS) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2)}
@@ -135,7 +135,21 @@ case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Ty
   }
 
   private def extendMap(t1: GroundType, t2: GroundType) =
-    SolveContinuousSubstCSEarlyMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend + (t1 -> t2))
+    SolveContinuousSubstCSEarlyMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend + (t1 -> t2), this.tvarBound)
+
+  def tvarBoundAdd(t1s :Seq[Type], t2s:Seq[Type]) = {
+    var csnew = this
+    if (t1s.isEmpty)
+      csnew
+    else {
+      for (i <- 0 until t1s.length)
+        csnew = csnew.extendTvarBound(t1s(i), t2s(i))
+    }
+    csnew
+  }
+
+  def extendTvarBound(t1: Type, t2 : Type) =
+    SolveContinuousSubstCSEarlyMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, this.tvarBound + (t1 -> t2))
 
   def isSubtype(t1 : Type, t2 : Type): Boolean =
     if (t1 == t2)
@@ -169,7 +183,7 @@ case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Ty
 
   private def extendBound(t1: Type, t2: Type) = {
     val t1bnds = bounds.getOrElse(t1, Set[Type]())
-    SolveContinuousSubstCSEarlyMerge(this.substitution, bounds + (t1 -> (t1bnds + t2)), this._notyet, this.never, this.extend)
+    SolveContinuousSubstCSEarlyMerge(this.substitution, bounds + (t1 -> (t1bnds + t2)), this._notyet, this.never, this.extend, this.tvarBound)
   }
 
   def shouldApplySubst: Boolean = true
@@ -214,7 +228,7 @@ case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Ty
       }
     }
 
-    val cs = SolveContinuousSubstCSEarlyMerge(Map(), newBounds, newNotyet, newNever, extend)
+    val cs = SolveContinuousSubstCSEarlyMerge(Map(), newBounds, newNotyet, newNever, extend, tvarBound)
     if (now.isEmpty)
       cs
     else
@@ -232,7 +246,7 @@ case class SolveContinuousSubstCSEarlyMerge(substitution: CSubst, bounds: Map[Ty
         case Some(t1) => newcons = t1.compatibleWith(t2) +: newcons
       }
     }
-    SolveContinuousSubstCSEarlyMerge(mysubst, bounds, this._notyet, this.never, this.extend).addNewConstraints(newcons)
+    SolveContinuousSubstCSEarlyMerge(mysubst, bounds, this._notyet, this.never, this.extend, this.tvarBound).addNewConstraints(newcons)
   }
 
 }

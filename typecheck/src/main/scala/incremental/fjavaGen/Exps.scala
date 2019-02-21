@@ -7,7 +7,6 @@ import incremental.{Node_, SyntaxChecking}
 
 import scala.collection.immutable.ListMap
 
-
 abstract class Toplevel(syntaxcheck: SyntaxChecking.SyntaxCheck) extends NodeKind(syntaxcheck)
 
 case object ProgramM extends NodeKind(_ => ProgramSyntax) {
@@ -19,19 +18,20 @@ case object ProgramM extends NodeKind(_ => ProgramSyntax) {
 case object ClassDec extends Toplevel(_ => ClassSyntax) {
   override def toString(e: Node_[_]): Option[String] = {
     val name = e.lits(0)
-    val sup = e.lits(1)
+    val bounds = e.lits(1)
+    val sup = e.lits(2)
 
     val indent = "  "
-    val ctor = e.lits(2).toString
-    val fields = e.lits(3).asInstanceOf[Seq[(Symbol, CName)]].map { case (field, typ) => s"val ${field.name}: $typ" }
+    val ctor = e.lits(3).toString
+    val fields = e.lits(4).asInstanceOf[Seq[(Symbol, Type)]].map { case (field, typ) => s"val ${field.name}: $typ" }
     val methods: Seq[Node_[_]] = e.kids.seq
 
-    Some(s"class $name extends $sup {\n$indent$ctor\n${fields.mkString(indent, "\n"+indent, "\n")}\n${methods.mkString(indent, "\n"+indent, "\n")}\n}")
+    Some(s"class $name <: $bounds extends $sup {\n$indent$ctor\n${fields.mkString(indent, "\n"+indent, "\n")}\n${methods.mkString(indent, "\n"+indent, "\n")}\n}")
   }
 }
 
-case class Ctor(superParams: ListMap[Symbol, CName], fields: ListMap[Symbol, CName]) {
-  val allArgTypes: Seq[CName] = superParams.values.toList ++ fields.values
+case class Ctor(superParams: ListMap[Symbol, Type], fields: ListMap[Symbol, Type]) {
+  val allArgTypes: Seq[Type] = superParams.values.toList ++ fields.values
 
   override def toString: String = {
     val sparams = superParams.map { case (param, typ) => s"${param.name}: $typ" }.mkString(", ")
@@ -60,6 +60,9 @@ object Exp {
   val cExp = classOf[Exp]
 }
 import Exp._
+
+case object Num extends Exp(simple(Seq(classOf[Integer])))
+case object Add extends Exp(simple(cExp, cExp))
 
 case object Var extends Exp(simple(Seq(classOf[Symbol]))) {
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.lits(0).asInstanceOf[Symbol].name}")
@@ -111,7 +114,7 @@ object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
     if (!(lits(0).isInstanceOf[CName]))
       error(s"Expected Class type CName, but got ${lits(0)}")
 
-    if (!(lits(1).isInstanceOf[CName]))
+    if (!(lits(2).isInstanceOf[CName]))
       error(s"Expected Super type CName, but got ${lits(1)}")
 
     //if ((lits.size > 3) && !(lits(2) == CtorDec))
@@ -119,7 +122,7 @@ object ClassSyntax extends SyntaxChecking.SyntaxChecker(ClassDec) {
      // error(s"Expected Ctor spec, but got ${lits(2)}")
     //TODO syntax check Ctor
 
-    for (i <- 3 until lits.size - 3 by 2) {
+    for (i <- 4 until lits.size - 4 by 2) {
       val name = lits(i)
       if (i + 1 >= lits.size)
         error(s"Field $name misses annotated type")
@@ -159,7 +162,7 @@ object MethodSyntax extends SyntaxChecking.SyntaxChecker(MethodDec) {
     if (lits.size != 3)
       error(s"Wrong number of arguments. Expected Method(return, name, params), but got $lits")
 
-    if (!(lits(0).isInstanceOf[CName]))
+    if (!(lits(0).isInstanceOf[Type]))
       error(s"Expected return type CName, but got ${lits(3)}")
 //      error(s"Expected method owner CName, but got ${lits(0)}")
 

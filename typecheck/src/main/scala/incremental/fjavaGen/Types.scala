@@ -72,6 +72,16 @@ case class UCName(x: CVar[Type]) extends GenType {
   override val hashCode: Int = x.x.hashCode()
 }
 
+case object TNum extends GroundType {
+  def freeTVars = Set()
+  def normalize = this
+  def occurs(x2: CVar[_]) = false
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = ???
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = if (other == this) cs else cs.never(Equal(this, other))
+  def uvars = Set()
+}
+
+
 case class CName(x: Symbol, params: Seq[Type]) extends GroundType {
 //  def isGround = {
 //    var flg = true

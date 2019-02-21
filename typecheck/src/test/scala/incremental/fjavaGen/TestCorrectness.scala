@@ -16,14 +16,10 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  val nats = new Nats
-  val strings = new Strings
-  import nats._
-  import strings._
 
   def typecheckTestFJ(desc: String, e: => Node)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
-      val ev = if (e.kind != ProgramM) e else ProgramM(Seq(), e.kids.seq ++ nats.all :+ strings.string)
+      val ev = if (e.kind != ProgramM) e else ProgramM(Seq(), e.kids.seq)
       val actual = checker.typecheck(ev)
 
 //      val typ = ev.withType[checker.Result].typ._1
@@ -43,99 +39,105 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
       assert(actual.isRight, s"Expected type error but got $actual")
     }
 
-  typecheckTestError("e0.f : C ", FieldAcc('f, Var('e0))) //(UCName(CVar('C)))
-  typecheckTestError("new C(x):C", New(Seq(CName('c, Seq())), Seq(Var('x)))) //(CName('c))
-  typecheckTestError("e0.m() : void", Invk(Seq('m), Seq(Var('e0)))) //(UCName(CVar('void)))
-  typecheckTestError("e0.m(e) : Double", Invk(Seq('m), Seq(Var('e0), Var('e))))//(UCName(CVar('Double)))
-  typecheckTestError("Point.add(p1, p2) : Point", Invk(Seq('add), Seq(Var('Point), Var('p1), Var('p2)))) //(UCName(CVar('Point)))
-  typecheckTestError("(C) e0 :C", UCast(CName('c, Seq()), Var('e)))
+//  typecheckTestError("e0.f : C ", FieldAcc('f, Var('e0))) //(UCName(CVar('C)))
+//  typecheckTestError("new C(x):C", New(Seq(CName('c, Seq())), Seq(Var('x)))) //(CName('c))
+//  typecheckTestError("e0.m() : void", Invk(Seq('m), Seq(Var('e0)))) //(UCName(CVar('void)))
+//  typecheckTestError("e0.m(e) : Double", Invk(Seq('m), Seq(Var('e0), Var('e))))//(UCName(CVar('Double)))
+//  typecheckTestError("Point.add(p1, p2) : Point", Invk(Seq('add), Seq(Var('Point), Var('p1), Var('p2)))) //(UCName(CVar('Point)))
+//  typecheckTestError("(C) e0 :C", UCast(CName('c, Seq()), Var('e)))
+//
+//  typecheckTestError("new Pair(first) : Pair", New(CName('Pair, Seq()), Var('first)))
+//  typecheckTestError("new Pair(snd): Pair", New(CName('Pair, Seq()), Var('object)))
+//  typecheckTestError("new Pair(first).setfst(first) : U ", Invk(Seq('setfst), Seq(New(Seq(CName('Pair, Seq())), Seq(Var('first))), Var('first))))//(CName('int))
+//  typecheckTestError("(Object)first : Object", UCast(CName('Object, Seq()), Var('first)))
+//  typecheckTestError("(Pair) first : Pair", New(CName('Pair, Seq()), Var('first)))
+//  typecheckTestError("(Pair) first : Pair, second : Pair", New(CName('Pair, Seq()), Var('first), Var('second)))
+//  typecheckTestFJ("new Object()", New(CName('Object, Seq())))(CName('Object, Seq())) //created object class with empty fields and methods, Object is the encoded Bottom Type
+//  typecheckTestError("new Pair(fst : First, snd : Second)", New(Seq(CName('Pair, Seq())), Seq(Var('First), Var('Second))))//(CName('Pair)) // see again why eq constraint does not work
+//
+//  typecheckTestError(" (new Pair(first)).first : Int", FieldAcc('f, New(CName('Pair, Seq()), Var('f)))) //(UCName(CVar('Int)))
+//
+//
+//  typecheckTestError("'void m(x, y) ", MethodDec(Seq(CName('void, Seq()), 'm, Seq(('x, CName('Tx, Seq())), ('y, CName('Ty, Seq())))),
+//    Seq(New(CName('Object, Seq())))))//(CName('Object))
+//  typecheckTestError("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void, Seq()), 'm, Seq(('c, CName('Tc, Seq())))),
+//    Seq(Invk(Seq('m), Seq(Var('e0), Var('c)))))) // recoursive call, so it is correct
+//  typecheckTestError("void m() {New Pair first}", MethodDec(Seq(CName('void, Seq()), 'm, Seq()), Seq(Invk(Seq('setfst),
+//    Seq(New(CName('Pair, Seq()), Var('first)), Var('first))))))//(CName('Pair))
+//  typecheckTestError("Pair first second", MethodDec(Seq(CName('Double, Seq()), 'getSum, Seq()), Seq(Invk(Seq('add),
+//    Seq(Var('Point), Var('fst), Var('snd))))))//(CName('Double))
+//
+//  //typecheckTestFJ("Tnum add(first, second) {first + seconds}", MethodDec(Seq(CName('Nat), 'getSum, Seq(('fst, UCName(CVar('fst))), ('snd, UCName(CVar('snd))))), Seq(Invk(Seq('add), Seq(Var('Point), Var('fst), Var('snd))))))(CName('Point))
+//
+//  typecheckTestError("String add(first, second) {first + seconds}", MethodDec(Seq(CName('String, Seq()), 'getSum, Seq(('fst, CName('Nat, Seq())), ('snd, CName('Nat, Seq())))),
+//    Seq(Add(Num(1), Num(2)))))//(CName('Nat))
+//
+//
+//  typecheckTestError("(New Pair(fst, snd)).setFirst(fst)", Invk(Seq('setFrist), Seq(New(Seq(CName('Pair, Seq())), Seq(Var('frt), Var('snd))), Var('frt))))//(TNum)
+//
+//  val Fst =  ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()), Ctor(ListMap(), ListMap('Pair -> CName('Int, Seq()))), Seq(('First, CName('Int, Seq())))), Seq())
+//  typecheckTestFJ(" Pair Int First ",ProgramM(Fst))(ProgramOK)
+//
+//  val GetX = ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()), Ctor(ListMap(), ListMap('First -> CName('Int, Seq()))), Seq(('First, CName('Int, Seq())))),
+//    Seq(MethodDec(Seq(CName('Nat, Seq()), 'getX, Seq(('x, CName('Int, Seq())))), Seq(Num(0)))))
+//  typecheckTestFJ(" Pair Int First, Int {(new Number(x)).getX(x): Int} ", ProgramM(GetX))(ProgramOK)
+//  typecheckTestError(" Pair String First, Double getX(First : Double){ return (New Pair).First} ", ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
+//    Ctor(ListMap(), ListMap('First -> CName('String, Seq()))), Seq(('First, CName('String, Seq())))),
+//    Seq(MethodDec(Seq(CName('Double, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Var('First))))))))//(CName('Pair))
+//
+//
+//  val Pair2 = ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()), Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()))),
+//    Seq(('First, CName('Nat, Seq())))),
+//    Seq(MethodDec(Seq(CName('Nat, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Num(1)))))))
+//
+//  typecheckTestFJ(" ========>>>> Pair Double First, Double getX(){ return (New Pair(Num(1))).First}  ", ProgramM(Pair2) )(ProgramOK) // look again at the combination of these examples
+//
+//
+//  val Pair1 =  ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
+//    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
+//    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))),
+//    Seq(MethodDec(Seq(CName('Nat, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Num(1), Num(2)))))))
+//  typecheckTestFJ("Pair Tnum First, Tnum Second, TNum getX() {return (New Pair(Num(1), Num(2)).First)}",ProgramM(Pair1))(ProgramOK)
+//
+//  typecheckTestError("Pair TNum first, TNum second, String getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
+//    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
+//    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))),
+//  Seq(MethodDec(Seq(CName('String, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Num(0), Num(1))))))))
+//
+//  typecheckTestError("Pair TNum first, string second, TNum getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
+//    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('String, Seq()))),
+//    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))),
+//    Seq(MethodDec(Seq(CName('String, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Num(0), Num(1))))))))
+//
+//  val Pair = ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
+//    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
+//    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))),
+//    Seq(MethodDec(Seq(CName('Nat, Seq()), 'add, Seq()),
+//          Seq(Add(FieldAcc('First, New(CName('Pair, Seq()), Num(1), Num(2))), FieldAcc('Second, New(CName('Pair, Seq()), Num(1), Num(2))))))))
+//  typecheckTestFJ("Pair Int First, Int Second, Int add() { return (New Pair).add(first, second) }", ProgramM(Pair) )(ProgramOK)
+//
+//  typecheckTestError("Pair Int First, Int Second, String addField() { return add(first Int, second Int) }", ClassDec(Seq(CName('Nat, Seq()), CName('Object, Seq()),
+//    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
+//    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))), Seq(MethodDec(Seq(CName('String, Seq()), 'add, Seq()),
+//    Seq(Add(FieldAcc('First, New(CName('Pair, Seq()), Num(0))), FieldAcc('Second, New(CName('Pair, Seq()), Num(1)))))))))//(CName('Nat))
+//
+//  typecheckTestError("Pair String First, Int Second, Int addField() { return add(first, second) }", ClassDec(Seq(CName('Nat, Seq()), CName('Object, Seq()),
+//    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
+//    Seq(('First, CName('String, Seq())), ('Second, CName('Nat, Seq())))), Seq(MethodDec(Seq(CName('Nat, Seq()), 'add, Seq()),
+//    Seq(Add(FieldAcc('First, New(CName('Pair, Seq()), Num(0))), FieldAcc('Second, New(CName('Pair, Seq()), Num(1))))))))) //(CName('Nat))
 
-  typecheckTestError("new Pair(first) : Pair", New(CName('Pair, Seq()), Var('first)))
-  typecheckTestError("new Pair(snd): Pair", New(CName('Pair, Seq()), Var('object)))
-  typecheckTestError("new Pair(first).setfst(first) : U ", Invk(Seq('setfst), Seq(New(Seq(CName('Pair, Seq())), Seq(Var('first))), Var('first))))//(CName('int))
-  typecheckTestError("(Object)first : Object", UCast(CName('Object, Seq()), Var('first)))
-  typecheckTestError("(Pair) first : Pair", New(CName('Pair, Seq()), Var('first)))
-  typecheckTestError("(Pair) first : Pair, second : Pair", New(CName('Pair, Seq()), Var('first), Var('second)))
-  typecheckTestFJ("new Object()", New(CName('Object, Seq())))(CName('Object, Seq())) //created object class with empty fields and methods, Object is the encoded Bottom Type
-  typecheckTestError("new Pair(fst : First, snd : Second)", New(Seq(CName('Pair, Seq())), Seq(Var('First), Var('Second))))//(CName('Pair)) // see again why eq constraint does not work
+  typecheckTestFJ("Pair<X, Y> first X, second Y, Num getFirst()  new Pair<Num, Num>(Num(1), Num(2))", ProgramM(ClassDec(Seq(CName('Pair, Seq(TVar('X), TVar('Y))), Seq(CName('Object, Seq()), CName('Object, Seq())), CName('Object, Seq()),
+    Ctor(ListMap(), ListMap('First -> TVar('X), 'Second -> TVar('Y))),
+    Seq(('First, TVar('X)), ('Second, TVar('Y)))),
+    Seq(MethodDec(Seq(CName('Num, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq(CName('Num, Seq()), CName('Num, Seq()))), Num(1), Num(2)))))))))(ProgramOK)
 
-  typecheckTestError(" (new Pair(first)).first : Int", FieldAcc('f, New(CName('Pair, Seq()), Var('f)))) //(UCName(CVar('Int)))
-
-
-  typecheckTestError("'void m(x, y) ", MethodDec(Seq(CName('void, Seq()), 'm, Seq(('x, CName('Tx, Seq())), ('y, CName('Ty, Seq())))),
-    Seq(New(CName('Object, Seq())))))//(CName('Object))
-  typecheckTestError("'Double m( e0.m(x) ) in C", MethodDec(Seq(CName('void, Seq()), 'm, Seq(('c, CName('Tc, Seq())))),
-    Seq(Invk(Seq('m), Seq(Var('e0), Var('c)))))) // recoursive call, so it is correct
-  typecheckTestError("void m() {New Pair first}", MethodDec(Seq(CName('void, Seq()), 'm, Seq()), Seq(Invk(Seq('setfst),
-    Seq(New(CName('Pair, Seq()), Var('first)), Var('first))))))//(CName('Pair))
-  typecheckTestError("Pair first second", MethodDec(Seq(CName('Double, Seq()), 'getSum, Seq()), Seq(Invk(Seq('add),
-    Seq(Var('Point), Var('fst), Var('snd))))))//(CName('Double))
-
-  //typecheckTestFJ("Tnum add(first, second) {first + seconds}", MethodDec(Seq(CName('Nat), 'getSum, Seq(('fst, UCName(CVar('fst))), ('snd, UCName(CVar('snd))))), Seq(Invk(Seq('add), Seq(Var('Point), Var('fst), Var('snd))))))(CName('Point))
-
-  typecheckTestError("String add(first, second) {first + seconds}", MethodDec(Seq(CName('String, Seq()), 'getSum, Seq(('fst, CName('Nat, Seq())), ('snd, CName('Nat, Seq())))),
-    Seq(Add(Num(1), Num(2)))))//(CName('Nat))
+  typecheckTestError("Pair<X, Y> first X, second Y, Num getFirst()  new Pair<String, Num>(Num(1), Num(2))", ProgramM(ClassDec(Seq(CName('Pair, Seq(TVar('X), TVar('Y))), Seq(CName('Object, Seq()), CName('Object, Seq())),CName('Object, Seq()),
+    Ctor(ListMap(), ListMap('First -> TVar('X), 'Second -> TVar('Y))),
+    Seq(('First, TVar('X)), ('Second, TVar('Y)))),
+    Seq(MethodDec(Seq(CName('Num, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq(CName('Sting, Seq()), CName('Num, Seq()))), Num(1), Num(2)))))))))
 
 
-  typecheckTestError("(New Pair(fst, snd)).setFirst(fst)", Invk(Seq('setFrist), Seq(New(Seq(CName('Pair, Seq())), Seq(Var('frt), Var('snd))), Var('frt))))//(TNum)
-
-  val Fst =  ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()), Ctor(ListMap(), ListMap('Pair -> CName('Int, Seq()))), Seq(('First, CName('Int, Seq())))), Seq())
-  typecheckTestFJ(" Pair Int First ",ProgramM(Fst))(ProgramOK)
-
-  val GetX = ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()), Ctor(ListMap(), ListMap('First -> CName('Int, Seq()))), Seq(('First, CName('Int, Seq())))),
-    Seq(MethodDec(Seq(CName('Nat, Seq()), 'getX, Seq(('x, CName('Int, Seq())))), Seq(Num(0)))))
-  typecheckTestFJ(" Pair Int First, Int {(new Number(x)).getX(x): Int} ", ProgramM(GetX))(ProgramOK)
-  typecheckTestError(" Pair String First, Double getX(First : Double){ return (New Pair).First} ", ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
-    Ctor(ListMap(), ListMap('First -> CName('String, Seq()))), Seq(('First, CName('String, Seq())))),
-    Seq(MethodDec(Seq(CName('Double, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Var('First))))))))//(CName('Pair))
-
-
-  val Pair2 = ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()), Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()))),
-    Seq(('First, CName('Nat, Seq())))),
-    Seq(MethodDec(Seq(CName('Nat, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Num(1)))))))
-
-  typecheckTestFJ(" ========>>>> Pair Double First, Double getX(){ return (New Pair(Num(1))).First}  ", ProgramM(Pair2) )(ProgramOK) // look again at the combination of these examples
-
-
-  val Pair1 =  ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
-    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
-    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))),
-    Seq(MethodDec(Seq(CName('Nat, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Num(1), Num(2)))))))
-  typecheckTestFJ("Pair Tnum First, Tnum Second, TNum getX() {return (New Pair(Num(1), Num(2)).First)}",ProgramM(Pair1))(ProgramOK)
-
-  typecheckTestError("Pair TNum first, TNum second, String getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
-    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
-    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))),
-  Seq(MethodDec(Seq(CName('String, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Num(0), Num(1))))))))
-
-  typecheckTestError("Pair TNum first, string second, TNum getX() {return (New PAir(Num(1), Num(2)).first)}", ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
-    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('String, Seq()))),
-    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))),
-    Seq(MethodDec(Seq(CName('String, Seq()), 'getX, Seq()), Seq(FieldAcc('First, New(CName('Pair, Seq()), Num(0), Num(1))))))))
-
-  val Pair = ClassDec(Seq(CName('Pair, Seq()), CName('Object, Seq()),
-    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
-    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))),
-    Seq(MethodDec(Seq(CName('Nat, Seq()), 'add, Seq()),
-          Seq(Add(FieldAcc('First, New(CName('Pair, Seq()), Num(1), Num(2))), FieldAcc('Second, New(CName('Pair, Seq()), Num(1), Num(2))))))))
-  typecheckTestFJ("Pair Int First, Int Second, Int add() { return (New Pair).add(first, second) }", ProgramM(Pair) )(ProgramOK)
-
-  typecheckTestError("Pair Int First, Int Second, String addField() { return add(first Int, second Int) }", ClassDec(Seq(CName('Nat, Seq()), CName('Object, Seq()),
-    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
-    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))), Seq(MethodDec(Seq(CName('String, Seq()), 'add, Seq()),
-    Seq(Add(FieldAcc('First, New(CName('Pair, Seq()), Num(0))), FieldAcc('Second, New(CName('Pair, Seq()), Num(1)))))))))//(CName('Nat))
-
-  typecheckTestError("Pair String First, Int Second, Int addField() { return add(first, second) }", ClassDec(Seq(CName('Nat, Seq()), CName('Object, Seq()),
-    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
-    Seq(('First, CName('String, Seq())), ('Second, CName('Nat, Seq())))), Seq(MethodDec(Seq(CName('Nat, Seq()), 'add, Seq()),
-    Seq(Add(FieldAcc('First, New(CName('Pair, Seq()), Num(0))), FieldAcc('Second, New(CName('Pair, Seq()), Num(1))))))))) //(CName('Nat))
-
-  typecheckTestError("Pair Int First, Int Second, Int addField() { return add(first : String, second : TNum) }", ClassDec(Seq(CName('Nat, Seq()), CName('Object, Seq()),
-    Ctor(ListMap(), ListMap('First -> CName('Nat, Seq()), 'Second -> CName('Nat, Seq()))),
-    Seq(('First, CName('Nat, Seq())), ('Second, CName('Nat, Seq())))), Seq(MethodDec(Seq(CName('Nat, Seq()), 'add, Seq()),
-    Seq(Add(FieldAcc('First, New(CName('Pair, Seq()), Str('a))), FieldAcc('Second, New(CName('Pair, Seq()), Num(0)))))))))//(CName('Nat))
-
-// val foo =  ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
+  // val foo =  ClassDec(Seq(CName('C), CName('Object), Ctor(ListMap(), ListMap()), Seq()),
 //   Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Add(Num(1), Num(1))))))
 //  typecheckTestFJ("Class C, Int foo(){return 1+1}} ",ProgramM(foo))(ProgramOK)
 //

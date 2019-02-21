@@ -7,8 +7,8 @@ import incremental.fjavaGen.CName
 
 
 sealed trait ClassFact
-case class CtorFact(cls: CName, args: Seq[CName]) extends ClassFact
-case class FieldFact(cls: CName, field: Symbol, typ: CName) extends ClassFact
+case class CtorFact(cls: CName, args: Seq[Type]) extends ClassFact
+case class FieldFact(cls: CName, field: Symbol, typ: Type) extends ClassFact
 case class MethodFact(cls: CName, name: Symbol, params: Seq[CName], ret: CName) extends ClassFact
 
 /*
