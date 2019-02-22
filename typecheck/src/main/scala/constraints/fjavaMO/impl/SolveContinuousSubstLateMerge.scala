@@ -97,14 +97,16 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
     val newcs1 = _notyet.foldLeft(copy(bounds = newBounds, _notyet = Seq()))((cs, cons) => cons.solve(cs))
     for ((params, alltuple) <- this.minsel) {
       val newc = (alltuple._1.subst(substitution), alltuple._2.map(_.subst(substitution)), alltuple._3)
-        if (isMinsel(newc._1, newc._2, newc._3)) {
-          newcons = newcons :+ AllEqual(params, minselRes(newc._1, newc._2, newc._3))
-          newMinsel = newMinsel - params
-        }
-        else newMinsel
+      if (isMinsel(newc._1, newc._2, newc._3)) {
+        newcons = newcons :+ AllEqual(params, minselRes(newc._1, newc._2, newc._3))
+        newMinsel = newMinsel - params
+      }
+      else {
+        newcons
+        newMinsel
+      }
     }
-
-    val newcs = _notyet.foldLeft(copy(minsel = newMinsel, _notyet = notyet ++ newcons))((cs, cons) => cons.solve(cs.addNewConstraints(newcons)))
+    val newcs = _notyet.foldLeft(copy(minsel = newMinsel, _notyet = newcons))((cs, cons) => cons.solve(cs))
 //    val newcs = newcs2.mergeSubsystem(newcs1)
 
     val startSize = notyet.size

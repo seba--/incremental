@@ -16,14 +16,11 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
 
   override def afterEach: Unit = checker.localState.printStatistics()
 
-  val nats = new Nats
-  val strings = new Strings
-  import nats._
-  import strings._
+
 
   def typecheckTestFJ(desc: String, e: => Node)(expected: Type): Unit =
     test(s"$classdesc: Type check $desc") {
-      val ev = if (e.kind != ProgramM) e else ProgramM(Seq(), e.kids.seq ++ nats.all :+ strings.string)
+      val ev = if (e.kind != ProgramM) e else ProgramM(Seq(), e.kids.seq)
       val actual = checker.typecheck(ev)
 
 //      val typ = ev.withType[checker.Result].typ._1
@@ -44,80 +41,79 @@ class TestCorrectness[CS <: ConstraintSystem[CS]](classdesc: String, checkerFact
     }
 
 
-  val M1 =  ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Num(1)))))
-
-  val M2 =  ClassDec(Seq(CName('C1), CName('C),Ctor(ListMap(), ListMap()), Seq()),
-    Seq())
-
-  val M3 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('String), 'foo, Seq()), Seq(Str('a)))))
-
-  val M4 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Num(1)))))
-
-  val M5 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
-    Seq())
-
-  val M6 =  ClassDec(Seq(CName('C3), CName('C2),Ctor(ListMap(), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Num(1)))))
-
-  typecheckTestError("{M1, M2, M3} ok", ProgramM(M1, M2, M3))
-  typecheckTestFJ("{M1, M2, M4} ok", ProgramM(M1, M2, M4))(ProgramOK)
-  typecheckTestFJ("{M1, M2, M5, M6} ok", ProgramM(M1, M2, M5, M6))(ProgramOK)
-  typecheckTestError("{M1, M2, M3, M6} ok", ProgramM(M1, M2, M3, M6))
-
-  val MutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
-    MethodDec(Seq(CName('Nat), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
-
-  val WMutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
-      MethodDec(Seq(CName('String), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
-
-  typecheckTestError("{C string foo() {this.bar()}, int bar() {this.foo()}}ok", ProgramM(WMutualRec))
-
-  val mutS1 = ClassDec(Seq(CName('C1), CName('C2),Ctor(ListMap(), ListMap()), Seq()),
-  Seq())
-
-  val mutS2 = ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
-    Seq())
-
-  typecheckTestError("{Mutual Super Types} ok", ProgramM(mutS1, mutS2))
-
-  val ctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap(), ListMap('First -> CName('Nat), 'Second -> CName('Nat))),
-    Seq(('First, CName('Nat)), ('Second, CName('Nat)))), Seq())
-
-  val wctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap(), ListMap('First -> CName('Nat))),
-    Seq(('First, CName('Nat)), ('Second, CName('Nat)))), Seq())
-
-  typecheckTestFJ("{ctorFC} ok", ProgramM(ctorFC))(ProgramOK)
-  typecheckTestError("{wctorFC} ok", ProgramM(wctorFC))
-
-//  val A = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap(), ListMap('i -> CName('Nat))), Seq(('i, CName('Nat)))),
-//    Seq(MethodDec(Seq(CName('Object), 'm, Seq(('b, CName('B)))), Seq(New(CName('B), FieldAcc('i, Var('this)))))))
+//  val M1 =  ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Num(1)))))
 //
-//  val B = ClassDec(Seq(CName('B), CName('A), Ctor(ListMap('i -> CName('Nat)), ListMap()), Seq()),
-//    Seq(MethodDec(Seq(CName('Object), 'm, Seq(('b, CName('B)))), Seq(FieldAcc('i, UCast(CName('A),Var('b)))))))
+//  val M2 =  ClassDec(Seq(CName('C1), CName('C),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq())
 //
-//  typecheckTestFJ("{A, B} ok", ProgramM(A, B))(ProgramOK)
-
-  val ASup = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap(), ListMap()), Seq()), Seq())
-
-  val BSub = ClassDec(Seq(CName('B), CName('A), Ctor(ListMap(), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
-
-  typecheckTestError("{ASup, BSub} not ok: unprovided field 'i'", ProgramM(ASup, BSub))
-
-  val AS = ClassDec(Seq(CName('A), CName('Object), Ctor(ListMap('i -> CName('Nat)), ListMap()), Seq()),
-    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
-
-  val BS = ClassDec(Seq(CName('B), CName('Object), Ctor(ListMap(), ListMap('i -> CName('Nat))), Seq(('i, CName('Nat)))),
-    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
-
- // val CS = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()), Seq())
-
-  typecheckTestFJ("{ASup, CSub}", ProgramM(BS))(ProgramOK)
+//  val M3 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq(MethodDec(Seq(CName('String), 'foo, Seq()), Seq(Str('a)))))
+//
+//  val M4 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Num(1)))))
+//
+//  val M5 =  ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq())
+//
+//  val M6 =  ClassDec(Seq(CName('C3), CName('C2),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Num(1)))))
+//
+//  typecheckTestFJ("{M1, M2, M3} ok", ProgramM(M1, M2, M3))(ProgramOK)
+//  typecheckTestFJ("{M1, M2, M4} ok", ProgramM(M1, M2, M4))(ProgramOK)
+//  typecheckTestFJ("{M1, M2, M5, M6} ok", ProgramM(M1, M2, M5, M6))(ProgramOK)
+//
+//  val MutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
+//    MethodDec(Seq(CName('Nat), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
+//
+//  val WMutualRec = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq(MethodDec(Seq(CName('Nat), 'foo, Seq()), Seq(Invk(Seq('bar), Seq(Var('this))))),
+//      MethodDec(Seq(CName('String), 'bar, Seq()), Seq(Invk(Seq('foo), Seq(Var('this)))))))
+//
+//  typecheckTestError("{C string foo() {this.bar()}, int bar() {this.foo()}}ok", ProgramM(WMutualRec))
+//
+//  val mutS1 = ClassDec(Seq(CName('C1), CName('C2),Ctor(ListMap(), ListMap()), Seq()),
+//  Seq())
+//
+//  val mutS2 = ClassDec(Seq(CName('C2), CName('C1),Ctor(ListMap(), ListMap()), Seq()),
+//    Seq())
+//
+//  typecheckTestError("{Mutual Super Types} ok", ProgramM(mutS1, mutS2))
+//
+//  val ctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap(), ListMap('First -> CName('Nat), 'Second -> CName('Nat))),
+//    Seq(('First, CName('Nat)), ('Second, CName('Nat)))), Seq())
+//
+//  val wctorFC = ClassDec(Seq(CName('Pair), CName('Object),  Ctor(ListMap(), ListMap('First -> CName('Nat))),
+//    Seq(('First, CName('Nat)), ('Second, CName('Nat)))), Seq())
+//
+//  typecheckTestFJ("{ctorFC} ok", ProgramM(ctorFC))(ProgramOK)
+//  typecheckTestError("{wctorFC} ok", ProgramM(wctorFC))
+//
+////  val A = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap(), ListMap('i -> CName('Nat))), Seq(('i, CName('Nat)))),
+////    Seq(MethodDec(Seq(CName('Object), 'm, Seq(('b, CName('B)))), Seq(New(CName('B), FieldAcc('i, Var('this)))))))
+////
+////  val B = ClassDec(Seq(CName('B), CName('A), Ctor(ListMap('i -> CName('Nat)), ListMap()), Seq()),
+////    Seq(MethodDec(Seq(CName('Object), 'm, Seq(('b, CName('B)))), Seq(FieldAcc('i, UCast(CName('A),Var('b)))))))
+////
+////  typecheckTestFJ("{A, B} ok", ProgramM(A, B))(ProgramOK)
+//
+//  val ASup = ClassDec(Seq(CName('A), CName('Object),Ctor(ListMap(), ListMap()), Seq()), Seq())
+//
+//  val BSub = ClassDec(Seq(CName('B), CName('A), Ctor(ListMap(), ListMap()), Seq()),
+//    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
+//
+//  typecheckTestError("{ASup, BSub} not ok: unprovided field 'i'", ProgramM(ASup, BSub))
+//
+//  val AS = ClassDec(Seq(CName('A), CName('Object), Ctor(ListMap('i -> CName('Nat)), ListMap()), Seq()),
+//    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
+//
+//  val BS = ClassDec(Seq(CName('B), CName('Object), Ctor(ListMap(), ListMap('i -> CName('Nat))), Seq(('i, CName('Nat)))),
+//    Seq(MethodDec(Seq(CName('Object), 'm, Seq()), Seq(FieldAcc('i, Var('this))))))
+//
+// // val CS = ClassDec(Seq(CName('C), CName('Object),Ctor(ListMap(), ListMap()), Seq()), Seq())
+//
+//  typecheckTestFJ("{ASup, CSub}", ProgramM(BS))(ProgramOK)
 
 
   val A = ClassDec(Seq(CName('A), CName('Object), Ctor(ListMap(), ListMap()), Seq()),

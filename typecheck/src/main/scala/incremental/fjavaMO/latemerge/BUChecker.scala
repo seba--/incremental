@@ -36,18 +36,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val (t, reqs, creqs, cons) = typecheckStep(e)
         val subcs = e.kids.seq.foldLeft(freshConstraintSystem)((cs, res) => cs mergeSubsystem(res.typ._4))
         val csPre = subcs addNewConstraints cons
-//        val csM = if (e.kind != MethodDec) csPre else {
-//          val m = e.lits(1).asInstanceOf[Symbol]
-//          val seqM = creqs.methods.toSeq
-//          for (i <- 0 until seqM.length ) {
-//            if (seqM(i).name == m)
-//              csPre.addMinSel(seqM(i).params.dropRight((seqM(i).params.length-1)/2), e.lits(2).asInstanceOf[Seq[(Symbol, CName)]].map(_._2),seqM(i).params.drop((seqM(i).params.length-1)/2))//TODO lira add the bound for minsel separated from params
-//            else
-//              csPre
-//            csPre
-//          }
-//      //TODO Lira add the minimal selction stuff, we need to update the set of overloaded params
-//        }
         val cs = if (e.kind != ClassDec) csPre else {
           // add inheritance to constraint system
           val c = e.lits(0).asInstanceOf[CName]
@@ -64,6 +52,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (creqsNoObject, objCons) = creqsRoot.satisfyCtor(CtorCReq(CName('Object), Seq()))
 
       val sol = csRoot.addNewConstraints(objCons).tryFinalize
+
 
       val tFinal = tRoot.subst(sol.substitution)
       val reqsFinal = reqsRoot mapValues (_.subst(sol.substitution))
@@ -82,6 +71,9 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
 
   def typecheckStep(e: Node_[Result]): StepResult = e.kind match {
 
+    case Num => (CName('Nat), Map(), ClassReqs(), Seq())
+    case Str => (CName('String), Map(), ClassReqs(), Seq())
+
     case Var =>
       val x = e.lits(0).asInstanceOf[Symbol]
       val X = freshCName()
@@ -99,7 +91,6 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       val (te, reqs0, creqs0,  _) = e.kids(0).typ
       val Uret = freshCName()
 
-     // var cons = Seq[Constraint]()
       var reqss: Seq[Reqs] = Seq(reqs0)
       var creqss: Seq[ClassReqs] = Seq(creqs0)
       var params = Seq[Type]()
@@ -114,9 +105,10 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         creqss = creqss :+ subcreqs
       }
 
+
       val (mreqs, mcons) = mergeReqMaps(reqss)
       val (creqs, cCons) = mergeCReqMaps(creqss)
-      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params, Uret, instparams).lift)
+      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params :+ Uret , Uret, instparams :+ CName('Object)).lift)
 
       (Uret, mreqs, mcreqs, mcons ++ cCons ++ mcCons )//++ cons)
 
@@ -206,6 +198,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       // handle all methods, satisfying current-class reqs
       for (i <- 0 until e.kids.seq.size) {
         val (t, req, creq, _) = e.kids(i).typ
+
         reqss = reqss :+ req
         val (creq2, cons) = creq.satisfyCurrentClass(c)
         creqss = creqss :+ creq2
@@ -252,32 +245,34 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         var cres = creqs2
         val m = methods.groupBy(_.lits(1)).values.toList
         for (i <- 0 until m.size) {
-          if (m(i).size == 1) {
-            val (creqs3, cons3) = cres.satisfyMethod(MethodCReq(
-              cname,
-              m(i).last.lits(1).asInstanceOf[Symbol],
-              m(i).last.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
-              m(i).last.lits(0).asInstanceOf[Type],
-              Seq()
-            ))
-            cres = creqs3
-            cons = cons ++ cons3
-          }
-          else {
+//          if (m(i).size == 1) {
+//            val (creqs3, cons3) = cres.satisfyMethod(MethodCReq(
+//              cname,
+//              m(i).last.lits(1).asInstanceOf[Symbol],
+//              m(i).last.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
+//              m(i).last.lits(0).asInstanceOf[Type],
+//              Seq()
+//            ))
+//            val (mreqs, mcons ) = mergeCReqMaps(cres, creqs3)
+//            cres = mreqs
+//            cons = cons ++ cons3 ++ mcons
+//          }
+//          else {
             var newmreq = Seq[MethodCReq]()
             var mltype = Set[Seq[Type]]()
             for (j <- 0 until m(i).size ) {
-              mltype = mltype + m(i)(j).lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2)
+              mltype = mltype + (m(i)(j).lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2) :+ CName('Object))
             }
-            for (i <- 0 until cres.methods.seq.size) {
-              if (cres.methods.toSeq(i).name == m(i).head.lits(1)) {
-                val reqm = cres.methods.toSeq(i)
-                cons = cons :+ MinSelCons(reqm.params, reqm.cls, reqm.instParams, cname, mltype)
-                // newmreq = cres.methods - cres.methods(i).asInstanceOf[MethodCReq]
+            for (p <- 0 until cres.methods.seq.size) {
+              if (cres.methods.toSeq(p).name == m(i).head.lits(1)) {
+                val reqm = cres.methods.toSeq(p)
+                cons = cons :+ MinSelCons(reqm.params , reqm.cls, reqm.instParams, cname, mltype)
               }
-              else cons
-
-            }
+              else {
+                cons
+                newmreq
+              }
+//            }
           }
         //            m(i)
         //            val (creqs3, cons3) = cres.many(_.satisfyMO,
@@ -301,7 +296,7 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       }
 
 
-
+        cres = cres.copy(cres.currentClass, cres.ext, cres.ctorParams , cres.fields, Set(), cres.optMethods)
         val (creqs4, cons4) = cres.satisfyExtends(ExtCReq(cname, sup))
         restCReqs = creqs4
         removeCons = removeCons ++ cons1 ++ cons2  ++ cons4 ++ cons

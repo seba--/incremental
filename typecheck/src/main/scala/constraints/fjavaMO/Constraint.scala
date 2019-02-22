@@ -26,11 +26,11 @@ trait Constraint {
 
 case class MinSelCons(unknownParam: Seq[Type], instClass: Type, instParams: Seq[Type], declClass : Type, declParams : Set[Seq[Type]]) extends Constraint {
   //MinSelC(invkClass : Type, instatiatedParams: Seq[Type], setMinsel: Map[Type, Set[Seq[Type]]]
-  def subst(s: CSubst) =  MinSelCons( unknownParam, instClass.subst(s), instParams.map(_.subst(s)), declClass, declParams ) //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
+  def subst(s: CSubst) =  MinSelCons( unknownParam, instClass.subst(s), instParams, declClass, declParams ) //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
 
   def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.addMinSelCo(unknownParam, instClass, instParams, declClass, declParams)
 
-  override def uvars = Set() ++ instParams.flatMap(_.uvars)
+  override def uvars = Set()
 }
 
 case class Subtype(lower: Type, upper: Type) extends Constraint {

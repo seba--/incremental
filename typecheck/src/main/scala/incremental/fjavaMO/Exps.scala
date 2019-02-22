@@ -61,6 +61,10 @@ object Exp {
 }
 import Exp._
 
+case object Num extends Exp(simple(Seq(classOf[Integer])))
+
+case object Str extends Exp(simple(Seq(classOf[Symbol])))
+
 case object Var extends Exp(simple(Seq(classOf[Symbol]))) {
   override def toString(e: Node_[_]): Option[String] = Some(s"${e.lits(0).asInstanceOf[Symbol].name}")
 }

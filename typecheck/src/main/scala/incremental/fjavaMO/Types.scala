@@ -38,6 +38,35 @@ case class UCName(x: CVar[Type]) extends Type {
   override val hashCode: Int = x.x.hashCode()
 }
 
+case object TNum extends GroundType {
+  def freeTVars = Set()
+  def normalize = this
+  def occurs(x: CVar[_]) = false
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other.subst(cs.substitution))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TNum => cs
+    case UCName(x) => other.unify(this, cs)
+    case _ => cs.never(Equal(this, other))
+  }
+  def uvars = Set()
+
+}
+
+case object TString extends GroundType {
+  def freeTVars = Set()
+  def normalize = this
+  def occurs(x: CVar[_]) = false
+  def subtype[CS <: ConstraintSystem[CS]](other: Type, cs: CS): CS = cs.addUpperBound(this, other.subst(cs.substitution))
+  def unify[CS <: ConstraintSystem[CS]](other: Type, cs: CS) = other match {
+    case TNum => cs
+    case UCName(x) => other.unify(this, cs)
+    case _ => cs.never(Equal(this, other))
+  }
+  def uvars = Set()
+
+}
+
+
 case class CName(x: Symbol) extends GroundType {
   def freeTVars = Set()
   def normalize = this

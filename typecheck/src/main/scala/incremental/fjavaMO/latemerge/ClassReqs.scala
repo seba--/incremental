@@ -70,7 +70,7 @@ case class MethodCReq(cls: Type, name: Symbol, params: Seq[Type], ret: Type , in
     Conditional(cls, cond, Equal(ret, other.self.ret))
   def subst(s: CSubst) = {
     val cls_ = cls.subst(s)
-    cond.subst(cls_, s) map (MethodCReq(cls_, name, params, ret,  params.map(_.subst(s)), optionallyDefined, _))
+    cond.subst(cls_, s) map (MethodCReq(cls_, name, params, ret,  instParams.map(_.subst(s)), optionallyDefined, _))
   }
   def liftOpt = ClassReqs(optMethods = Set(this))
   def lift = ClassReqs(methods = Set(this))
@@ -273,7 +273,7 @@ case class ClassReqs (
     val newcrs = crs flatMap (creq2 =>
       if (creq1.canMerge(creq2)) {
         creq1.assert(creq2) foreach (c => cons = cons :+ c)
-        Some(creq2)
+        creq2.alsoNot(creq1.cls)
       }
       else
         Some(creq2)
