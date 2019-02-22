@@ -13,7 +13,7 @@ object SolveContinuousSubstLateMerge extends ConstraintSystemFactory[SolveContin
   def freshConstraintSystem = SolveContinuousSubstCSLateMerge(Map(), Map(), Seq(), Seq(), Map(), Map())
 }
 
-case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType], minsel: Map[Seq[Type], Set[Seq[Type]]]) extends ConstraintSystem[SolveContinuousSubstCSLateMerge] {
+case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Type, Set[Type]], _notyet: Seq[Constraint], never: Seq[Constraint], extend: Map[GroundType, GroundType], minsel: Map[Seq[Type], (Type, Seq[Type], Map[Type, Set[Seq[Type]]])]) extends ConstraintSystem[SolveContinuousSubstCSLateMerge] {
   //invariant: substitution maps to ground types
   //invariant: there is at most one ground type in each bound, each key does not occur in its bounds, keys of solution and bounds are distinct
 
@@ -40,13 +40,17 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
     var mnever = never ++ that.never
     val init = SolveContinuousSubstCSLateMerge(msubst, this.bounds, mnotyet, mnever, this.extend, this.minsel)
     val extendedCS = that.extend.foldLeft(init) { case (cs, (t1, t2)) => cs.extendz(t1, t2) }
-    that.bounds.foldLeft(extendedCS) { case (cs, (t, ts)) =>
+    val boundCs =  that.bounds.foldLeft(extendedCS) { case (cs, (t, ts)) =>
       ts.foldLeft(cs) { case (cs2, t2) => cs2.addUpperBound(t, t2) }
     }
-    val minselCS  = that.minsel.foldLeft(init) { case (cs, (t1, t2)) => cs.MinSelSolve(t1, t2) }
-    that.minsel.foldLeft(minselCS) { case (cs, (t, ts)) =>
-      ts.foldLeft(cs) { case (cs2, t2) => cs2.addMinSel(t, t2) }
-    }
+//    val minselCS  = that.minsel.foldLeft(init) { case (cs, (t1, t2)) =>  cs.MinSelSolve(t1, t2) }
+//    that.minsel.foldLeft(minselCS) { case (cs, (t, ts)) =>
+//      ts.foldLeft(cs) { case (cs2, t2) => cs2.addMinSel(t, t2) }
+//    }
+    val minselCS  = that.minsel.foldLeft(boundCs) { case (cs, (t1, ts)) =>
+       ts._3.foldLeft(cs) {case (cs2, (cls, mltyp))  => cs2.extendMinSel(t1, ts._1, ts._2, cls, mltyp) } }
+
+    minselCS
   }
 
 
@@ -71,7 +75,7 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
 
   def tryFinalize(steps: Int): SolveContinuousSubstCSLateMerge = {
     var newBounds = Map[Type, Set[Type]]()
-    var newMinsel = Map[Seq[Type], Set[Seq[Type]]]()
+    var newMinsel = Map[Seq[Type], (Type, Seq[Type], Map[Type, Set[Seq[Type]]])]()
     var seqT = Set[Seq[Type]]()
     var lt = Set[Type]()
     var newcons = Seq[Constraint]()
@@ -91,16 +95,16 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
     }
 
     val newcs1 = _notyet.foldLeft(copy(bounds = newBounds, _notyet = Seq()))((cs, cons) => cons.solve(cs))
-    for ((c, bound) <- this.minsel) {
-      val newc = c.map(_.subst(substitution))
-        if (isMinsel(newc, bound)) {
-          newcons = newcons :+ Equal(newc.last, minselB(newc, bound).last)
-          newMinsel = newMinsel - c
+    for ((params, alltuple) <- this.minsel) {
+      val newc = (alltuple._1.subst(substitution), alltuple._2.map(_.subst(substitution)), alltuple._3)
+        if (isMinsel(newc._1, newc._2, newc._3)) {
+          newcons = newcons :+ AllEqual(params, minselRes(newc._1, newc._2, newc._3))
+          newMinsel = newMinsel - params
         }
-        else newMinsel = newMinsel + (newc -> bound)
+        else newMinsel
     }
 
-    val newcs = _notyet.foldLeft(copy(minsel = newMinsel, _notyet = Seq()))((cs, cons) => cons.solve(cs.addNewConstraints(newcons)))
+    val newcs = _notyet.foldLeft(copy(minsel = newMinsel, _notyet = notyet ++ newcons))((cs, cons) => cons.solve(cs.addNewConstraints(newcons)))
 //    val newcs = newcs2.mergeSubsystem(newcs1)
 
     val startSize = notyet.size
@@ -164,33 +168,76 @@ case class SolveContinuousSubstCSLateMerge(substitution: CSubst, bounds: Map[Typ
     else  isCompleteH(sType)
   }
 
-  def isMinsel(lowerB: Seq[Type], setT: Set[Seq[Type]]): Boolean =
-    if (minselB(lowerB, setT).head == Seq(CName('Object)))
+  def isMinsel(cls : Type, params: Seq[Type], multiT: Map[Type,Set[Seq[Type]]]): Boolean =
+    if (minselRes(cls, params, multiT).head == Seq(CName('Object)))
       false
     else
       true
 
-  def minselB(params: Seq[Type], bounds: Set[Seq[Type]]): Seq[Type] = {
-    LUB(minS(matchB(params, bounds)), matchB(params, bounds) )
-  }
 
-  def MinSelSolve(lowerB: Seq[Type], setT: Set[Seq[Type]]) = {
-    if (minselB(lowerB, setT).size == 1 &&  minselB(lowerB, setT).head == Seq(CName('Object)))
-      SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet,  this.never :+ Equal(CName('Object), CName('Object)), this.extend, this.minsel)
+//  def MinSelSolve(mapParams : Map[Seq[Type], (Type, Seq[Type], Map[Type, Set[Seq[Type]]])]) = {
+//    for ((param, mltyp) <- mapParams) {
+//      if (minselRes(mltyp._1, mltyp._2, mltyp._3).size == 1 && minselRes(mltyp._1, mltyp._2, mltyp._3).head == Seq(CName('Object)))
+//        SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never :+ Equal(CName('Object), CName('Object)), this.extend, this.minsel)
+//      else {
+//        var newcs = SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, this.minsel)
+//        newcs = newcs.addNewConstraint(AllEqual(param, minselRes(mltyp._1, mltyp._2, mltyp._3)))
+//        newcs
+//      }
+//    }
+//  }
+
+  def MinSelSolve(mapParams : Seq[Type],  rest: (Type, Seq[Type], Map[Type, Set[Seq[Type]]])) =
+  {
+    if (minselRes(rest._1, rest._2, rest._3).size == 1 && minselRes(rest._1, rest._2, rest._3).head == Seq(CName('Object)))
+      SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never :+ Equal(CName('Object), CName('Object)), this.extend, this.minsel)
     else {
       var newcs = SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, this.minsel)
-        newcs = newcs.addNewConstraint(Equal(lowerB.last, minselB(lowerB, setT).last))
+      newcs = newcs.addNewConstraint(AllEqual(mapParams, minselRes(rest._1, rest._2, rest._3)))
       newcs
     }
   }
-//TODO lira encounter the case when it is not all CNAME or other corner cases
-    def addMinSel( cvS : Seq[Type], bound: Seq[Type]) : SolveContinuousSubstCSLateMerge =
-        extendMinSel(cvS, bound)
 
-  private def extendMinSel( cvS: Seq[Type], bound : Seq[Type]) = {
-  val var1 = minsel.getOrElse(cvS, Set[Seq[Type]]())
-  SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, minsel + (cvS -> (var1 + bound)))
+
+  def addMinSelCo(unknownParam: Seq[Type], instClass: Type, instParams: Seq[Type], declClass : Type, declParams : Set[Seq[Type]]) : SolveContinuousSubstCSLateMerge =
+        extendMinSelCo(unknownParam, instClass, instParams, declClass, declParams)
+
+  private def extendMinSelCo( unknownParam: Seq[Type], instClass: Type, instParams: Seq[Type], declClass : Type, declParams : Set[Seq[Type]]) = {
+  val var1 = minsel.getOrElse(unknownParam, (instClass, instParams, Map[Type, Set[Seq[Type]]]()))
+    if (var1._3.isEmpty)
+      SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, minsel + (unknownParam -> (var1._1, var1._2, var1._3 + (declClass -> declParams))))
+    else {
+      val var2 = var1._3.getOrElse(declClass, Set[Seq[Type]]())
+      SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, minsel + (unknownParam -> (var1._1, var1._2, var1._3 + (declClass -> (var2 ++ declParams)))))
+
+    }
 }
+
+  private def extendMinSel( unknownParam: Seq[Type], instClass: Type, instParams: Seq[Type], declClass : Type, declParams : Set[Seq[Type]]) = {
+    val var1 = minsel.getOrElse(unknownParam, (instClass, instParams, Map[Type, Set[Seq[Type]]]()))
+    if (var1._3.isEmpty)
+      SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, minsel + (unknownParam -> (var1._1, var1._2, var1._3 + (declClass -> declParams))))
+    else {
+      val var2 = var1._3.getOrElse(declClass, Set[Seq[Type]]())
+      SolveContinuousSubstCSLateMerge(this.substitution, this.bounds, this._notyet, this.never, this.extend, minsel + (unknownParam -> (var1._1, var1._2, var1._3 + (declClass -> (var2 ++ declParams)))))
+
+    }
+  }
+
+  def minselRes( cls : Type, params: Seq[Type], mltype: Map[Type, Set[Seq[Type]]]): Seq[Type] = {
+    LUB(minS(matchB(params, matchClass(cls, mltype))), matchB(params, matchClass(cls, mltype)) )
+  }
+
+  def matchClass(instClass: Type, mltype : Map[Type, Set[Seq[Type]]]) : Set[Seq[Type]] = {
+    var multitype = Set[Seq[Type]]()
+    for ((cls,setmul) <- mltype) {
+      if (isSubtype(instClass, cls))
+        multitype = multitype ++ setmul
+      else
+        multitype
+    }
+    multitype
+    }
 
   def matchB(params : Seq[Type], bounds: Set[Seq[Type]]) : Set[Seq[Type]] = {
     var m = Seq[Seq[Type]]()

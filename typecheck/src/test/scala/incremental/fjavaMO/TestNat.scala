@@ -123,12 +123,12 @@ class TestNat[CS <: ConstraintSystem[CS]](classdesc: String, checkerFactory: Typ
 
 }
 
-class TestJavacNat extends TestNat("JAVAC", new JavacCheckerFactory(SolveEnd))
-
-class TestDUSolveEndNat extends TestNat("DUSolveEnd", new DUCheckerFactory(SolveEnd))
-
-class TestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveEnd))
+//class TestJavacNat extends TestNat("JAVAC", new JavacCheckerFactory(SolveEnd))
+//
+//class TestDUSolveEndNat extends TestNat("DUSolveEnd", new DUCheckerFactory(SolveEnd))
+//
+//class TestBUSolveEndNat extends TestNat("BUSolveEnd", new BUCheckerFactory(SolveEnd))
 
 class TestBUSolveContinuousSubstNat extends TestNat("BUSolveContinuousSubst", new BUCheckerFactory(SolveContinuousSubstLateMerge))
 
-class TestBUEarlySolveContinuousSubstNat extends TestNat("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubstEarlyMerge))
+//class TestBUEarlySolveContinuousSubstNat extends TestNat("BUEarlySolveContinuousSubst", new earlymerge.BUCheckerFactory(SolveContinuousSubstEarlyMerge))

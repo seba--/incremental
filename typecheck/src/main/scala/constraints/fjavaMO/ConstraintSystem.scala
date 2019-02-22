@@ -12,8 +12,7 @@ abstract class ConstraintSystem[CS <: ConstraintSystem[CS]]
 
   def isCompleteH(cls : GroundType) : Boolean
   def isSubtype(t1 : Type, t2 : Type) : Boolean
-  def addMinSel(cvar : Seq[Type], seqT: Seq[Type]): CS
-  def addMinSelCo(unknownParam: Seq[Type], instClass: Type, instParams: Seq[Type], declClass : Type, declParams : Seq[Type]): CS
+  def addMinSelCo(unknownParam: Seq[Type], instClass: Type, instParams: Seq[Type], declClass : Type, declParams : Set[Seq[Type]]): CS
   def addUpperBound(t1: Type, t2: Type): CS
   def extendz(t1: GroundType, t2: GroundType): CS
   def solved(s: CSubst): CS

@@ -15,16 +15,16 @@ trait Constraint {
 
 //TODO lira see this again
 
-case class MinSelC(instatiatedParams: Seq[Type], givenParams : Seq[Type]) extends Constraint {
-  //MinSelC(invkClass : Type, instatiatedParams: Seq[Type], setMinsel: Map[Type, Set[Seq[Type]]]
-  def subst(s: CSubst) =  MinSelC(instatiatedParams.map(_.subst(s)), givenParams ) //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
+//case class MinSelC(instatiatedParams: Seq[Type], givenParams : Seq[Type]) extends Constraint {
+//  //MinSelC(invkClass : Type, instatiatedParams: Seq[Type], setMinsel: Map[Type, Set[Seq[Type]]]
+//  def subst(s: CSubst) =  MinSelC(instatiatedParams.map(_.subst(s)), givenParams ) //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
+//
+//  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.addMinSel(instatiatedParams, givenParams)
+//
+//  override def uvars = Set() ++ instatiatedParams.flatMap(_.uvars)
+//}
 
-  def solve[CS <: ConstraintSystem[CS]](cs: CS) = cs.addMinSel(instatiatedParams, givenParams)
-
-  override def uvars = Set() ++ instatiatedParams.flatMap(_.uvars)
-}
-
-case class MinSelCons(unknownParam: Seq[Type], instClass: Type, instParams: Seq[Type], declClass : Type, declParams : Seq[Type]) extends Constraint {
+case class MinSelCons(unknownParam: Seq[Type], instClass: Type, instParams: Seq[Type], declClass : Type, declParams : Set[Seq[Type]]) extends Constraint {
   //MinSelC(invkClass : Type, instatiatedParams: Seq[Type], setMinsel: Map[Type, Set[Seq[Type]]]
   def subst(s: CSubst) =  MinSelCons( unknownParam, instClass.subst(s), instParams.map(_.subst(s)), declClass, declParams ) //AllEqual(expected.map(_.subst(s)), actual.map(_.subst(s)))
 

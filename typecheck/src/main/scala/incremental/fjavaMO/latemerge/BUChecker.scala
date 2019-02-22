@@ -103,19 +103,20 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
       var reqss: Seq[Reqs] = Seq(reqs0)
       var creqss: Seq[ClassReqs] = Seq(creqs0)
       var params = Seq[Type]()
+      var instparams = Seq[Type]()
 
       for (i <- 1 until e.kids.seq.size) {
         val (ti, subreqs, subcreqs, _) = e.kids(i).typ
         val U = freshCName()
-        params = params :+ ti
-        //cons = cons :+ Subtype(ti, U)
+        params = params :+ U
+        instparams = instparams :+ ti
         reqss = reqss :+ subreqs
         creqss = creqss :+ subcreqs
       }
 
       val (mreqs, mcons) = mergeReqMaps(reqss)
       val (creqs, cCons) = mergeCReqMaps(creqss)
-      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params, Uret).lift)
+      val (mcreqs, mcCons) = creqs.merge(MethodCReq(te, m, params, Uret, instparams).lift)
 
       (Uret, mreqs, mcreqs, mcons ++ cCons ++ mcCons )//++ cons)
 
@@ -245,44 +246,59 @@ abstract class BUChecker[CS <: ConstraintSystem[CS]] extends TypeChecker[CS] {
         val ctor = cls.lits(2).asInstanceOf[Ctor]
         val fields = cls.lits(3).asInstanceOf[Seq[(Symbol, Type)]].toMap
         val methods = cls.kids.seq
-//TODO lira see again if I addd the infor in the set or just keep it as e requirement
         val (creqs1, cons1) = restCReqs.satisfyCtor(CtorCReq(cname, ctor.allArgTypes))
         val (creqs2, cons2) = creqs1.many(_.satisfyField, fields map (f => FieldCReq(cname, f._1, f._2)))
         var cons = Seq[Constraint]()
         var cres = creqs2
         val m = methods.groupBy(_.lits(1)).values.toList
         for (i <- 0 until m.size) {
-          val prove = m(i)
-          if ( m(i).size == 1) {
+          if (m(i).size == 1) {
             val (creqs3, cons3) = cres.satisfyMethod(MethodCReq(
               cname,
               m(i).last.lits(1).asInstanceOf[Symbol],
               m(i).last.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
-              m(i).last.lits(0).asInstanceOf[Type]
+              m(i).last.lits(0).asInstanceOf[Type],
+              Seq()
             ))
             cres = creqs3
             cons = cons ++ cons3
           }
           else {
-            val (creqs3, cons3) = cres.many(_.satisfyMO,
-              m(i).slice(0, m(i).size - 1 ) map (m => MethodCReq(
-                cname,
-                m.lits(1).asInstanceOf[Symbol],
-                m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
-                m.lits(0).asInstanceOf[Type]
-              )))
-            cres = creqs3
-            cons = cons ++ cons3
+            var newmreq = Seq[MethodCReq]()
+            var mltype = Set[Seq[Type]]()
+            for (j <- 0 until m(i).size ) {
+              mltype = mltype + m(i)(j).lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2)
+            }
+            for (i <- 0 until cres.methods.seq.size) {
+              if (cres.methods.toSeq(i).name == m(i).head.lits(1)) {
+                val reqm = cres.methods.toSeq(i)
+                cons = cons :+ MinSelCons(reqm.params, reqm.cls, reqm.instParams, cname, mltype)
+                // newmreq = cres.methods - cres.methods(i).asInstanceOf[MethodCReq]
+              }
+              else cons
+
+            }
           }
-          val (creqs3, cons3) = cres.satisfyMethod(MethodCReq(
-            cname,
-            m(i).last.lits(1).asInstanceOf[Symbol],
-            m(i).last.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
-            m(i).last.lits(0).asInstanceOf[Type]
-          ))
-          cres = creqs3
-          cons = cons ++ cons3
-        }
+        //            m(i)
+        //            val (creqs3, cons3) = cres.many(_.satisfyMO,
+        //              m(i).slice(0, m(i).size - 1 ) map (m => MethodCReq(
+        //                cname,
+        //                m.lits(1).asInstanceOf[Symbol],
+        //                m.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
+        //                m.lits(0).asInstanceOf[Type]
+        //              )))
+        //            cres = creqs3
+        //            cons = cons ++ cons3
+        //          }
+        //          val (creqs3, cons3) = cres.satisfyMethod(MethodCReq(
+        //            cname,
+        //            m(i).last.lits(1).asInstanceOf[Symbol],
+        //            m(i).last.lits(2).asInstanceOf[Seq[(Symbol, Type)]].map(_._2),
+        //            m(i).last.lits(0).asInstanceOf[Type]
+        //          ))
+       // cres = creqs3
+       // cons = cons ++ cons3
+      }
 
 
 
